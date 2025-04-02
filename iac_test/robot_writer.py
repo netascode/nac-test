@@ -14,7 +14,7 @@ from typing import Any, Dict, List
 
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader  # type: ignore
 
-from iac_test import yaml
+from nac_yaml import yaml
 
 logger = logging.getLogger(__name__)
 
