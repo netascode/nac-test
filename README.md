@@ -34,7 +34,7 @@ After all templates have been rendered [Pabot](https://pabot.org/) will execute 
 
 ## Installation
 
-Python 3.7+ is required to install `nac-test`. Don't have Python 3.7 or later? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/).
+Python 3.10+ is required to install `nac-test`. Don't have Python 3.10 or later? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/).
 
 `nac-test` can be installed in a virtual environment using `pip`:
 
