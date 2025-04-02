@@ -7,17 +7,17 @@ import os
 from click.testing import CliRunner
 import pytest
 
-import iac_test.cli.main
+import nac_test.cli.main
 
 pytestmark = pytest.mark.integration
 
 
-def test_iac_test(tmpdir):
+def test_nac_test(tmpdir):
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates/"
     result = runner.invoke(
-        iac_test.cli.main.main,
+        nac_test.cli.main.main,
         [
             "-d",
             data_path,
@@ -30,13 +30,13 @@ def test_iac_test(tmpdir):
     assert result.exit_code == 0
 
 
-def test_iac_test_env(tmpdir):
+def test_nac_test_env(tmpdir):
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_env/"
     templates_path = "tests/integration/fixtures/templates/"
     os.environ["DEF"] = "value"
     result = runner.invoke(
-        iac_test.cli.main.main,
+        nac_test.cli.main.main,
         [
             "-d",
             data_path,
@@ -49,13 +49,13 @@ def test_iac_test_env(tmpdir):
     assert result.exit_code == 0
 
 
-def test_iac_test_filter(tmpdir):
+def test_nac_test_filter(tmpdir):
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates_filter/"
     filters_path = "tests/integration/fixtures/filters/"
     result = runner.invoke(
-        iac_test.cli.main.main,
+        nac_test.cli.main.main,
         [
             "-d",
             data_path,
@@ -70,13 +70,13 @@ def test_iac_test_filter(tmpdir):
     assert result.exit_code == 0
 
 
-def test_iac_test_test(tmpdir):
+def test_nac_test_test(tmpdir):
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates_test/"
     tests_path = "tests/integration/fixtures/tests/"
     result = runner.invoke(
-        iac_test.cli.main.main,
+        nac_test.cli.main.main,
         [
             "-d",
             data_path,
@@ -91,12 +91,12 @@ def test_iac_test_test(tmpdir):
     assert result.exit_code == 0
 
 
-def test_iac_test_render(tmpdir):
+def test_nac_test_render(tmpdir):
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates_fail/"
     result = runner.invoke(
-        iac_test.cli.main.main,
+        nac_test.cli.main.main,
         [
             "-d",
             data_path,
@@ -110,12 +110,12 @@ def test_iac_test_render(tmpdir):
     assert result.exit_code == 0
 
 
-def test_iac_test_list(tmpdir):
+def test_nac_test_list(tmpdir):
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list/"
     templates_path = "tests/integration/fixtures/templates_list/"
     result = runner.invoke(
-        iac_test.cli.main.main,
+        nac_test.cli.main.main,
         [
             "-d",
             data_path,
@@ -131,12 +131,12 @@ def test_iac_test_list(tmpdir):
     assert result.exit_code == 0
 
 
-def test_iac_test_list_folder(tmpdir):
+def test_nac_test_list_folder(tmpdir):
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list/"
     templates_path = "tests/integration/fixtures/templates_list_folder/"
     result = runner.invoke(
-        iac_test.cli.main.main,
+        nac_test.cli.main.main,
         [
             "-d",
             data_path,

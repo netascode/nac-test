@@ -1,3 +1,7 @@
+# 0.3.0 (unreleased)
+
+- BREAKING CHANGE: Rename tool from `iac-test` to `nac-test`
+
 # 0.2.6
 
 - Fix issue with directly nested lists in YAML files

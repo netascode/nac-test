@@ -2,7 +2,7 @@
 
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
-import iac_test.cli.main
+import nac_test.cli.main
 
 if __name__ == "__main__":
-    iac_test.cli.main.main()
+    nac_test.cli.main.main()

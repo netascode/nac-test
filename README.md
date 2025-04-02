@@ -1,13 +1,13 @@
-[![Tests](https://github.com/netascode/iac-test/actions/workflows/test.yml/badge.svg)](https://github.com/netascode/iac-test/actions/workflows/test.yml)
+[![Tests](https://github.com/netascode/nac-test/actions/workflows/test.yml/badge.svg)](https://github.com/netascode/nac-test/actions/workflows/test.yml)
 ![Python Support](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-informational "Python Support: 3.8, 3.9, 3.10, 3.11, 3.12")
 
-# iac-test
+# nac-test
 
 A CLI tool to render and execute [Robot Framework](https://robotframework.org/) tests using [Jinja](https://jinja.palletsprojects.com/) templating. Combining Robot's language agnostic syntax with the flexibility of Jinja templating allows dynamically rendering a set of test suites from the desired infrastructure state expressed in YAML syntax.
 
 ```shell
-$ iac-test -h
-Usage: iac-test [OPTIONS]
+$ nac-test -h
+Usage: nac-test [OPTIONS]
 
   A CLI tool to render and execute Robot Framework tests using Jinja
   templating.
@@ -15,20 +15,20 @@ Usage: iac-test [OPTIONS]
 Options:
   --version                  Show the version and exit.
   -v, --verbosity LVL        Either CRITICAL, ERROR, WARNING, INFO or DEBUG
-  -d, --data PATH            Path to data YAML files. (env: IAC_TEST_DATA)
+  -d, --data PATH            Path to data YAML files. (env: NAC_TEST_DATA)
                              [required]
-  -t, --templates DIRECTORY  Path to test templates. (env: IAC_TEST_TEMPLATES)
+  -t, --templates DIRECTORY  Path to test templates. (env: NAC_TEST_TEMPLATES)
                              [required]
-  -f, --filters DIRECTORY    Path to Jinja filters. (env: IAC_TEST_FILTERS)
-  --tests DIRECTORY          Path to Jinja tests. (env: IAC_TEST_TESTS)
-  -o, --output DIRECTORY     Path to output directory. (env: IAC_TEST_OUTPUT)
+  -f, --filters DIRECTORY    Path to Jinja filters. (env: NAC_TEST_FILTERS)
+  --tests DIRECTORY          Path to Jinja tests. (env: NAC_TEST_TESTS)
+  -o, --output DIRECTORY     Path to output directory. (env: NAC_TEST_OUTPUT)
                              [required]
   -i, --include TEXT         Selects the test cases by tag (include). (env:
-                             IAC_TEST_INCLUDE)
+                             NAC_TEST_INCLUDE)
   -e, --exclude TEXT         Selects the test cases by tag (exclude). (env:
-                             IAC_TEST_EXCLUDE)
+                             NAC_TEST_EXCLUDE)
   --render-only              Only render tests without executing them. (env:
-                             IAC_TEST_RENDER_ONLY)
+                             NAC_TEST_RENDER_ONLY)
   --dry-run                  Dry run flag. See robot dry run mode. (env:
                              IAC_DRY_RUN)
   -h, --help                 Show this message and exit.
@@ -40,15 +40,15 @@ After all templates have been rendered [Pabot](https://pabot.org/) will execute 
 
 ## Installation
 
-Python 3.7+ is required to install `iac-test`. Don't have Python 3.7 or later? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/).
+Python 3.7+ is required to install `nac-test`. Don't have Python 3.7 or later? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/).
 
-`iac-test` can be installed in a virtual environment using `pip`:
+`nac-test` can be installed in a virtual environment using `pip`:
 
 ```shell
-pip install iac-test
+pip install nac-test
 ```
 
-The following Robot libraries are installed with `iac-test`:
+The following Robot libraries are installed with `nac-test`:
 
 - [RESTinstance](https://github.com/asyrjasalo/RESTinstance)
 - [Requests](https://github.com/MarketSquare/robotframework-requests)
@@ -106,10 +106,10 @@ Test {{ child.name }}
 {% endfor %}
 ```
 
-After running `iac-test` with the following parameters:
+After running `nac-test` with the following parameters:
 
 ```shell
-iac-test --data ./data --templates ./templates --output ./tests
+nac-test --data ./data --templates ./templates --output ./tests
 ```
 
 The following rendered Robot test suite can be found in the `./tests` folder:
@@ -174,7 +174,7 @@ Special rendering directives exist to render a single test suite per (YAML) list
 {# iterate_list <YAML_PATH_TO_LIST> <LIST_ITEM_ID> <JINJA_VARIABLE_NAME> #}
 ```
 
-After running `iac-test` with the data from the previous [example](#example) and the following template:
+After running `nac-test` with the data from the previous [example](#example) and the following template:
 
 ```
 {# iterate_list root.children name child_name #}

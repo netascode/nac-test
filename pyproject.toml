@@ -1,17 +1,17 @@
 [tool.poetry]
 authors = ["Daniel Schmidt <danischm@cisco.com>"]
 description = "A CLI tool to render and execute Robot Framework tests using Jinja templating."
-documentation = "https://github.com/netascode/iac-test"
-homepage = "https://github.com/netascode/iac-test"
+documentation = "https://github.com/netascode/nac-test"
+homepage = "https://github.com/netascode/nac-test"
 license = "LICENSE"
 maintainers = ["Daniel Schmidt <danischm@cisco.com>"]
-name = "iac-test"
+name = "nac-test"
 readme = "README.md"
-repository = "https://github.com/netascode/iac-test"
+repository = "https://github.com/netascode/nac-test"
 version = "0.2.6"
 
 [tool.poetry.scripts]
-iac-test = "iac_test.cli.main:main"
+nac-test = "nac_test.cli.main:main"
 
 [tool.poetry.dependencies]
 Jinja2 = "^3.0.3"
@@ -20,13 +20,13 @@ click = "^8.0.4"
 errorhandler = "^2.0.1"
 importlib-metadata = "^2.0.0"
 jmespath = "^1.0.1"
+nac-yaml = "^0.1.0"
 python = "^3.10"
 robotframework = "^6.0.1"
 robotframework-jsonlibrary = "^0.5"
 robotframework-pabot = "^2.8.0"
 robotframework-requests = "^0.9.4"
 ruamel-yaml = ">0.16.10"
-nac-yaml = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.10.0"
@@ -37,7 +37,7 @@ pytest-mock = "^3.14.0"
 ruff = "^0.5.6"
 
 [tool.coverage.run]
-source = ["iac_test"]
+source = ["nac_test"]
 
 [tool.coverage.report]
 exclude_lines = ["pragma: no cover", "@abstract", "except ImportError:"]

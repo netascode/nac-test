@@ -27,7 +27,7 @@ jobs:
         run: |
           pip install poetry
           poetry install
-          poetry run mypy iac_test
+          poetry run mypy nac_test
 
   test:
     name: Tests

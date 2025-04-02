@@ -10,7 +10,7 @@ import pathlib
 import re
 import shutil
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader  # type: ignore
 
@@ -22,15 +22,15 @@ logger = logging.getLogger(__name__)
 class RobotWriter:
     def __init__(
         self,
-        data_paths: List[str],
+        data_paths: list[str],
         filters_path: str,
         tests_path: str,
-        include_tags: List[str] = [],
-        exclude_tags: List[str] = [],
+        include_tags: list[str] = [],
+        exclude_tags: list[str] = [],
     ) -> None:
         logger.info("Loading yaml files from %s", data_paths)
         self.data = yaml.load_yaml_files(data_paths)
-        self.filters: Dict[str, Any] = {}
+        self.filters: dict[str, Any] = {}
         self.include_tags = include_tags
         self.exclude_tags = exclude_tags
         if filters_path:
@@ -39,26 +39,26 @@ class RobotWriter:
                 if filename.endswith(".py"):
                     file_path = os.path.join(filters_path, filename)
                     spec = importlib.util.spec_from_file_location(
-                        "iac_test.filters", file_path
+                        "nac_test.filters", file_path
                     )
                     if spec is not None:
                         mod = importlib.util.module_from_spec(spec)
-                        sys.modules["iac_test.filters"] = mod
+                        sys.modules["nac_test.filters"] = mod
                         if spec.loader is not None:
                             spec.loader.exec_module(mod)
                             self.filters[mod.Filter.name] = mod.Filter
-        self.tests: Dict[str, Any] = {}
+        self.tests: dict[str, Any] = {}
         if tests_path:
             logger.info("Loading tests")
             for filename in os.listdir(tests_path):
                 if filename.endswith(".py"):
                     file_path = os.path.join(tests_path, filename)
                     spec = importlib.util.spec_from_file_location(
-                        "iac_test.tests", file_path
+                        "nac_test.tests", file_path
                     )
                     if spec is not None:
                         mod = importlib.util.module_from_spec(spec)
-                        sys.modules["iac_test.tests"] = mod
+                        sys.modules["nac_test.tests"] = mod
                         if spec.loader is not None:
                             spec.loader.exec_module(mod)
                             self.tests[mod.Test.name] = mod.Test
@@ -169,10 +169,10 @@ class RobotWriter:
                             value = str(item.get(attr))
                             if value is None:
                                 continue
-                            extra = {}
+                            extra: dict[str, Any] = {}
                             if "[" in params[4]:
                                 index = params[4].split("[")[1].split("]")[0]
-                                extra_list = [None] * (int(index) + 1)
+                                extra_list: list[Any] = [None] * (int(index) + 1)
                                 extra_list[int(index)] = value
                                 extra = {params[4].split("[")[0]: extra_list}
                             else:

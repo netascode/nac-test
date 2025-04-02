@@ -4,13 +4,12 @@
 
 import logging
 import sys
-from typing import List
 
 import click
 import errorhandler
 
-import iac_test.pabot
-import iac_test.robot_writer
+import nac_test.pabot
+import nac_test.robot_writer
 
 from . import options
 
@@ -39,7 +38,7 @@ def configure_logging(level: str) -> None:
 
 
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
-@click.version_option(iac_test.__version__)
+@click.version_option(nac_test.__version__)
 @click.option(
     "-v",
     "--verbosity",
@@ -60,23 +59,23 @@ def configure_logging(level: str) -> None:
 @options.dry_run
 def main(
     verbosity: str,
-    data: List[str],
+    data: list[str],
     templates: str,
     filters: str,
     tests: str,
     output: str,
-    include: List[str],
-    exclude: List[str],
+    include: list[str],
+    exclude: list[str],
     render_only: bool,
     dry_run: bool,
 ) -> None:
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
     configure_logging(verbosity)
 
-    writer = iac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
+    writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
     writer.write(templates, output)
     if not render_only:
-        iac_test.pabot.run_pabot(output, include, exclude, dry_run)
+        nac_test.pabot.run_pabot(output, include, exclude, dry_run)
     exit()
 
 
