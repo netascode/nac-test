@@ -7,31 +7,25 @@ A CLI tool to render and execute [Robot Framework](https://robotframework.org/) 
 
 ```shell
 $ nac-test -h
-Usage: nac-test [OPTIONS]
 
-  A CLI tool to render and execute Robot Framework tests using Jinja
-  templating.
-
-Options:
-  --version                  Show the version and exit.
-  -v, --verbosity LVL        Either CRITICAL, ERROR, WARNING, INFO or DEBUG
-  -d, --data PATH            Path to data YAML files. (env: NAC_TEST_DATA)
-                             [required]
-  -t, --templates DIRECTORY  Path to test templates. (env: NAC_TEST_TEMPLATES)
-                             [required]
-  -f, --filters DIRECTORY    Path to Jinja filters. (env: NAC_TEST_FILTERS)
-  --tests DIRECTORY          Path to Jinja tests. (env: NAC_TEST_TESTS)
-  -o, --output DIRECTORY     Path to output directory. (env: NAC_TEST_OUTPUT)
-                             [required]
-  -i, --include TEXT         Selects the test cases by tag (include). (env:
-                             NAC_TEST_INCLUDE)
-  -e, --exclude TEXT         Selects the test cases by tag (exclude). (env:
-                             NAC_TEST_EXCLUDE)
-  --render-only              Only render tests without executing them. (env:
-                             NAC_TEST_RENDER_ONLY)
-  --dry-run                  Dry run flag. See robot dry run mode. (env:
-                             IAC_DRY_RUN)
-  -h, --help                 Show this message and exit.
+ Usage: nac-test [OPTIONS]                                                                                                                                    
+                                                                                                                                                              
+ A CLI tool to render and execute Robot Framework tests using Jinja templating.                                                                               
+                                                                                                                                                              
+╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *  --data         -d      PATH                                 Path to data YAML files. [env var: NAC_TEST_DATA] [default: None] [required]                │
+│ *  --templates    -t      DIRECTORY                            Path to test templates. [env var: NAC_TEST_TEMPLATES] [default: None] [required]            │
+│ *  --output       -o      DIRECTORY                            Path to output directory. [env var: NAC_TEST_OUTPUT] [default: None] [required]             │
+│    --filters      -f      DIRECTORY                            Path to Jinja filters. [env var: NAC_TEST_FILTERS] [default: None]                          │
+│    --tests                DIRECTORY                            Path to Jinja tests. [env var: NAC_TEST_TESTS] [default: None]                              │
+│    --include      -i      TEXT                                 Selects the test cases by tag (include). [env var: NAC_TEST_INCLUDE]                        │
+│    --exclude      -e      TEXT                                 Selects the test cases by tag (exclude). [env var: NAC_TEST_EXCLUDE]                        │
+│    --render-only                                               Only render tests without executing them. [env var: NAC_TEST_RENDER_ONLY]                   │
+│    --dry-run                                                   Dry run flag. See robot dry run mode. [env var: NAC_TEST_DRY_RUN]                           │
+│    --verbosity    -v      [DEBUG|INFO|WARNING|ERROR|CRITICAL]  Verbosity level. [env var: NAC_VALIDATE_VERBOSITY] [default: WARNING]                       │
+│    --version                                                   Display version number.                                                                     │
+│    --help                                                      Show this message and exit.                                                                 │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 All data from the YAML files (`--data` option) will first be combined into a single data structure which is then provided as input to the templating process. Each template in the `--templates` path will then be rendered and written to the `--output` path. If the `--templates` path has subfolders, the folder structure will be retained when rendering the templates.
