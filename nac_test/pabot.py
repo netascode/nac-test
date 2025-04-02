@@ -11,7 +11,7 @@ def run_pabot(
     path: Path, include: list[str] = [], exclude: list[str] = [], dry_run: bool = False
 ) -> None:
     """Run pabot"""
-    args = ["--pabotlib"]
+    args = ["--pabotlib", "--pabotlibport", "0"]
     if dry_run:
         args.append("--dryrun")
     for i in include:
