@@ -5,13 +5,19 @@
 import logging
 import sys
 
-import click
 import errorhandler
+
+import typer
+from typing_extensions import Annotated
+from enum import Enum
+
+from pathlib import Path
 
 import nac_test.pabot
 import nac_test.robot_writer
 
-from . import options
+
+app = typer.Typer(add_completion=False)
 
 logger = logging.getLogger(__name__)
 
@@ -37,37 +43,167 @@ def configure_logging(level: str) -> None:
     error_handler.reset()
 
 
-@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
-@click.version_option(nac_test.__version__)
-@click.option(
-    "-v",
-    "--verbosity",
-    metavar="LVL",
-    is_eager=True,
-    type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
-    help="Either CRITICAL, ERROR, WARNING, INFO or DEBUG",
-    default="WARNING",
-)
-@options.data
-@options.templates
-@options.filters
-@options.tests
-@options.output
-@options.include
-@options.exclude
-@options.render_only
-@options.dry_run
+class VerbosityLevel(str, Enum):
+    debug = "DEBUG"
+    info = "INFO"
+    warning = "WARNING"
+    error = "ERROR"
+    critical = "CRITICAL"
+
+
+def version_callback(value: bool) -> None:
+    if value:
+        print(f"nac-validate, version {nac_test.__version__}")
+        raise typer.Exit()
+
+
+Verbosity = Annotated[
+    VerbosityLevel,
+    typer.Option(
+        "-v",
+        "--verbosity",
+        help="Verbosity level.",
+        envvar="NAC_VALIDATE_VERBOSITY",
+        is_eager=True,
+    ),
+]
+
+
+Data = Annotated[
+    list[Path],
+    typer.Option(
+        "-d",
+        "--data",
+        exists=True,
+        dir_okay=True,
+        file_okay=True,
+        help="Path to data YAML files.",
+        envvar="NAC_TEST_DATA",
+    ),
+]
+
+
+Templates = Annotated[
+    Path,
+    typer.Option(
+        "-t",
+        "--templates",
+        exists=True,
+        dir_okay=True,
+        file_okay=False,
+        help="Path to test templates.",
+        envvar="NAC_TEST_TEMPLATES",
+    ),
+]
+
+
+Filters = Annotated[
+    Path | None,
+    typer.Option(
+        "-f",
+        "--filters",
+        exists=True,
+        dir_okay=True,
+        file_okay=False,
+        help="Path to Jinja filters.",
+        envvar="NAC_TEST_FILTERS",
+    ),
+]
+
+
+Tests = Annotated[
+    Path | None,
+    typer.Option(
+        "--tests",
+        exists=True,
+        dir_okay=True,
+        file_okay=False,
+        help="Path to Jinja tests.",
+        envvar="NAC_TEST_TESTS",
+    ),
+]
+
+
+Output = Annotated[
+    Path,
+    typer.Option(
+        "-o",
+        "--output",
+        exists=False,
+        dir_okay=True,
+        file_okay=False,
+        help="Path to output directory.",
+        envvar="NAC_TEST_OUTPUT",
+    ),
+]
+
+
+Include = Annotated[
+    list[str],
+    typer.Option(
+        "-i",
+        "--include",
+        help="Selects the test cases by tag (include).",
+        envvar="NAC_TEST_INCLUDE",
+    ),
+]
+
+
+Exclude = Annotated[
+    list[str],
+    typer.Option(
+        "-e",
+        "--exclude",
+        help="Selects the test cases by tag (exclude).",
+        envvar="NAC_TEST_EXCLUDE",
+    ),
+]
+
+
+RenderOnly = Annotated[
+    bool,
+    typer.Option(
+        "--render-only",
+        help="Only render tests without executing them.",
+        envvar="NAC_TEST_RENDER_ONLY",
+    ),
+]
+
+
+DryRun = Annotated[
+    bool,
+    typer.Option(
+        "--dry-run",
+        help="Dry run flag. See robot dry run mode.",
+        envvar="NAC_TEST_DRY_RUN",
+    ),
+]
+
+
+Version = Annotated[
+    bool,
+    typer.Option(
+        "--version",
+        callback=version_callback,
+        help="Display version number.",
+        is_eager=True,
+    ),
+]
+
+
+@app.command()
 def main(
-    verbosity: str,
-    data: list[str],
-    templates: str,
-    filters: str,
-    tests: str,
-    output: str,
-    include: list[str],
-    exclude: list[str],
-    render_only: bool,
-    dry_run: bool,
+    data: Data,
+    templates: Templates,
+    output: Output,
+    filters: Filters = None,
+    tests: Tests = None,
+    include: Include = [],
+    exclude: Exclude = [],
+    render_only: RenderOnly = False,
+    dry_run: DryRun = False,
+    verbosity: Verbosity = VerbosityLevel.warning,
+    version: Version = False,
 ) -> None:
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
     configure_logging(verbosity)
@@ -81,6 +217,6 @@ def main(
 
 def exit() -> None:
     if error_handler.fired:
-        sys.exit(1)
+        raise typer.Exit(1)
     else:
-        sys.exit(0)
+        raise typer.Exit(0)

@@ -13,6 +13,7 @@ import sys
 from typing import Any
 
 from jinja2 import ChainableUndefined, Environment, FileSystemLoader  # type: ignore
+from pathlib import Path
 
 from nac_yaml import yaml
 
@@ -22,9 +23,9 @@ logger = logging.getLogger(__name__)
 class RobotWriter:
     def __init__(
         self,
-        data_paths: list[str],
-        filters_path: str,
-        tests_path: str,
+        data_paths: list[Path],
+        filters_path: Path | None,
+        tests_path: Path | None,
         include_tags: list[str] = [],
         exclude_tags: list[str] = [],
     ) -> None:
@@ -36,8 +37,8 @@ class RobotWriter:
         if filters_path:
             logger.info("Loading filters")
             for filename in os.listdir(filters_path):
-                if filename.endswith(".py"):
-                    file_path = os.path.join(filters_path, filename)
+                if Path(filename).suffix == ".py":
+                    file_path = Path(filters_path, filename)
                     spec = importlib.util.spec_from_file_location(
                         "nac_test.filters", file_path
                     )
@@ -51,8 +52,8 @@ class RobotWriter:
         if tests_path:
             logger.info("Loading tests")
             for filename in os.listdir(tests_path):
-                if filename.endswith(".py"):
-                    file_path = os.path.join(tests_path, filename)
+                if Path(filename).suffix == ".py":
+                    file_path = Path(tests_path, filename)
                     spec = importlib.util.spec_from_file_location(
                         "nac_test.tests", file_path
                     )
@@ -64,7 +65,7 @@ class RobotWriter:
                             self.tests[mod.Test.name] = mod.Test
 
     def render_template(
-        self, template_path: str, output_path: str, env: Environment, **kwargs: Any
+        self, template_path: Path, output_path: Path, env: Environment, **kwargs: Any
     ) -> None:
         """Render single robot jinja template"""
         logger.info("Render robot template: %s", template_path)
@@ -74,7 +75,7 @@ class RobotWriter:
         # create output directory if it does not exist yet
         pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 
-        template = env.get_template(template_path)
+        template = env.get_template(str(template_path))
         # hack to convert nested ordereddict to dict, to avoid duplicate dict keys, e.g. 'tag'
         # json roundtrip should be safe as everything should be serializable
         data = json.loads(json.dumps(self.data))
@@ -96,17 +97,17 @@ class RobotWriter:
         with open(output_path, "w") as file:
             file.write(result)
 
-    def _fix_duplicate_path(self, *paths: str) -> str:
+    def _fix_duplicate_path(self, *paths: str) -> Path:
         """Helper function to detect existing paths with non-matching case. Returns a unique path to work with case-insensitve filesystems."""
         directory = os.path.join(*paths[:-1])
         if os.path.exists(directory):
             entries = os.listdir(directory)
             lower_case_entries = [path.lower() for path in entries]
             if paths[-1].lower() in lower_case_entries and paths[-1] not in entries:
-                return os.path.join(*paths[:-1], "_" + paths[-1])
-        return os.path.join(*paths)
+                return Path(*paths[:-1], "_" + paths[-1])
+        return Path(os.path.join(*paths))
 
-    def write(self, templates_path: str, output_path: str) -> None:
+    def write(self, templates_path: Path, output_path: Path) -> None:
         """Render Robot test suites."""
         env = Environment(
             loader=FileSystemLoader(templates_path),
@@ -121,35 +122,27 @@ class RobotWriter:
 
         for dir, _, files in os.walk(templates_path):
             for filename in files:
-                if (
-                    ".robot" not in filename
-                    and ".j2" not in filename
-                    and ".resource" not in filename
-                ):
+                if Path(filename).suffix not in [".robot", ".resource", ".j2"]:
                     logger.info(
                         "Skip file with unknown file extension (not one of .robot, .resource or .j2): %s",
-                        os.path.join(dir, filename),
+                        Path(dir, filename),
                     )
-                    out = os.path.join(
-                        output_path, os.path.relpath(dir, templates_path)
-                    )
+                    out = Path(output_path, os.path.relpath(dir, templates_path))
                     pathlib.Path(out).mkdir(parents=True, exist_ok=True)
-                    shutil.copy(os.path.join(dir, filename), out)
+                    shutil.copy(Path(dir, filename), out)
                     continue
                 rel = os.path.relpath(dir, templates_path)
-                t_path = os.path.join(rel, filename)
+                t_path = Path(rel, filename)
 
                 # search for directives
                 pattern = re.compile("{#(.+?)#}")
                 content = ""
                 next_template = False
                 try:
-                    with open(os.path.join(dir, filename), "r") as file:
+                    with open(Path(dir, filename), "r") as file:
                         content = file.read()
                 except:  # noqa: E722
-                    logger.warning(
-                        "Could not open/read file: %s", os.path.join(dir, filename)
-                    )
+                    logger.warning("Could not open/read file: %s", Path(dir, filename))
                     continue
                 for match in re.finditer(pattern, content):
                     params = match.group().split(" ")
@@ -179,20 +172,20 @@ class RobotWriter:
                                 extra = {params[4]: value}
                             if params[1] == "iterate_list":
                                 o_dir = self._fix_duplicate_path(
-                                    output_path, rel, value
+                                    str(output_path), rel, value
                                 )
-                                o_path = os.path.join(o_dir, filename)
+                                o_path = Path(o_dir, filename)
                             else:
                                 foldername = os.path.splitext(filename)[0]
                                 new_filename = (
                                     value + "." + os.path.splitext(filename)[1][1:]
                                 )
                                 o_path = self._fix_duplicate_path(
-                                    output_path, rel, foldername, new_filename
+                                    str(output_path), rel, foldername, new_filename
                                 )
-                            self.render_template(t_path, o_path, env, **extra)
+                            self.render_template(t_path, Path(o_path), env, **extra)
                 if next_template:
                     continue
 
-                o_path = os.path.join(output_path, rel, filename)
+                o_path = Path(output_path, rel, filename)
                 self.render_template(t_path, o_path, env)

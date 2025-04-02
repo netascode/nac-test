@@ -2,11 +2,13 @@
 
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
+from pathlib import Path
+
 import pabot.pabot
 
 
 def run_pabot(
-    path: str, include: list[str] = [], exclude: list[str] = [], dry_run: bool = False
+    path: Path, include: list[str] = [], exclude: list[str] = [], dry_run: bool = False
 ) -> None:
     """Run pabot"""
     args = ["--pabotlib"]
@@ -17,6 +19,14 @@ def run_pabot(
     for e in exclude:
         args.extend(["--exclude", e])
     args.extend(
-        ["-d", path, "--skiponfailure", "non-critical", "-x", "xunit.xml", path]
+        [
+            "-d",
+            str(path),
+            "--skiponfailure",
+            "non-critical",
+            "-x",
+            "xunit.xml",
+            str(path),
+        ]
     )
     pabot.pabot.main(args)

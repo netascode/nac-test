@@ -5,4 +5,4 @@
 import nac_test.cli.main
 
 if __name__ == "__main__":
-    nac_test.cli.main.main()
+    nac_test.cli.main.app()
