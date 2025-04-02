@@ -53,7 +53,7 @@ class VerbosityLevel(str, Enum):
 
 def version_callback(value: bool) -> None:
     if value:
-        print(f"nac-validate, version {nac_test.__version__}")
+        print(f"nac-test, version {nac_test.__version__}")
         raise typer.Exit()
 
 
