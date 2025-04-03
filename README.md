@@ -1,14 +1,14 @@
 [![Tests](https://github.com/netascode/nac-test/actions/workflows/test.yml/badge.svg)](https://github.com/netascode/nac-test/actions/workflows/test.yml)
 ![Python Support](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-informational "Python Support: 3.10, 3.11, 3.12, 3.13")
 
-# nac-test
+# iac-test
 
 A CLI tool to render and execute [Robot Framework](https://robotframework.org/) tests using [Jinja](https://jinja.palletsprojects.com/) templating. Combining Robot's language agnostic syntax with the flexibility of Jinja templating allows dynamically rendering a set of test suites from the desired infrastructure state expressed in YAML syntax.
 
 ```shell
-$ nac-test -h
+$ iac-test -h
 
- Usage: nac-test [OPTIONS]                                                                                                                                    
+ Usage: iac-test [OPTIONS]                                                                                                                                    
                                                                                                                                                               
  A CLI tool to render and execute Robot Framework tests using Jinja templating.                                                                               
                                                                                                                                                               
@@ -34,15 +34,15 @@ After all templates have been rendered [Pabot](https://pabot.org/) will execute 
 
 ## Installation
 
-Python 3.10+ is required to install `nac-test`. Don't have Python 3.10 or later? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/).
+Python 3.10+ is required to install `iac-test`. Don't have Python 3.10 or later? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/).
 
-`nac-test` can be installed in a virtual environment using `pip`:
+`iac-test` can be installed in a virtual environment using `pip`:
 
 ```shell
-pip install nac-test
+pip install iac-test
 ```
 
-The following Robot libraries are installed with `nac-test`:
+The following Robot libraries are installed with `iac-test`:
 
 - [RESTinstance](https://github.com/asyrjasalo/RESTinstance)
 - [Requests](https://github.com/MarketSquare/robotframework-requests)
@@ -100,10 +100,10 @@ Test {{ child.name }}
 {% endfor %}
 ```
 
-After running `nac-test` with the following parameters:
+After running `iac-test` with the following parameters:
 
 ```shell
-nac-test --data ./data --templates ./templates --output ./tests
+iac-test --data ./data --templates ./templates --output ./tests
 ```
 
 The following rendered Robot test suite can be found in the `./tests` folder:
@@ -168,7 +168,7 @@ Special rendering directives exist to render a single test suite per (YAML) list
 {# iterate_list <YAML_PATH_TO_LIST> <LIST_ITEM_ID> <JINJA_VARIABLE_NAME> #}
 ```
 
-After running `nac-test` with the data from the previous [example](#example) and the following template:
+After running `iac-test` with the data from the previous [example](#example) and the following template:
 
 ```
 {# iterate_list root.children name child_name #}
