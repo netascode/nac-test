@@ -8,10 +8,16 @@ import pabot.pabot
 
 
 def run_pabot(
-    path: Path, include: list[str] = [], exclude: list[str] = [], dry_run: bool = False
+    path: Path,
+    include: list[str] = [],
+    exclude: list[str] = [],
+    dry_run: bool = False,
+    verbose: bool = False,
 ) -> None:
     """Run pabot"""
     args = ["--pabotlib", "--pabotlibport", "0"]
+    if verbose:
+        args.append("--verbose")
     if dry_run:
         args.append("--dryrun")
     for i in include:

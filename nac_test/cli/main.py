@@ -211,7 +211,9 @@ def main(
     writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
     writer.write(templates, output)
     if not render_only:
-        nac_test.pabot.run_pabot(output, include, exclude, dry_run)
+        nac_test.pabot.run_pabot(
+            output, include, exclude, dry_run, verbosity == VerbosityLevel.debug
+        )
     exit()
 
 

@@ -5,6 +5,7 @@
 - BREAKING CHANGE: Update YAML merge logic to merge list items with matching attributes and primitive values, even if both have additional attributes the other does not have
 - BREAKING CHANGE: Do not deduplicate items in a list of primitive values, for example a list of strings
 - BREAKING CHANGE: Deduplicate items in a list of dictionaries consistently, regardless of whether they are in the same file or not
+- Randomize pabot port to avoid conflicts with multiple instances of `nac-test` running in parallel
 
 # 0.2.6
 
