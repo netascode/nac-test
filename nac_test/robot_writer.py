@@ -12,12 +12,18 @@ import shutil
 import sys
 from typing import Any
 
-from jinja2 import ChainableUndefined, Environment, FileSystemLoader  # type: ignore
+from jinja2 import Undefined, ChainableUndefined, Environment, FileSystemLoader  # type: ignore
 from pathlib import Path
 
 from nac_yaml import yaml
 
 logger = logging.getLogger(__name__)
+
+
+class StrictChainableUndefined(ChainableUndefined):
+    __iter__ = __str__ = __len__ = Undefined._fail_with_undefined_error  # type: ignore
+    __eq__ = __ne__ = __bool__ = __hash__ = Undefined._fail_with_undefined_error  # type: ignore
+    __contains__ = Undefined._fail_with_undefined_error  # type: ignore
 
 
 class RobotWriter:
@@ -111,7 +117,7 @@ class RobotWriter:
         """Render Robot test suites."""
         env = Environment(
             loader=FileSystemLoader(templates_path),
-            undefined=ChainableUndefined,
+            undefined=StrictChainableUndefined,
             lstrip_blocks=True,
             trim_blocks=True,
         )

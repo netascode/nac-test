@@ -5,6 +5,7 @@
 - BREAKING CHANGE: Do not deduplicate items in a list of primitive values, for example a list of strings
 - BREAKING CHANGE: Deduplicate items in a list of dictionaries consistently, regardless of whether they are in the same file or not
 - Randomize pabot port to avoid conflicts with multiple instances of `nac-test` running in parallel
+- Be more strict about undefined variables in Jinja templates
 
 # 0.2.6
 

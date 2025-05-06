@@ -108,6 +108,34 @@ def test_nac_test_render(tmpdir: str) -> None:
         ],
     )
     assert result.exit_code == 0
+    templates_path = "tests/integration/fixtures/templates_missing/"
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            tmpdir,
+            "--render-only",
+        ],
+    )
+    assert result.exit_code == 1
+    templates_path = "tests/integration/fixtures/templates_missing_default/"
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            tmpdir,
+            "--render-only",
+        ],
+    )
+    assert result.exit_code == 0
 
 
 def test_nac_test_list(tmpdir: str) -> None:
