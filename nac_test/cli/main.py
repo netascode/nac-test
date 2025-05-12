@@ -44,11 +44,11 @@ def configure_logging(level: str) -> None:
 
 
 class VerbosityLevel(str, Enum):
-    debug = "DEBUG"
-    info = "INFO"
-    warning = "WARNING"
-    error = "ERROR"
-    critical = "CRITICAL"
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
 
 
 def version_callback(value: bool) -> None:
@@ -202,7 +202,7 @@ def main(
     exclude: Exclude = [],
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
-    verbosity: Verbosity = VerbosityLevel.warning,
+    verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,
 ) -> None:
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
@@ -212,7 +212,7 @@ def main(
     writer.write(templates, output)
     if not render_only:
         nac_test.pabot.run_pabot(
-            output, include, exclude, dry_run, verbosity == VerbosityLevel.debug
+            output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
         )
     exit()
 
