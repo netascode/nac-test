@@ -8,7 +8,7 @@ maintainers = ["Daniel Schmidt <danischm@cisco.com>"]
 name = "nac-test"
 readme = "README.md"
 repository = "https://github.com/netascode/nac-test"
-version = "0.3.0a2"
+version = "1.0.0"
 
 [tool.poetry.scripts]
 iac-test = "nac_test.cli.main:app"
