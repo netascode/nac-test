@@ -163,6 +163,7 @@ Exclude = Annotated[
 MergedDataFilename = Annotated[
     str,
     typer.Option(
+        "-m",
         "--merged-data-filename",
         help="Filename for the merged data model YAML file.",
     ),
