@@ -195,3 +195,21 @@ class RobotWriter:
 
                 o_path = Path(output_path, rel, filename)
                 self.render_template(t_path, o_path, env)
+
+    def write_merged_data_model(
+        self,
+        output_directory: Path,
+        filename: str = "merged_data_model_test_variables.yaml",
+    ) -> None:
+        """Writes the merged data model to a specified YAML file.
+
+        This method takes the internal, merged data dictionary (`self.data`)
+        and writes it to a YAML file in the specified output directory.
+
+        Args:
+            output_directory: The directory where the YAML file will be saved.
+            filename: The name of the output YAML file.
+        """
+        full_output_path = output_directory / filename
+        logger.info("Writing merged data model to %s", full_output_path)
+        yaml.write_yaml_file(self.data, full_output_path)

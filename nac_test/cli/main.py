@@ -160,6 +160,15 @@ Exclude = Annotated[
 ]
 
 
+MergedDataFilename = Annotated[
+    str,
+    typer.Option(
+        "--merged-data-filename",
+        help="Filename for the merged data model YAML file.",
+    ),
+]
+
+
 RenderOnly = Annotated[
     bool,
     typer.Option(
@@ -204,12 +213,14 @@ def main(
     dry_run: DryRun = False,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,
+    merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
     configure_logging(verbosity)
 
     writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
     writer.write(templates, output)
+    writer.write_merged_data_model(output, merged_data_filename)
     if not render_only:
         nac_test.pabot.run_pabot(
             output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
