@@ -16,6 +16,7 @@ from jinja2 import Undefined, ChainableUndefined, Environment, FileSystemLoader 
 from pathlib import Path
 
 from nac_yaml import yaml
+from nac_test.data_merger import DataMerger
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +36,7 @@ class RobotWriter:
         include_tags: list[str] = [],
         exclude_tags: list[str] = [],
     ) -> None:
-        logger.info("Loading yaml files from %s", data_paths)
-        self.data = yaml.load_yaml_files(data_paths)
+        self.data = DataMerger.merge_data_files(data_paths)
         self.filters: dict[str, Any] = {}
         self.include_tags = include_tags
         self.exclude_tags = exclude_tags
@@ -210,6 +210,4 @@ class RobotWriter:
             output_directory: The directory where the YAML file will be saved.
             filename: The name of the output YAML file.
         """
-        full_output_path = output_directory / filename
-        logger.info("Writing merged data model to %s", full_output_path)
-        yaml.write_yaml_file(self.data, full_output_path)
+        DataMerger.write_merged_data_model(self.data, output_directory, filename)
