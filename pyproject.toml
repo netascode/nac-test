@@ -27,6 +27,14 @@ robotframework-pabot = "~=4.1"
 robotframework-requests = "~=0.9"
 ruamel-yaml = "~=0.16"
 typer = "~=0.15"
+# --- pyATS & Genie Ecosystem ---
+pyats = "~=25.5"
+"pyats[library]" = "~=25.5"
+psutil = "~=7.0.0"
+genie = "~=25.5"
+"unicon[robot]" = "~=25.5"
+aiohttp = "~=3.10"
+httpx = "~=0.27"
 
 [tool.poetry.group.dev.dependencies]
 ansible-core = "~=2.17"
