@@ -4,6 +4,8 @@
 
 import logging
 import sys
+import time #  -- ANDREA REMOVE AFTER MVP
+from datetime import datetime #  -- ANDREA REMOVE AFTER MVP
 
 import errorhandler
 
@@ -15,6 +17,7 @@ from pathlib import Path
 
 import nac_test.pabot
 import nac_test.robot_writer
+from nac_test.pyats.orchestrator import PyATSOrchestrator
 
 
 app = typer.Typer(add_completion=False)
@@ -190,6 +193,16 @@ DryRun = Annotated[
 ]
 
 
+PyATS = Annotated[
+    bool,
+    typer.Option(
+        "--pyats",
+        help="Run PyATS tests instead of Robot Framework tests (MVP feature).",
+        envvar="NAC_TEST_PYATS",
+    ),
+]
+
+
 Version = Annotated[
     bool,
     typer.Option(
@@ -212,6 +225,7 @@ def main(
     exclude: Exclude = [],
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
+    pyats: PyATS = False,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
@@ -219,13 +233,32 @@ def main(
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
     configure_logging(verbosity)
 
-    writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
-    writer.write(templates, output)
-    writer.write_merged_data_model(output, merged_data_filename)
-    if not render_only:
-        nac_test.pabot.run_pabot(
-            output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
-        )
+    if pyats:
+        # PyATS execution path
+        orchestrator = PyATSOrchestrator(data, templates, output, merged_data_filename)
+        orchestrator.run_tests()
+    else:
+        # Robot Framework execution path
+        writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
+        
+        # Start timing the rendering process -- ANDREA REMOVE AFTER MVP
+        print(f"Starting template rendering at {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
+        render_start_time = time.time()
+        #  -- ANDREA REMOVE AFTER MVP
+
+        writer.write(templates, output)
+        writer.write_merged_data_model(output, merged_data_filename)
+        
+        # End timing the rendering process -- ANDREA REMOVE AFTER MVP
+        render_end_time = time.time()
+        render_duration = render_end_time - render_start_time
+        print(f"Template rendering completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
+        print(f"Total rendering time: {render_duration:.3f} seconds")
+        #  -- ANDREA REMOVE AFTER MVP
+        if not render_only:
+            nac_test.pabot.run_pabot(
+                output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
+            )
     exit()
 
 
