@@ -8,7 +8,6 @@ import yaml
 import logging
 from pathlib import Path
 from typing import Any, Dict, TypeVar, Callable, Awaitable
-from abc import ABC, abstractmethod
 
 from nac_test.pyats.common.connection_pool import ConnectionPool
 from nac_test.pyats.common.retry_strategy import SmartRetry
@@ -16,7 +15,7 @@ from nac_test.pyats.common.retry_strategy import SmartRetry
 T = TypeVar("T")
 
 
-class NACTestBase(aetest.Testcase, ABC):
+class NACTestBase(aetest.Testcase):
     """Generic base class with common functionality for all architectures"""
 
     @aetest.setup
@@ -68,11 +67,12 @@ class NACTestBase(aetest.Testcase, ABC):
         """
         return await SmartRetry.execute(func, *args, **kwargs)
 
-    @abstractmethod
     def get_connection_params(self) -> Dict[str, Any]:
         """Get connection parameters for the specific architecture.
 
         Must be implemented by subclasses to return architecture-specific
         connection details.
         """
-        pass
+        raise NotImplementedError(
+            "Subclasses must implement get_connection_params() method"
+        )

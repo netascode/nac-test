@@ -232,6 +232,9 @@ class PyATSOrchestrator:
             env["PYATS_LOG_LEVEL"] = "ERROR"
             env["HTTPX_LOG_LEVEL"] = "ERROR"
 
+            # Set the DATA_FILE environment variable to point to the merged data model
+            env["DATA_FILE"] = str(self.output_dir / self.merged_data_filename)
+
             # Add the test directory to PYTHONPATH so imports work
             # This allows "from pyats_common.<architecture>_base_test import <ARCHITECTURE>TestBase" to work
             test_parent_dir = str(self.test_dir)
