@@ -24,14 +24,11 @@ class NACTestBase(aetest.Testcase):
         # Configure test-specific logger
         self.logger = logging.getLogger(self.__class__.__module__)
 
-        # Only show test logs in debug mode
-        if not os.environ.get("PYATS_DEBUG"):
-            self.logger.setLevel(logging.ERROR)
-
         # Load merged data model created by nac-test
         self.data_model = self.load_data_model()
 
         # Get controller details from environment
+        # Note: Environment validation happens in orchestrator pre-flight check
         self.controller_type = os.environ.get("CONTROLLER_TYPE", "ACI")
         self.controller_url = os.environ[f"{self.controller_type}_URL"]
         self.username = os.environ[f"{self.controller_type}_USERNAME"]

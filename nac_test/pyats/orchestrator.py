@@ -81,6 +81,37 @@ class PyATSOrchestrator:
         # Allow override via environment variable
         return int(os.environ.get("PYATS_MAX_WORKERS", actual_workers))
 
+    def validate_environment(self) -> None:
+        """Pre-flight check: Validate required environment variables before running tests.
+        
+        This ensures we fail fast with clear error messages rather than starting
+        PyATS only to have all tests fail due to missing configuration.
+        
+        Raises:
+            SystemExit: If required environment variables are missing
+        """
+        # Get controller type (defaults to ACI in the MVP)
+        controller_type = os.environ.get("CONTROLLER_TYPE", "ACI")
+        
+        # Define required environment variables based on controller type
+        required_vars = [
+            f"{controller_type}_URL",
+            f"{controller_type}_USERNAME",
+            f"{controller_type}_PASSWORD"
+        ]
+        
+        # Check for missing variables
+        missing = [var for var in required_vars if not os.environ.get(var)]
+        
+        if missing:
+            # Get formatted error message for terminal display
+            error_msg = terminal.format_env_var_error(missing, controller_type)
+            
+            # Print the colored error message
+            print(error_msg)
+            
+            # Exit with error code (don't start PyATS)
+            sys.exit(1)
     def discover_pyats_tests(self) -> List[Path]:
         """Find all .py test files when --pyats flag is set
 
@@ -156,6 +187,9 @@ class PyATSOrchestrator:
 
     def run_tests(self) -> None:
         """Main entry point from nac-test CLI with real-time progress reporting"""
+        # Pre-flight check: Validate environment variables BEFORE doing anything else
+        self.validate_environment()
+        
         # Ensure output directory exists
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
