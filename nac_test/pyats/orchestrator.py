@@ -6,6 +6,7 @@ import multiprocessing as mp
 from pathlib import Path
 import psutil
 import os
+import sys
 from typing import List, Dict, Any, Optional
 import logging
 import subprocess
@@ -27,6 +28,7 @@ from .constants import (
 )
 from .progress_reporter import ProgressReporter
 from nac_test.data_merger import DataMerger
+from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +114,7 @@ class PyATSOrchestrator:
             
             # Exit with error code (don't start PyATS)
             sys.exit(1)
+
     def discover_pyats_tests(self) -> List[Path]:
         """Find all .py test files when --pyats flag is set
 
@@ -262,7 +265,7 @@ class PyATSOrchestrator:
             # Set up environment to suppress warnings and set PYTHONPATH
             env = os.environ.copy()
             env["PYTHONWARNINGS"] = "ignore::UserWarning"
-            # Suppress verbose logs
+            # Suppress verbose logs for console output
             env["PYATS_LOG_LEVEL"] = "ERROR"
             env["HTTPX_LOG_LEVEL"] = "ERROR"
 
@@ -431,12 +434,33 @@ class PyATSOrchestrator:
 
             # After progress reporter shows the line, add title display
             title = test_info.get("title", event["test_name"])
-            status_text = event["result"].upper()
+            
+            # Format status for display - distinguish between FAILED and ERRORED
+            result_status = event["result"].lower()
+            if result_status == "errored":
+                status_text = "ERROR"
+            else:
+                status_text = result_status.upper()
 
-            # Display title line like Robot Framework
-            print("-" * 78)
-            print(f"{title:<70} | {status_text} |")
-            print("-" * 78)
+            # Display title line like Robot Framework with colors
+            separator = "-" * 78
+            
+            # Color based on status
+            if result_status == "passed":
+                # Green for passed
+                print(terminal.success(separator))
+                print(terminal.success(f"{title:<70} | {status_text} |"))
+                print(terminal.success(separator))
+            elif result_status in ["failed", "errored"]:
+                # Red for failed/errored
+                print(terminal.error(separator))
+                print(terminal.error(f"{title:<70} | {status_text} |"))
+                print(terminal.error(separator))
+            else:
+                # Default (white) for other statuses
+                print(separator)
+                print(f"{title:<70} | {status_text} |")
+                print(separator)
 
         elif event_type == "section_start" and os.environ.get("PYATS_DEBUG"):
             # In debug mode, show section progress
@@ -451,11 +475,11 @@ class PyATSOrchestrator:
         if os.environ.get("PYATS_DEBUG"):
             return True
 
-        # Always suppress these patterns
+        # Always suppress these patterns for clean console output
         suppress_patterns = [
             r"%HTTPX-INFO:",
             r"%AETEST-INFO:",
-            r"%AETEST-ERROR:",  # Suppress error details unless debugging
+            r"%AETEST-ERROR:",  # We'll show our own error summary
             r"%EASYPY-INFO:",
             r"%WARNINGS-WARNING:",
             r"%GENIE-INFO:",
@@ -464,16 +488,19 @@ class PyATSOrchestrator:
             r"^\s*$",  # Empty lines
             r"^\+[-=]+\+$",  # PyATS table borders
             r"^\|.*\|$",  # PyATS table content
+            r"^[-=]+$",  # Separator lines
+            r"Starting section",  # Section start messages
+            r"Starting testcase",  # Test start messages
         ]
 
         for pattern in suppress_patterns:
             if re.search(pattern, line):
                 return False
 
-        # Only show critical errors in production mode
+        # Show critical information
         show_patterns = [
             r"ERROR",
-            r"FAILED",
+            r"FAILED", 
             r"CRITICAL",
             r"Traceback",
             r"Exception.*Error",
@@ -481,7 +508,9 @@ class PyATSOrchestrator:
 
         for pattern in show_patterns:
             if re.search(pattern, line, re.IGNORECASE):
-                return True
+                # But still suppress if it's part of PyATS formatting
+                if not any(re.search(p, line) for p in [r"^\|", r"^\+"]):
+                    return True
 
         return False
 
@@ -582,9 +611,16 @@ class PyATSOrchestrator:
         failed_total = failed + errored
 
         print("\n" + "=" * 80)
-        print(
-            f"{total} tests, {passed} passed, {failed_total} failed, {skipped} skipped."
-        )
+        if errored > 0:
+            # If we have errored tests, show them separately
+            print(
+                f"{total} tests, {passed} passed, {failed} failed, {errored} errored, {skipped} skipped."
+            )
+        else:
+            # Otherwise show combined failed count
+            print(
+                f"{total} tests, {passed} passed, {failed_total} failed, {skipped} skipped."
+            )
         print("=" * 80)
 
         # Extract and find PyATS output files
@@ -595,26 +631,27 @@ class PyATSOrchestrator:
             summary_xml = extract_dir / "ResultsSummary.xml"
             report_files = list(extract_dir.glob("*.report"))
 
-            print("PyATS Output Files:")
-            print("=" * 80)
+            print(terminal.info("PyATS Output Files:"))
+            print(terminal.info("=" * 80))
 
             if results_json.exists():
-                print(f"Results JSON:    {results_json}")
+                print(f"{terminal.info('Results JSON:')}    {results_json}")
             if results_xml.exists():
-                print(f"Results XML:     {results_xml}")
+                print(f"{terminal.info('Results XML:')}     {results_xml}")
             if summary_xml.exists():
-                print(f"Summary XML:     {summary_xml}")
+                print(f"{terminal.info('Summary XML:')}     {summary_xml}")
             if report_files:
-                print(f"Report:          {report_files[0]}")
+                print(f"{terminal.info('Report:')}          {report_files[0]}")
 
             # Also show the original archive location
             if hasattr(self, "archive_name"):
                 archive_path = self.output_dir / self.archive_name
                 if archive_path.exists():
-                    print(f"Archive:         {archive_path}")
+                    print(f"{terminal.info('Archive:')}         {archive_path}")
 
-        print(f"\nTotal testing: {self._format_duration(total_test_time)}")
-        print(f"Elapsed time:  {self._format_duration(wall_time)}")
+        # Color the timing information
+        print(f"\n{terminal.highlight('Total testing:')} {self._format_duration(total_test_time)}")
+        print(f"{terminal.highlight('Elapsed time:')}  {self._format_duration(wall_time)}")
 
     def _format_duration(self, seconds: float) -> str:
         """Format duration like Robot does"""

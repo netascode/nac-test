@@ -7,9 +7,7 @@ import time
 from datetime import datetime
 import logging
 from typing import Dict, Any
-from colorama import Fore, Style, init
-
-init()  # Initialize colorama for cross-platform color support
+from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +30,12 @@ class ProgressReporter:
         """Report that a test has started executing"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
-        # Use colorama for cross-platform color support
-        status_color = Fore.YELLOW
+        # Use terminal utilities for consistent coloring
+        status_text = terminal.warning("EXECUTING")
 
         print(
             f"{timestamp} [PID:{pid}] [{worker_id}] [ID:{test_id}] "
-            f"{status_color}EXECUTING{Style.RESET_ALL} {test_name}"
+            f"{status_text} {test_name}"
         )
 
         # Track test start in test_status
@@ -64,20 +62,29 @@ class ProgressReporter:
         if test_name in self.test_status:
             self.test_status[test_name].update({"status": status, "duration": duration})
 
-        # Color based on status using colorama for cross-platform support
-        # Aligning similarly to Robot Framework output
-        if status == "PASSED":
-            status_color = Fore.GREEN
-        elif status == "FAILED":
-            status_color = Fore.RED
-        elif status == "SKIPPED":
-            status_color = Fore.YELLOW
+        # Color based on status using terminal utilities
+        # PyATS statuses: 'passed', 'failed', 'skipped', 'errored', 'aborted', 'blocked'
+        if status == "PASSED" or status == "passed":
+            status_text = terminal.success(status.upper())
+        elif status == "FAILED" or status == "failed":
+            # FAILED = test assertions failed (show in red, but not as "ERROR")
+            status_text = terminal.error(status.upper())
+        elif status == "ERRORED" or status == "errored":
+            # ERRORED = exception/setup issue (show as "ERROR" in red)
+            status_text = terminal.error("ERROR")
+        elif status == "SKIPPED" or status == "skipped":
+            status_text = terminal.warning(status.upper())
+        elif status == "ABORTED" or status == "aborted":
+            status_text = terminal.error("ABORTED")
+        elif status == "BLOCKED" or status == "blocked":
+            status_text = terminal.warning("BLOCKED")
         else:
-            status_color = Fore.WHITE
+            # Unknown status - show as-is
+            status_text = status.upper()
 
         print(
             f"{timestamp} [PID:{pid}] [{worker_id}] [ID:{test_id}] "
-            f"{status_color}{status}{Style.RESET_ALL} {test_name} in {duration:.1f} seconds"
+            f"{status_text} {test_name} in {duration:.1f} seconds"
         )
 
     def get_next_test_id(self) -> int:
