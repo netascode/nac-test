@@ -6,7 +6,7 @@ import asyncio
 import random
 import httpx
 import logging
-from typing import Any, Callable, TypeVar, Optional, Awaitable
+from typing import Callable, TypeVar, Optional, Awaitable, Any
 
 from nac_test.pyats.constants import (
     RETRY_MAX_ATTEMPTS,
@@ -33,13 +33,15 @@ class SmartRetry:
 
     HTTP_RETRY_CODES = {429, 502, 503, 504}
 
-    @classmethod
+    @staticmethod
     async def execute(
-        cls,
         func: Callable[..., Awaitable[T]],
-        *args,
-        max_attempts: Optional[int] = None,
-        **kwargs,
+        *args: Any,
+        max_attempts: int = RETRY_MAX_ATTEMPTS,
+        initial_delay: float = RETRY_INITIAL_DELAY,
+        max_delay: float = RETRY_MAX_DELAY,
+        backoff_factor: float = RETRY_EXPONENTIAL_BASE,
+        **kwargs: Any,
     ) -> T:
         """Execute function with smart retry logic
 
@@ -47,6 +49,9 @@ class SmartRetry:
             func: Async function to execute
             *args: Positional arguments for func
             max_attempts: Override default max attempts
+            initial_delay: Override default initial delay
+            max_delay: Override default max delay
+            backoff_factor: Override default backoff factor
             **kwargs: Keyword arguments for func
 
         Returns:
@@ -55,9 +60,6 @@ class SmartRetry:
         Raises:
             Last exception encountered after all retries exhausted
         """
-        if max_attempts is None:
-            max_attempts = RETRY_MAX_ATTEMPTS
-
         last_exception: Optional[Exception] = None
 
         for attempt in range(max_attempts):
@@ -65,7 +67,7 @@ class SmartRetry:
                 return await func(*args, **kwargs)
 
             except httpx.HTTPStatusError as e:
-                if e.response.status_code not in cls.HTTP_RETRY_CODES:
+                if e.response.status_code not in SmartRetry.HTTP_RETRY_CODES:
                     raise  # Don't retry client errors (4xx except 429)
                 last_exception = e
 
@@ -82,8 +84,8 @@ class SmartRetry:
             if attempt < max_attempts - 1:
                 # Exponential backoff with jitter
                 delay = min(
-                    RETRY_INITIAL_DELAY * (RETRY_EXPONENTIAL_BASE**attempt),
-                    RETRY_MAX_DELAY,
+                    initial_delay * (backoff_factor**attempt),
+                    max_delay,
                 )
 
                 # Add jitter to prevent thundering herd

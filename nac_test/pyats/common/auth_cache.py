@@ -54,8 +54,8 @@ class AuthCache:
                     with open(token_file, "r") as f:
                         data = json.load(f)
                         if time.time() < data["expires_at"]:
-                            return data["token"]
-                except:
+                            return str(data["token"])
+                except (json.JSONDecodeError, KeyError, TypeError):
                     pass  # Invalid file, will recreate
 
             # Get new token using architecture-specific function

@@ -6,7 +6,7 @@ import multiprocessing as mp
 from pathlib import Path
 import psutil
 import os
-from typing import List
+from typing import List, Dict, Any, Optional
 import logging
 import subprocess
 import tempfile
@@ -19,7 +19,12 @@ import zipfile
 import shutil
 from datetime import datetime
 
-from .constants import *
+from .constants import (
+    DEFAULT_CPU_MULTIPLIER,
+    MEMORY_PER_WORKER_GB,
+    MAX_WORKERS_HARD_LIMIT,
+    DEFAULT_TEST_TIMEOUT,
+)
 from .progress_reporter import ProgressReporter
 from nac_test.data_merger import DataMerger
 
@@ -261,10 +266,10 @@ class PyATSOrchestrator:
             os.unlink(plugin_config_file)
 
     def _run_with_progress(
-        self, cmd: List[str], test_files: List[Path], env: dict
+        self, cmd: List[str], test_files: List[Path], env: Dict[str, str]
     ) -> int:
         """Run PyATS command with real-time progress reporting"""
-        self.test_status = {}
+        self.test_status: Dict[str, Dict[str, Any]] = {}
         self.start_time = datetime.now()
 
         # Initialize progress reporter's test_status reference
@@ -282,9 +287,9 @@ class PyATSOrchestrator:
         )
 
         # Process output in real-time
-        output_queue = queue.Queue()
+        output_queue: queue.Queue[str] = queue.Queue()
 
-        def read_output():
+        def read_output() -> None:
             if process.stdout:
                 line_count = 0  # Initialize line_count
                 for line in iter(process.stdout.readline, ""):
@@ -341,7 +346,7 @@ class PyATSOrchestrator:
             if self._should_show_line(line):
                 print(line)
 
-    def _handle_progress_event(self, event: dict) -> None:
+    def _handle_progress_event(self, event: Dict[str, Any]) -> None:
         """Handle structured progress event from plugin"""
         event_type = event.get("event")
 
@@ -443,9 +448,9 @@ class PyATSOrchestrator:
 
         return False
 
-    def _find_pyats_output_files(self):
+    def _find_pyats_output_files(self) -> Dict[str, Any]:
         """Find PyATS generated output files in archive directory"""
-        output_files = {}
+        output_files: Dict[str, Any] = {}
 
         # Look for our controlled archive name
         if hasattr(self, "archive_name"):
@@ -483,7 +488,7 @@ class PyATSOrchestrator:
 
         return output_files
 
-    def _extract_pyats_results(self):
+    def _extract_pyats_results(self) -> Optional[Path]:
         """Extract PyATS results from zip archive to a permanent location"""
         # Look for our controlled archive name
         if not hasattr(self, "archive_name"):

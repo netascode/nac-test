@@ -24,7 +24,9 @@ class DataMerger:
             Merged dictionary containing all data from the YAML files
         """
         logger.info("Loading yaml files from %s", data_paths)
-        return yaml.load_yaml_files(data_paths)
+        data = yaml.load_yaml_files(data_paths)
+        # Ensure we always return a dict, even if yaml returns None
+        return data if isinstance(data, dict) else {}
 
     @staticmethod
     def write_merged_data_model(
@@ -42,3 +44,17 @@ class DataMerger:
         full_output_path = output_directory / filename
         logger.info("Writing merged data model to %s", full_output_path)
         yaml.write_yaml_file(data, full_output_path)
+
+    @staticmethod
+    def load_yaml_file(file_path: Path) -> Dict[str, Any]:
+        """Load a single YAML file from the provided path.
+
+        Args:
+            file_path: Path to the YAML file to load
+
+        Returns:
+            Loaded dictionary from the YAML file
+        """
+        logger.info("Loading yaml file from %s", file_path)
+        data = yaml.load_yaml_files([file_path])
+        return data if data is not None else {}

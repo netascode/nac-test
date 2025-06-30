@@ -16,14 +16,14 @@ class ConnectionPool:
     _instance = None
     _lock = threading.Lock()
 
-    def __new__(cls):
+    def __new__(cls) -> "ConnectionPool":
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         if not hasattr(self, "limits"):
             self.limits = httpx.Limits(
                 max_connections=200, max_keepalive_connections=50, keepalive_expiry=300

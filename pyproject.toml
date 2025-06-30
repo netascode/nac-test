@@ -29,18 +29,20 @@ ruamel-yaml = "~=0.16"
 typer = "~=0.15"
 # --- pyATS & Genie Ecosystem ---
 pyats = "~=25.5"
-"pyats[library]" = "~=25.5"
 psutil = "~=7.0.0"
 genie = "~=25.5"
-"unicon[robot]" = "~=25.5"
-aiohttp = "~=3.10"
-httpx = "~=0.27"
+httpx = "~=0.28"
+colorama = "~=0.4.6"
 
 [tool.poetry.group.dev.dependencies]
 ansible-core = "~=2.17"
 pytest = "~=8.2"
-pytest-cov = "~=6.0"
+pytest-cov = "~=4.1" # Genie dependency which is used by d2d/ssh test cases does not support pytest-cov 6.x yet
 pytest-mock = "~=3.14"
+mypy = "^1.16.1"
+pre-commit = "^4.2.0"
+ruff = ">=0.11.13"
+types-pyyaml = "^6.0.12.20250516"
 
 [tool.coverage.run]
 source = ["nac_test"]

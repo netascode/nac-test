@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-"""Progress reporting for PyATS tests matching Robot Framework format."""
+"""Progress reporting for PyATS test execution."""
 
+import threading
 import time
-import os
 from datetime import datetime
 import logging
-from typing import Optional
+from typing import Dict, Any
 from colorama import Fore, Style, init
 
 init()  # Initialize colorama for cross-platform color support
@@ -21,8 +21,10 @@ class ProgressReporter:
         self.start_time = time.time()
         self.total_tests = total_tests
         self.max_workers = max_workers
-        self.test_status = {}
+        self.test_status: Dict[str, Dict[str, Any]] = {}
         self.test_counter = 0  # Global test ID counter
+        self.current_test_id = 0
+        self.lock = threading.Lock()
 
     def report_test_start(
         self, test_name: str, pid: int, worker_id: str, test_id: int

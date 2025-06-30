@@ -10,6 +10,7 @@ import time
 import logging
 import ast
 from pathlib import Path
+from typing import Dict, Any
 from pyats.easypy.plugins.bases import BasePlugin
 
 # Event schema version for future compatibility
@@ -30,18 +31,18 @@ class ProgressReporterPlugin(BasePlugin):
     global uniqueness across parallel workers.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         # Get worker ID from environment or runtime
         self.worker_id = self._get_worker_id()
         # Track task start times for duration calculation
-        self.task_start_times = {}
+        self.task_start_times: Dict[str, float] = {}
 
-    def _emit_event(self, event: dict) -> None:
+    def _emit_event(self, event: Dict[str, Any]) -> None:
         """Emit a progress event in the standard format."""
         print(f"NAC_PROGRESS:{json.dumps(event)}", flush=True)
 
-    def _get_worker_id(self):
+    def _get_worker_id(self) -> str:
         """Get the worker ID from PyATS runtime or environment."""
         # First try environment variable
         if "PYATS_TASK_WORKER_ID" in os.environ:
@@ -57,7 +58,7 @@ class ProgressReporterPlugin(BasePlugin):
         # Default to process ID as last resort
         return str(os.getpid())
 
-    def pre_job(self, job):
+    def pre_job(self, job: Any) -> None:
         """Called when the job starts."""
         try:
             event = {
@@ -72,7 +73,7 @@ class ProgressReporterPlugin(BasePlugin):
         except Exception as e:
             logger.error(f"Failed to emit job_start event: {e}")
 
-    def post_job(self, job):
+    def post_job(self, job: Any) -> None:
         """Called when the job completes."""
         try:
             event = {
@@ -87,7 +88,7 @@ class ProgressReporterPlugin(BasePlugin):
         except Exception as e:
             logger.error(f"Failed to emit job_end event: {e}")
 
-    def pre_task(self, task):
+    def pre_task(self, task: Any) -> None:
         """Called before each test file executes."""
         try:
             # Extract clean test name from path
@@ -157,7 +158,7 @@ class ProgressReporterPlugin(BasePlugin):
         except Exception as e:
             logger.error(f"Error in pre_task: {e}")
 
-    def post_task(self, task):
+    def post_task(self, task: Any) -> None:
         """Called after each test file completes."""
         try:
             test_name = self._get_test_name(task.testscript)
@@ -188,7 +189,7 @@ class ProgressReporterPlugin(BasePlugin):
         except Exception as e:
             logger.error(f"Failed to emit task_end event: {e}")
 
-    def pre_section(self, section):
+    def pre_section(self, section: Any) -> None:
         """Called before each test section (setup/test/cleanup)."""
         try:
             # Only emit for actual test sections, not internal ones
@@ -208,7 +209,7 @@ class ProgressReporterPlugin(BasePlugin):
         except Exception as e:
             logger.error(f"Failed to emit section_start event: {e}")
 
-    def post_section(self, section):
+    def post_section(self, section: Any) -> None:
         """Called after each test section completes."""
         try:
             if hasattr(section, "uid") and hasattr(section.uid, "name"):
@@ -230,7 +231,7 @@ class ProgressReporterPlugin(BasePlugin):
         except Exception as e:
             logger.error(f"Failed to emit section_end event: {e}")
 
-    def _get_task_worker_id(self, task):
+    def _get_task_worker_id(self, task: Any) -> str:
         """Get worker ID for a specific task."""
         # Try to get from task's runtime
         try:
@@ -242,7 +243,7 @@ class ProgressReporterPlugin(BasePlugin):
         # Fall back to general worker ID
         return self.worker_id
 
-    def _get_test_name(self, testscript):
+    def _get_test_name(self, testscript: str) -> str:
         """Extract a clean test name from the test file path."""
         try:
             # Convert path to dot notation like Robot does

@@ -7,17 +7,20 @@ import os
 import yaml
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, TypeVar, Callable, Awaitable
+from abc import ABC, abstractmethod
 
 from nac_test.pyats.common.connection_pool import ConnectionPool
 from nac_test.pyats.common.retry_strategy import SmartRetry
 
+T = TypeVar("T")
 
-class NACTestBase(aetest.Testcase):
+
+class NACTestBase(aetest.Testcase, ABC):
     """Generic base class with common functionality for all architectures"""
 
     @aetest.setup
-    def setup(self):
+    def setup(self) -> None:
         """Common setup for all tests"""
         # Configure test-specific logger
         self.logger = logging.getLogger(self.__class__.__module__)
@@ -39,23 +42,20 @@ class NACTestBase(aetest.Testcase):
         self.pool = ConnectionPool()
 
     def load_data_model(self) -> Dict[str, Any]:
-        """Load the merged data model YAML file
+        """Load the merged data model from the test environment.
 
         Returns:
-            Dictionary containing the merged data model
+            Merged data model dictionary
         """
-        # Look for the file in the current directory (where tests are run)
-        data_file = Path("merged_data_model_test_variables.yaml")
-
-        if not data_file.exists():
-            raise FileNotFoundError(
-                f"Data model file not found: {data_file.absolute()}"
-            )
-
+        data_file = Path(os.environ.get("DATA_FILE", "merged_data_model.yaml"))
         with open(data_file, "r") as f:
-            return yaml.safe_load(f)
+            data = yaml.safe_load(f)
+            # Ensure we always return a dict
+            return data if isinstance(data, dict) else {}
 
-    async def api_call_with_retry(self, func, *args, **kwargs):
+    async def api_call_with_retry(
+        self, func: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any
+    ) -> T:
         """Standard API call with retry logic
 
         Args:
@@ -67,3 +67,12 @@ class NACTestBase(aetest.Testcase):
             Result from successful function execution
         """
         return await SmartRetry.execute(func, *args, **kwargs)
+
+    @abstractmethod
+    def get_connection_params(self) -> Dict[str, Any]:
+        """Get connection parameters for the specific architecture.
+
+        Must be implemented by subclasses to return architecture-specific
+        connection details.
+        """
+        pass

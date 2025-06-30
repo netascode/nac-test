@@ -15,7 +15,6 @@ from typing import Any
 from jinja2 import Undefined, ChainableUndefined, Environment, FileSystemLoader  # type: ignore
 from pathlib import Path
 
-from nac_yaml import yaml
 from nac_test.data_merger import DataMerger
 
 logger = logging.getLogger(__name__)
