@@ -11,8 +11,8 @@ DEFAULT_CPU_MULTIPLIER = 2
 LOAD_AVERAGE_THRESHOLD = 0.8
 
 # Concurrency limits
-DEFAULT_API_CONCURRENCY = 20
-DEFAULT_SSH_CONCURRENCY = 10
+DEFAULT_API_CONCURRENCY = 40
+DEFAULT_SSH_CONCURRENCY = 20
 
 # Retry configuration
 RETRY_MAX_ATTEMPTS = 3
@@ -28,4 +28,4 @@ CONNECTION_CLOSE_DELAY = 0.25  # seconds
 PROGRESS_UPDATE_INTERVAL = 0.5  # seconds
 
 # File paths
-AUTH_CACHE_DIR = "/tmp/nac-test-auth-cache" 
+AUTH_CACHE_DIR = "/tmp/nac-test-auth-cache"
