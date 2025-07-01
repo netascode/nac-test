@@ -365,6 +365,24 @@
             font-size: 0.9em;
         }
 
+        /* Test context banner styling */
+        .test-context-banner {
+            background-color: #f0f4f8;
+            border-left: 4px solid var(--accent);
+            padding: 10px 15px;
+            margin: 15px 0 10px 0;
+            font-weight: 500;
+            color: var(--secondary);
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+
+        .test-context-banner::before {
+            content: "Test Context: ";
+            font-weight: 600;
+            color: var(--primary);
+        }
+
         /* Collapsible sections */
         .chevron::before {
             content: '\25BC'; /* Down-pointing triangle HTML entity */
@@ -469,6 +487,9 @@
         <section>
             <h2>Command Executions</h2>
             {% for execution in command_executions %}
+            {% if execution.test_context %}
+            <div class="test-context-banner">{{ execution.test_context }}</div>
+            {% endif %}
             <div class="cli-container" id="device-{{ loop.index }}">
                 <div class="cli-header" onclick="toggleCollapse('device-{{ loop.index }}')">
                     <span>Device: {{ execution.device_name }}</span>

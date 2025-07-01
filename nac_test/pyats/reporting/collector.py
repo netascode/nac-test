@@ -54,14 +54,22 @@ class TestResultCollector:
             "timestamp": datetime.now().isoformat()
         })
 
+    # TODO: Consider alternative display options for command execution context (this is `test_context`):
+    # Option 1: Group by test step with collapsible sections - better for tests with many API calls per step
+    # Option 2: Inline commands with their corresponding results - more intuitive but requires restructuring
+    # Option 3: (Current) Add context banners - simple to implement, maintains current structure
+    # Trade-offs: Option 1 adds UI complexity, Option 2 requires significant template changes and might
+    # make the results section too verbose, Option 3 keeps things simple but requires scrolling to correlate
+    # keeping it simple for MVP
     def add_command_api_execution(
         self, 
         device_name: str, 
         command: str, 
         output: str, 
-        data: Optional[Dict] = None
+        data: Optional[Dict] = None,
+        test_context: Optional[str] = None
     ) -> None:
-        """Add a command/API execution record.
+        """Add a command/API execution record with optional test context.
 
         Pre-truncates output to 50KB to avoid memory issues with large responses.
 
@@ -70,6 +78,14 @@ class TestResultCollector:
             command: Command or API endpoint.
             output: Raw output/response (will be truncated to 50KB).
             data: Parsed data (if applicable).
+            test_context: Optional context describing which test step/verification this belongs to.
+                         Example: "BGP peer 10.100.2.73 on node 202"
+        
+        #TODO: Alternative display options could be considered (need to discuss w/ the team):
+            - Group executions by test step with collapsible sections
+            - Inline commands directly with their corresponding test results
+            - Current approach: Display context as banners above each execution
+        The current approach was chosen for simplicity and backwards compatibility.
         """
         logger.debug("Recording command execution on %s: %s", device_name, command)
         
@@ -81,7 +97,8 @@ class TestResultCollector:
             "command": command,
             "output": truncated_output,
             "data": data or {},
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
+            "test_context": test_context
         })
 
     def save_to_file(self) -> Path:
