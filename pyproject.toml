@@ -32,7 +32,9 @@ pyats = "~=25.5"
 psutil = "~=7.0.0"
 genie = "~=25.5"
 httpx = "~=0.28"
+aiofiles = "~=24.1"
 colorama = "~=0.4.6"
+markdown = "~=3.8.2"
 
 [tool.poetry.group.dev.dependencies]
 ansible-core = "~=2.17"

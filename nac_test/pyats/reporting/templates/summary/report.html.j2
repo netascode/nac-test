@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network as Code Test Results Summary</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #3498db;
+            --neutral: #95a5a6;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+            background-color: #f9f9f9;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 6px var(--shadow);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h1, h2, h3, h4 {
+            margin-top: 0;
+            line-height: 1.2;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        header h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            margin-bottom: 30px;
+            padding: 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            margin: 20px 0;
+            padding: 25px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-gap: 20px;
+            margin-top: 20px;
+        }
+
+        .summary-item {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .summary-item h3 {
+            font-size: 2.5rem;
+            margin: 10px 0;
+        }
+
+        .summary-item p {
+            color: #7f8c8d;
+            margin: 0;
+        }
+
+        .total {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-left: 4px solid var(--accent);
+        }
+
+        .passed {
+            background-color: rgba(46, 204, 113, 0.1);
+            border-left: 4px solid var(--success);
+        }
+
+        .failed {
+            background-color: rgba(231, 76, 60, 0.1);
+            border-left: 4px solid var(--danger);
+        }
+
+        .skipped {
+            background-color: rgba(243, 156, 18, 0.1);
+            border-left: 4px solid var(--warning);
+        }
+
+        .rate {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-left: 4px solid var(--accent);
+        }
+
+        .progress-container {
+            margin-top: 10px;
+            background-color: #f1f1f1;
+            border-radius: 10px;
+            height: 10px;
+            position: relative;
+        }
+
+        .progress-bar {
+            border-radius: 10px;
+            height: 10px;
+            background: linear-gradient(to right, var(--success), var(--accent));
+            width: {{ success_rate }}%;
+        }
+
+        /* Result table styles */
+        .results-table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        table.results-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+
+        table.results-table thead th {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 500;
+            position: relative;
+        }
+
+        table.results-table tbody tr {
+            border-bottom: 1px solid var(--light);
+            transition: background-color 0.3s;
+        }
+
+        table.results-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        table.results-table tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+
+        table.results-table td {
+            padding: 15px;
+        }
+
+        .status-cell {
+            font-weight: bold;
+        }
+
+        .pass-status {
+            color: var(--success);
+        }
+
+        .fail-status {
+            color: var(--danger);
+        }
+
+        .skip-status {
+            color: var(--warning);
+        }
+
+        .abort-status {
+            color: #e67e22;
+        }
+
+        .error-status {
+            color: #8e44ad;
+        }
+
+        .block-status {
+            color: var(--secondary);
+        }
+
+        .neutral-status {
+            color: var(--neutral);
+        }
+
+        .info-status {
+            color: var(--info);
+        }
+
+        .action-cell {
+            text-align: center;
+        }
+
+        .view-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: var(--accent);
+            color: white;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .view-btn:hover {
+            background-color: #2980b9;
+            text-decoration: none;
+        }
+
+        /* Responsive table */
+        @media (max-width: 768px) {
+            table.results-table thead {
+                display: none;
+            }
+
+            table.results-table tbody tr {
+                display: block;
+                margin-bottom: 15px;
+                border-bottom: none;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+
+            table.results-table tbody td {
+                display: block;
+                text-align: right;
+                position: relative;
+                padding-left: 50%;
+                border-bottom: 1px solid #eee;
+            }
+
+            table.results-table td:before {
+                content: attr(data-label);
+                position: absolute;
+                left: 15px;
+                font-weight: bold;
+            }
+
+            table.results-table td:last-child {
+                border-bottom: none;
+            }
+
+            .action-cell {
+                text-align: center;
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Network as Code Test Results Summary</h1>
+            <div class="date-info">Generated on {{ generation_time }}</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="summary">
+            <h2>Executive Summary</h2>
+            <div class="summary-grid">
+                <div class="summary-item total">
+                    <p>Total Tests</p>
+                    <h3>{{ total_tests }}</h3>
+                </div>
+                <div class="summary-item passed">
+                    <p>Passed</p>
+                    <h3>{{ passed_tests }}</h3>
+                </div>
+                <div class="summary-item failed">
+                    <p>Failed</p>
+                    <h3>{{ failed_tests }}</h3>
+                </div>
+                <div class="summary-item skipped">
+                    <p>Skipped</p>
+                    <h3>{{ skipped_tests }}</h3>
+                </div>
+                <div class="summary-item rate">
+                    <p>Success Rate</p>
+                    <h3>{{ "%.1f"|format(success_rate) }}%</h3>
+                    <div class="progress-container">
+                        <div class="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>Test Results</h2>
+        <div class="results-table-container">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Test Name</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in results %}
+                    {% set status_style = result.status|status_style %}
+                    <tr>
+                        <td data-label="Test Name">{{ result.title }}</td>
+                        <td data-label="Status" class="status-cell {{ status_style.css_class }}">
+                            {{ status_style.display_text }}
+                        </td>
+                        <td data-label="Date">{{ result.timestamp|format_datetime }}</td>
+                        <td data-label="Action" class="action-cell">
+                            <a href="{{ result.result_file_path }}" class="view-btn">
+                                View Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <p>Generated by Cisco's Network as Code <code>nac-test</code> Tool</p>
+        </footer>
+    </div>
+</body>
+</html>

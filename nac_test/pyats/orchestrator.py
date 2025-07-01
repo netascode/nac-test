@@ -19,6 +19,7 @@ import re
 import zipfile
 import shutil
 from datetime import datetime
+import asyncio
 
 from .constants import (
     DEFAULT_CPU_MULTIPLIER,
@@ -29,6 +30,7 @@ from .constants import (
 from .progress_reporter import ProgressReporter
 from nac_test.data_merger import DataMerger
 from nac_test.utils.terminal import terminal
+from nac_test.pyats.reporting.generator import ReportGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -300,6 +302,10 @@ class PyATSOrchestrator:
                     logger.error(
                         f"PyATS execution failed with return code: {return_code}"
                     )
+                    
+            # Generate HTML reports after all tests complete
+            self._generate_html_reports()
+            
         finally:
             # Clean up temporary files
             os.unlink(job_file)
@@ -566,6 +572,11 @@ class PyATSOrchestrator:
 
         # Create extraction directory
         extract_dir = self.output_dir / "pyats_results"
+        
+        # If pyats_results already exists with HTML reports, update the previous archive
+        if extract_dir.exists() and (extract_dir / "html_reports").exists():
+            self._update_previous_archive_with_html_reports(extract_dir)
+        
         extract_dir.mkdir(exist_ok=True)
 
         # Clear previous results
@@ -580,6 +591,43 @@ class PyATSOrchestrator:
             zip_ref.extractall(extract_dir)
 
         return extract_dir
+
+    def _update_previous_archive_with_html_reports(self, pyats_results_dir: Path) -> None:
+        """Update the most recent archive with HTML reports before overwriting"""
+        # Find the most recent archive (excluding the current one)
+        archives = sorted([
+            f for f in self.output_dir.glob("nac_test_job_*.zip")
+            if f.name != getattr(self, 'archive_name', '')
+        ], key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        if not archives:
+            return
+            
+        latest_archive = archives[0]
+        
+        # Create a temporary directory for updating the archive
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            
+            # Extract the existing archive
+            with zipfile.ZipFile(latest_archive, 'r') as zip_ref:
+                zip_ref.extractall(temp_path)
+            
+            # Copy HTML reports into the extracted content
+            html_reports_src = pyats_results_dir / "html_reports"
+            if html_reports_src.exists():
+                html_reports_dst = temp_path / "html_reports"
+                if html_reports_dst.exists():
+                    shutil.rmtree(html_reports_dst)
+                shutil.copytree(html_reports_src, html_reports_dst)
+            
+            # Re-create the archive with HTML reports included
+            with zipfile.ZipFile(latest_archive, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
+                for root, dirs, files in os.walk(temp_path):
+                    for file in files:
+                        file_path = Path(root) / file
+                        arcname = file_path.relative_to(temp_path)
+                        zip_ref.write(file_path, arcname)
 
     def _print_summary(self) -> None:
         """Print execution summary matching Robot format"""
@@ -661,3 +709,37 @@ class PyATSOrchestrator:
             minutes = int(seconds / 60)
             secs = seconds % 60
             return f"{minutes} minutes {secs:.2f} seconds"
+
+    def _generate_html_reports(self) -> None:
+        """Generate HTML reports from collected results."""
+        print("\nGenerating HTML reports...")
+        
+        # Use async for parallel generation
+        asyncio.run(self._generate_html_reports_async())
+        
+    async def _generate_html_reports_async(self) -> None:
+        """Generate HTML reports asynchronously."""
+        # Use the already extracted pyats_results directory
+        extract_dir = self.output_dir / "pyats_results"
+        if not extract_dir.exists():
+            print("PyATS results directory not found for HTML report generation")
+            return
+            
+        generator = ReportGenerator(self.output_dir, extract_dir)
+        result = await generator.generate_all_reports()
+        
+        if result['status'] == 'success':
+            print(f"Total report generation time: {result['duration']:.2f} seconds")
+            if result['failed_reports'] > 0:
+                print(f"Warning: {result['failed_reports']} reports failed to generate")
+                
+            # Show the HTML report location
+            html_reports_dir = extract_dir / "html_reports"
+            summary_report = html_reports_dir / "summary_report.html"
+            
+            if summary_report.exists():
+                print(f"\n{terminal.success('HTML Reports Generated:')}")
+                print(f"{terminal.info('Summary Report:')} {summary_report}")
+                print(f"{terminal.info('All Reports:')}    {html_reports_dir}")
+        else:
+            print("No test results found for report generation")

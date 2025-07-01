@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }} - Test Results</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #3498db;
+            --neutral: #95a5a6;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+            background-color: #f9f9f9;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 6px var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        h1, h2, h3, h4 {
+            margin-top: 0;
+            line-height: 1.2;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        header h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .status-banner {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .pass-status {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .fail-status {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .skip-status {
+            background-color: rgba(243, 156, 18, 0.15);
+            color: var(--warning);
+            border-left: 4px solid var(--warning);
+        }
+
+        .abort-status {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e67e22;
+            border-left: 4px solid #e67e22;
+        }
+
+        .error-status {
+            background-color: rgba(142, 68, 173, 0.15);
+            color: #8e44ad;
+            border-left: 4px solid #8e44ad;
+        }
+
+        .block-status {
+            background-color: rgba(52, 73, 94, 0.15);
+            color: var(--secondary);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .neutral-status {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: var(--neutral);
+            border-left: 4px solid var(--neutral);
+        }
+
+        .result-pass {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .result-fail {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .result-info {
+            background-color: rgba(52, 152, 219, 0.15);
+            color: var(--info);
+            border-left: 4px solid var(--info);
+        }
+
+        .result-skip {
+            background-color: rgba(243, 156, 18, 0.15);
+            color: var(--warning);
+            border-left: 4px solid var(--warning);
+        }
+
+        .result-abort {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e67e22;
+            border-left: 4px solid #e67e22;
+        }
+
+        .result-error {
+            background-color: rgba(142, 68, 173, 0.15);
+            color: #8e44ad;
+            border-left: 4px solid #8e44ad;
+        }
+
+        .result-block {
+            background-color: rgba(52, 73, 94, 0.15);
+            color: var(--secondary);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .result-neutral {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: var(--neutral);
+            border-left: 4px solid var(--neutral);
+        }
+
+        section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            margin-bottom: 30px;
+            padding: 25px;
+        }
+
+        section h2 {
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 10px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--primary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow: auto;
+            border: 1px solid #e9ecef;
+            margin: 15px 0;
+        }
+
+        code {
+            font-family: 'Source Code Pro', Consolas, Monaco, 'Andale Mono', monospace;
+            font-size: 0.9em;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid #e9ecef;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        /* List styling */
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+
+        li {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+
+        /* Nested list styling */
+        ul ul, ol ol, ul ol, ol ul {
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        /* Bold text styling */
+        strong, b {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Jobfile path styling */
+        .jobfile-path {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85em;
+            font-weight: normal;
+            margin-top: 5px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+        }
+
+        /* Highlighted box styling for important criteria */
+        p:has(> strong:first-child) {
+            background-color: rgba(147, 112, 219, 0.15);
+            border-left: 4px solid #9370DB;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        /* Alternative for browsers that don't support :has() */
+        p > strong:first-child {
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        .result-item {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .result-message {
+            margin: 0;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            border-top: 1px solid var(--light);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* CLI Terminal Styling */
+        .cli-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .cli-header {
+            background-color: #f5f5f5;
+            padding: 8px 15px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cli-content {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        .cli-prompt {
+            color: #98c379;
+        }
+
+        .cli-command {
+            color: #61afef;
+            font-weight: bold;
+        }
+
+        .cli-output {
+            color: #abb2bf;
+            display: block;
+            margin-top: 10px;
+        }
+
+        /* Parsed Output Styling */
+        .parsed-data-header {
+            background-color: #2d333b;
+            color: #ddd;
+            padding: 8px 15px;
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .parsed-data-content {
+            background-color: #1a1f26;
+            color: #56b6c2;
+            padding: 15px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        /* JSON output styling */
+        .json-output {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+        }
+
+        /* Collapsible sections */
+        .chevron::before {
+            content: '\25BC'; /* Down-pointing triangle HTML entity */
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+
+        .collapsed .chevron::before {
+            content: '\25B6'; /* Right-pointing triangle HTML entity */
+        }
+
+        .content-collapsed {
+            display: none;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            header {
+                padding: 20px 15px;
+            }
+
+            section {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>{{ title }}</h1>
+            {% set status_style = status|status_style %}
+            <div class="status-banner {{ status_style.css_class }}">
+                Test Status: {{ status_style.display_text }}
+            </div>
+            {% if jobfile_path %}
+            <div class="jobfile-path">
+                Jobfile: {{ jobfile_path }}
+            </div>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="container">
+        <section id="section-description">
+            <h2 onclick="toggleCollapse('section-description-content')">
+                Description <span class="chevron"></span>
+            </h2>
+            <div id="section-description-content">
+                {{ description_html|safe }}
+            </div>
+        </section>
+
+        <section id="section-setup">
+            <h2 onclick="toggleCollapse('section-setup-content')">
+                Setup <span class="chevron"></span>
+            </h2>
+            <div id="section-setup-content">
+                {{ setup_html|safe }}
+            </div>
+        </section>
+
+        <section id="section-procedure">
+            <h2 onclick="toggleCollapse('section-procedure-content')">
+                Procedure <span class="chevron"></span>
+            </h2>
+            <div id="section-procedure-content">
+                {{ procedure_html|safe }}
+            </div>
+        </section>
+
+        <section id="section-criteria">
+            <h2 onclick="toggleCollapse('section-criteria-content')">
+                Pass/Fail Criteria <span class="chevron"></span>
+            </h2>
+            <div id="section-criteria-content">
+                {{ criteria_html|safe }}
+            </div>
+        </section>
+
+        <section id="section-results">
+            <h2 onclick="toggleCollapse('section-results-content')">
+                Results <span class="chevron"></span>
+            </h2>
+            <div id="section-results-content">
+                {% for result in results %}
+                    {% set result_style = result.status|status_style %}
+                    <div class="result-item result-{{ result_style.css_class|replace('-status', '') }}">
+                        <div class="result-message">
+                            {{ result.message }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if command_executions %}
+        <section>
+            <h2>Command Executions</h2>
+            {% for execution in command_executions %}
+            <div class="cli-container" id="device-{{ loop.index }}">
+                <div class="cli-header" onclick="toggleCollapse('device-{{ loop.index }}')">
+                    <span>Device: {{ execution.device_name }}</span>
+                    <span class="chevron"></span>
+                </div>
+                <div class="device-content">
+                    <div class="cli-content">
+<span class="cli-prompt">{{ execution.device_name }}#</span> <span class="cli-command">{{ execution.command }}</span>
+{% set formatted_output = execution.output | format_json_output %}
+{% if formatted_output != execution.output %}
+<div class="json-output">{{ formatted_output }}</div>
+{% else %}
+<span class="cli-output">{{ execution.output }}</span>
+{% endif %}
+                    </div>
+                    {% if execution.data %}
+                    <div class="parsed-data-header" onclick="toggleCollapse('parsed-data-{{ loop.index }}')">
+                        <span>Parsed Data</span>
+                        <span class="chevron"></span>
+                    </div>
+                    <div class="parsed-data-content" id="parsed-data-{{ loop.index }}">{{ execution.data | tojson(indent=2) }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+
+        <footer>
+            <p>Generated: {{ generation_time }}</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleCollapse(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                // Toggle collapsed class on the element
+                element.classList.toggle('collapsed');
+
+                // For device containers, toggle the content differently
+                if (id.startsWith('device-')) {
+                    const content = element.querySelector('.device-content');
+                    if (content) {
+                        content.classList.toggle('content-collapsed');
+                    }
+                }
+                // For parsed data sections, toggle them directly and update the header chevron
+                else if (id.startsWith('parsed-data-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the header that triggered this
+                    const header = element.previousElementSibling;
+                    if (header && header.classList.contains('parsed-data-header')) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
+                // For main sections toggle the content-collapsed class
+                else if (id.startsWith('section-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the header that triggered this section
+                    const header = document.querySelector(`h2[onclick*="${id}"]`);
+                    if (header) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
+            }
+        }
+
+        // Initialize sections
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize all parsed data sections as collapsed by default
+            const parsedDataSections = document.querySelectorAll('[id^="parsed-data-"]');
+            parsedDataSections.forEach(function(section) {
+                section.classList.add('content-collapsed');
+                const header = section.previousElementSibling;
+                if (header && header.classList.contains('parsed-data-header')) {
+                    header.classList.add('collapsed');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
