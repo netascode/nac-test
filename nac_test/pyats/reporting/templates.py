@@ -19,13 +19,13 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 def format_datetime(dt_str: Union[str, datetime]) -> str:
     """Format an ISO datetime string to a human-readable format.
-    
+
     Args:
         dt_str: Either an ISO format datetime string or a datetime object.
-    
+
     Returns:
         Formatted datetime string in "YYYY-MM-DD HH:MM" format.
-    
+
     Example:
         >>> format_datetime("2024-01-15T14:30:45.123456")
         "2024-01-15 14:30"
@@ -50,7 +50,7 @@ def get_status_style(status: Union[ResultStatus, str]) -> Dict[str, str]:
         Dictionary with keys:
             - css_class: CSS class name for styling (e.g., "pass-status")
             - display_text: Human-readable status text (e.g., "PASSED")
-    
+
     Example:
         >>> get_status_style(ResultStatus.PASSED)
         {"css_class": "pass-status", "display_text": "PASSED"}
@@ -84,21 +84,21 @@ def get_status_style(status: Union[ResultStatus, str]) -> Dict[str, str]:
 
 def format_json_output(output: str) -> str:
     """Format output as JSON if possible, otherwise return as-is.
-    
+
     This filter attempts to parse and pretty-print JSON output.
     If the output is not valid JSON, it returns the original string.
-    
+
     Args:
         output: Command output string that might be JSON
-        
+
     Returns:
         Pretty-printed JSON string or original output
     """
     import json
-    
+
     if not output or not output.strip():
         return output
-    
+
     try:
         # Try to parse the entire output first
         parsed = json.loads(output.strip())
@@ -109,7 +109,7 @@ def format_json_output(output: str) -> str:
         # If that fails, try to find JSON within the output
         # (e.g., after command echo or other prefix text)
         for i, char in enumerate(output):
-            if char in '{[':
+            if char in "{[":
                 try:
                     json_content = output[i:]
                     parsed = json.loads(json_content)
@@ -119,7 +119,7 @@ def format_json_output(output: str) -> str:
                         return prefix + json.dumps(parsed, indent=2, sort_keys=False)
                 except json.JSONDecodeError:
                     continue
-    
+
     # Not valid JSON or not structured data, return as-is
     return output
 
@@ -141,7 +141,7 @@ def get_jinja_environment(directory: Optional[Union[str, Path]] = None) -> Envir
             - Strict undefined handling
             - Whitespace trimming enabled
             - 'do' extension for template logic
-    
+
     Example:
         >>> env = get_jinja_environment(TEMPLATES_DIR)
         >>> template = env.get_template("test_case/report.html.j2")
@@ -178,7 +178,7 @@ def render_template(template_path: str, **context: Any) -> str:
 
     Returns:
         Rendered template as a string.
-    
+
     Example:
         >>> html = render_template(
         ...     "test_case/report.html.j2",
@@ -204,7 +204,7 @@ def render_string_template(template_string: str, **context: Any) -> str:
 
     Returns:
         Rendered template as a string.
-    
+
     Example:
         >>> html = render_string_template(
         ...     "<h1>{{ title }}</h1><p>Status: {{ status }}</p>",

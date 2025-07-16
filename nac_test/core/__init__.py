@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""PyATS-specific constants and configuration."""
+"""Core components shared across the nac-test framework."""
 
 from nac_test.core.constants import (
     # Retry configuration
@@ -18,20 +18,10 @@ from nac_test.core.constants import (
     PROGRESS_UPDATE_INTERVAL,
 )
 
-# PyATS-specific worker calculation constants
-MIN_WORKERS = 2
-MAX_WORKERS = 32
-MAX_WORKERS_HARD_LIMIT = 50
-MEMORY_PER_WORKER_GB = 2
-DEFAULT_CPU_MULTIPLIER = 2
-LOAD_AVERAGE_THRESHOLD = 0.8
+from nac_test.core.models import TestStatus, TestResult
 
-# PyATS-specific file paths
-AUTH_CACHE_DIR = "/tmp/nac-test-auth-cache"
-
-# Re-export all constants for backward compatibility
 __all__ = [
-    # From core
+    # Constants
     "RETRY_MAX_ATTEMPTS",
     "RETRY_INITIAL_DELAY",
     "RETRY_MAX_DELAY",
@@ -41,12 +31,7 @@ __all__ = [
     "DEFAULT_API_CONCURRENCY",
     "DEFAULT_SSH_CONCURRENCY",
     "PROGRESS_UPDATE_INTERVAL",
-    # PyATS-specific
-    "MIN_WORKERS",
-    "MAX_WORKERS",
-    "MAX_WORKERS_HARD_LIMIT",
-    "MEMORY_PER_WORKER_GB",
-    "DEFAULT_CPU_MULTIPLIER",
-    "LOAD_AVERAGE_THRESHOLD",
-    "AUTH_CACHE_DIR",
+    # Models
+    "TestStatus",
+    "TestResult",
 ]

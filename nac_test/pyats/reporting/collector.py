@@ -48,11 +48,13 @@ class TestResultCollector:
             message: Detailed result message.
         """
         logger.debug("[RESULT][%s] %s", status, message)
-        self.results.append({
-            "status": status.value,
-            "message": message,
-            "timestamp": datetime.now().isoformat()
-        })
+        self.results.append(
+            {
+                "status": status.value,
+                "message": message,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     # TODO: Consider alternative display options for command execution context (this is `test_context`):
     # Option 1: Group by test step with collapsible sections - better for tests with many API calls per step
@@ -62,12 +64,12 @@ class TestResultCollector:
     # make the results section too verbose, Option 3 keeps things simple but requires scrolling to correlate
     # keeping it simple for MVP
     def add_command_api_execution(
-        self, 
-        device_name: str, 
-        command: str, 
-        output: str, 
+        self,
+        device_name: str,
+        command: str,
+        output: str,
         data: Optional[Dict] = None,
-        test_context: Optional[str] = None
+        test_context: Optional[str] = None,
     ) -> None:
         """Add a command/API execution record with optional test context.
 
@@ -80,7 +82,7 @@ class TestResultCollector:
             data: Parsed data (if applicable).
             test_context: Optional context describing which test step/verification this belongs to.
                          Example: "BGP peer 10.100.2.73 on node 202"
-        
+
         #TODO: Alternative display options could be considered (need to discuss w/ the team):
             - Group executions by test step with collapsible sections
             - Inline commands directly with their corresponding test results
@@ -88,18 +90,20 @@ class TestResultCollector:
         The current approach was chosen for simplicity and backwards compatibility.
         """
         logger.debug("Recording command execution on %s: %s", device_name, command)
-        
+
         # Pre-truncate to 50KB to avoid memory issues
         truncated_output = output[:50000] if len(output) > 50000 else output
-        
-        self.command_executions.append({
-            "device_name": device_name,
-            "command": command,
-            "output": truncated_output,
-            "data": data or {},
-            "timestamp": datetime.now().isoformat(),
-            "test_context": test_context
-        })
+
+        self.command_executions.append(
+            {
+                "device_name": device_name,
+                "command": command,
+                "output": truncated_output,
+                "data": data or {},
+                "timestamp": datetime.now().isoformat(),
+                "test_context": test_context,
+            }
+        )
 
     def save_to_file(self) -> Path:
         """Save results to JSON file - called once at test end.
@@ -111,7 +115,7 @@ class TestResultCollector:
         """
         end_time = datetime.now()
         duration = (end_time - self.start_time).total_seconds()
-        
+
         data = {
             "test_id": self.test_id,
             "start_time": self.start_time.isoformat(),
@@ -121,12 +125,12 @@ class TestResultCollector:
             "command_executions": self.command_executions,
             "overall_status": self._determine_overall_status(),
             # Include metadata directly in the results file
-            "metadata": self.metadata if hasattr(self, 'metadata') else {}
+            "metadata": self.metadata if hasattr(self, "metadata") else {},
         }
-        
+
         output_file = self.output_dir / f"{self.test_id}.json"
         logger.debug("Saving test results to %s", output_file)
-        
+
         output_file.write_text(json.dumps(data, indent=2))
         return output_file
 
@@ -143,11 +147,14 @@ class TestResultCollector:
         """
         if not self.results:
             return ResultStatus.SKIPPED.value
-            
+
         # If any result is FAILED or ERRORED, overall is FAILED
         for result in self.results:
-            if result["status"] in [ResultStatus.FAILED.value, ResultStatus.ERRORED.value]:
+            if result["status"] in [
+                ResultStatus.FAILED.value,
+                ResultStatus.ERRORED.value,
+            ]:
                 return ResultStatus.FAILED.value
-                
+
         # All passed
-        return ResultStatus.PASSED.value 
+        return ResultStatus.PASSED.value

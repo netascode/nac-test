@@ -91,12 +91,3 @@ class ProgressReporter:
         """Get next available test ID - ensures global uniqueness across workers"""
         self.test_counter += 1
         return self.test_counter
-
-    def _format_duration(self, seconds: float) -> str:
-        """Format duration like Robot Framework does"""
-        if seconds < 60:
-            return f"{seconds:.1f}s"
-        else:
-            minutes = int(seconds / 60)
-            secs = seconds % 60
-            return f"{minutes}m {secs:.0f}s"

@@ -2,35 +2,33 @@
 
 """Main PyATS orchestration logic for nac-test."""
 
-import multiprocessing as mp
 from pathlib import Path
-import psutil
 import os
 import sys
+import tempfile
 from typing import List, Dict, Any, Optional
 import logging
-import subprocess
-import tempfile
-import textwrap
-import threading
-import queue
-import json
-import re
-import zipfile
-import shutil
 from datetime import datetime
 import asyncio
 
-from .constants import (
+from nac_test.pyats.constants import (
     DEFAULT_CPU_MULTIPLIER,
     MEMORY_PER_WORKER_GB,
     MAX_WORKERS_HARD_LIMIT,
-    DEFAULT_TEST_TIMEOUT,
 )
-from .progress_reporter import ProgressReporter
+from nac_test.pyats.discovery import TestDiscovery, DeviceInventoryDiscovery
+from nac_test.pyats.execution import JobGenerator, SubprocessRunner, OutputProcessor
+from nac_test.pyats.execution.device import DeviceExecutor
 from nac_test.data_merger import DataMerger
+from nac_test.pyats.progress import ProgressReporter
+from nac_test.pyats.reporting.multi_archive_generator import MultiArchiveReportGenerator
+from nac_test.pyats.reporting.summary_printer import SummaryPrinter
+from nac_test.pyats.reporting.utils.archive_inspector import ArchiveInspector
+from nac_test.pyats.reporting.utils.archive_aggregator import ArchiveAggregator
+from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
-from nac_test.pyats.reporting.generator import ReportGenerator
+from nac_test.utils.environment import EnvironmentValidator
+
 
 logger = logging.getLogger(__name__)
 
@@ -57,155 +55,272 @@ class PyATSOrchestrator:
         self.test_dir = Path(test_dir)
         self.output_dir = Path(output_dir)
         self.merged_data_filename = merged_data_filename
+
+        # Track test status by type for combined summary
+        self.api_test_status: Dict[str, Dict[str, Any]] = {}
+        self.d2d_test_status: Dict[str, Dict[str, Any]] = {}
+        self.overall_start_time: Optional[datetime] = None
+
+        # Calculate max workers based on system resources
         self.max_workers = self._calculate_workers()
+
+        # Device parallelism for SSH/D2D tests (can be overridden via CLI)
+        self.max_parallel_devices: Optional[int] = None
+
         # Note: ProgressReporter will be initialized later with total test count
 
+        # Initialize discovery components
+        self.test_discovery = TestDiscovery(self.test_dir)
+        self.device_inventory_discovery = DeviceInventoryDiscovery(
+            self.output_dir, self.merged_data_filename
+        )
+
+        # Initialize execution components
+        self.job_generator = JobGenerator(self.max_workers, self.output_dir)
+        self.output_processor = (
+            None  # Will be initialized when progress reporter is ready
+        )
+        self.subprocess_runner = (
+            None  # Will be initialized when output processor is ready
+        )
+        self.device_executor = None  # Will be initialized when needed
+
+        # Initialize reporting components
+        self.summary_printer = SummaryPrinter()
+
     def _calculate_workers(self) -> int:
-        """Calculate optimal worker count based on CPU and memory"""
-        # CPU-based calculation
-        cpu_workers = mp.cpu_count() * DEFAULT_CPU_MULTIPLIER
-
-        # Memory-based calculation
-        available_memory = psutil.virtual_memory().available
-        # Convert from bytes to GB
-        memory_workers = int(
-            available_memory / (MEMORY_PER_WORKER_GB * 1024 * 1024 * 1024)
+        """Calculate optimal worker count based on CPU, memory, and test type"""
+        cpu_workers = SystemResourceCalculator.calculate_worker_capacity(
+            memory_per_worker_gb=MEMORY_PER_WORKER_GB,
+            cpu_multiplier=DEFAULT_CPU_MULTIPLIER,
+            max_workers=MAX_WORKERS_HARD_LIMIT,
+            env_var="PYATS_MAX_WORKERS",
         )
 
-        # Consider system load
-        load_avg = os.getloadavg()[0]  # 1-minute load average
-        if load_avg > mp.cpu_count():
-            cpu_workers = max(1, int(cpu_workers * 0.5))  # Reduce if system is loaded
+        return cpu_workers
 
-        # Use the more conservative limit
-        actual_workers = max(
-            1, min(cpu_workers, memory_workers, MAX_WORKERS_HARD_LIMIT)
+    async def _execute_api_tests_standard(
+        self, test_files: List[Path]
+    ) -> Optional[Path]:
+        """
+        Execute API tests using the standard PyATS job file approach.
+
+        Args:
+            test_files: List of API test files to execute
+
+        Returns:
+            Path to the generated archive file, or None if execution fails
+        """
+        logger.info(
+            f"Executing {len(test_files)} API tests using standard PyATS job execution"
         )
 
-        # Allow override via environment variable
-        return int(os.environ.get("PYATS_MAX_WORKERS", actual_workers))
+        if not test_files:
+            logger.warning("No test files provided for API tests")
+            return None
+
+        job_content = self.job_generator.generate_job_file_content(test_files)
+        job_file_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix="_api_job.py", delete=False
+            ) as f:
+                f.write(job_content)
+                job_file_path = Path(f.name)
+
+            # Set up environment for the API test job
+            env = os.environ.copy()
+            env["PYTHONWARNINGS"] = "ignore::UserWarning"
+            env["PYATS_LOG_LEVEL"] = "ERROR"
+            env["HTTPX_LOG_LEVEL"] = "ERROR"
+            env["DATA_FILE"] = str(self.output_dir / self.merged_data_filename)
+            test_parent_dir = str(self.test_dir)
+            nac_test_dir = str(Path(__file__).parent.parent.parent)
+            if "PYTHONPATH" in env:
+                env["PYTHONPATH"] = (
+                    f"{test_parent_dir}{os.pathsep}{nac_test_dir}{os.pathsep}{env['PYTHONPATH']}"
+                )
+            else:
+                env["PYTHONPATH"] = f"{test_parent_dir}{os.pathsep}{nac_test_dir}"
+
+            # Execute and return the archive path
+            assert self.subprocess_runner is not None  # Should be initialized by now
+            archive_path = await self.subprocess_runner.execute_job(job_file_path, env)
+
+            # If successful, rename archive to include _api_ identifier
+            if archive_path and archive_path.exists():
+                api_archive_path = archive_path.parent / archive_path.name.replace(
+                    "nac_test_job_", "nac_test_job_api_"
+                )
+                archive_path.rename(api_archive_path)
+                logger.info(f"API test archive created: {api_archive_path}")
+                return api_archive_path
+
+            return archive_path
+
+        finally:
+            # Clean up the temporary job file
+            if job_file_path and os.path.exists(job_file_path):
+                os.unlink(job_file_path)
+
+    async def _execute_ssh_tests_device_centric(
+        self, test_files: List[Path], devices: List[Dict[str, Any]]
+    ) -> Optional[Path]:
+        """
+        Run tests in device-centric mode for SSH.
+
+        This method iterates through each device from the inventory and launches a
+        dedicated PyATS job subprocess for it, managed by a semaphore to
+        control concurrency.
+
+        Args:
+            test_files: List of SSH test files to execute
+            devices: List of device dictionaries from inventory
+
+        Returns:
+            Path to the aggregated D2D archive file, or None if no tests were executed
+        """
+        logger.info(
+            f"Executing {len(test_files)} SSH tests using device-centric execution"
+        )
+
+        # Devices are passed from the orchestration level
+        if not devices:
+            # This shouldn't happen since we check before calling, but keep as safety
+            logger.error("No devices provided for D2D test execution")
+            return None
+
+        # Initialize device executor if not already done
+        if self.device_executor is None:
+            assert self.subprocess_runner is not None  # Should be initialized
+            self.device_executor = DeviceExecutor(
+                self.job_generator, self.subprocess_runner, self.test_status
+            )
+
+        # Note: Progress reporter is already initialized at orchestration level
+        # with the correct total_operations count
+
+        # Track individual device archives for aggregation
+        device_archives = []
+
+        # Determine batch size: use max_workers by default, cap with max_parallel_devices if specified
+        batch_size = self.max_workers
+        if self.max_parallel_devices is not None:
+            batch_size = min(self.max_workers, self.max_parallel_devices)
+            logger.info(
+                f"Using user-specified device parallelism cap: {self.max_parallel_devices} (system capacity: {self.max_workers})"
+            )
+        else:
+            logger.info(f"Using system-calculated device parallelism: {batch_size}")
+
+        # Batch devices based on calculated batch size
+        device_batches = [
+            devices[i : i + batch_size] for i in range(0, len(devices), batch_size)
+        ]
+
+        logger.info(
+            f"Processing {len(devices)} devices in {len(device_batches)} batches (batch size: {batch_size})"
+        )
+
+        # Process each batch sequentially, but devices within batch in parallel
+        for batch_idx, device_batch in enumerate(device_batches):
+            logger.info(
+                f"Processing batch {batch_idx + 1}/{len(device_batches)} with {len(device_batch)} devices"
+            )
+
+            # Create tasks for all devices in this batch
+            # Use min of max_workers and batch size for semaphore
+            semaphore_size = min(self.max_workers, len(device_batch))
+            semaphore = asyncio.Semaphore(semaphore_size)
+            tasks = [
+                self.device_executor.run_device_job_with_semaphore(
+                    device, test_files, semaphore
+                )
+                for device in device_batch
+            ]
+
+            # Wait for all devices in this batch to complete and collect archives
+            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Collect successful archives
+            for result in batch_results:
+                if isinstance(result, Path) and result.exists():
+                    device_archives.append(result)
+                elif isinstance(result, Exception):
+                    logger.error(f"Device execution failed with error: {result}")
+
+            logger.info(f"Completed batch {batch_idx + 1}/{len(device_batches)}")
+
+        # Copy test status to d2d_test_status for combined reporting
+        if hasattr(self, "d2d_test_status"):
+            self.d2d_test_status.update(self.test_status)
+
+        # Print summary for D2D tests
+        start_time = (
+            self.overall_start_time
+            if hasattr(self, "overall_start_time") and self.overall_start_time
+            else getattr(self, "start_time", datetime.now())
+        )
+        self.summary_printer.print_summary(
+            self.test_status,
+            start_time,
+            output_dir=self.output_dir,
+            archive_path=None,  # Archive will be created after this
+            api_test_status=getattr(self, "api_test_status", None),
+            d2d_test_status=getattr(self, "d2d_test_status", None),
+            overall_start_time=self.overall_start_time,
+        )
+
+        # Aggregate all device archives into a single D2D archive
+        if device_archives:
+            aggregated_archive = await ArchiveAggregator.aggregate_device_archives(
+                device_archives, self.output_dir
+            )
+            return aggregated_archive
+        else:
+            logger.warning("No device archives were generated")
+            return None
 
     def validate_environment(self) -> None:
         """Pre-flight check: Validate required environment variables before running tests.
-        
+
         This ensures we fail fast with clear error messages rather than starting
         PyATS only to have all tests fail due to missing configuration.
-        
+
         Raises:
             SystemExit: If required environment variables are missing
         """
         # Get controller type (defaults to ACI in the MVP)
         controller_type = os.environ.get("CONTROLLER_TYPE", "ACI")
-        
-        # Define required environment variables based on controller type
-        required_vars = [
-            f"{controller_type}_URL",
-            f"{controller_type}_USERNAME",
-            f"{controller_type}_PASSWORD"
-        ]
-        
-        # Check for missing variables
-        missing = [var for var in required_vars if not os.environ.get(var)]
-        
-        if missing:
-            # Get formatted error message for terminal display
-            error_msg = terminal.format_env_var_error(missing, controller_type)
-            
-            # Print the colored error message
-            print(error_msg)
-            
-            # Exit with error code (don't start PyATS)
-            sys.exit(1)
 
-    def discover_pyats_tests(self) -> List[Path]:
-        """Find all .py test files when --pyats flag is set
-
-        Searches for Python test files in the standard test directories:
-        - */test/config/
-        - */test/operational/
-        - */test/health/
-
-        This mirrors the Robot Framework test structure while excluding
-        utility directories like pyats_common and jinja_filters.
-        """
-        test_files = []
-
-        # Use rglob for recursive search - finds .py files at any depth
-        for test_path in self.test_dir.rglob("*.py"):
-            # Skip non-test files
-            if "__pycache__" in str(test_path):
-                continue
-            if test_path.name.startswith("_"):
-                continue
-            if test_path.name == "__init__.py":
-                continue
-
-            # Convert to string for efficient path checking
-            path_str = str(test_path)
-
-            # Only include files in the standard test directories
-            if (
-                "/test/config/" in path_str
-                or "/test/operational/" in path_str
-                or "/test/health/" in path_str
-            ):
-                # Exclude utility directories
-                if "pyats_common" not in path_str and "jinja_filters" not in path_str:
-                    test_files.append(test_path)
-
-        return sorted(test_files)
-
-    def _generate_job_file_content(self, test_files: List[Path]) -> str:
-        """Generate the content for a PyATS job file"""
-        # Convert test file paths to strings for the job file
-        test_files_str = ",\n        ".join([f'"{str(tf)}"' for tf in test_files])
-
-        job_content = textwrap.dedent(f'''
-        """Auto-generated PyATS job file by nac-test"""
-        
-        import os
-        from pathlib import Path
-        
-        # Test files to execute
-        TEST_FILES = [
-            {test_files_str}
-        ]
-        
-        def main(runtime):
-            """Main job file entry point"""
-            # Set max workers
-            runtime.max_workers = {self.max_workers}
-            
-            # Note: runtime.directory is read-only and set by --archive-dir
-            # The output directory is: {str(self.output_dir)}
-            
-            # Run all test files
-            for idx, test_file in enumerate(TEST_FILES):
-                runtime.tasks.run(
-                    testscript=test_file,
-                    taskid=f"test_{{idx}}",
-                    max_runtime={DEFAULT_TEST_TIMEOUT}
-                )
-        ''')
-
-        return job_content
+        EnvironmentValidator.validate_controller_env(controller_type)
 
     def run_tests(self) -> None:
-        """Main entry point from nac-test CLI with real-time progress reporting"""
-        # Pre-flight check: Validate environment variables BEFORE doing anything else
-        self.validate_environment()
-        
-        # Ensure output directory exists
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        """Main entry point - triggers the async execution flow."""
+        # This is the synchronous entry point that kicks off the async orchestration
+        try:
+            asyncio.run(self._run_tests_async())
+        except Exception as e:
+            logger.error(
+                f"An unexpected error occurred during test orchestration: {e}",
+                exc_info=True,
+            )
 
-        # Merge data files and write to output directory for tests to access
+    async def _run_tests_async(self):
+        """Main async orchestration logic."""
+        # Track overall start time for combined summary
+        self.overall_start_time = datetime.now()
+
+        # Pre-flight check and setup
+        self.validate_environment()
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         merged_data = DataMerger.merge_data_files(self.data_paths)
         DataMerger.write_merged_data_model(
             merged_data, self.output_dir, self.merged_data_filename
         )
 
-        # Discover test files
-        test_files = self.discover_pyats_tests()
+        # Test Discovery
+        test_files, skipped_files = self.test_discovery.discover_pyats_tests()
 
         if not test_files:
             print("No PyATS test files (*.py) found in test directory")
@@ -214,532 +329,164 @@ class PyATSOrchestrator:
         print(f"Discovered {len(test_files)} PyATS test files")
         print(f"Running with {self.max_workers} parallel workers")
 
-        # Create progress reporter with total test count and max workers
+        # Categorize tests by type (api/ vs d2d/)
+        try:
+            api_tests, d2d_tests = self.test_discovery.categorize_tests_by_type(
+                test_files
+            )
+        except ValueError as e:
+            print(terminal.error(str(e)))
+            sys.exit(1)
+
+        # Initialize progress reporter for output formatting
         self.progress_reporter = ProgressReporter(
             total_tests=len(test_files), max_workers=self.max_workers
         )
-
-        # Generate job file content
-        job_content = self._generate_job_file_content(test_files)
-
-        # Create temporary job file
-        with tempfile.NamedTemporaryFile(mode="w", suffix="_job.py", delete=False) as f:
-            f.write(job_content)
-            job_file = f.name
-
-        # Create temporary plugin configuration file
-        plugin_config = textwrap.dedent("""
-        plugins:
-            ProgressReporterPlugin:
-                enabled: True
-                module: nac_test.pyats.progress_plugin
-                order: 1.0
-        """)
-
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix="_plugin_config.yaml", delete=False
-        ) as f:
-            f.write(plugin_config)
-            plugin_config_file = f.name
-
-        try:
-            # Generate controlled archive name with timestamp
-            job_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
-            archive_name = f"nac_test_job_{job_timestamp}.zip"
-            self.archive_name = archive_name  # Store for later reference
-
-            # Build PyATS command with plugin configuration
-            cmd = [
-                "pyats",
-                "run",
-                "job",
-                job_file,
-                "--configuration",
-                plugin_config_file,
-                "--archive-dir",
-                str(self.output_dir),
-                "--archive-name",
-                archive_name,
-                "--no-archive-subdir",  # Prevent YY-MM subdirectory creation
-                "--no-mail",  # Disable email notifications
-            ]
-
-            # Set up environment to suppress warnings and set PYTHONPATH
-            env = os.environ.copy()
-            env["PYTHONWARNINGS"] = "ignore::UserWarning"
-            # Suppress verbose logs for console output
-            env["PYATS_LOG_LEVEL"] = "ERROR"
-            env["HTTPX_LOG_LEVEL"] = "ERROR"
-
-            # Set the DATA_FILE environment variable to point to the merged data model
-            env["DATA_FILE"] = str(self.output_dir / self.merged_data_filename)
-
-            # Add the test directory to PYTHONPATH so imports work
-            # This allows "from pyats_common.<architecture>_base_test import <ARCHITECTURE>TestBase" to work
-            test_parent_dir = str(self.test_dir)
-
-            # Also add nac-test directory so the plugin can be imported
-            nac_test_dir = str(
-                Path(__file__).parent.parent.parent
-            )  # Go up to nac-test root
-
-            if "PYTHONPATH" in env:
-                env["PYTHONPATH"] = (
-                    f"{test_parent_dir}{os.pathsep}{nac_test_dir}{os.pathsep}{env['PYTHONPATH']}"
-                )
-            else:
-                env["PYTHONPATH"] = f"{test_parent_dir}{os.pathsep}{nac_test_dir}"
-
-            # Run with output capture
-            print(f"Executing PyATS with command: {' '.join(cmd)}")
-            return_code = self._run_with_progress(cmd, test_files, env)
-
-            if return_code != 0:
-                # Only log error for critical failures (not test failures)
-                # Return code 1 = some tests failed (expected)
-                # Return code > 1 = execution error (unexpected)
-                if return_code > 1:
-                    logger.error(
-                        f"PyATS execution failed with return code: {return_code}"
-                    )
-                    
-            # Generate HTML reports after all tests complete
-            self._generate_html_reports()
-            
-        finally:
-            # Clean up temporary files
-            os.unlink(job_file)
-            os.unlink(plugin_config_file)
-
-    def _run_with_progress(
-        self, cmd: List[str], test_files: List[Path], env: Dict[str, str]
-    ) -> int:
-        """Run PyATS command with real-time progress reporting"""
-        self.test_status: Dict[str, Dict[str, Any]] = {}
+        self.test_status = {}
         self.start_time = datetime.now()
 
-        # Initialize progress reporter's test_status reference
+        # Set the test_status reference in progress reporter
         self.progress_reporter.test_status = self.test_status
 
-        # Start subprocess
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-            bufsize=1,
-            env=env,
-            cwd=str(self.output_dir),
+        # Initialize execution components now that progress reporter is ready
+        self.output_processor = OutputProcessor(
+            self.progress_reporter, self.test_status
+        )
+        self.subprocess_runner = SubprocessRunner(
+            self.output_dir, output_handler=self.output_processor.process_line
         )
 
-        # Process output in real-time
-        output_queue: queue.Queue[str] = queue.Queue()
+        # Execute tests based on their type
+        tasks = []
 
-        def read_output() -> None:
-            if process.stdout:
-                line_count = 0  # Initialize line_count
-                for line in iter(process.stdout.readline, ""):
-                    line_count += 1
-                    output_queue.put(line)
-                process.stdout.close()
+        if api_tests:
+            print(f"Found {len(api_tests)} API test(s) - using standard execution")
+            tasks.append(self._execute_api_tests_standard(api_tests))
 
-        # Start output reader thread
-        reader_thread = threading.Thread(target=read_output)
-        reader_thread.daemon = True
-        reader_thread.start()
-
-        # Process output and report progress
-        while True:
-            try:
-                line = output_queue.get(timeout=0.1)
-                self._process_output_line(line.strip())
-            except queue.Empty:
-                if process.poll() is not None:
-                    break
-
-        # Wait for process to complete
-        return_code = process.wait()
-
-        # Print summary
-        self._print_summary()
-
-        return return_code
-
-    def _process_output_line(self, line: str) -> None:
-        """Process output line, looking for our progress events"""
-        # Look for our structured progress events
-        if line.startswith("NAC_PROGRESS:"):
-            try:
-                # Parse our JSON event
-                event_json = line[13:]  # Remove "NAC_PROGRESS:" prefix
-                event = json.loads(event_json)
-
-                # Validate event schema version
-                if event.get("version", "1.0") != "1.0":
-                    logger.warning(
-                        f"Unknown event schema version: {event.get('version')}"
+        if d2d_tests:
+            # Get device inventory for D2D tests
+            devices = self.device_inventory_discovery.get_device_inventory(d2d_tests)
+            if devices:
+                print(
+                    f"Found {len(d2d_tests)} D2D test(s) - using device-centric execution"
+                )
+                tasks.append(self._execute_ssh_tests_device_centric(d2d_tests, devices))
+            else:
+                print(
+                    terminal.warning(
+                        "No devices found in inventory. D2D tests will be skipped."
                     )
-
-                self._handle_progress_event(event)
-            except json.JSONDecodeError:
-                # If parsing fails, show the line in debug mode
-                if os.environ.get("PYATS_DEBUG"):
-                    print(f"Failed to parse progress event: {line}")
-            except Exception as e:
-                logger.error(f"Error processing progress event: {e}")
-        else:
-            # Show line if it matches our criteria
-            if self._should_show_line(line):
-                print(line)
-
-    def _handle_progress_event(self, event: Dict[str, Any]) -> None:
-        """Handle structured progress event from plugin"""
-        event_type = event.get("event")
-
-        if event_type == "task_start":
-            # Assign global test ID
-            test_id = self.progress_reporter.get_next_test_id()
-
-            # Report test starting
-            self.progress_reporter.report_test_start(
-                event["test_name"], event["pid"], event["worker_id"], test_id
-            )
-
-            # Track status with assigned test ID and title
-            self.test_status[event["test_name"]] = {
-                "start_time": event["timestamp"],
-                "status": "EXECUTING",
-                "worker": event["worker_id"],
-                "test_id": test_id,
-                "taskid": event["taskid"],
-                "title": event.get(
-                    "test_title", event["test_name"]
-                ),  # Use test_name as final fallback
-            }
-
-        elif event_type == "task_end":
-            # Retrieve the test ID we assigned at start
-            test_info = self.test_status.get(event["test_name"], {})
-            test_id = test_info.get("test_id", 0)
-
-            # Report test completion
-            self.progress_reporter.report_test_end(
-                event["test_name"],
-                event["pid"],
-                event["worker_id"],
-                test_id,
-                event["result"],
-                event["duration"],
-            )
-
-            # Update status
-            if event["test_name"] in self.test_status:
-                self.test_status[event["test_name"]].update(
-                    {"status": event["result"], "duration": event["duration"]}
                 )
 
-            # After progress reporter shows the line, add title display
-            title = test_info.get("title", event["test_name"])
-            
-            # Format status for display - distinguish between FAILED and ERRORED
-            result_status = event["result"].lower()
-            if result_status == "errored":
-                status_text = "ERROR"
-            else:
-                status_text = result_status.upper()
-
-            # Display title line like Robot Framework with colors
-            separator = "-" * 78
-            
-            # Color based on status
-            if result_status == "passed":
-                # Green for passed
-                print(terminal.success(separator))
-                print(terminal.success(f"{title:<70} | {status_text} |"))
-                print(terminal.success(separator))
-            elif result_status in ["failed", "errored"]:
-                # Red for failed/errored
-                print(terminal.error(separator))
-                print(terminal.error(f"{title:<70} | {status_text} |"))
-                print(terminal.error(separator))
-            else:
-                # Default (white) for other statuses
-                print(separator)
-                print(f"{title:<70} | {status_text} |")
-                print(separator)
-
-        elif event_type == "section_start" and os.environ.get("PYATS_DEBUG"):
-            # In debug mode, show section progress
-            print(f"  -> Section {event['section']} starting")
-
-        elif event_type == "section_end" and os.environ.get("PYATS_DEBUG"):
-            print(f"  -> Section {event['section']} {event['result']}")
-
-    def _should_show_line(self, line: str) -> bool:
-        """Determine if line should be shown to user"""
-        # In debug mode, show everything
-        if os.environ.get("PYATS_DEBUG"):
-            return True
-
-        # Always suppress these patterns for clean console output
-        suppress_patterns = [
-            r"%HTTPX-INFO:",
-            r"%AETEST-INFO:",
-            r"%AETEST-ERROR:",  # We'll show our own error summary
-            r"%EASYPY-INFO:",
-            r"%WARNINGS-WARNING:",
-            r"%GENIE-INFO:",
-            r"%UNICON-INFO:",
-            r"NAC_PROGRESS_PLUGIN:",  # Suppress plugin debug output
-            r"^\s*$",  # Empty lines
-            r"^\+[-=]+\+$",  # PyATS table borders
-            r"^\|.*\|$",  # PyATS table content
-            r"^[-=]+$",  # Separator lines
-            r"Starting section",  # Section start messages
-            r"Starting testcase",  # Test start messages
-        ]
-
-        for pattern in suppress_patterns:
-            if re.search(pattern, line):
-                return False
-
-        # Show critical information
-        show_patterns = [
-            r"ERROR",
-            r"FAILED", 
-            r"CRITICAL",
-            r"Traceback",
-            r"Exception.*Error",
-        ]
-
-        for pattern in show_patterns:
-            if re.search(pattern, line, re.IGNORECASE):
-                # But still suppress if it's part of PyATS formatting
-                if not any(re.search(p, line) for p in [r"^\|", r"^\+"]):
-                    return True
-
-        return False
-
-    def _find_pyats_output_files(self) -> Dict[str, Any]:
-        """Find PyATS generated output files in archive directory"""
-        output_files: Dict[str, Any] = {}
-
-        # Look for our controlled archive name
-        if hasattr(self, "archive_name"):
-            archive_path = self.output_dir / self.archive_name
-            if archive_path.exists():
-                # Extract the zip file to a temporary directory
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    temp_path = Path(temp_dir)
-
-                    # Extract zip contents
-                    with zipfile.ZipFile(archive_path, "r") as zip_ref:
-                        zip_ref.extractall(temp_path)
-
-                    # Now look for the actual PyATS output files
-                    patterns = {
-                        "results_json": "results.json",
-                        "results_xml": "ResultsDetails.xml",
-                        "summary_xml": "ResultsSummary.xml",
-                        "report": "*.report",
-                        "job_log": "JobLog.*",
-                        "task_logs": "TaskLog.*",
-                    }
-
-                    for key, pattern in patterns.items():
-                        matches = list(temp_path.glob(pattern))
-                        if matches:
-                            # For task logs, there might be multiple
-                            if key == "task_logs":
-                                output_files[key] = [str(m) for m in matches]
-                            else:
-                                output_files[key] = str(matches[0])
-
-                # Store the archive location
-                output_files["archive"] = str(archive_path)
-
-        return output_files
-
-    def _extract_pyats_results(self) -> Optional[Path]:
-        """Extract PyATS results from zip archive to a permanent location"""
-        # Look for our controlled archive name
-        if not hasattr(self, "archive_name"):
-            return None
-
-        archive_path = self.output_dir / self.archive_name
-        if not archive_path.exists():
-            return None
-
-        # Create extraction directory
-        extract_dir = self.output_dir / "pyats_results"
-        
-        # If pyats_results already exists with HTML reports, update the previous archive
-        if extract_dir.exists() and (extract_dir / "html_reports").exists():
-            self._update_previous_archive_with_html_reports(extract_dir)
-        
-        extract_dir.mkdir(exist_ok=True)
-
-        # Clear previous results
-        for item in extract_dir.iterdir():
-            if item.is_dir():
-                shutil.rmtree(item)
-            else:
-                item.unlink()
-
-        # Extract
-        with zipfile.ZipFile(archive_path, "r") as zip_ref:
-            zip_ref.extractall(extract_dir)
-
-        return extract_dir
-
-    def _update_previous_archive_with_html_reports(self, pyats_results_dir: Path) -> None:
-        """Update the most recent archive with HTML reports before overwriting"""
-        # Find the most recent archive (excluding the current one)
-        archives = sorted([
-            f for f in self.output_dir.glob("nac_test_job_*.zip")
-            if f.name != getattr(self, 'archive_name', '')
-        ], key=lambda x: x.stat().st_mtime, reverse=True)
-        
-        if not archives:
-            return
-            
-        latest_archive = archives[0]
-        
-        # Create a temporary directory for updating the archive
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            
-            # Extract the existing archive
-            with zipfile.ZipFile(latest_archive, 'r') as zip_ref:
-                zip_ref.extractall(temp_path)
-            
-            # Copy HTML reports into the extracted content
-            html_reports_src = pyats_results_dir / "html_reports"
-            if html_reports_src.exists():
-                html_reports_dst = temp_path / "html_reports"
-                if html_reports_dst.exists():
-                    shutil.rmtree(html_reports_dst)
-                shutil.copytree(html_reports_src, html_reports_dst)
-            
-            # Re-create the archive with HTML reports included
-            with zipfile.ZipFile(latest_archive, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
-                for root, dirs, files in os.walk(temp_path):
-                    for file in files:
-                        file_path = Path(root) / file
-                        arcname = file_path.relative_to(temp_path)
-                        zip_ref.write(file_path, arcname)
-
-    def _print_summary(self) -> None:
-        """Print execution summary matching Robot format"""
-        wall_time = (datetime.now() - self.start_time).total_seconds()
-
-        # Calculate total test time (sum of all individual test durations)
-        total_test_time = sum(
-            test.get("duration", 0)
-            for test in self.test_status.values()
-            if "duration" in test
-        )
-
-        # PyATS returns lowercase status values: 'passed', 'failed', 'skipped', 'errored'
-        passed = sum(
-            1 for t in self.test_status.values() if t.get("status") == "passed"
-        )
-        failed = sum(
-            1 for t in self.test_status.values() if t.get("status") == "failed"
-        )
-        skipped = sum(
-            1 for t in self.test_status.values() if t.get("status") == "skipped"
-        )
-        errored = sum(
-            1 for t in self.test_status.values() if t.get("status") == "errored"
-        )
-        total = len(self.test_status)
-
-        # Include errored tests in the failed count for the summary
-        failed_total = failed + errored
-
-        print("\n" + "=" * 80)
-        if errored > 0:
-            # If we have errored tests, show them separately
-            print(
-                f"{total} tests, {passed} passed, {failed} failed, {errored} errored, {skipped} skipped."
-            )
+        # Run all test types in parallel
+        if tasks:
+            await asyncio.gather(*tasks)
         else:
-            # Otherwise show combined failed count
-            print(
-                f"{total} tests, {passed} passed, {failed_total} failed, {skipped} skipped."
+            print("No tests to execute after categorization")
+
+        # Print summary after all tests complete
+        if hasattr(self, "test_status") and self.test_status:
+            # Combine all test statuses for summary
+            combined_status = {}
+            if hasattr(self, "api_test_status"):
+                combined_status.update(self.api_test_status)
+            if hasattr(self, "d2d_test_status"):
+                combined_status.update(self.d2d_test_status)
+            if not combined_status:
+                combined_status = self.test_status
+
+            # Print the summary
+            self.summary_printer.print_summary(
+                combined_status,
+                self.start_time,
+                output_dir=self.output_dir,
+                archive_path=None,
+                api_test_status=getattr(self, "api_test_status", None),
+                d2d_test_status=getattr(self, "d2d_test_status", None),
+                overall_start_time=self.overall_start_time,
             )
-        print("=" * 80)
 
-        # Extract and find PyATS output files
-        extract_dir = self._extract_pyats_results()
-        if extract_dir:
-            results_json = extract_dir / "results.json"
-            results_xml = extract_dir / "ResultsDetails.xml"
-            summary_xml = extract_dir / "ResultsSummary.xml"
-            report_files = list(extract_dir.glob("*.report"))
+        # Generate HTML reports after all test types have completed
+        await self._generate_html_reports_async()
 
-            print(terminal.info("PyATS Output Files:"))
-            print(terminal.info("=" * 80))
-
-            if results_json.exists():
-                print(f"{terminal.info('Results JSON:')}    {results_json}")
-            if results_xml.exists():
-                print(f"{terminal.info('Results XML:')}     {results_xml}")
-            if summary_xml.exists():
-                print(f"{terminal.info('Summary XML:')}     {summary_xml}")
-            if report_files:
-                print(f"{terminal.info('Report:')}          {report_files[0]}")
-
-            # Also show the original archive location
-            if hasattr(self, "archive_name"):
-                archive_path = self.output_dir / self.archive_name
-                if archive_path.exists():
-                    print(f"{terminal.info('Archive:')}         {archive_path}")
-
-        # Color the timing information
-        print(f"\n{terminal.highlight('Total testing:')} {self._format_duration(total_test_time)}")
-        print(f"{terminal.highlight('Elapsed time:')}  {self._format_duration(wall_time)}")
-
-    def _format_duration(self, seconds: float) -> str:
-        """Format duration like Robot does"""
-        if seconds < 60:
-            return f"{seconds:.2f} seconds"
-        else:
-            minutes = int(seconds / 60)
-            secs = seconds % 60
-            return f"{minutes} minutes {secs:.2f} seconds"
-
-    def _generate_html_reports(self) -> None:
-        """Generate HTML reports from collected results."""
-        print("\nGenerating HTML reports...")
-        
-        # Use async for parallel generation
-        asyncio.run(self._generate_html_reports_async())
-        
     async def _generate_html_reports_async(self) -> None:
-        """Generate HTML reports asynchronously."""
-        # Use the already extracted pyats_results directory
-        extract_dir = self.output_dir / "pyats_results"
-        if not extract_dir.exists():
-            print("PyATS results directory not found for HTML report generation")
+        """Generate HTML reports asynchronously from collected archives.
+
+        This method handles multiple archives (API and D2D) using the
+        MultiArchiveReportGenerator for proper report organization and
+        combined summary generation.
+        """
+
+        # Use ArchiveInspector to find all archives
+        archives = ArchiveInspector.find_archives(self.output_dir)
+
+        # Collect the latest archive of each type
+        archive_paths = []
+        archive_info = []  # Store archive info for display later
+
+        if archives["api"]:
+            archive_paths.append(archives["api"][0])
+            archive_info.append(f"Found API archive: {archives['api'][0].name}")
+
+        if archives["d2d"]:
+            archive_paths.append(archives["d2d"][0])
+            archive_info.append(f"Found D2D archive: {archives['d2d'][0].name}")
+
+        if not archive_paths and archives["legacy"]:
+            # Fallback to legacy archives for backward compatibility
+            archive_paths.append(archives["legacy"][0])
+            archive_info.append(f"Found legacy archive: {archives['legacy'][0].name}")
+
+        if not archive_paths:
+            print("No PyATS job archives found to generate reports from.")
             return
-            
-        generator = ReportGenerator(self.output_dir, extract_dir)
-        result = await generator.generate_all_reports()
-        
-        if result['status'] == 'success':
+
+        print(f"\nGenerating reports from {len(archive_paths)} archive(s)...")
+
+        # Use MultiArchiveReportGenerator for all cases (handles single archive too)
+        generator = MultiArchiveReportGenerator(self.output_dir)
+        result = await generator.generate_reports_from_archives(archive_paths)
+
+        if result["status"] in ["success", "partial"]:
             print(f"Total report generation time: {result['duration']:.2f} seconds")
-            if result['failed_reports'] > 0:
-                print(f"Warning: {result['failed_reports']} reports failed to generate")
-                
-            # Show the HTML report location
-            html_reports_dir = extract_dir / "html_reports"
-            summary_report = html_reports_dir / "summary_report.html"
-            
-            if summary_report.exists():
-                print(f"\n{terminal.success('HTML Reports Generated:')}")
-                print(f"{terminal.info('Summary Report:')} {summary_report}")
-                print(f"{terminal.info('All Reports:')}    {html_reports_dir}")
+
+            # Print archive info at the bottom
+            for info in archive_info:
+                print(info)
+
+            # Display results based on what was generated
+            print(f"\n{terminal.info('HTML Reports Generated:')}")
+            print("=" * 80)
+
+            if result.get("combined_summary"):
+                # Multiple archives - show combined summary
+                print(f"{'Combined Summary:'} {result['combined_summary']}")
+
+                # Show individual report directories
+                for archive_type, archive_result in result["results"].items():
+                    if archive_result.get("status") == "success":
+                        report_dir = archive_result.get("report_dir", "")
+                        print(f"{f'{archive_type.upper()} Reports:'}   {report_dir}")
+            else:
+                # Single archive - show its report location
+                for archive_type, archive_result in result["results"].items():
+                    if archive_result.get("status") == "success":
+                        report_dir = Path(archive_result.get("report_dir", ""))
+                        summary_report = report_dir / "summary_report.html"
+
+                        print(f"{'Summary Report:'} {summary_report}")
+                        print(f"{'All Reports:'}    {report_dir}")
+                        break
+
+            # Report any failures
+            failed_archives = [
+                k for k, v in result["results"].items() if v.get("status") != "success"
+            ]
+            if failed_archives:
+                print(
+                    f"\n{terminal.warning('Warning:')} Failed to process archives: {', '.join(failed_archives)}"
+                )
         else:
-            print("No test results found for report generation")
+            print(f"\n{terminal.error('Failed to generate reports')}")
+            if result.get("error"):
+                print(f"Error: {result['error']}")

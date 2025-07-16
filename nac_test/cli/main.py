@@ -6,6 +6,7 @@ import logging
 import sys
 import time  #  -- ANDREA REMOVE AFTER MVP
 from datetime import datetime  #  -- ANDREA REMOVE AFTER MVP
+from typing import Optional
 
 import errorhandler
 
@@ -15,9 +16,8 @@ from enum import Enum
 
 from pathlib import Path
 
-import nac_test.pabot
-import nac_test.robot_writer
-from nac_test.pyats.orchestrator import PyATSOrchestrator
+import nac_test.robot.pabot
+import nac_test.robot.robot_writer
 
 
 app = typer.Typer(add_completion=False)
@@ -203,6 +203,18 @@ PyATS = Annotated[
 ]
 
 
+MaxParallelDevices = Annotated[
+    int,
+    typer.Option(
+        "--max-parallel-devices",
+        help="Maximum number of devices to test in parallel for SSH/D2D tests. If not specified, automatically calculated based on system resources. Use this to set a lower limit if needed.",
+        envvar="NAC_TEST_MAX_PARALLEL_DEVICES",
+        min=1,
+        max=500,
+    ),
+]
+
+
 Version = Annotated[
     bool,
     typer.Option(
@@ -226,6 +238,7 @@ def main(
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
     pyats: PyATS = False,
+    max_parallel_devices: Optional[MaxParallelDevices] = None,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
@@ -234,12 +247,17 @@ def main(
     configure_logging(verbosity)
 
     if pyats:
+        # Import is done here to avoid CLI argument conflicts
+        from nac_test.pyats.orchestrator import PyATSOrchestrator
+
         # PyATS execution path
         orchestrator = PyATSOrchestrator(data, templates, output, merged_data_filename)
+        if max_parallel_devices is not None:
+            orchestrator.max_parallel_devices = max_parallel_devices
         orchestrator.run_tests()
     else:
         # Robot Framework execution path
-        writer = nac_test.robot_writer.RobotWriter(
+        writer = nac_test.robot.robot_writer.RobotWriter(
             data, filters, tests, include, exclude
         )
 
@@ -262,7 +280,7 @@ def main(
         print(f"Total rendering time: {render_duration:.3f} seconds")
         #  -- ANDREA REMOVE AFTER MVP
         if not render_only:
-            nac_test.pabot.run_pabot(
+            nac_test.robot.pabot.run_pabot(
                 output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
             )
     exit()

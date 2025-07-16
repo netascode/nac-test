@@ -33,12 +33,12 @@ logger = logging.getLogger(__name__)
 
 class ReportGenerator:
     """Async HTML report generator with robust error handling.
-    
+
     This class generates HTML reports from test results collected during
     PyATS test execution. It uses async I/O for parallel processing of
     multiple test results, significantly improving performance for large
     test suites.
-    
+
     Attributes:
         output_dir: Base output directory containing test results
         report_dir: Directory where HTML reports will be generated
@@ -46,10 +46,12 @@ class ReportGenerator:
         max_concurrent: Maximum number of concurrent report generations
         failed_reports: List of report paths that failed to generate
     """
-    
-    def __init__(self, output_dir: Path, pyats_results_dir: Path, max_concurrent: int = 10) -> None:
+
+    def __init__(
+        self, output_dir: Path, pyats_results_dir: Path, max_concurrent: int = 10
+    ) -> None:
         """Initialize the report generator.
-        
+
         Args:
             output_dir: Base output directory containing test results
             pyats_results_dir: Directory where PyATS results are extracted
@@ -66,18 +68,19 @@ class ReportGenerator:
         self.temp_data_dir = output_dir / "html_report_data_temp"
         self.max_concurrent = max_concurrent
         self.failed_reports: List[str] = []
-        
+
         # Initialize Jinja2 environment using our templates module
         from nac_test.pyats.reporting.templates import TEMPLATES_DIR
+
         self.env = get_jinja_environment(TEMPLATES_DIR)
-        
+
     async def generate_all_reports(self) -> Dict[str, Any]:
         """Generate all reports with parallelization and error handling.
-        
+
         This method finds all test result JSON files and generates HTML
         reports for each one in parallel. It also generates a summary
         report and optionally cleans up the JSON files.
-        
+
         Returns:
             Dictionary containing:
                 - status: "success" or "no_results"
@@ -88,69 +91,69 @@ class ReportGenerator:
                 - summary_report: Path to the summary report (if generated)
         """
         start_time = datetime.now()
-        
+
         # Move files from temp location to final location
         if self.temp_data_dir.exists():
             for json_file in self.temp_data_dir.glob("*.json"):
                 json_file.rename(self.html_report_data_dir / json_file.name)
             # Clean up temp directory
             self.temp_data_dir.rmdir()
-        
+
         # Find all test result files in html_report_data directory
         result_files = list(self.html_report_data_dir.glob("*.json"))
-        
+
         if not result_files:
             logger.warning("No test results found to generate reports")
             return {"status": "no_results", "duration": 0}
-        
+
         logger.info(f"Found {len(result_files)} test results to process")
-        
+
         # Generate reports concurrently with semaphore control
         semaphore = asyncio.Semaphore(self.max_concurrent)
-        tasks = [
-            self._generate_report_safe(file, semaphore) 
-            for file in result_files
-        ]
-        
+        tasks = [self._generate_report_safe(file, semaphore) for file in result_files]
+
         report_paths = await asyncio.gather(*tasks)
         successful_reports = [p for p in report_paths if p is not None]
-        
+
         logger.info(f"Successfully generated {len(successful_reports)} reports")
-        
+
         # Generate summary report
-        summary_path = await self._generate_summary_report(successful_reports, result_files)
-        
+        summary_path = await self._generate_summary_report(
+            successful_reports, result_files
+        )
+
         # Clean up JSON files (unless in debug mode or KEEP_HTML_REPORT_DATA is set)
-        if os.environ.get('PYATS_DEBUG') or os.environ.get('KEEP_HTML_REPORT_DATA'):
-            if os.environ.get('KEEP_HTML_REPORT_DATA'):
+        if os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA"):
+            if os.environ.get("KEEP_HTML_REPORT_DATA"):
                 logger.info("Keeping JSON result files (KEEP_HTML_REPORT_DATA is set)")
             else:
                 logger.info("Debug mode enabled - keeping JSON result files")
         else:
             await self._cleanup_json_files(result_files)
-        
+
         duration = (datetime.now() - start_time).total_seconds()
-        
+
         return {
             "status": "success",
             "duration": duration,
             "total_tests": len(result_files),
             "successful_reports": len(successful_reports),
             "failed_reports": len(self.failed_reports),
-            "summary_report": str(summary_path) if summary_path else None
+            "summary_report": str(summary_path) if summary_path else None,
         }
-    
-    async def _generate_report_safe(self, result_file: Path, 
-                                   semaphore: asyncio.Semaphore) -> Optional[Path]:
+
+    async def _generate_report_safe(
+        self, result_file: Path, semaphore: asyncio.Semaphore
+    ) -> Optional[Path]:
         """Generate a single report with error handling.
-        
+
         This method wraps the actual report generation with error handling
         to ensure that a single failure doesn't stop the entire process.
-        
+
         Args:
             result_file: Path to the JSON result file
             semaphore: Semaphore for controlling concurrency
-            
+
         Returns:
             Path to the generated report, or None if generation failed
         """
@@ -161,81 +164,83 @@ class ReportGenerator:
                 logger.error(f"Failed to generate report for {result_file}: {e}")
                 self.failed_reports.append(str(result_file))
                 return None
-    
+
     async def _generate_single_report(self, result_file: Path) -> Path:
         """Generate a single test report asynchronously.
-        
+
         Reads a JSON test result file and generates an HTML report using
         the test_case template. Command outputs are truncated for display.
-        
+
         Args:
             result_file: Path to the JSON result file
-            
+
         Returns:
             Path to the generated HTML report
         """
         # Read test results
-        async with aiofiles.open(result_file, 'r') as f:
+        async with aiofiles.open(result_file, "r") as f:
             content = await f.read()
             test_data = json.loads(content)
-        
+
         # Get metadata (now included in the same file)
-        metadata = test_data.get('metadata', {})
-        
+        metadata = test_data.get("metadata", {})
+
         # Truncate command outputs for HTML display
-        for execution in test_data.get('command_executions', []):
-            execution['output'] = self._truncate_output(execution['output'])
-        
+        for execution in test_data.get("command_executions", []):
+            execution["output"] = self._truncate_output(execution["output"])
+
         # Use pre-rendered HTML from metadata
         template = self.env.get_template("test_case/report.html.j2")
         html_content = template.render(
-            title=metadata.get('title', test_data['test_id']),
-            description_html=metadata.get('description_html', ''),
-            setup_html=metadata.get('setup_html', ''),
-            procedure_html=metadata.get('procedure_html', ''),
-            criteria_html=metadata.get('criteria_html', ''),
-            results=test_data.get('results', []),
-            command_executions=test_data.get('command_executions', []),
-            status=test_data.get('overall_status', 'unknown'),
+            title=metadata.get("title", test_data["test_id"]),
+            description_html=metadata.get("description_html", ""),
+            setup_html=metadata.get("setup_html", ""),
+            procedure_html=metadata.get("procedure_html", ""),
+            criteria_html=metadata.get("criteria_html", ""),
+            results=test_data.get("results", []),
+            command_executions=test_data.get("command_executions", []),
+            status=test_data.get("overall_status", "unknown"),
             generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            jobfile_path=metadata.get('jobfile_path', '')
+            jobfile_path=metadata.get("jobfile_path", ""),
         )
-        
+
         # Write HTML report
         report_path = self.report_dir / f"{test_data['test_id']}.html"
-        async with aiofiles.open(report_path, 'w') as f:
+        async with aiofiles.open(report_path, "w") as f:
             await f.write(html_content)
-        
+
         logger.debug(f"Generated report: {report_path}")
         return report_path
-    
+
     def _truncate_output(self, output: str, max_lines: int = 1000) -> str:
         """Truncate output with a note.
-        
+
         Truncates long command outputs to prevent HTML reports from
         becoming too large. A note is added indicating how many lines
         were omitted.
-        
+
         Args:
             output: The output string to truncate
             max_lines: Maximum number of lines to keep. Defaults to 1000.
-            
+
         Returns:
             Truncated output string with omission note if truncated
         """
-        lines = output.split('\n')
+        lines = output.split("\n")
         if len(lines) <= max_lines:
             return output
-        
-        return '\n'.join(lines[:max_lines]) + \
-               f'\n\n... truncated ({len(lines) - max_lines} lines omitted) ...'
-    
+
+        return (
+            "\n".join(lines[:max_lines])
+            + f"\n\n... truncated ({len(lines) - max_lines} lines omitted) ..."
+        )
+
     async def _cleanup_json_files(self, files: List[Path]) -> None:
         """Clean up JSON files after successful report generation.
-        
+
         Removes the intermediate JSON files to save disk space. This is
         skipped if PYATS_DEBUG environment variable is set.
-        
+
         Args:
             files: List of JSON file paths to delete
         """
@@ -244,67 +249,87 @@ class ReportGenerator:
                 file.unlink()
             except Exception as e:
                 logger.warning(f"Failed to delete {file}: {e}")
-    
-    async def _generate_summary_report(self, report_paths: List[Path], 
-                                     result_files: List[Path]) -> Optional[Path]:
+
+    async def _generate_summary_report(
+        self, report_paths: List[Path], result_files: List[Path]
+    ) -> Optional[Path]:
         """Generate summary report from individual reports.
-        
+
         Creates an aggregated summary report showing all test results
         with links to individual reports. Reads the original JSON files
         to get accurate status and metadata.
-        
+
         Args:
             report_paths: List of successfully generated report paths
             result_files: List of all result JSON files (for reading metadata)
-            
+
         Returns:
             Path to the summary report, or None if generation failed
         """
         try:
             # Read the original JSON files for accurate data
-            
+
             all_results = []
-            
+
             # Create a mapping of test_id to report_path for successful reports
             report_map = {path.stem: path for path in report_paths}
-            
+
             # Read all JSON files to get complete test information
             for result_file in result_files:
                 try:
-                    async with aiofiles.open(result_file, 'r') as f:
+                    async with aiofiles.open(result_file, "r") as f:
                         content = await f.read()
                         test_data = json.loads(content)
-                    
-                    test_id = test_data['test_id']
-                    metadata = test_data.get('metadata', {})
-                    
+
+                    test_id = test_data["test_id"]
+                    metadata = test_data.get("metadata", {})
+
                     # Only include tests that have successfully generated reports
                     if test_id in report_map:
-                        all_results.append({
-                            "test_id": test_id,
-                            "title": metadata.get('title', test_id),
-                            "status": test_data.get('overall_status', ResultStatus.SKIPPED.value),
-                            "timestamp": test_data.get('start_time', datetime.now().isoformat()),
-                            "result_file_path": report_map[test_id].name  # Just the filename since they're in the same directory
-                        })
+                        all_results.append(
+                            {
+                                "test_id": test_id,
+                                "title": metadata.get("title", test_id),
+                                "status": test_data.get(
+                                    "overall_status", ResultStatus.SKIPPED.value
+                                ),
+                                "timestamp": test_data.get(
+                                    "start_time", datetime.now().isoformat()
+                                ),
+                                "result_file_path": report_map[
+                                    test_id
+                                ].name,  # Just the filename since they're in the same directory
+                            }
+                        )
                 except Exception as e:
                     logger.warning(f"Failed to read metadata from {result_file}: {e}")
-            
+
             # Sort results by timestamp
             all_results.sort(key=lambda x: x["timestamp"])
-            
+
             # Calculate statistics
             total_tests = len(all_results)
-            passed_tests = sum(1 for r in all_results if r["status"] == ResultStatus.PASSED.value)
-            failed_tests = sum(1 for r in all_results if r["status"] in [
-                ResultStatus.FAILED.value, ResultStatus.ERRORED.value
-            ])
-            skipped_tests = sum(1 for r in all_results if r["status"] == ResultStatus.SKIPPED.value)
-            
+            passed_tests = sum(
+                1 for r in all_results if r["status"] == ResultStatus.PASSED.value
+            )
+            failed_tests = sum(
+                1
+                for r in all_results
+                if r["status"]
+                in [ResultStatus.FAILED.value, ResultStatus.ERRORED.value]
+            )
+            skipped_tests = sum(
+                1 for r in all_results if r["status"] == ResultStatus.SKIPPED.value
+            )
+
             # Success rate excludes skipped tests from the calculation
             tests_with_results = total_tests - skipped_tests
-            success_rate = (passed_tests / tests_with_results * 100) if tests_with_results > 0 else 0
-            
+            success_rate = (
+                (passed_tests / tests_with_results * 100)
+                if tests_with_results > 0
+                else 0
+            )
+
             # Render summary
             template = self.env.get_template("summary/report.html.j2")
             html_content = template.render(
@@ -314,16 +339,16 @@ class ReportGenerator:
                 failed_tests=failed_tests,
                 skipped_tests=skipped_tests,
                 success_rate=success_rate,
-                results=all_results
+                results=all_results,
             )
-            
+
             summary_file = self.report_dir / "summary_report.html"
-            async with aiofiles.open(summary_file, 'w') as f:
+            async with aiofiles.open(summary_file, "w") as f:
                 await f.write(html_content)
-            
+
             logger.info(f"Generated summary report: {summary_file}")
             return summary_file
-            
+
         except Exception as e:
             logger.error(f"Failed to generate summary report: {e}")
-            return None 
+            return None
