@@ -80,19 +80,19 @@ class JobGenerator:
         Returns:
             Job file content as a string
         """
-        device_id = device.get("device_id", device.get("host", "unknown"))
+        hostname = device["hostname"]  # Required field per nac-test contract
         test_files_str = ",\n        ".join([f'"{str(tf)}"' for tf in test_files])
 
         job_content = textwrap.dedent(f'''
-        """Auto-generated PyATS job file for device {device_id}"""
+        """Auto-generated PyATS job file for device {hostname}"""
         
         import os
         import json
         from pathlib import Path
         from nac_test.pyats.ssh.connection_manager import DeviceConnectionManager
         
-        # Device being tested
-        DEVICE_ID = "{device_id}"
+        # Device being tested (using hostname)
+        HOSTNAME = "{hostname}"
         DEVICE_INFO = {json.dumps(device)}
         
         # Test files to execute
@@ -113,7 +113,7 @@ class JobGenerator:
             for idx, test_file in enumerate(TEST_FILES):
                 runtime.tasks.run(
                     testscript=test_file,
-                    taskid=f"{{DEVICE_ID}}_test_{{idx}}",
+                    taskid=f"{{HOSTNAME}}_test_{{idx}}",
                     max_runtime={DEFAULT_TEST_TIMEOUT}
                 )
         ''')

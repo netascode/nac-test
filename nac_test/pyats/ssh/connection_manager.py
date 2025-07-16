@@ -8,15 +8,12 @@ including connection pooling, resource limits, and per-device locking.
 
 import asyncio
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 from contextlib import asynccontextmanager
-from unicon import Connection
-from unicon.core.errors import (
-    UniconConnectionError,
-    CredentialsExhaustedError,
-    StateMachineError,
-    TimeoutError as UniconTimeoutError,
-)
+
+# Only import for type checking to avoid early PyATS initialization
+if TYPE_CHECKING:
+    from unicon import Connection
 
 from nac_test.utils.system_resources import SystemResourceCalculator
 
@@ -42,7 +39,7 @@ class DeviceConnectionManager:
         """
         self.max_concurrent = max_concurrent or self._calculate_ssh_capacity()
         self.device_locks: Dict[str, asyncio.Lock] = {}
-        self.connections: Dict[str, Connection] = {}
+        self.connections: Dict[str, Any] = {}  # Changed from Connection to avoid import
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
 
         logger.info(
@@ -63,15 +60,15 @@ class DeviceConnectionManager:
         )
 
     async def get_connection(
-        self, device_id: str, device_info: Dict[str, Any]
-    ) -> Connection:
+        self, hostname: str, device_info: Dict[str, Any]
+    ) -> Any:  # Changed from Connection to avoid import
         """Get or create SSH connection for a device.
 
         This method ensures that only one connection exists per device at a time
         and respects the global connection limit.
 
         Args:
-            device_id: Unique device identifier
+            hostname: Unique device identifier
             device_info: Device connection information containing:
                 - host: Device IP address or hostname
                 - username: SSH username
@@ -86,31 +83,31 @@ class DeviceConnectionManager:
             ConnectionError: If connection cannot be established
         """
         # Ensure one connection per device
-        if device_id not in self.device_locks:
-            self.device_locks[device_id] = asyncio.Lock()
+        if hostname not in self.device_locks:
+            self.device_locks[hostname] = asyncio.Lock()
 
-        async with self.device_locks[device_id]:
+        async with self.device_locks[hostname]:
             # Return existing connection if available
-            if device_id in self.connections:
-                conn = self.connections[device_id]
+            if hostname in self.connections:
+                conn = self.connections[hostname]
                 if self._is_connection_healthy(conn):
-                    logger.debug(f"Reusing existing connection for {device_id}")
+                    logger.debug(f"Reusing existing connection for {hostname}")
                     return conn
                 else:
                     # Connection is unhealthy, remove it
-                    logger.warning(f"Removing unhealthy connection for {device_id}")
-                    await self._close_connection_internal(device_id)
+                    logger.warning(f"Removing unhealthy connection for {hostname}")
+                    await self._close_connection_internal(hostname)
 
             # Create new connection
-            return await self._create_connection(device_id, device_info)
+            return await self._create_connection(hostname, device_info)
 
     async def _create_connection(
-        self, device_id: str, device_info: Dict[str, Any]
-    ) -> Connection:
+        self, hostname: str, device_info: Dict[str, Any]
+    ) -> Any:  # Changed from Connection to avoid import
         """Create new SSH connection for a device.
 
         Args:
-            device_id: Unique device identifier
+            hostname: Unique device identifier
             device_info: Device connection information
 
         Returns:
@@ -119,10 +116,18 @@ class DeviceConnectionManager:
         Raises:
             ConnectionError: With detailed error information about the failure type
         """
+        # Import unicon exceptions here to delay PyATS initialization
+        from unicon.core.errors import (
+            UniconConnectionError,
+            CredentialsExhaustedError,
+            StateMachineError,
+            TimeoutError as UniconTimeoutError,
+        )
+
         # Respect global connection limit
         async with self.semaphore:
             host = device_info.get("host", "unknown")
-            logger.info(f"Creating SSH connection to {device_id} at {host}")
+            logger.info(f"Creating SSH connection to {hostname} at {host}")
 
             try:
                 # Run Unicon connection in thread pool (since it's synchronous)
@@ -132,30 +137,32 @@ class DeviceConnectionManager:
                 )
 
                 # Store connection
-                self.connections[device_id] = conn
-                logger.info(f"Successfully connected to {device_id}")
+                self.connections[hostname] = conn
+                logger.info(f"Successfully connected to {hostname}")
 
                 return conn
 
             except CredentialsExhaustedError as e:
                 # Authentication failure - no point retrying
-                error_msg = self._format_auth_error(device_id, device_info, e)
+                error_msg = self._format_auth_error(hostname, device_info, e)
                 logger.error(error_msg)
                 raise ConnectionError(error_msg) from e
 
             except (UniconConnectionError, StateMachineError, UniconTimeoutError) as e:
                 # Connection-related errors
-                error_msg = self._format_connection_error(device_id, device_info, e)
+                error_msg = self._format_connection_error(hostname, device_info, e)
                 logger.error(error_msg)
                 raise ConnectionError(error_msg) from e
 
             except Exception as e:
                 # Unexpected errors
-                error_msg = self._format_unexpected_error(device_id, device_info, e)
+                error_msg = self._format_unexpected_error(hostname, device_info, e)
                 logger.error(error_msg)
                 raise ConnectionError(error_msg) from e
 
-    def _unicon_connect(self, device_info: Dict[str, Any]) -> Connection:
+    def _unicon_connect(
+        self, device_info: Dict[str, Any]
+    ) -> Any:  # Changed from Connection to avoid import
         """Create Unicon connection (runs in thread pool).
 
         Args:
@@ -167,6 +174,9 @@ class DeviceConnectionManager:
         Raises:
             Exception: Any exception from Unicon connection attempt
         """
+        # Import unicon here to delay PyATS initialization until actually needed
+        from unicon import Connection
+
         # Extract connection parameters
         connection_params = {
             "hostname": device_info["host"],
@@ -184,7 +194,9 @@ class DeviceConnectionManager:
 
         return conn
 
-    def _is_connection_healthy(self, conn: Connection) -> bool:
+    def _is_connection_healthy(
+        self, conn: Any
+    ) -> bool:  # Changed from Connection to avoid import
         """Check if connection is healthy and usable.
 
         Args:
@@ -199,18 +211,24 @@ class DeviceConnectionManager:
             return False
 
     def _format_connection_error(
-        self, device_id: str, device_info: Dict[str, Any], error: Exception
+        self, hostname: str, device_info: Dict[str, Any], error: Exception
     ) -> str:
         """Format connection error with detailed information.
 
         Args:
-            device_id: Device identifier
+            hostname: Device identifier
             device_info: Device connection information
             error: The connection exception that occurred
 
         Returns:
             Formatted error message with troubleshooting hints
         """
+        # Import unicon exceptions here for error type checking
+        from unicon.core.errors import (
+            StateMachineError,
+            TimeoutError as UniconTimeoutError,
+        )
+
         host = device_info.get("host", "unknown")
         platform = device_info.get("platform", "unknown")
         error_type = type(error).__name__
@@ -242,7 +260,7 @@ class DeviceConnectionManager:
             ]
 
         return (
-            f"{category} for device '{device_id}'\n"
+            f"{category} for device '{hostname}'\n"
             f"  Host: {host}\n"
             f"  Platform: {platform}\n"
             f"  Error: {error_type}: {error}\n"
@@ -251,14 +269,14 @@ class DeviceConnectionManager:
 
     def _format_auth_error(
         self,
-        device_id: str,
+        hostname: str,
         device_info: Dict[str, Any],
-        error: CredentialsExhaustedError,
+        error: Exception,  # Changed from CredentialsExhaustedError to avoid import
     ) -> str:
         """Format authentication error with detailed information.
 
         Args:
-            device_id: Device identifier
+            hostname: Device identifier
             device_info: Device connection information
             error: The authentication exception
 
@@ -269,7 +287,7 @@ class DeviceConnectionManager:
         username = device_info.get("username", "unknown")
 
         return (
-            f"Authentication failure for device '{device_id}'\n"
+            f"Authentication failure for device '{hostname}'\n"
             f"  Host: {host}\n"
             f"  Username: {username}\n"
             f"  Error: {type(error).__name__}: {error}\n"
@@ -281,12 +299,12 @@ class DeviceConnectionManager:
         )
 
     def _format_unexpected_error(
-        self, device_id: str, device_info: Dict[str, Any], error: Exception
+        self, hostname: str, device_info: Dict[str, Any], error: Exception
     ) -> str:
         """Format unexpected error with detailed information.
 
         Args:
-            device_id: Device identifier
+            hostname: Device identifier
             device_info: Device connection information
             error: The unexpected exception
 
@@ -297,7 +315,7 @@ class DeviceConnectionManager:
         platform = device_info.get("platform", "unknown")
 
         return (
-            f"Unexpected error connecting to device '{device_id}'\n"
+            f"Unexpected error connecting to device '{hostname}'\n"
             f"  Host: {host}\n"
             f"  Platform: {platform}\n"
             f"  Error: {type(error).__name__}: {error}\n"
@@ -307,36 +325,36 @@ class DeviceConnectionManager:
             f"    - An unsupported device type or firmware version"
         )
 
-    async def close_connection(self, device_id: str) -> None:
+    async def close_connection(self, hostname: str) -> None:
         """Close and cleanup connection for a device.
 
         Args:
-            device_id: Unique device identifier
+            hostname: Unique device identifier
         """
-        if device_id in self.device_locks:
-            async with self.device_locks[device_id]:
-                await self._close_connection_internal(device_id)
+        if hostname in self.device_locks:
+            async with self.device_locks[hostname]:
+                await self._close_connection_internal(hostname)
 
-    async def _close_connection_internal(self, device_id: str) -> None:
+    async def _close_connection_internal(self, hostname: str) -> None:
         """Internal method to close connection without locking.
 
         Args:
-            device_id: Unique device identifier
+            hostname: Unique device identifier
         """
-        if device_id in self.connections:
+        if hostname in self.connections:
             try:
-                conn = self.connections[device_id]
+                conn = self.connections[hostname]
                 # Run disconnect in thread pool
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(None, self._disconnect_unicon, conn)
-                logger.info(f"Closed connection to {device_id}")
+                logger.info(f"Closed connection to {hostname}")
             except Exception as e:
-                logger.error(f"Error closing connection to {device_id}: {e}")
+                logger.error(f"Error closing connection to {hostname}: {e}")
             finally:
                 # Always remove from connections dict
-                del self.connections[device_id]
+                del self.connections[hostname]
 
-    def _disconnect_unicon(self, conn: Connection) -> None:
+    def _disconnect_unicon(self, conn: "Connection") -> None:
         """Disconnect Unicon connection (runs in thread pool).
 
         Args:
@@ -350,19 +368,19 @@ class DeviceConnectionManager:
 
     async def close_all_connections(self) -> None:
         """Close all active connections."""
-        device_ids = list(self.connections.keys())
+        hostnames = list(self.connections.keys())
 
-        logger.info(f"Closing {len(device_ids)} active connections")
+        logger.info(f"Closing {len(hostnames)} active connections")
 
-        for device_id in device_ids:
-            await self.close_connection(device_id)
+        for hostname in hostnames:
+            await self.close_connection(hostname)
 
     @asynccontextmanager
-    async def device_connection(self, device_id: str, device_info: Dict[str, Any]):
+    async def device_connection(self, hostname: str, device_info: Dict[str, Any]):
         """Context manager for device connections with automatic cleanup.
 
         Args:
-            device_id: Unique device identifier
+            hostname: Unique device identifier
             device_info: Device connection information
 
         Yields:
@@ -370,11 +388,11 @@ class DeviceConnectionManager:
         """
         conn = None
         try:
-            conn = await self.get_connection(device_id, device_info)
+            conn = await self.get_connection(hostname, device_info)
             yield conn
         finally:
             if conn:
-                await self.close_connection(device_id)
+                await self.close_connection(hostname)
 
     def get_connection_stats(self) -> Dict[str, Any]:
         """Get connection manager statistics.

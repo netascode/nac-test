@@ -52,7 +52,8 @@ class DeviceInventoryDiscovery:
         Every SSH-based test architecture MUST provide a base class that:
         - Inherits from SSHTestBase (provided by nac-test)
         - Implements get_ssh_device_inventory(data_model) class method
-        - Returns a list of dicts with: device_id, host, hostname, os, username, password
+        - Returns a list of dicts with REQUIRED fields: hostname, host, os, username, password
+        - Optional fields: type, platform (for PyATS/Unicon compatibility)
         #TODO: Prob need to think about "type" and "platform" b/c PyATS/Unicon is picky.
 
         Example implementations:
@@ -73,9 +74,10 @@ class DeviceInventoryDiscovery:
             logger.error("No test files provided for device inventory discovery")
             return []
 
-        # Load the merged data model that will be passed to the test class
+        # Load merged data model that contains device information
         # Each architecture decides how to parse this data model
         merged_data_path = self.output_dir / self.merged_data_filename
+
         if not merged_data_path.exists():
             logger.error(f"Merged data model not found at {merged_data_path}")
             return []
@@ -88,15 +90,66 @@ class DeviceInventoryDiscovery:
         # For future NXOS: all tests under /d2d/ would inherit from NXOSTestBase
         test_file = test_files[0]
         try:
-            # Dynamically import the test module
-            spec = importlib.util.spec_from_file_location("test_module", str(test_file))
-            if spec is None or spec.loader is None:
-                logger.error(f"Could not load test module from {test_file}")
-                return []
+            # I dont love this but we need to clean sys.argv before 
+            # importing to prevent PyATS argument parser conflict
+            # PyATS configuration module parses sys.argv at import time looking for --pyats-configuration
+            # Our --pyats flag gets interpreted as an incomplete --pyats-configuration argument
+            # This follows the same pattern as PyATS's own aetest module
+            original_argv = sys.argv.copy()
+            try:
+                # Remove --pyats from argv temporarily
+                sys.argv = [arg for arg in sys.argv if arg != "--pyats"]
 
-            module = importlib.util.module_from_spec(spec)
-            sys.modules["test_module"] = module
-            spec.loader.exec_module(module)
+                # Here we need to set up sys.path to enable test module imports
+                # D2D test files contain imports like "from tests.pyats_common.base import ..."
+                # but Python doesn't know where to find the 'tests' package when `nac-test` is run.
+                # 
+                # In the API test flow, the orchestrator sets up PYTHONPATH before discovery,
+                # but for D2D tests, DeviceInventoryDiscovery runs BEFORE any path setup.
+                # So we get into a bit of a pickle.
+                # We need to handle this here to maintain the architecture-agnostic contract.
+                #
+                # How this works:
+                # 1. Find the 'tests' directory in the test file's path hierarchy
+                # 2. Add its parent directory to sys.path
+                # 3. This allows Python to resolve "from tests.something import ..."
+                #
+                # Example:
+                # - Test file: /home/user/nac-sdwan-terraform/tests/d2d/bgp_peers.py
+                # - Find 'tests' dir: /home/user/nac-sdwan-terraform/tests
+                # - Add to sys.path: /home/user/nac-sdwan-terraform
+                # - Now "from tests.pyats_common..." resolves correctly
+                test_dir = None
+                for parent in test_file.parents:
+                    if parent.name == 'tests':
+                        test_dir = parent
+                        break
+                
+                if test_dir:
+                    # Add the parent of 'tests' directory to sys.path
+                    test_parent = test_dir.parent
+                    if str(test_parent) not in sys.path:
+                        logger.debug(f"Adding {test_parent} to sys.path for test imports")
+                        sys.path.insert(0, str(test_parent))
+                else:
+                    # Log a warning but continue - the test might not follow the expected structure
+                    logger.warning(f"Could not find 'tests' directory in path of {test_file}")
+
+                # Dynamically import the test module
+                spec = importlib.util.spec_from_file_location(
+                    "test_module", str(test_file)
+                )
+                if spec is None or spec.loader is None:
+                    logger.error(f"Could not load test module from {test_file}")
+                    return []
+
+                module = importlib.util.module_from_spec(spec)
+                sys.modules["test_module"] = module
+                spec.loader.exec_module(module)
+
+            finally:
+                # Always restore original argv
+                sys.argv = original_argv
 
             # Look for a class with get_ssh_device_inventory method
             # We check all classes in the module and their inheritance chain (MRO)
@@ -105,19 +158,21 @@ class DeviceInventoryDiscovery:
                     # Check if this class or its parents have the method
                     # This handles inheritance: TestClass -> SDWANTestBase -> SSHTestBase
                     for cls in obj.__mro__:
-                        if hasattr(cls, "get_ssh_device_inventory") and callable(
-                            getattr(cls, "get_ssh_device_inventory")
-                        ):
+                        if hasattr(cls, "get_ssh_device_inventory"):
                             # Found it! Call the method and return whatever it gives us
                             # The architecture handles all specifics: parsing files, resolving IPs, adding credentials
+
                             logger.info(
                                 f"Found device inventory method in {cls.__name__}"
                             )
-                            return cls.get_ssh_device_inventory(data_model)
+                            devices = cls.get_ssh_device_inventory(data_model)
+
+                            return devices
 
         except Exception as e:
             logger.error(f"Failed to get device inventory from {test_file}: {e}")
 
         # This should never happen if the architecture follows the contract btw
+
         logger.error("No test class with get_ssh_device_inventory() method found")
         return []

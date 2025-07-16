@@ -366,6 +366,7 @@ class PyATSOrchestrator:
         if d2d_tests:
             # Get device inventory for D2D tests
             devices = self.device_inventory_discovery.get_device_inventory(d2d_tests)
+
             if devices:
                 print(
                     f"Found {len(d2d_tests)} D2D test(s) - using device-centric execution"

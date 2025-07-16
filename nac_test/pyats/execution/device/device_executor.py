@@ -48,10 +48,10 @@ class DeviceExecutor:
         Returns:
             Path to the device's test archive if successful, None otherwise
         """
-        device_id = device.get("device_id", device.get("host", "unknown"))
+        hostname = device["hostname"]  # Required field per nac-test contract
 
         async with semaphore:
-            logger.info(f"Starting tests for device {device_id}")
+            logger.info(f"Starting tests for device {hostname}")
 
             try:
                 # Create temporary files for job and testbed
@@ -73,7 +73,7 @@ class DeviceExecutor:
 
                 # Set up environment for this device
                 env = {
-                    "DEVICE_ID": device_id,
+                    "HOSTNAME": hostname,
                     "DEVICE_INFO": str(device),  # Will be loaded by the job file
                     "DATA_MODEL_PATH": str(
                         self.subprocess_runner.output_dir / "merged_data.yaml"
@@ -82,10 +82,10 @@ class DeviceExecutor:
 
                 # Track test status for this device
                 for test_file in test_files:
-                    test_name = f"{device_id}::{test_file.stem}"
+                    test_name = f"{hostname}::{test_file.stem}"
                     self.test_status[test_name] = {
                         "status": "pending",
-                        "device": device_id,
+                        "device": hostname,
                         "test_file": str(test_file),
                     }
 
@@ -97,7 +97,7 @@ class DeviceExecutor:
                 # Update test status based on result
                 status = "passed" if archive_path else "failed"
                 for test_file in test_files:
-                    test_name = f"{device_id}::{test_file.stem}"
+                    test_name = f"{hostname}::{test_file.stem}"
                     if test_name in self.test_status:
                         self.test_status[test_name]["status"] = status
 
@@ -110,19 +110,19 @@ class DeviceExecutor:
 
                 if archive_path:
                     logger.info(
-                        f"Completed tests for device {device_id}: {archive_path}"
+                        f"Completed tests for device {hostname}: {archive_path}"
                     )
                 else:
-                    logger.error(f"Failed to run tests for device {device_id}")
+                    logger.error(f"Failed to run tests for device {hostname}")
 
                 return archive_path
 
             except Exception as e:
-                logger.error(f"Error running tests for device {device_id}: {e}")
+                logger.error(f"Error running tests for device {hostname}: {e}")
 
                 # Mark all tests as errored
                 for test_file in test_files:
-                    test_name = f"{device_id}::{test_file.stem}"
+                    test_name = f"{hostname}::{test_file.stem}"
                     if test_name in self.test_status:
                         self.test_status[test_name]["status"] = "errored"
                         self.test_status[test_name]["error"] = str(e)

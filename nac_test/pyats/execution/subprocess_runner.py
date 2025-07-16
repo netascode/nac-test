@@ -162,8 +162,8 @@ class SubprocessRunner:
             return None
 
         # Get device ID from environment for archive naming
-        device_id = env.get("DEVICE_ID", "unknown")
-        archive_name = f"pyats_archive_device_{device_id}"
+        hostname = env.get("HOSTNAME", "unknown")
+        archive_name = f"pyats_archive_device_{hostname}"
 
         cmd = [
             "pyats",

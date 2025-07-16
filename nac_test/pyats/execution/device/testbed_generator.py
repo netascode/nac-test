@@ -18,12 +18,13 @@ class TestbedGenerator:
 
         Args:
             device: Device dictionary with connection information
-                Expected keys: device_id, host, hostname, os, username, password
+                Required keys: hostname, host, os, username, password
+                Optional keys: type, platform
 
         Returns:
             Testbed YAML content as a string
         """
-        device_id = device.get("device_id", device.get("host", "unknown"))
+        hostname = device["hostname"]  # Required field per nac-test contract
 
         # Build connection arguments
         connection_args = {
@@ -32,6 +33,15 @@ class TestbedGenerator:
             "port": device.get("port", 22),
         }
 
+        # Override protocol/port if connection_options is present and pased
+        # This allows per-device SSH port/protocol customization from test_inventory.yaml
+        if device.get("connection_options"):
+            opts = device["connection_options"]
+            if "protocol" in opts:
+                connection_args["protocol"] = opts["protocol"]
+            if "port" in opts:
+                connection_args["port"] = opts["port"]
+
         # Add optional SSH arguments if provided
         if device.get("ssh_options"):
             connection_args["ssh_options"] = device["ssh_options"]
@@ -39,7 +49,7 @@ class TestbedGenerator:
         # Build the testbed structure
         testbed = {
             "testbed": {
-                "name": f"testbed_{device_id}",
+                "name": f"testbed_{hostname}",
                 "credentials": {
                     "default": {
                         "username": device["username"],
@@ -48,8 +58,8 @@ class TestbedGenerator:
                 },
             },
             "devices": {
-                device_id: {
-                    "alias": device.get("hostname", device_id),
+                hostname: {
+                    "alias": device.get("alias", hostname),
                     "os": device["os"],
                     "type": device.get("type", "router"),
                     "platform": device.get("platform", device["os"]),

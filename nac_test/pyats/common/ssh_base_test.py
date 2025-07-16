@@ -6,7 +6,7 @@ from pyats import aetest
 import logging
 import os
 import json
-from typing import Any
+from typing import Any, Optional
 
 
 class SSHTestBase(NACTestBase):
@@ -14,7 +14,43 @@ class SSHTestBase(NACTestBase):
 
     This class provides the core framework for SSH test execution, including
     automatic context setup and command execution capabilities.
+
+    The class also provides access to the PyATS testbed object when available,
+    enabling the use of Genie parsers and other PyATS/Genie features.
+    #TODO: Move this to its own thing to better adhere for SRP. Hustling the MVP.
     """
+
+    @property
+    def testbed(self) -> Optional[Any]:
+        """Access the PyATS testbed object if available.
+
+        When tests are run via PyATS with --testbed-file, the testbed is loaded
+        and made available through the runtime. This property provides convenient
+        access to it.
+
+        Returns:
+            The PyATS testbed object if available, None otherwise.
+        """
+        # In PyATS aetest, the testbed is available via self.parent (runtime)
+        if hasattr(self.parent, "testbed"):
+            return self.parent.testbed
+        return None
+
+    @property
+    def testbed_device(self) -> Optional[Any]:
+        """Access the current device from the PyATS testbed.
+
+        This provides a convenient way to access the current device's testbed
+        object, which includes Genie parsing capabilities.
+
+        Returns:
+            The device object from the testbed if available, None otherwise.
+        """
+        if self.testbed and hasattr(self, "hostname"):
+            # Look up device by hostname in the testbed
+            if self.hostname in self.testbed.devices:
+                return self.testbed.devices[self.hostname]
+        return None
 
     @aetest.setup
     def setup_ssh_context(self) -> None:
@@ -25,6 +61,9 @@ class SSHTestBase(NACTestBase):
         device info and the main data model from environment variables set by
         the orchestrator. It then establishes a connection and injects the
         necessary tools (like self.execute_command) into the test instance.
+
+        If a PyATS testbed is available, it also ensures the device connection
+        is established through the testbed for Genie parser access.
         """
         # These environment variables are not set by the user, but are passed
         # by the nac-test orchestrator to provide context to this isolated
@@ -54,40 +93,57 @@ class SSHTestBase(NACTestBase):
             self.parent.connection_manager = DeviceConnectionManager()
         self.connection_manager = self.parent.connection_manager
 
-        device_id = self.device_info.get("device_id") or self.device_info.get("host")
-        if not device_id:
+        try:
+            hostname = self.device_info["hostname"]
+        except KeyError:
             self.failed(
-                "Framework Error: device_info from resolver must contain a 'device_id'."
+                "Framework Error: device_info from resolver MUST contain a 'hostname' field. "
+                "This is a required field per the nac-test contract."
             )
             return
+
+        # Store hostname early so testbed_device property can use it
+        self.hostname = hostname
 
         # The rest of the setup is async, we'll run it in the event loop
         loop = asyncio.get_event_loop()
         try:
-            loop.run_until_complete(self._async_setup(device_id))
+            loop.run_until_complete(self._async_setup(hostname))
         except ConnectionError as e:
             # Connection failed - fail the test with clear message
             self.failed(str(e))
 
-    async def _async_setup(self, device_id: str) -> None:
+    async def _async_setup(self, hostname: str) -> None:
         """Helper for async setup operations with connection error handling."""
         try:
-            # 1. Establish the connection using the manager
-            self.connection = await self.connection_manager.get_connection(
-                device_id, self.device_info
-            )
+            # Check if we have a testbed device available
+            if self.testbed_device:
+                # Connect via testbed to enable Genie features
+                self.logger.info(f"Connecting to device {hostname} via PyATS testbed")
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, self.testbed_device.connect)
+                # Store the testbed device connection for command execution
+                self.connection = self.testbed_device
+            else:
+                # Fall back to standard nac-test connection
+                self.logger.info(
+                    f"Connecting to device {hostname} via nac-test connection manager"
+                )
+                self.connection = await self.connection_manager.get_connection(
+                    hostname, self.device_info
+                )
         except Exception as e:
             # Connection failed - raise exception to be caught in setup_ssh_context
-            error_msg = f"Failed to connect to device {device_id}: {str(e)}"
+            error_msg = f"Failed to connect to device {hostname}: {str(e)}"
             self.logger.error(error_msg)
 
             # Raise with a clear message that will be caught by the calling method
             raise ConnectionError(
-                f"Device connection failed: {device_id}\nError: {str(e)}"
+                f"Device connection failed: {hostname}\nError: {str(e)}"
             )
 
         # 2. Create and attach the command cache
-        self.command_cache = CommandCache(device_id)
+        self.command_cache = CommandCache(hostname)
 
         # 3. Create and attach the execute_command helper method
         self.execute_command = self._create_execute_command_method(
@@ -96,7 +152,39 @@ class SSHTestBase(NACTestBase):
 
         # 4. Attach device_data for easy access in the test
         self.device_data = self.device_info
-        self.device_id = device_id
+        # hostname already set in setup_ssh_context
+
+    def parse_output(
+        self, command: str, output: Optional[str] = None
+    ) -> Optional[dict]:
+        """Parse command output using Genie parser if available.
+
+        This method attempts to use Genie parsers when a PyATS testbed is available.
+        If no testbed is available or parsing fails, it returns None.
+
+        Args:
+            command: The command whose output should be parsed
+            output: Optional pre-fetched command output. If not provided,
+                   the command will be executed.
+
+        Returns:
+            Parsed output dictionary if successful, None otherwise.
+        """
+        # If we have a testbed device, use its parse method
+        if self.testbed_device:
+            try:
+                if output is not None:
+                    # Parse provided output
+                    return self.testbed_device.parse(command, output=output)
+                else:
+                    # Execute and parse in one step
+                    return self.testbed_device.parse(command)
+            except Exception as e:
+                self.logger.warning(f"Genie parser failed for '{command}': {e}")
+                return None
+        else:
+            self.logger.debug("No testbed device available for Genie parsing")
+            return None
 
     def _create_execute_command_method(
         self, connection: Any, command_cache: CommandCache

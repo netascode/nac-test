@@ -24,19 +24,19 @@ class CommandCache:
     automatically expiring entries after a configured time period.
     """
 
-    def __init__(self, device_id: str, ttl: int = 3600):
+    def __init__(self, hostname: str, ttl: int = 3600):
         """Initialize command cache for a specific device.
 
         Args:
-            device_id: Unique identifier for the device
+            hostname: Unique identifier for the device
             ttl: Time-to-live in seconds (default: 1 hour)
         """
-        self.device_id = device_id
+        self.hostname = hostname
         self.ttl = ttl
         self.cache: Dict[str, Dict] = {}  # command -> {output, timestamp}
 
         logger.debug(
-            f"Initialized command cache for device {device_id} with TTL {ttl}s"
+            f"Initialized command cache for device {hostname} with TTL {ttl}s"
         )
 
     def get(self, command: str) -> Optional[str]:
@@ -51,12 +51,12 @@ class CommandCache:
         if command in self.cache:
             entry = self.cache[command]
             if time.time() - entry["timestamp"] < self.ttl:
-                logger.debug(f"Cache hit for '{command}' on {self.device_id}")
+                logger.debug(f"Cache hit for '{command}' on {self.hostname}")
                 return entry["output"]
             else:
                 # Entry has expired, remove it
                 del self.cache[command]
-                logger.debug(f"Cache expired for '{command}' on {self.device_id}")
+                logger.debug(f"Cache expired for '{command}' on {self.hostname}")
 
         return None
 
@@ -69,14 +69,14 @@ class CommandCache:
         """
         self.cache[command] = {"output": output, "timestamp": time.time()}
         logger.debug(
-            f"Cached '{command}' output for {self.device_id} ({len(output)} chars)"
+            f"Cached '{command}' output for {self.hostname} ({len(output)} chars)"
         )
 
     def clear(self) -> None:
         """Clear all cached entries for this device."""
         entry_count = len(self.cache)
         self.cache.clear()
-        logger.debug(f"Cleared {entry_count} cached entries for {self.device_id}")
+        logger.debug(f"Cleared {entry_count} cached entries for {self.hostname}")
 
     def get_cache_stats(self) -> Dict[str, int]:
         """Get cache statistics.
