@@ -9,12 +9,12 @@ RETRY_MAX_DELAY = 60.0
 RETRY_EXPONENTIAL_BASE = 2.0
 
 # General timeouts
-DEFAULT_TEST_TIMEOUT = 300  # 5 minutes per test
+DEFAULT_TEST_TIMEOUT = 21600  # 6 hours per test
 CONNECTION_CLOSE_DELAY = 0.25  # seconds
 
 # Concurrency limits - Can be used by both PyATS and Robot
-DEFAULT_API_CONCURRENCY = 40
-DEFAULT_SSH_CONCURRENCY = 20
+DEFAULT_API_CONCURRENCY = 70
+DEFAULT_SSH_CONCURRENCY = 50
 
 # Progress reporting
 PROGRESS_UPDATE_INTERVAL = 0.5  # seconds

@@ -1,6 +1,6 @@
-from nac_test.pyats.common.base_test import NACTestBase
-from nac_test.pyats.ssh.command_cache import CommandCache
-from nac_test.pyats.ssh.connection_manager import DeviceConnectionManager
+from nac_test.pyats_core.common.base_test import NACTestBase
+from nac_test.pyats_core.ssh.command_cache import CommandCache
+from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
 import asyncio
 from pyats import aetest
 import logging

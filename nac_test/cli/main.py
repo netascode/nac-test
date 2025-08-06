@@ -248,7 +248,7 @@ def main(
 
     if pyats:
         # Import is done here to avoid CLI argument conflicts
-        from nac_test.pyats.orchestrator import PyATSOrchestrator
+        from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
         # PyATS execution path
         orchestrator = PyATSOrchestrator(data, templates, output, merged_data_filename)

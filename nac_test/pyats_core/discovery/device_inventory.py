@@ -12,6 +12,7 @@ import logging
 import yaml
 import sys
 import importlib.util
+from nac_test.utils.path_setup import add_tests_parent_to_syspath
 
 logger = logging.getLogger(__name__)
 
@@ -119,21 +120,15 @@ class DeviceInventoryDiscovery:
                 # - Find 'tests' dir: /home/user/nac-sdwan-terraform/tests
                 # - Add to sys.path: /home/user/nac-sdwan-terraform
                 # - Now "from tests.pyats_common..." resolves correctly
-                test_dir = None
-                for parent in test_file.parents:
-                    if parent.name == 'tests':
-                        test_dir = parent
-                        break
                 
-                if test_dir:
-                    # Add the parent of 'tests' directory to sys.path
-                    test_parent = test_dir.parent
-                    if str(test_parent) not in sys.path:
-                        logger.debug(f"Adding {test_parent} to sys.path for test imports")
-                        sys.path.insert(0, str(test_parent))
-                else:
-                    # Log a warning but continue - the test might not follow the expected structure
-                    logger.warning(f"Could not find 'tests' directory in path of {test_file}")
+                # DEBUG: Log sys.path before adding
+                logger.info(f"sys.path before add_tests_parent_to_syspath: {sys.path}")
+                
+                add_tests_parent_to_syspath(test_file)
+                
+                # DEBUG: Log sys.path after adding
+                logger.info(f"sys.path after add_tests_parent_to_syspath: {sys.path}")
+                logger.info(f"Attempting to import test file: {test_file}")
 
                 # Dynamically import the test module
                 spec = importlib.util.spec_from_file_location(

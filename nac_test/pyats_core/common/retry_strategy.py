@@ -8,7 +8,7 @@ import httpx
 import logging
 from typing import Callable, TypeVar, Optional, Awaitable, Any
 
-from nac_test.pyats.constants import (
+from nac_test.pyats_core.constants import (
     RETRY_MAX_ATTEMPTS,
     RETRY_INITIAL_DELAY,
     RETRY_MAX_DELAY,

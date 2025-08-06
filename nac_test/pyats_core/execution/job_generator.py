@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 import textwrap
 import json
 
-from nac_test.pyats.constants import DEFAULT_TEST_TIMEOUT
+from nac_test.pyats_core.constants import DEFAULT_TEST_TIMEOUT
 
 
 class JobGenerator:
@@ -89,7 +89,7 @@ class JobGenerator:
         import os
         import json
         from pathlib import Path
-        from nac_test.pyats.ssh.connection_manager import DeviceConnectionManager
+        from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
         
         # Device being tested (using hostname)
         HOSTNAME = "{hostname}"

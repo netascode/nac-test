@@ -9,7 +9,7 @@ import hashlib
 from pathlib import Path
 from typing import Callable, Tuple
 
-from nac_test.pyats.constants import AUTH_CACHE_DIR
+from nac_test.pyats_core.constants import AUTH_CACHE_DIR
 
 
 class AuthCache:

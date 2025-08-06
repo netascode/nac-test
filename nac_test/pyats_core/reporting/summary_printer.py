@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 
 from nac_test.utils.terminal import terminal
-from nac_test.pyats.reporting.utils.archive_inspector import ArchiveInspector
+from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
 
 logger = logging.getLogger(__name__)
 

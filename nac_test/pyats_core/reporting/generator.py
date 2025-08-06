@@ -25,8 +25,8 @@ from typing import Any, Dict, List, Optional
 
 import aiofiles
 
-from nac_test.pyats.reporting.templates import get_jinja_environment
-from nac_test.pyats.reporting.types import ResultStatus
+from nac_test.pyats_core.reporting.templates import get_jinja_environment
+from nac_test.pyats_core.reporting.types import ResultStatus
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class ReportGenerator:
         self.failed_reports: List[str] = []
 
         # Initialize Jinja2 environment using our templates module
-        from nac_test.pyats.reporting.templates import TEMPLATES_DIR
+        from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR
 
         self.env = get_jinja_environment(TEMPLATES_DIR)
 

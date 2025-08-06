@@ -7,8 +7,11 @@ import tempfile
 import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+import os
+import sys
 
 from .testbed_generator import TestbedGenerator
+from nac_test.utils.path_setup import get_pythonpath_for_tests
 
 logger = logging.getLogger(__name__)
 
@@ -16,17 +19,19 @@ logger = logging.getLogger(__name__)
 class DeviceExecutor:
     """Handles device-centric test execution."""
 
-    def __init__(self, job_generator, subprocess_runner, test_status: Dict[str, Any]):
+    def __init__(self, job_generator, subprocess_runner, test_status: Dict[str, Any], test_dir: Path):
         """Initialize device executor.
 
         Args:
             job_generator: JobGenerator instance for creating job files
             subprocess_runner: SubprocessRunner instance for executing jobs
             test_status: Dictionary for tracking test status
+            test_dir: Directory containing PyATS test files (user-specified)
         """
         self.job_generator = job_generator
         self.subprocess_runner = subprocess_runner
         self.test_status = test_status
+        self.test_dir = test_dir
 
     async def run_device_job_with_semaphore(
         self, device: Dict, test_files: List[Path], semaphore: asyncio.Semaphore
@@ -72,13 +77,17 @@ class DeviceExecutor:
                     testbed_file_path = Path(testbed_file.name)
 
                 # Set up environment for this device
-                env = {
+                # Always start with a copy of os.environ to preserve PATH and other variables
+                env = os.environ.copy()
+                nac_test_dir = Path(__file__).parent.parent.parent.parent  # nac-test root
+                env.update({
                     "HOSTNAME": hostname,
                     "DEVICE_INFO": str(device),  # Will be loaded by the job file
                     "DATA_MODEL_PATH": str(
                         self.subprocess_runner.output_dir / "merged_data.yaml"
                     ),
-                }
+                    "PYTHONPATH": get_pythonpath_for_tests(self.test_dir, [nac_test_dir]),
+                })
 
                 # Track test status for this device
                 for test_file in test_files:
@@ -88,6 +97,19 @@ class DeviceExecutor:
                         "device": hostname,
                         "test_file": str(test_file),
                     }
+
+                # TEMP DEBUG: Print environment and command for D2D/SSH subprocess -- REMOVE ME AFTER TESTING
+                # print("=== D2D/SSH SUBPROCESS ENV ===")
+                # print("sys.executable:", sys.executable)
+                # print("os.getcwd():", os.getcwd())
+                # print("env['PATH']:", env.get('PATH'))
+                # print("env['PYTHONPATH']:", env.get('PYTHONPATH'))
+                # print("env:", env)
+                # print("cmd: pyats run job ...", job_file_path, testbed_file_path)
+
+                # # TEMP DEBUG: Print test_dir and PYTHONPATH for D2D/SSH subprocess
+                # print(f"D2D/SSH DEBUG: self.test_dir = {self.test_dir}")
+                # print(f"D2D/SSH DEBUG: PYTHONPATH = {env['PYTHONPATH']}")
 
                 # Execute the job with testbed
                 archive_path = await self.subprocess_runner.execute_job_with_testbed(
@@ -101,12 +123,12 @@ class DeviceExecutor:
                     if test_name in self.test_status:
                         self.test_status[test_name]["status"] = status
 
-                # Clean up temporary files
-                try:
-                    job_file_path.unlink()
-                    testbed_file_path.unlink()
-                except Exception:
-                    pass
+                # Clean up temporary files -- UNCOMMENT ME
+                # try:
+                #     job_file_path.unlink()
+                #     testbed_file_path.unlink()
+                # except Exception:
+                #     pass
 
                 if archive_path:
                     logger.info(

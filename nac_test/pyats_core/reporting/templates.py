@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 from jinja2 import BaseLoader, Environment, FileSystemLoader, StrictUndefined
-from nac_test.pyats.reporting.types import ResultStatus
+from nac_test.pyats_core.reporting.types import ResultStatus
 
 # Get the absolute path to the templates directory
 TEMPLATES_DIR = Path(__file__).parent / "templates"

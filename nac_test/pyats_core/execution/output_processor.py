@@ -8,7 +8,7 @@ import json
 import logging
 from typing import Dict, Any, Optional
 
-from nac_test.pyats.progress import ProgressReporter
+from nac_test.pyats_core.progress import ProgressReporter
 from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
@@ -176,6 +176,7 @@ class OutputProcessor:
             r"%WARNINGS-WARNING:",
             r"%GENIE-INFO:",
             r"%UNICON-INFO:",
+            r"%SCRIPT-INFO:", # Suppress script-level info logs from tests
             r"NAC_PROGRESS_PLUGIN:",  # Suppress plugin debug output
             r"^\s*$",  # Empty lines
             r"^\+[-=]+\+$",  # PyATS table borders

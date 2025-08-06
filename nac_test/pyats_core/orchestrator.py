@@ -2,29 +2,31 @@
 
 """Main PyATS orchestration logic for nac-test."""
 
-from pathlib import Path
-import os
 import sys
+import os
 import tempfile
 from typing import List, Dict, Any, Optional
 import logging
 from datetime import datetime
 import asyncio
+from nac_test.utils.path_setup import get_pythonpath_for_tests
+from pathlib import Path
+import yaml
 
-from nac_test.pyats.constants import (
+from nac_test.pyats_core.constants import (
     DEFAULT_CPU_MULTIPLIER,
     MEMORY_PER_WORKER_GB,
     MAX_WORKERS_HARD_LIMIT,
 )
-from nac_test.pyats.discovery import TestDiscovery, DeviceInventoryDiscovery
-from nac_test.pyats.execution import JobGenerator, SubprocessRunner, OutputProcessor
-from nac_test.pyats.execution.device import DeviceExecutor
+from nac_test.pyats_core.discovery import TestDiscovery, DeviceInventoryDiscovery
+from nac_test.pyats_core.execution import JobGenerator, SubprocessRunner, OutputProcessor
+from nac_test.pyats_core.execution.device import DeviceExecutor
 from nac_test.data_merger import DataMerger
-from nac_test.pyats.progress import ProgressReporter
-from nac_test.pyats.reporting.multi_archive_generator import MultiArchiveReportGenerator
-from nac_test.pyats.reporting.summary_printer import SummaryPrinter
-from nac_test.pyats.reporting.utils.archive_inspector import ArchiveInspector
-from nac_test.pyats.reporting.utils.archive_aggregator import ArchiveAggregator
+from nac_test.pyats_core.progress import ProgressReporter
+from nac_test.pyats_core.reporting.multi_archive_generator import MultiArchiveReportGenerator
+from nac_test.pyats_core.reporting.summary_printer import SummaryPrinter
+from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
+from nac_test.pyats_core.reporting.utils.archive_aggregator import ArchiveAggregator
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
 from nac_test.utils.environment import EnvironmentValidator
@@ -99,6 +101,49 @@ class PyATSOrchestrator:
 
         return cpu_workers
 
+    def _build_reporter_config(self) -> dict:
+        """Build the configuration for PyATS reporters.
+
+        This centralizes the reporter setup to use an asynchronous QueueHandler
+        which puts all incoming reporting messages into a queue and lets a
+        separate thread handle the slow disk I/O. This makes the ReportServer
+        non-blocking and prevents client timeouts under heavy load.
+
+        Returns:
+            A dictionary representing the reporter configuration.
+        """
+        return {
+            'reporter': {
+                'server': {
+                    'handlers': {
+                        'fh': {
+                            'class': 'pyats.reporter.handlers.FileHandler',
+                        },
+                        'qh': {
+                            'class': 'pyats.reporter.handlers.QueueHandler',
+                            'handlers': ['fh'],
+                        }
+                    }
+                },
+                'root': {
+                    'handlers': ['qh'],
+                }
+            }
+        }
+    def _generate_plugin_config(self, temp_dir: Path) -> Path:
+        """Generate the PyATS plugin configuration file.
+
+        Args:
+            temp_dir: The temporary directory to write the file in.
+
+        Returns:
+            The path to the generated configuration file.
+        """
+        reporter_config = self._build_reporter_config()
+        config_path = temp_dir / "plugin_config.yaml"
+        with open(config_path, 'w') as f:
+            yaml.dump(reporter_config, f)
+        return config_path
     async def _execute_api_tests_standard(
         self, test_files: List[Path]
     ) -> Optional[Path]:
@@ -136,12 +181,20 @@ class PyATSOrchestrator:
             env["DATA_FILE"] = str(self.output_dir / self.merged_data_filename)
             test_parent_dir = str(self.test_dir)
             nac_test_dir = str(Path(__file__).parent.parent.parent)
-            if "PYTHONPATH" in env:
-                env["PYTHONPATH"] = (
-                    f"{test_parent_dir}{os.pathsep}{nac_test_dir}{os.pathsep}{env['PYTHONPATH']}"
-                )
-            else:
-                env["PYTHONPATH"] = f"{test_parent_dir}{os.pathsep}{nac_test_dir}"
+            env["PYTHONPATH"] = get_pythonpath_for_tests(self.test_dir, [nac_test_dir])
+
+            # TEMP DEBUG: Print environment and command for API subprocess -- REMOVE ME AFTER TESTING
+            # print("=== API SUBPROCESS ENV ===")
+            # print("sys.executable:", sys.executable)
+            # print("os.getcwd():", os.getcwd())
+            # print("env['PATH']:", env.get('PATH'))
+            # print("env['PYTHONPATH']:", env.get('PYTHONPATH'))
+            # print("env:", env)
+            # print("cmd: pyats run job ...", job_file_path)
+
+            # # TEMP DEBUG: Print test_dir and PYTHONPATH for API subprocess
+            # print(f"API DEBUG: self.test_dir = {self.test_dir}")
+            # print(f"API DEBUG: PYTHONPATH = {env['PYTHONPATH']}")
 
             # Execute and return the archive path
             assert self.subprocess_runner is not None  # Should be initialized by now
@@ -194,7 +247,7 @@ class PyATSOrchestrator:
         if self.device_executor is None:
             assert self.subprocess_runner is not None  # Should be initialized
             self.device_executor = DeviceExecutor(
-                self.job_generator, self.subprocess_runner, self.test_status
+                self.job_generator, self.subprocess_runner, self.test_status, self.test_dir
             )
 
         # Note: Progress reporter is already initialized at orchestration level
@@ -355,35 +408,39 @@ class PyATSOrchestrator:
         self.subprocess_runner = SubprocessRunner(
             self.output_dir, output_handler=self.output_processor.process_line
         )
+        # Generate the plugin config and pass it to the runner
+        with tempfile.TemporaryDirectory() as temp_dir:
+            plugin_config_path = self._generate_plugin_config(Path(temp_dir))
+            self.subprocess_runner.plugin_config_path = plugin_config_path
 
-        # Execute tests based on their type
-        tasks = []
+            # Execute tests based on their type
+            tasks = []
 
-        if api_tests:
-            print(f"Found {len(api_tests)} API test(s) - using standard execution")
-            tasks.append(self._execute_api_tests_standard(api_tests))
+            if api_tests:
+                print(f"Found {len(api_tests)} API test(s) - using standard execution")
+                tasks.append(self._execute_api_tests_standard(api_tests))
 
-        if d2d_tests:
-            # Get device inventory for D2D tests
-            devices = self.device_inventory_discovery.get_device_inventory(d2d_tests)
+            if d2d_tests:
+                # Get device inventory for D2D tests
+                devices = self.device_inventory_discovery.get_device_inventory(d2d_tests)
 
-            if devices:
-                print(
-                    f"Found {len(d2d_tests)} D2D test(s) - using device-centric execution"
-                )
-                tasks.append(self._execute_ssh_tests_device_centric(d2d_tests, devices))
-            else:
-                print(
-                    terminal.warning(
-                        "No devices found in inventory. D2D tests will be skipped."
+                if devices:
+                    print(
+                        f"Found {len(d2d_tests)} D2D test(s) - using device-centric execution"
                     )
-                )
+                    tasks.append(self._execute_ssh_tests_device_centric(d2d_tests, devices))
+                else:
+                    print(
+                        terminal.warning(
+                            "No devices found in inventory. D2D tests will be skipped."
+                        )
+                    )
 
-        # Run all test types in parallel
-        if tasks:
-            await asyncio.gather(*tasks)
-        else:
-            print("No tests to execute after categorization")
+            # Run all test types in parallel
+            if tasks:
+                await asyncio.gather(*tasks)
+            else:
+                print("No tests to execute after categorization")
 
         # Print summary after all tests complete
         if hasattr(self, "test_status") and self.test_status:

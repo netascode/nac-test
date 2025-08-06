@@ -31,6 +31,7 @@ class ConnectionPool:
 
     def get_client(
         self,
+        base_url: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[httpx.Timeout] = None,
         verify: bool = True,
@@ -38,6 +39,7 @@ class ConnectionPool:
         """Get an async HTTP client with custom headers and timeout
 
         Args:
+            base_url: Optional base URL for resolving relative URLs
             headers: Optional headers dict (architecture-specific)
             timeout: Optional timeout settings
             verify: SSL verification flag
@@ -48,6 +50,16 @@ class ConnectionPool:
         if timeout is None:
             timeout = httpx.Timeout(30.0)
 
-        return httpx.AsyncClient(
-            limits=self.limits, headers=headers or {}, timeout=timeout, verify=verify
-        )
+        # Build kwargs dict, only including base_url if it's not None
+        client_kwargs = {
+            'limits': self.limits,
+            'headers': headers or {},
+            'timeout': timeout,
+            'verify': verify
+        }
+        
+        # Only add base_url if it's not None (httpx fails with base_url=None)
+        if base_url is not None:
+            client_kwargs['base_url'] = base_url
+            
+        return httpx.AsyncClient(**client_kwargs)

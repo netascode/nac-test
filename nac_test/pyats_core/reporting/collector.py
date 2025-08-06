@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from nac_test.pyats.reporting.types import ResultStatus
+from nac_test.pyats_core.reporting.types import ResultStatus
 
 logger = logging.getLogger(__name__)
 

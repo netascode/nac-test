@@ -15,19 +15,24 @@ logger = logging.getLogger(__name__)
 
 
 class SubprocessRunner:
-    """Handles PyATS subprocess execution."""
+    """Executes PyATS jobs as subprocesses and handles their output."""
 
     def __init__(
-        self, output_dir: Path, output_handler: Optional[Callable[[str], None]] = None
+        self,
+        output_dir: Path,
+        output_handler: Callable[[str], None],
+        plugin_config_path: Optional[Path] = None,
     ):
-        """Initialize subprocess runner.
+        """Initialize the subprocess runner.
 
         Args:
-            output_dir: Directory for output files
-            output_handler: Optional callback for processing output lines
+            output_dir: Directory for test output
+            output_handler: Function to process each line of stdout
+            plugin_config_path: Path to the PyATS plugin configuration file
         """
-        self.output_dir = Path(output_dir)
+        self.output_dir = output_dir
         self.output_handler = output_handler
+        self.plugin_config_path = plugin_config_path
 
     async def execute_job(
         self, job_file_path: Path, env: Dict[str, str]
@@ -48,7 +53,7 @@ class SubprocessRunner:
             plugins:
                 ProgressReporterPlugin:
                     enabled: True
-                    module: nac_test.pyats.progress.plugin
+                    module: nac_test.pyats_core.progress.plugin
                     order: 1.0
             """)
 
@@ -117,13 +122,13 @@ class SubprocessRunner:
         except Exception as e:
             logger.error(f"Error executing PyATS job: {e}")
             return None
-        finally:
-            # Clean up the temporary plugin config file
-            if plugin_config_file and os.path.exists(plugin_config_file):
-                try:
-                    os.unlink(plugin_config_file)
-                except Exception:
-                    pass
+        # finally:  -- UNCOMMENT ME
+        #     # Clean up the temporary plugin config file
+        #     if plugin_config_file and os.path.exists(plugin_config_file):
+        #         try:
+        #             os.unlink(plugin_config_file)
+        #         except Exception:
+        #             pass
 
     async def execute_job_with_testbed(
         self, job_file_path: Path, testbed_file_path: Path, env: Dict[str, Any]
@@ -147,7 +152,7 @@ class SubprocessRunner:
             plugins:
                 ProgressReporterPlugin:
                     enabled: True
-                    module: nac_test.pyats.progress.plugin
+                    module: nac_test.pyats_core.progress.plugin
                     order: 1.0
             """)
 
@@ -214,13 +219,13 @@ class SubprocessRunner:
         except Exception as e:
             logger.error(f"Error executing PyATS job with testbed: {e}")
             return None
-        finally:
-            # Clean up the temporary plugin config file
-            if plugin_config_file and os.path.exists(plugin_config_file):
-                try:
-                    os.unlink(plugin_config_file)
-                except Exception:
-                    pass
+        # finally:
+        #     # Clean up the temporary plugin config file
+        #     if plugin_config_file and os.path.exists(plugin_config_file):
+        #         try:
+        #             os.unlink(plugin_config_file)
+        #         except Exception:
+        #             pass
 
     async def _process_output_realtime(
         self, process: asyncio.subprocess.Process

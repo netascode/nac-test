@@ -13,9 +13,9 @@ from functools import lru_cache
 from datetime import datetime
 from contextlib import contextmanager
 
-from nac_test.pyats.common.connection_pool import ConnectionPool
-from nac_test.pyats.common.retry_strategy import SmartRetry
-from nac_test.pyats.reporting.collector import TestResultCollector
+from nac_test.pyats_core.common.connection_pool import ConnectionPool
+from nac_test.pyats_core.common.retry_strategy import SmartRetry
+from nac_test.pyats_core.reporting.collector import TestResultCollector
 import markdown
 
 T = TypeVar("T")

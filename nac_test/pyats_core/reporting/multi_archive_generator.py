@@ -14,11 +14,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from nac_test.pyats.reporting.generator import ReportGenerator
-from nac_test.pyats.reporting.templates import get_jinja_environment, TEMPLATES_DIR
-from nac_test.pyats.reporting.types import ResultStatus
-from nac_test.pyats.reporting.utils.archive_inspector import ArchiveInspector
-from nac_test.pyats.reporting.utils.archive_extractor import ArchiveExtractor
+from nac_test.pyats_core.reporting.generator import ReportGenerator
+from nac_test.pyats_core.reporting.templates import get_jinja_environment, TEMPLATES_DIR
+from nac_test.pyats_core.reporting.types import ResultStatus
+from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
+from nac_test.pyats_core.reporting.utils.archive_extractor import ArchiveExtractor
 
 logger = logging.getLogger(__name__)
 
