@@ -13,6 +13,11 @@ from typing import Dict, Any, Optional, Callable
 
 logger = logging.getLogger(__name__)
 
+# Default buffer limit for subprocess output (10MB)
+# Can be overridden with PYATS_OUTPUT_BUFFER_LIMIT environment variable (in bytes)
+# like `export PYATS_OUTPUT_BUFFER_LIMIT=52428800`  # 50MB`
+DEFAULT_BUFFER_LIMIT = 10 * 1024 * 1024  # 10MB
+
 
 class SubprocessRunner:
     """Executes PyATS jobs as subprocesses and handles their output."""
@@ -90,12 +95,19 @@ class SubprocessRunner:
         print(f"Executing PyATS with command: {' '.join(cmd)}")
 
         try:
+            # Get buffer limit from environment or use default
+            buffer_limit = int(os.environ.get('PYATS_OUTPUT_BUFFER_LIMIT', DEFAULT_BUFFER_LIMIT))
+            logger.debug(f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB")
+            
+            # Increase the buffer limit to handle large output lines (default 10MB instead of asyncio's 64KB)
+            # otherwise this may trigger a `chunk exceeded` error nad nac-test WILL hang
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 env={**os.environ, **env},
                 cwd=str(self.output_dir),
+                limit=buffer_limit,
             )
 
             # Process output in real-time if we have a handler
@@ -192,12 +204,18 @@ class SubprocessRunner:
         print(f"Executing PyATS with command: {' '.join(cmd)}")
 
         try:
+            # Get buffer limit from environment or use default
+            buffer_limit = int(os.environ.get('PYATS_OUTPUT_BUFFER_LIMIT', DEFAULT_BUFFER_LIMIT))
+            logger.debug(f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB")
+            
+            # Increase the buffer limit to handle large output lines (default 10MB instead of asyncio's 64KB)
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 env={**os.environ, **env},
                 cwd=str(self.output_dir),
+                limit=buffer_limit,
             )
 
             # Process output in real-time
@@ -242,19 +260,47 @@ class SubprocessRunner:
             return await process.wait()
 
         try:
+            consecutive_errors = 0
+            max_consecutive_errors = 5
+            
             while True:
-                line_bytes = await process.stdout.readline()
-                if not line_bytes:
-                    break
+                try:
+                    line_bytes = await process.stdout.readline()
+                    if not line_bytes:
+                        break
 
-                line = line_bytes.decode("utf-8", errors="replace").rstrip()
+                    line = line_bytes.decode("utf-8", errors="replace").rstrip()
 
-                # Process the line if we have a handler
-                if self.output_handler:
-                    self.output_handler(line)
-                else:
-                    # Default: just print it
-                    print(line)
+                    # Process the line if we have a handler
+                    if self.output_handler:
+                        self.output_handler(line)
+                    else:
+                        # Default: just print it
+                        print(line)
+                    
+                    # Reset error counter on successful read
+                    consecutive_errors = 0
+                    
+                except asyncio.LimitOverrunError as e:
+                    # Handle lines that exceed the buffer limit
+                    consecutive_errors += 1
+                    logger.warning(f"Output line exceeded buffer limit: {e}. Attempting to clear buffer...")
+                    
+                    # Try to consume the oversized data in chunks
+                    try:
+                        # Read and discard data until we find a newline or EOF
+                        while True:
+                            chunk = await process.stdout.read(8192)  # Read 8KB chunks
+                            if not chunk or b'\n' in chunk:
+                                break
+                        logger.info("Successfully cleared oversized output buffer")
+                    except Exception as clear_error:
+                        logger.error(f"Failed to clear buffer: {clear_error}")
+                        
+                    if consecutive_errors >= max_consecutive_errors:
+                        logger.error(f"Too many consecutive buffer overrun errors ({consecutive_errors}). Stopping output processing.")
+                        # Continue running the process but stop processing output
+                        break
 
             # Wait for process to complete
             return await process.wait()
