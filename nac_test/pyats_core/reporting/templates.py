@@ -82,6 +82,61 @@ def get_status_style(status: Union[ResultStatus, str]) -> Dict[str, str]:
         return {"css_class": "neutral-status", "display_text": str(status)}
 
 
+def format_skip_message(message: str) -> str:
+    """Format enhanced skip messages with rich content.
+    
+    This filter formats skip messages that contain markdown-like formatting
+    (bullet points, bold text, code blocks) into proper HTML.
+    
+    Args:
+        message: Skip message potentially containing markdown-like formatting
+        
+    Returns:
+        HTML-formatted message with proper styling
+    """
+    if not message or '📋' not in message:
+        # Not an enhanced skip message, return as-is
+        return message
+    
+    # Convert markdown-like formatting to HTML
+    html = message
+    
+    # Replace emoji
+    html = html.replace('📋', '<span style="font-size: 1.2em;">📋</span>')
+    
+    # Convert bold text
+    import re
+    html = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', html)
+    
+    # Convert bullet points to list items
+    lines = html.split('\n')
+    formatted_lines = []
+    in_list = False
+    
+    for line in lines:
+        if line.strip().startswith('•'):
+            if not in_list:
+                formatted_lines.append('<ul class="skip-detail-list">')
+                in_list = True
+            # Extract the content after the bullet
+            content = line.strip()[1:].strip()
+            # Check if it's a code item (contains backticks)
+            if '`' in content:
+                content = re.sub(r'`([^`]+)`', r'<code>\1</code>', content)
+            formatted_lines.append(f'<li>{content}</li>')
+        else:
+            if in_list:
+                formatted_lines.append('</ul>')
+                in_list = False
+            if line.strip():
+                formatted_lines.append(f'<p>{line}</p>')
+    
+    if in_list:
+        formatted_lines.append('</ul>')
+    
+    return '\n'.join(formatted_lines)
+
+
 def format_json_output(output: str) -> str:
     """Format output as JSON if possible, otherwise return as-is.
 
@@ -161,6 +216,7 @@ def get_jinja_environment(directory: Optional[Union[str, Path]] = None) -> Envir
     environment.filters["format_datetime"] = format_datetime
     environment.filters["status_style"] = get_status_style
     environment.filters["format_json_output"] = format_json_output
+    environment.filters["format_skip_message"] = format_skip_message
 
     return environment
 

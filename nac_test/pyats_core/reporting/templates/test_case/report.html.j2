@@ -11,6 +11,7 @@
             --success: #2ecc71;
             --danger: #e74c3c;
             --warning: #f39c12;
+            --skip: #95a5a6;
             --info: #3498db;
             --neutral: #95a5a6;
             --light: #ecf0f1;
@@ -76,9 +77,9 @@
         }
 
         .skip-status {
-            background-color: rgba(243, 156, 18, 0.15);
-            color: var(--warning);
-            border-left: 4px solid var(--warning);
+            background-color: rgba(149, 165, 166, 0.15);
+            color: #7f8c8d;
+            border-left: 4px solid #95a5a6;
         }
 
         .abort-status {
@@ -265,6 +266,53 @@
 
         .result-message {
             margin: 0;
+        }
+        
+        /* Enhanced skip result styling */
+        .result-skip {
+            background-color: rgba(149, 165, 166, 0.08);
+            border-left: 4px solid var(--skip);
+            color: #5d6d7e;
+        }
+        
+        .result-skip .result-message {
+            white-space: pre-line;
+            line-height: 1.8;
+        }
+        
+        .result-skip .result-message strong {
+            color: #34495e;
+            display: block;
+            margin: 10px 0 5px 0;
+        }
+        
+        .skip-detail-list {
+            margin: 10px 0;
+            padding-left: 20px;
+            list-style: none;
+        }
+        
+        .skip-detail-list li {
+            position: relative;
+            padding-left: 20px;
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+        
+        .skip-detail-list li:before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--skip);
+        }
+        
+        .result-skip .result-message code {
+            background-color: rgba(149, 165, 166, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+            color: #2c3e50;
         }
 
         footer {
@@ -472,14 +520,28 @@
                 Results <span class="chevron"></span>
             </h2>
             <div id="section-results-content">
-                {% for result in results %}
-                    {% set result_style = result.status|status_style %}
-                    <div class="result-item result-{{ result_style.css_class|replace('-status', '') }}">
+                {% if results %}
+                    {% for result in results %}
+                        {% set result_style = result.status|status_style %}
+                        <div class="result-item result-{{ result_style.css_class|replace('-status', '') }}">
+                            <div class="result-message">
+                                                            {% if result.status == 'skipped' %}
+                                <!-- Enhanced skip result with formatted content -->
+                                {{ result.message|format_skip_message|safe }}
+                            {% else %}
+                                {{ result.message }}
+                            {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <!-- No results available - test was likely skipped at the beginning -->
+                    <div class="result-item result-skip">
                         <div class="result-message">
-                            {{ result.message }}
+                            <p><em>No detailed results available - test was skipped during execution.</em></p>
                         </div>
                     </div>
-                {% endfor %}
+                {% endif %}
             </div>
         </section>
 
