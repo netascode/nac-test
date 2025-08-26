@@ -281,29 +281,27 @@
         }
         
         .result-skip .result-message strong {
-            color: #34495e;
-            display: block;
-            margin: 10px 0 5px 0;
+            color: #5a6c7d;              /* Softer than #34495e */
+            display: inline-block;        /* Less prominent than block */
+            font-weight: 500;            /* Medium weight instead of bold */
+            margin: 8px 0 3px 0;         /* Reduced margins */
         }
         
         .skip-detail-list {
-            margin: 10px 0;
-            padding-left: 20px;
-            list-style: none;
+            margin: 8px 0;               /* Reduced from 10px */
+            padding-left: 18px;          /* Slightly less indentation */
+            list-style: disc outside;    /* Simple standard bullets */
         }
         
         .skip-detail-list li {
-            position: relative;
-            padding-left: 20px;
-            margin: 5px 0;
-            line-height: 1.6;
+            margin: 3px 0;               /* Reduced spacing */
+            line-height: 1.5;            /* Slightly tighter */
+            color: #6c7b8a;              /* Softer text color */
         }
         
+        /* Remove the custom bullet styling */
         .skip-detail-list li:before {
-            content: '•';
-            position: absolute;
-            left: 0;
-            color: var(--skip);
+            display: none;
         }
         
         .result-skip .result-message code {
