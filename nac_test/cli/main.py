@@ -4,8 +4,8 @@
 
 import logging
 import sys
-import time  #  -- ANDREA REMOVE AFTER MVP
-from datetime import datetime  #  -- ANDREA REMOVE AFTER MVP
+import time
+from datetime import datetime
 from typing import Optional
 
 import errorhandler
@@ -261,24 +261,21 @@ def main(
             data, filters, tests, include, exclude
         )
 
-        # Start timing the rendering process -- ANDREA REMOVE AFTER MVP
+        # Start timing the rendering process 
         print(
             f"Starting template rendering at {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}"
         )
         render_start_time = time.time()
-        #  -- ANDREA REMOVE AFTER MVP
-
         writer.write(templates, output)
         writer.write_merged_data_model(output, merged_data_filename)
 
-        # End timing the rendering process -- ANDREA REMOVE AFTER MVP
+        # End timing the rendering process
         render_end_time = time.time()
         render_duration = render_end_time - render_start_time
         print(
             f"Template rendering completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}"
         )
         print(f"Total rendering time: {render_duration:.3f} seconds")
-        #  -- ANDREA REMOVE AFTER MVP
         if not render_only:
             nac_test.robot.pabot.run_pabot(
                 output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG

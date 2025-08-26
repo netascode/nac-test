@@ -56,9 +56,12 @@ class JobGenerator:
             
             # Run all test files
             for idx, test_file in enumerate(TEST_FILES):
+                # Create meaningful task ID from test file name
+                # e.g., "epg_attributes.py" -> "epg_attributes" 
+                test_name = Path(test_file).stem
                 runtime.tasks.run(
                     testscript=test_file,
-                    taskid=f"test_{{idx}}",
+                    taskid=test_name,
                     max_runtime={DEFAULT_TEST_TIMEOUT}
                 )
         ''')
@@ -111,9 +114,12 @@ class JobGenerator:
             
             # Run all test files for this device
             for idx, test_file in enumerate(TEST_FILES):
+                # Create meaningful task ID from test file name and hostname
+                # e.g., "router1_epg_attributes"
+                test_name = Path(test_file).stem
                 runtime.tasks.run(
                     testscript=test_file,
-                    taskid=f"{{HOSTNAME}}_test_{{idx}}",
+                    taskid=f"{{HOSTNAME}}_{{test_name}}",
                     max_runtime={DEFAULT_TEST_TIMEOUT}
                 )
         ''')
