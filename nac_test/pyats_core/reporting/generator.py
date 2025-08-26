@@ -94,13 +94,13 @@ class ReportGenerator:
 
         # Move files from temp location to final location
         if self.temp_data_dir.exists():
-            for json_file in self.temp_data_dir.glob("*.json"):
-                json_file.rename(self.html_report_data_dir / json_file.name)
+            for jsonl_file in self.temp_data_dir.glob("*.jsonl"):
+                jsonl_file.rename(self.html_report_data_dir / jsonl_file.name)
             # Clean up temp directory
             self.temp_data_dir.rmdir()
 
         # Find all test result files in html_report_data directory
-        result_files = list(self.html_report_data_dir.glob("*.json"))
+        result_files = list(self.html_report_data_dir.glob("*.jsonl"))
 
         if not result_files:
             logger.warning("No test results found to generate reports")
@@ -122,14 +122,14 @@ class ReportGenerator:
             successful_reports, result_files
         )
 
-        # Clean up JSON files (unless in debug mode or KEEP_HTML_REPORT_DATA is set)
+        # Clean up JSONL files (unless in debug mode or KEEP_HTML_REPORT_DATA is set)
         if os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA"):
             if os.environ.get("KEEP_HTML_REPORT_DATA"):
-                logger.info("Keeping JSON result files (KEEP_HTML_REPORT_DATA is set)")
+                logger.info("Keeping JSONL result files (KEEP_HTML_REPORT_DATA is set)")
             else:
-                logger.info("Debug mode enabled - keeping JSON result files")
+                logger.info("Debug mode enabled - keeping JSONL result files")
         else:
-            await self._cleanup_json_files(result_files)
+            await self._cleanup_jsonl_files(result_files)
 
         duration = (datetime.now() - start_time).total_seconds()
 
@@ -140,6 +140,69 @@ class ReportGenerator:
             "successful_reports": len(successful_reports),
             "failed_reports": len(self.failed_reports),
             "summary_report": str(summary_path) if summary_path else None,
+        }
+
+    async def _read_jsonl_results(self, jsonl_path: Path) -> Dict[str, Any]:
+        """Read JSONL file asynchronously with robust error handling.
+        
+        Reads a streaming JSONL file produced by TestResultCollector and reconstructs
+        the expected data structure for HTML template generation.
+        
+        Args:
+            jsonl_path: Path to the JSONL result file.
+            
+        Returns:
+            Dictionary containing test data in expected format for templates.
+            
+        Raises:
+            Exception: If file cannot be read or is completely malformed.
+        """
+        results = []
+        command_executions = []
+        metadata = {}
+        summary = {}
+        
+        try:
+            async with aiofiles.open(jsonl_path, 'r') as f:
+                async for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    try:
+                        record = json.loads(line)
+                        record_type = record.get("type")
+                        
+                        if record_type == "metadata":
+                            metadata = record
+                        elif record_type == "result":
+                            results.append(record)
+                        elif record_type == "command_execution":
+                            command_executions.append(record)
+                        elif record_type == "summary":
+                            summary = record
+                        elif record_type == "emergency_close":
+                            # Log but continue processing - emergency close indicates crash recovery
+                            logger.debug(f"Found emergency close record in {jsonl_path}")
+                            
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Skipping malformed JSONL line in {jsonl_path}: {e}")
+                        continue
+                        
+        except Exception as e:
+            logger.error(f"Failed to read JSONL file {jsonl_path}: {e}")
+            raise
+        
+        # Return in expected format for existing templates
+        return {
+            "test_id": metadata.get("test_id") or summary.get("test_id"),
+            "start_time": metadata.get("start_time") or summary.get("start_time"), 
+            "end_time": summary.get("end_time"),
+            "duration": summary.get("duration"),
+            "results": results,
+            "command_executions": command_executions,
+            "overall_status": summary.get("overall_status"),
+            "metadata": summary.get("metadata", {})
         }
 
     async def _generate_report_safe(
@@ -168,19 +231,17 @@ class ReportGenerator:
     async def _generate_single_report(self, result_file: Path) -> Path:
         """Generate a single test report asynchronously.
 
-        Reads a JSON test result file and generates an HTML report using
+        Reads a JSONL test result file and generates an HTML report using
         the test_case template. Command outputs are truncated for display.
 
         Args:
-            result_file: Path to the JSON result file
+            result_file: Path to the JSONL result file
 
         Returns:
             Path to the generated HTML report
         """
-        # Read test results
-        async with aiofiles.open(result_file, "r") as f:
-            content = await f.read()
-            test_data = json.loads(content)
+        # Read test results from JSONL format
+        test_data = await self._read_jsonl_results(result_file)
 
         # Get metadata (now included in the same file)
         metadata = test_data.get("metadata", {})
@@ -235,14 +296,14 @@ class ReportGenerator:
             + f"\n\n... truncated ({len(lines) - max_lines} lines omitted) ..."
         )
 
-    async def _cleanup_json_files(self, files: List[Path]) -> None:
-        """Clean up JSON files after successful report generation.
+    async def _cleanup_jsonl_files(self, files: List[Path]) -> None:
+        """Clean up JSONL files after successful report generation.
 
-        Removes the intermediate JSON files to save disk space. This is
+        Removes the intermediate JSONL files to save disk space. This is
         skipped if PYATS_DEBUG environment variable is set.
 
         Args:
-            files: List of JSON file paths to delete
+            files: List of JSONL file paths to delete
         """
         for file in files:
             try:
@@ -267,19 +328,17 @@ class ReportGenerator:
             Path to the summary report, or None if generation failed
         """
         try:
-            # Read the original JSON files for accurate data
+            # Read the original JSONL files for accurate data
 
             all_results = []
 
             # Create a mapping of test_id to report_path for successful reports
             report_map = {path.stem: path for path in report_paths}
 
-            # Read all JSON files to get complete test information
+            # Read all JSONL files to get complete test information
             for result_file in result_files:
                 try:
-                    async with aiofiles.open(result_file, "r") as f:
-                        content = await f.read()
-                        test_data = json.loads(content)
+                    test_data = await self._read_jsonl_results(result_file)
 
                     test_id = test_data["test_id"]
                     metadata = test_data.get("metadata", {})
