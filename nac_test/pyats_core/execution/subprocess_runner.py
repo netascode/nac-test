@@ -11,12 +11,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable
 
-logger = logging.getLogger(__name__)
+from nac_test.pyats_core.constants import DEFAULT_BUFFER_LIMIT
 
-# Default buffer limit for subprocess output (10MB)
-# Can be overridden with PYATS_OUTPUT_BUFFER_LIMIT environment variable (in bytes)
-# like `export PYATS_OUTPUT_BUFFER_LIMIT=52428800`  # 50MB`
-DEFAULT_BUFFER_LIMIT = 10 * 1024 * 1024  # 10MB
+logger = logging.getLogger(__name__)
 
 
 class SubprocessRunner:
@@ -89,6 +86,7 @@ class SubprocessRunner:
             archive_name,
             "--no-archive-subdir",
             "--no-mail",
+            "--no-xml-report",
         ]
 
         logger.info(f"Executing command: {' '.join(cmd)}")
@@ -198,6 +196,7 @@ class SubprocessRunner:
             "--no-archive-subdir",
             "--quiet",
             "--no-mail",
+            "--no-xml-report",
         ]
 
         logger.info(f"Executing command: {' '.join(cmd)}")
