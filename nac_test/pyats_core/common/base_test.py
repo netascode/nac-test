@@ -710,11 +710,12 @@ class NACTestBase(aetest.Testcase):
         # Store reference to self for use in closures
         test_instance = self
         
-        # Sensible retry configuration for APIC connections
-        # Aggressive retry with exponential backoff to handle APIC stress
+        # Sensible retry configuration for APIC/controllers connections
+        # Aggressive retry with exponential backoff to handle controller stress
         # Max total wait time: ~10 minutes (5 + 10 + 20 + 40 + 80 + 160 + 300 = 615 seconds)
-        MAX_RETRIES = 7  # Increased from 3 to give APIC more recovery time
-        INITIAL_DELAY = 5.0  # Start with 5 seconds (increased from 2)
+        #TODO: Move this to constants.py later
+        MAX_RETRIES = 7  # Increased from 3 to give more recovery time at high scale may come into play
+        INITIAL_DELAY = 5.0  # Start with 5 seconds
         MAX_DELAY = 300.0    # Cap at 5 minutes per retry
         
         async def execute_with_retry(method_name, original_method, url, *args, **kwargs):
