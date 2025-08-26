@@ -29,6 +29,14 @@ LOAD_AVERAGE_THRESHOLD = 0.8
 # PyATS-specific file paths
 AUTH_CACHE_DIR = "/tmp/nac-test-auth-cache"
 
+# Multi-job execution configuration (to avoid reporter crashes)
+TESTS_PER_JOB = 15  # Reduced from 20 for safety margin - each test ~1500 steps
+MAX_PARALLEL_JOBS = 2  # Conservative parallelism to avoid resource exhaustion
+JOB_RETRY_ATTEMPTS = 1  # Retry failed jobs once
+
+# PyATS subprocess output handling
+DEFAULT_BUFFER_LIMIT = 10 * 1024 * 1024  # 10MB - handles large PyATS output lines
+
 # Re-export all constants for backward compatibility
 __all__ = [
     # From core
@@ -49,4 +57,10 @@ __all__ = [
     "DEFAULT_CPU_MULTIPLIER",
     "LOAD_AVERAGE_THRESHOLD",
     "AUTH_CACHE_DIR",
+    # Multi-job execution
+    "TESTS_PER_JOB",
+    "MAX_PARALLEL_JOBS",
+    "JOB_RETRY_ATTEMPTS",
+    # Subprocess handling
+    "DEFAULT_BUFFER_LIMIT",
 ]
