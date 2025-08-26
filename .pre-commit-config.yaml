@@ -1,9 +1,22 @@
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Kept: Checks not covered by Ruff
+      - id: check-json
+      - id: check-yaml
+      - id: check-symlinks
+      - id: check-merge-conflict
+      - id: requirements-txt-fixer
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.2
+    rev: v0.11.13
     hooks:
       - id: ruff
+        name: Ruff Linter
+        args: [--fix, --diff]
+        # --fix: Apply fixes automatically
       - id: ruff-format
+        name: Ruff Formatter
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.15.0
     hooks:
