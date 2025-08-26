@@ -2,6 +2,8 @@
 
 """Core constants shared across the nac-test framework."""
 
+import os
+
 # Retry configuration - Generic retry logic used by multiple components
 RETRY_MAX_ATTEMPTS = 3
 RETRY_INITIAL_DELAY = 1.0
@@ -13,8 +15,9 @@ DEFAULT_TEST_TIMEOUT = 21600  # 6 hours per test
 CONNECTION_CLOSE_DELAY = 0.25  # seconds
 
 # Concurrency limits - Can be used by both PyATS and Robot
-DEFAULT_API_CONCURRENCY = 70
-DEFAULT_SSH_CONCURRENCY = 50
+# Can be overridden via NAC_API_CONCURRENCY environment variable
+DEFAULT_API_CONCURRENCY = int(os.environ.get("NAC_API_CONCURRENCY", "55"))
+DEFAULT_SSH_CONCURRENCY = int(os.environ.get("NAC_SSH_CONCURRENCY", "20"))
 
 # Progress reporting
 PROGRESS_UPDATE_INTERVAL = 0.5  # seconds
