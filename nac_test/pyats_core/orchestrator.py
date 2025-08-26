@@ -30,6 +30,7 @@ from nac_test.pyats_core.reporting.utils.archive_aggregator import ArchiveAggreg
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
 from nac_test.utils.environment import EnvironmentValidator
+from nac_test.utils.cleanup import cleanup_pyats_runtime, cleanup_old_test_outputs
 
 
 logger = logging.getLogger(__name__)
@@ -363,6 +364,13 @@ class PyATSOrchestrator:
         """Main async orchestration logic."""
         # Track overall start time for combined summary
         self.overall_start_time = datetime.now()
+
+        # Clean up before test execution
+        cleanup_pyats_runtime()
+        
+        # Clean up old test outputs (CI/CD only)
+        if os.environ.get("CI"):
+            cleanup_old_test_outputs(self.output_dir, days=3)
 
         # Pre-flight check and setup
         self.validate_environment()
