@@ -152,6 +152,7 @@ class NACTestBase(aetest.Testcase):
         # Generate unique test ID
         test_id = self._generate_test_id()
         self.result_collector = TestResultCollector(test_id, html_report_data_dir)
+        self.result_collector._test_instance = self
 
         # Attach pre-rendered metadata to collector
         metadata = self.get_rendered_metadata()
@@ -817,13 +818,13 @@ class NACTestBase(aetest.Testcase):
                     
                     await asyncio.sleep(delay)
 
-        async def tracked_get(url, *args, **kwargs):
+        async def tracked_get(url, *args, test_context=None, **kwargs):
             """Tracked GET method with retry and connection cleanup."""
             response = await execute_with_retry("GET", original_get, url, *args, **kwargs)
-            test_instance._track_api_response("GET", url, response, device_name)
+            test_instance._track_api_response("GET", url, response, device_name, test_context=test_context)
             return response
 
-        async def tracked_post(url, *args, **kwargs):
+        async def tracked_post(url, *args, test_context=None, **kwargs):
             """Tracked POST method with retry and connection cleanup."""
             response = await execute_with_retry("POST", original_post, url, *args, **kwargs)
             test_instance._track_api_response(
@@ -832,10 +833,11 @@ class NACTestBase(aetest.Testcase):
                 response,
                 device_name,
                 kwargs.get("json", kwargs.get("data")),
+                test_context=test_context,
             )
             return response
 
-        async def tracked_put(url, *args, **kwargs):
+        async def tracked_put(url, *args, test_context=None, **kwargs):
             """Tracked PUT method with retry and connection cleanup."""
             response = await execute_with_retry("PUT", original_put, url, *args, **kwargs)
             test_instance._track_api_response(
@@ -844,16 +846,17 @@ class NACTestBase(aetest.Testcase):
                 response,
                 device_name,
                 kwargs.get("json", kwargs.get("data")),
+                test_context=test_context,
             )
             return response
 
-        async def tracked_delete(url, *args, **kwargs):
+        async def tracked_delete(url, *args, test_context=None, **kwargs):
             """Tracked DELETE method with retry and connection cleanup."""
             response = await execute_with_retry("DELETE", original_delete, url, *args, **kwargs)
-            test_instance._track_api_response("DELETE", url, response, device_name)
+            test_instance._track_api_response("DELETE", url, response, device_name, test_context=test_context)
             return response
 
-        async def tracked_patch(url, *args, **kwargs):
+        async def tracked_patch(url, *args, test_context=None, **kwargs):
             """Tracked PATCH method with retry and connection cleanup."""
             response = await execute_with_retry("PATCH", original_patch, url, *args, **kwargs)
             test_instance._track_api_response(
@@ -862,6 +865,7 @@ class NACTestBase(aetest.Testcase):
                 response,
                 device_name,
                 kwargs.get("json", kwargs.get("data")),
+                test_context=test_context,
             )
             return response
 
@@ -881,6 +885,7 @@ class NACTestBase(aetest.Testcase):
         response: Any,
         device_name: str,
         request_data: Optional[Dict] = None,
+        test_context: Optional[str] = None,
     ) -> None:
         """Track an API response in the result collector.
 
@@ -890,6 +895,7 @@ class NACTestBase(aetest.Testcase):
             response: The httpx response object
             device_name: Name of the device/controller
             request_data: Optional request payload for POST/PUT/PATCH
+            test_context: Explicit test context for this specific API call (eliminates race conditions)
         """
         if not hasattr(self, "result_collector"):
             # Safety check - collector might not be initialized in some edge cases
@@ -920,8 +926,8 @@ class NACTestBase(aetest.Testcase):
             if request_data:
                 parsed_data = {"request": request_data, "response": parsed_data}
 
-            # Get current test context if available
-            test_context = getattr(self, "_current_test_context", None)
+            # Use explicit test context parameter (eliminates race conditions)
+            # test_context is now passed as parameter instead of reading shared state
 
             # Use the unified tracking method
             self.result_collector.add_command_api_execution(
