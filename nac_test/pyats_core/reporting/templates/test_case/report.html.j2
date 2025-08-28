@@ -268,6 +268,26 @@
             margin: 0;
         }
         
+        /* CSS for nested result-command structure */
+        .result-header.expandable {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .result-commands {
+            margin-top: 15px;
+            padding-left: 20px;
+            border-left: 2px solid #e9ecef;
+        }
+        
+        .cmd-count {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
         /* Enhanced skip result styling */
         .result-skip {
             background-color: rgba(149, 165, 166, 0.08);
@@ -519,17 +539,78 @@
             </h2>
             <div id="section-results-content">
                 {% if results %}
-                    {% for result in results %}
+                    <!-- Leverage existing Jinja2 groupby filter (handle None values for sorting) -->
+                    {% set commands_with_safe_context = [] %}
+                    {% for cmd in command_executions %}
+                        {% set _ = cmd.update({'safe_context': cmd.test_context or ''}) %}
+                        {% set _ = commands_with_safe_context.append(cmd) %}
+                    {% endfor %}
+                    {% set commands_by_context = commands_with_safe_context | groupby('safe_context') | list %}
+                    {% set context_to_commands = {} %}
+                    {% for context, cmds in commands_by_context %}
+                        {% set original_context = context if context else none %}
+                        {% set _ = context_to_commands.update({original_context: cmds | list}) %}
+                    {% endfor %}
+                    
+                    <!-- Sort results: FAILED first, then PASSED, then SKIPPED (for better debugging UX) -->
+                    {% set failed_results = results | selectattr('status', 'in', ['FAILED', 'failed']) | list %}
+                    {% set passed_results = results | selectattr('status', 'in', ['PASSED', 'passed']) | list %}  
+                    {% set skipped_results = results | selectattr('status', 'in', ['SKIPPED', 'skipped']) | list %}
+                    {% set sorted_results = failed_results + passed_results + skipped_results %}
+                    
+                    {% for result in sorted_results %}
                         {% set result_style = result.status|status_style %}
                         <div class="result-item result-{{ result_style.css_class|replace('-status', '') }}">
-                            <div class="result-message">
-                                                            {% if result.status == 'skipped' %}
-                                <!-- Enhanced skip result with formatted content -->
-                                {{ result.message|format_skip_message|safe }}
-                            {% else %}
-                                {{ result.message }}
-                            {% endif %}
+                            
+                            <!-- Result header (clickable if has commands) -->
+                            <div class="result-header {% if result.context and result.context in context_to_commands %}expandable{% endif %}" 
+                                 onclick="{% if result.context and result.context in context_to_commands %}toggleCollapse('result-commands-{{ loop.index }}'){% endif %}">
+                                <div class="result-message">
+                                    {% if result.status == 'skipped' %}
+                                        <!-- Enhanced skip result with formatted content -->
+                                        {{ result.message|format_skip_message|safe }}
+                                    {% else %}
+                                        {{ result.message }}
+                                    {% endif %}
+                                </div>
+                                {% if result.context and result.context in context_to_commands %}
+                                    <span class="cmd-count">({{ context_to_commands[result.context]|length }} commands)</span>
+                                    <span class="chevron"></span>
+                                {% endif %}
                             </div>
+                            
+                            <!-- Nested commands (reuse existing command rendering logic exactly) -->
+                            {% if result.context and result.context in context_to_commands %}
+                            <div class="result-commands content-collapsed" id="result-commands-{{ loop.index }}">
+                                {% for execution in context_to_commands[result.context] %}
+                                    <!-- REUSE existing command template code (no duplication) -->
+                                    <div class="cli-container" id="cmd-{{ loop.index0 }}-{{ loop.index }}">
+                                        <div class="cli-header" onclick="toggleCollapse('cmd-content-{{ loop.index0 }}-{{ loop.index }}')">
+                                            <span>Device: {{ execution.device_name }}</span>
+                                            <span class="chevron"></span>
+                                        </div>
+                                        <div class="device-content" id="cmd-content-{{ loop.index0 }}-{{ loop.index }}">
+                                            <div class="cli-content">
+<span class="cli-prompt">{{ execution.device_name }}#</span> <span class="cli-command">{{ execution.command }}</span>
+{% set formatted_output = execution.output | format_json_output %}
+{% if formatted_output != execution.output %}
+<div class="json-output">{{ formatted_output }}</div>
+{% else %}
+<span class="cli-output">{{ execution.output }}</span>
+{% endif %}
+                                            </div>
+                                            {% if execution.data %}
+                                            <div class="parsed-data-header" onclick="toggleCollapse('parsed-data-{{ loop.index0 }}-{{ loop.index }}')">
+                                                <span>Parsed Data</span>
+                                                <span class="chevron"></span>
+                                            </div>
+                                            <div class="parsed-data-content" id="parsed-data-{{ loop.index0 }}-{{ loop.index }}">{{ execution.data | tojson(indent=2) }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                     {% endfor %}
                 {% else %}
@@ -544,19 +625,32 @@
         </section>
 
         {% if command_executions %}
-        <section>
-            <h2>Command Executions</h2>
-            {% for execution in command_executions %}
-            {% if execution.test_context %}
-            <div class="test-context-banner">{{ execution.test_context }}</div>
+        <!-- Handle orphaned commands (defensive programming for edge cases) -->
+        {% set orphaned_commands = [] %}
+        {% for execution in command_executions %}
+            {% if not execution.test_context or not (results | selectattr('context', 'equalto', execution.test_context) | list) %}
+                {% set _ = orphaned_commands.append(execution) %}
             {% endif %}
-            <div class="cli-container" id="device-{{ loop.index }}">
-                <div class="cli-header" onclick="toggleCollapse('device-{{ loop.index }}')">
-                    <span>Device: {{ execution.device_name }}</span>
-                    <span class="chevron"></span>
+        {% endfor %}
+        
+        {% if orphaned_commands %}
+        <section id="section-orphaned-commands">
+            <h2 onclick="toggleCollapse('section-orphaned-commands-content')">
+                Commands Without Matching Results <span class="chevron"></span>
+            </h2>
+            <div id="section-orphaned-commands-content">
+                <div class="orphaned-notice" style="background-color: rgba(243, 156, 18, 0.1); border-left: 4px solid #f39c12; padding: 10px 15px; margin-bottom: 15px; border-radius: 4px;">
+                    <strong>Note:</strong> These commands don't have corresponding test results (possibly due to missing context or test execution issues):
                 </div>
-                <div class="device-content">
-                    <div class="cli-content">
+                {% for execution in orphaned_commands %}
+                    <!-- REUSE existing command template code (no duplication) -->
+                    <div class="cli-container" id="orphaned-cmd-{{ loop.index }}">
+                        <div class="cli-header" onclick="toggleCollapse('orphaned-cmd-content-{{ loop.index }}')">
+                            <span>Device: {{ execution.device_name }}</span>
+                            <span class="chevron"></span>
+                        </div>
+                        <div class="device-content" id="orphaned-cmd-content-{{ loop.index }}">
+                            <div class="cli-content">
 <span class="cli-prompt">{{ execution.device_name }}#</span> <span class="cli-command">{{ execution.command }}</span>
 {% set formatted_output = execution.output | format_json_output %}
 {% if formatted_output != execution.output %}
@@ -564,18 +658,20 @@
 {% else %}
 <span class="cli-output">{{ execution.output }}</span>
 {% endif %}
+                            </div>
+                            {% if execution.data %}
+                            <div class="parsed-data-header" onclick="toggleCollapse('orphaned-parsed-data-{{ loop.index }}')">
+                                <span>Parsed Data</span>
+                                <span class="chevron"></span>
+                            </div>
+                            <div class="parsed-data-content" id="orphaned-parsed-data-{{ loop.index }}">{{ execution.data | tojson(indent=2) }}</div>
+                            {% endif %}
+                        </div>
                     </div>
-                    {% if execution.data %}
-                    <div class="parsed-data-header" onclick="toggleCollapse('parsed-data-{{ loop.index }}')">
-                        <span>Parsed Data</span>
-                        <span class="chevron"></span>
-                    </div>
-                    <div class="parsed-data-content" id="parsed-data-{{ loop.index }}">{{ execution.data | tojson(indent=2) }}</div>
-                    {% endif %}
-                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </section>
+        {% endif %}
         {% endif %}
 
         <footer>
@@ -590,15 +686,15 @@
                 // Toggle collapsed class on the element
                 element.classList.toggle('collapsed');
 
-                // For device containers, toggle the content differently
-                if (id.startsWith('device-')) {
+                // For command containers (both nested and orphaned), toggle the content differently
+                if (id.startsWith('cmd-content-') || id.startsWith('orphaned-cmd-content-')) {
                     const content = element.querySelector('.device-content');
                     if (content) {
                         content.classList.toggle('content-collapsed');
                     }
                 }
                 // For parsed data sections, toggle them directly and update the header chevron
-                else if (id.startsWith('parsed-data-')) {
+                else if (id.startsWith('parsed-data-') || id.startsWith('orphaned-parsed-data-')) {
                     element.classList.toggle('content-collapsed');
                     // Find and toggle the chevron in the header that triggered this
                     const header = element.previousElementSibling;
@@ -615,18 +711,41 @@
                         header.classList.toggle('collapsed');
                     }
                 }
+                // For result command sections, toggle them and update the result header chevron
+                else if (id.startsWith('result-commands-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the result header that triggered this
+                    const header = element.previousElementSibling;
+                    if (header && header.classList.contains('result-header')) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
             }
         }
 
         // Initialize sections
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize all parsed data sections as collapsed by default
-            const parsedDataSections = document.querySelectorAll('[id^="parsed-data-"]');
+            const parsedDataSections = document.querySelectorAll('[id^="parsed-data-"], [id^="orphaned-parsed-data-"]');
             parsedDataSections.forEach(function(section) {
                 section.classList.add('content-collapsed');
                 const header = section.previousElementSibling;
                 if (header && header.classList.contains('parsed-data-header')) {
                     header.classList.add('collapsed');
+                }
+            });
+            
+            // Initialize all result command sections as collapsed by default
+            const resultCommandSections = document.querySelectorAll('[id^="result-commands-"]');
+            resultCommandSections.forEach(function(section) {
+                section.classList.add('content-collapsed');
+                // Find the corresponding result header to add collapsed chevron
+                const resultHeader = section.previousElementSibling;
+                if (resultHeader && resultHeader.classList.contains('result-header')) {
+                    const chevron = resultHeader.querySelector('.chevron');
+                    if (chevron) {
+                        chevron.parentElement.classList.add('collapsed');
+                    }
                 }
             });
         });
