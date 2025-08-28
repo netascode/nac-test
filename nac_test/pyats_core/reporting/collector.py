@@ -56,20 +56,27 @@ class TestResultCollector:
         self._current_overall_status = "passed"  # Start optimistic, update as we stream
         self.metadata: Dict[str, str] = {}  # Will be set by base test class
 
-    def add_result(self, status: ResultStatus, message: str) -> None:
+    def add_result(self, status: ResultStatus, message: str, test_context: Optional[str] = None) -> None:
         """Add a test result - writes immediately to disk.
 
         Args:
             status: Result status from ResultStatus enum (e.g., ResultStatus.PASSED).
             message: Detailed result message.
+            test_context: Optional context string to associate this result with API calls.
         """
         logger.debug("[RESULT][%s] %s", status, message)
+        
+        # Use explicit context if provided, otherwise try to get from test instance (backward compat)
+        context = test_context
+        if context is None and hasattr(self, '_test_instance'):
+            context = getattr(self._test_instance, '_current_test_context', None)
         
         # Write to disk immediately
         record = {
             "type": "result",
             "status": status.value,
             "message": message,
+            "context": context,
             "timestamp": datetime.now().isoformat()
         }
         self.jsonl_file.write(json.dumps(record) + "\n")
