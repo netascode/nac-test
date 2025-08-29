@@ -54,6 +54,47 @@
             margin-bottom: 10px;
         }
 
+        .header-content {
+            position: relative;
+        }
+
+        .nav-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        @media (max-width: 768px) {
+            .nav-button {
+                position: static;
+                margin-bottom: 20px;
+                display: inline-flex;
+            }
+        }
+
         .status-banner {
             display: inline-block;
             padding: 8px 16px;
@@ -483,16 +524,24 @@
 <body>
     <header>
         <div class="container">
-            <h1>{{ title }}</h1>
-            {% set status_style = status|status_style %}
-            <div class="status-banner {{ status_style.css_class }}">
-                Test Status: {{ status_style.display_text }}
+            <div class="header-content">
+                <a href="summary_report.html" class="nav-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                    Back to Summary
+                </a>
+                <h1>{{ title }}</h1>
+                {% set status_style = status|status_style %}
+                <div class="status-banner {{ status_style.css_class }}">
+                    Test Status: {{ status_style.display_text }}
+                </div>
+                {% if jobfile_path %}
+                <div class="jobfile-path">
+                    Jobfile: {{ jobfile_path }}
+                </div>
+                {% endif %}
             </div>
-            {% if jobfile_path %}
-            <div class="jobfile-path">
-                Jobfile: {{ jobfile_path }}
-            </div>
-            {% endif %}
         </div>
     </header>
 
