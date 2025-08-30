@@ -179,23 +179,16 @@ class PyATSOrchestrator:
             env["PYTHONWARNINGS"] = "ignore::UserWarning"
             env["PYATS_LOG_LEVEL"] = "ERROR"
             env["HTTPX_LOG_LEVEL"] = "ERROR"
-            env["DATA_FILE"] = str(self.output_dir / self.merged_data_filename)
+            
+            # Environment variables are used because PyATS tests run as separate subprocess processes.
+            # We cannot pass Python objects across process boundaries
+            # so we use env vars to communicate
+            # configuration (like data file paths) from the orchestrator to the test subprocess.
+            # The merged data file is created by main.py at the base output level.
+            env["DATA_FILE"] = str(self.output_dir.parent / self.merged_data_filename)
             test_parent_dir = str(self.test_dir)
             nac_test_dir = str(Path(__file__).parent.parent.parent)
             env["PYTHONPATH"] = get_pythonpath_for_tests(self.test_dir, [nac_test_dir])
-
-            # TEMP DEBUG: Print environment and command for API subprocess -- REMOVE ME AFTER TESTING
-            # print("=== API SUBPROCESS ENV ===")
-            # print("sys.executable:", sys.executable)
-            # print("os.getcwd():", os.getcwd())
-            # print("env['PATH']:", env.get('PATH'))
-            # print("env['PYTHONPATH']:", env.get('PYTHONPATH'))
-            # print("env:", env)
-            # print("cmd: pyats run job ...", job_file_path)
-
-            # # TEMP DEBUG: Print test_dir and PYTHONPATH for API subprocess
-            # print(f"API DEBUG: self.test_dir = {self.test_dir}")
-            # print(f"API DEBUG: PYTHONPATH = {env['PYTHONPATH']}")
 
             # Execute and return the archive path
             assert self.subprocess_runner is not None  # Should be initialized by now
@@ -375,10 +368,8 @@ class PyATSOrchestrator:
         # Pre-flight check and setup
         self.validate_environment()
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        merged_data = DataMerger.merge_data_files(self.data_paths)
-        DataMerger.write_merged_data_model(
-            merged_data, self.output_dir, self.merged_data_filename
-        )
+        
+        # Note: Merged data file created by main.py (single source of truth)
 
         # Test Discovery
         test_files, skipped_files = self.test_discovery.discover_pyats_tests()
