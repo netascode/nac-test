@@ -3,21 +3,19 @@
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
 import logging
-import sys
-import time
-from datetime import datetime
 from typing import Optional
 
 import errorhandler
 
 import typer
 from typing_extensions import Annotated
-from enum import Enum
 
 from pathlib import Path
 
-import nac_test.robot.pabot
-import nac_test.robot.robot_writer
+import nac_test
+from nac_test.combined_orchestrator import CombinedOrchestrator
+from nac_test.utils.logging import configure_logging, VerbosityLevel
+from nac_test.data_merger import DataMerger
 
 
 app = typer.Typer(add_completion=False)
@@ -27,36 +25,9 @@ logger = logging.getLogger(__name__)
 error_handler = errorhandler.ErrorHandler()
 
 
-def configure_logging(level: str) -> None:
-    if level == "DEBUG":
-        lev = logging.DEBUG
-    elif level == "INFO":
-        lev = logging.INFO
-    elif level == "WARNING":
-        lev = logging.WARNING
-    elif level == "ERROR":
-        lev = logging.ERROR
-    else:
-        lev = logging.CRITICAL
-    logger = logging.getLogger()
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter("%(levelname)s - %(message)s"))
-    logger.addHandler(handler)
-    logger.setLevel(lev)
-    error_handler.reset()
-
-
-class VerbosityLevel(str, Enum):
-    DEBUG = "DEBUG"
-    INFO = "INFO"
-    WARNING = "WARNING"
-    ERROR = "ERROR"
-    CRITICAL = "CRITICAL"
-
-
 def version_callback(value: bool) -> None:
     if value:
-        print(f"nac-test, version {nac_test.__version__}")
+        typer.echo(f"nac-test, version {nac_test.__version__}")
         raise typer.Exit()
 
 
@@ -197,7 +168,7 @@ PyATS = Annotated[
     bool,
     typer.Option(
         "--pyats",
-        help="Run PyATS tests instead of Robot Framework tests (MVP feature).",
+        help="[DEV ONLY] Run only PyATS tests (skips Robot Framework). Use for faster development cycles.",
         envvar="NAC_TEST_PYATS",
     ),
 ]
@@ -244,42 +215,31 @@ def main(
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
-    configure_logging(verbosity)
+    configure_logging(verbosity, error_handler)
 
-    if pyats:
-        # Import is done here to avoid CLI argument conflicts
-        from nac_test.pyats_core.orchestrator import PyATSOrchestrator
+    # Create output directory and shared merged data file (SOT)
+    output.mkdir(parents=True, exist_ok=True)
+    merged_data = DataMerger.merge_data_files(data)
+    DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
 
-        # PyATS execution path
-        orchestrator = PyATSOrchestrator(data, templates, output, merged_data_filename)
-        if max_parallel_devices is not None:
-            orchestrator.max_parallel_devices = max_parallel_devices
-        orchestrator.run_tests()
-    else:
-        # Robot Framework execution path
-        writer = nac_test.robot.robot_writer.RobotWriter(
-            data, filters, tests, include, exclude
-        )
-
-        # Start timing the rendering process 
-        print(
-            f"Starting template rendering at {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}"
-        )
-        render_start_time = time.time()
-        writer.write(templates, output)
-        writer.write_merged_data_model(output, merged_data_filename)
-
-        # End timing the rendering process
-        render_end_time = time.time()
-        render_duration = render_end_time - render_start_time
-        print(
-            f"Template rendering completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}"
-        )
-        print(f"Total rendering time: {render_duration:.3f} seconds")
-        if not render_only:
-            nac_test.robot.pabot.run_pabot(
-                output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
-            )
+    # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
+    orchestrator = CombinedOrchestrator(
+        data_paths=data,
+        templates_dir=templates,
+        output_dir=output,
+        merged_data_filename=merged_data_filename,
+        filters_path=filters,
+        tests_path=tests,
+        include_tags=include,
+        exclude_tags=exclude,
+        render_only=render_only,
+        dry_run=dry_run,
+        max_parallel_devices=max_parallel_devices,
+        verbosity=verbosity,
+        dev_pyats_only=pyats,
+    )
+    
+    orchestrator.run_tests()
     exit()
 
 
