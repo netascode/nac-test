@@ -92,11 +92,14 @@ class CombinedOrchestrator:
             )
             typer.echo("🧪 Running PyATS tests only (development mode)...")
 
-            # Direct call to PyATS orchestrator (base directory)
+            # Create PyATS output subdirectory (consistent with production mode)
+            pyats_output_dir = self.output_dir / "pyats_results"
+            pyats_output_dir.mkdir(exist_ok=True)
+
             orchestrator = PyATSOrchestrator(
                 data_paths=self.data_paths,
                 test_dir=self.templates_dir,
-                output_dir=self.output_dir,
+                output_dir=pyats_output_dir,
                 merged_data_filename=self.merged_data_filename,
             )
             if self.max_parallel_devices is not None:
