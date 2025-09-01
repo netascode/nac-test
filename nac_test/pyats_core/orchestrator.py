@@ -19,11 +19,17 @@ from nac_test.pyats_core.constants import (
     MAX_WORKERS_HARD_LIMIT,
 )
 from nac_test.pyats_core.discovery import TestDiscovery, DeviceInventoryDiscovery
-from nac_test.pyats_core.execution import JobGenerator, SubprocessRunner, OutputProcessor
+from nac_test.pyats_core.execution import (
+    JobGenerator,
+    SubprocessRunner,
+    OutputProcessor,
+)
 from nac_test.pyats_core.execution.device import DeviceExecutor
 from nac_test.data_merger import DataMerger
 from nac_test.pyats_core.progress import ProgressReporter
-from nac_test.pyats_core.reporting.multi_archive_generator import MultiArchiveReportGenerator
+from nac_test.pyats_core.reporting.multi_archive_generator import (
+    MultiArchiveReportGenerator,
+)
 from nac_test.pyats_core.reporting.summary_printer import SummaryPrinter
 from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
 from nac_test.pyats_core.reporting.utils.archive_aggregator import ArchiveAggregator
@@ -51,12 +57,17 @@ class PyATSOrchestrator:
         Args:
             data_paths: List of paths to data model YAML files
             test_dir: Directory containing PyATS test files
-            output_dir: Directory for test output
+            output_dir: Base output directory (orchestrator creates pyats_results subdirectory)
             merged_data_filename: Name of the merged data model file
         """
         self.data_paths = data_paths
         self.test_dir = Path(test_dir)
-        self.output_dir = Path(output_dir)
+        self.base_output_dir = Path(
+            output_dir
+        )  # Store base directory for merged data file access
+        self.output_dir = (
+            self.base_output_dir / "pyats_results"
+        )  # PyATS works in its own subdirectory
         self.merged_data_filename = merged_data_filename
 
         # Track test status by type for combined summary
@@ -114,23 +125,24 @@ class PyATSOrchestrator:
             A dictionary representing the reporter configuration.
         """
         return {
-            'reporter': {
-                'server': {
-                    'handlers': {
-                        'fh': {
-                            'class': 'pyats.reporter.handlers.FileHandler',
+            "reporter": {
+                "server": {
+                    "handlers": {
+                        "fh": {
+                            "class": "pyats.reporter.handlers.FileHandler",
                         },
-                        'qh': {
-                            'class': 'pyats.reporter.handlers.QueueHandler',
-                            'handlers': ['fh'],
-                        }
+                        "qh": {
+                            "class": "pyats.reporter.handlers.QueueHandler",
+                            "handlers": ["fh"],
+                        },
                     }
                 },
-                'root': {
-                    'handlers': ['qh'],
-                }
+                "root": {
+                    "handlers": ["qh"],
+                },
             }
         }
+
     def _generate_plugin_config(self, temp_dir: Path) -> Path:
         """Generate the PyATS plugin configuration file.
 
@@ -142,9 +154,10 @@ class PyATSOrchestrator:
         """
         reporter_config = self._build_reporter_config()
         config_path = temp_dir / "plugin_config.yaml"
-        with open(config_path, 'w') as f:
+        with open(config_path, "w") as f:
             yaml.dump(reporter_config, f)
         return config_path
+
     async def _execute_api_tests_standard(
         self, test_files: List[Path]
     ) -> Optional[Path]:
@@ -179,14 +192,13 @@ class PyATSOrchestrator:
             env["PYTHONWARNINGS"] = "ignore::UserWarning"
             env["PYATS_LOG_LEVEL"] = "ERROR"
             env["HTTPX_LOG_LEVEL"] = "ERROR"
-            
+
             # Environment variables are used because PyATS tests run as separate subprocess processes.
             # We cannot pass Python objects across process boundaries
             # so we use env vars to communicate
             # configuration (like data file paths) from the orchestrator to the test subprocess.
             # The merged data file is created by main.py at the base output level.
-            env["DATA_FILE"] = str(self.output_dir.parent / self.merged_data_filename)
-            test_parent_dir = str(self.test_dir)
+            env["DATA_FILE"] = str(self.base_output_dir / self.merged_data_filename)
             nac_test_dir = str(Path(__file__).parent.parent.parent)
             env["PYTHONPATH"] = get_pythonpath_for_tests(self.test_dir, [nac_test_dir])
 
@@ -241,7 +253,10 @@ class PyATSOrchestrator:
         if self.device_executor is None:
             assert self.subprocess_runner is not None  # Should be initialized
             self.device_executor = DeviceExecutor(
-                self.job_generator, self.subprocess_runner, self.test_status, self.test_dir
+                self.job_generator,
+                self.subprocess_runner,
+                self.test_status,
+                self.test_dir,
             )
 
         # Note: Progress reporter is already initialized at orchestration level
@@ -360,7 +375,7 @@ class PyATSOrchestrator:
 
         # Clean up before test execution
         cleanup_pyats_runtime()
-        
+
         # Clean up old test outputs (CI/CD only)
         if os.environ.get("CI"):
             cleanup_old_test_outputs(self.output_dir, days=3)
@@ -368,7 +383,7 @@ class PyATSOrchestrator:
         # Pre-flight check and setup
         self.validate_environment()
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Note: Merged data file created by main.py (single source of truth)
 
         # Test Discovery
@@ -404,8 +419,9 @@ class PyATSOrchestrator:
         self.output_processor = OutputProcessor(
             self.progress_reporter, self.test_status
         )
+        # Archives should be stored at base level, not in pyats_results subdirectory
         self.subprocess_runner = SubprocessRunner(
-            self.output_dir, output_handler=self.output_processor.process_line
+            self.base_output_dir, output_handler=self.output_processor.process_line
         )
         # Generate the plugin config and pass it to the runner
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -421,13 +437,17 @@ class PyATSOrchestrator:
 
             if d2d_tests:
                 # Get device inventory for D2D tests
-                devices = self.device_inventory_discovery.get_device_inventory(d2d_tests)
+                devices = self.device_inventory_discovery.get_device_inventory(
+                    d2d_tests
+                )
 
                 if devices:
                     print(
                         f"Found {len(d2d_tests)} D2D test(s) - using device-centric execution"
                     )
-                    tasks.append(self._execute_ssh_tests_device_centric(d2d_tests, devices))
+                    tasks.append(
+                        self._execute_ssh_tests_device_centric(d2d_tests, devices)
+                    )
                 else:
                     print(
                         terminal.warning(
@@ -452,11 +472,11 @@ class PyATSOrchestrator:
             if not combined_status:
                 combined_status = self.test_status
 
-            # Print the summary
+            # Print the summary (archives are at base level)
             self.summary_printer.print_summary(
                 combined_status,
                 self.start_time,
-                output_dir=self.output_dir,
+                output_dir=self.base_output_dir,
                 archive_path=None,
                 api_test_status=getattr(self, "api_test_status", None),
                 d2d_test_status=getattr(self, "d2d_test_status", None),
@@ -474,8 +494,8 @@ class PyATSOrchestrator:
         combined summary generation.
         """
 
-        # Use ArchiveInspector to find all archives
-        archives = ArchiveInspector.find_archives(self.output_dir)
+        # Use ArchiveInspector to find all archives (stored at base level)
+        archives = ArchiveInspector.find_archives(self.base_output_dir)
 
         # Collect the latest archive of each type
         archive_paths = []
@@ -501,7 +521,8 @@ class PyATSOrchestrator:
         print(f"\nGenerating reports from {len(archive_paths)} archive(s)...")
 
         # Use MultiArchiveReportGenerator for all cases (handles single archive too)
-        generator = MultiArchiveReportGenerator(self.output_dir)
+        # Pass base directory to avoid double-nesting of pyats_results directories
+        generator = MultiArchiveReportGenerator(self.base_output_dir)
         result = await generator.generate_reports_from_archives(archive_paths)
 
         if result["status"] in ["success", "partial"]:
@@ -543,6 +564,18 @@ class PyATSOrchestrator:
                 print(
                     f"\n{terminal.warning('Warning:')} Failed to process archives: {', '.join(failed_archives)}"
                 )
+            
+            # Clean up archives after successful extraction and report generation
+            # (unless in debug mode or user wants to keep data)
+            if not (os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA")):
+                for archive_path in archive_paths:
+                    try:
+                        archive_path.unlink()
+                        logger.debug(f"Cleaned up archive: {archive_path}")
+                    except Exception as e:
+                        logger.warning(f"Failed to clean up archive {archive_path}: {e}")
+            else:
+                logger.info("Keeping archive files (debug mode or KEEP_HTML_REPORT_DATA is set)")
         else:
             print(f"\n{terminal.error('Failed to generate reports')}")
             if result.get("error"):

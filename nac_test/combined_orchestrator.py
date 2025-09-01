@@ -10,8 +10,7 @@ import typer
 from nac_test.data_merger import DataMerger
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.pyats_core.discovery import TestDiscovery
-import nac_test.robot.robot_writer
-import nac_test.robot.pabot
+from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import VerbosityLevel
 
 logger = logging.getLogger(__name__)
@@ -92,14 +91,11 @@ class CombinedOrchestrator:
             )
             typer.echo("🧪 Running PyATS tests only (development mode)...")
 
-            # Create PyATS output subdirectory (consistent with production mode)
-            pyats_output_dir = self.output_dir / "pyats_results"
-            pyats_output_dir.mkdir(exist_ok=True)
-
+            # Direct call to PyATS orchestrator (base directory) - orchestrator manages its own structure
             orchestrator = PyATSOrchestrator(
                 data_paths=self.data_paths,
                 test_dir=self.templates_dir,
-                output_dir=pyats_output_dir,
+                output_dir=self.output_dir,
                 merged_data_filename=self.merged_data_filename,
             )
             if self.max_parallel_devices is not None:
@@ -116,18 +112,15 @@ class CombinedOrchestrator:
             typer.echo("No test files found (no *.py PyATS tests or *.robot templates)")
             return
 
-        # Sequential execution with subdirectory management
+        # Sequential execution - each orchestrator manages its own directory structure
         if has_pyats:
             typer.echo("\n🧪 Running PyATS tests...\n")
 
-            # Create PyATS output subdirectory and run
-            pyats_output_dir = self.output_dir / "pyats_results"
-            pyats_output_dir.mkdir(exist_ok=True)
-
+            # Direct call to PyATS orchestrator (base directory) - orchestrator manages its own structure
             orchestrator = PyATSOrchestrator(
                 data_paths=self.data_paths,
                 test_dir=self.templates_dir,
-                output_dir=pyats_output_dir,
+                output_dir=self.output_dir,
                 merged_data_filename=self.merged_data_filename,
             )
             if self.max_parallel_devices is not None:
@@ -137,29 +130,21 @@ class CombinedOrchestrator:
         if has_robot:
             typer.echo("\n🤖 Running Robot Framework tests...\n")
 
-            # Create Robot output subdirectory and run
-            robot_output_dir = self.output_dir / "robot_results"
-            robot_output_dir.mkdir(exist_ok=True)
-
-            writer = nac_test.robot.robot_writer.RobotWriter(
+            # Direct call to Robot orchestrator (base directory) - orchestrator manages its own structure
+            orchestrator = RobotOrchestrator(
                 data_paths=self.data_paths,
+                templates_dir=self.templates_dir,
+                output_dir=self.output_dir,
+                merged_data_filename=self.merged_data_filename,
                 filters_path=self.filters_path,
                 tests_path=self.tests_path,
                 include_tags=self.include_tags,
                 exclude_tags=self.exclude_tags,
+                render_only=self.render_only,
+                dry_run=self.dry_run,
+                verbosity=self.verbosity,
             )
-
-            writer.write(self.templates_dir, robot_output_dir)
-            writer.write_merged_data_model(robot_output_dir, self.merged_data_filename)
-
-            if not self.render_only:
-                nac_test.robot.pabot.run_pabot(
-                    path=robot_output_dir,
-                    include=self.include_tags,
-                    exclude=self.exclude_tags,
-                    dry_run=self.dry_run,
-                    verbose=(self.verbosity == VerbosityLevel.DEBUG),
-                )
+            orchestrator.run_tests()
 
         # Summary
         self._print_execution_summary(has_pyats, has_robot)
