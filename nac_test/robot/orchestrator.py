@@ -16,6 +16,7 @@ import typer
 from nac_test.robot.robot_writer import RobotWriter
 from nac_test.robot.pabot import run_pabot
 from nac_test.utils.logging import VerbosityLevel
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -103,8 +104,17 @@ class RobotOrchestrator:
         logger.info(f"Templates directory: {self.templates_dir}")
         
         # Phase 1: Template rendering (delegate to existing RobotWriter)
-        typer.echo("📝 Rendering Robot Framework templates...")
+        start_time = datetime.now()
+        start_timestamp = start_time.strftime("%H:%M:%S")
+        typer.echo(f"[{start_timestamp}] 📝 Rendering Robot Framework templates...")
+        
         self.robot_writer.write(self.templates_dir, self.output_dir)
+        
+        end_time = datetime.now()
+        end_timestamp = end_time.strftime("%H:%M:%S")
+        duration = (end_time - start_time).total_seconds()
+        duration_str = f"{duration:.1f}s" if duration < 60 else f"{int(duration//60)}m {duration%60:.0f}s"
+        typer.echo(f"[{end_timestamp}] ✅ Template rendering completed ({duration_str})")
         
         # Phase 2: Create merged data model in Robot working directory
         # Note: Robot tests expect the merged data file in their working directory
@@ -113,7 +123,7 @@ class RobotOrchestrator:
         
         # Phase 3: Test execution (unless render-only mode)
         if not self.render_only:
-            typer.echo("🤖 Executing Robot Framework tests...")
+            typer.echo("🤖 Executing Robot Framework tests...\n\n")
             run_pabot(
                 path=self.output_dir,
                 include=self.include_tags,

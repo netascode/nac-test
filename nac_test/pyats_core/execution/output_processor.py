@@ -197,6 +197,8 @@ class OutputProcessor:
             r"CRITICAL",
             r"Traceback",
             r"Exception.*Error",
+            r"RECOVERED", # Controller recovered messages
+            r"RECOVERY", # Controller recovery messages
         ]
 
         for pattern in show_patterns:
