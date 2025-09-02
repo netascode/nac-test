@@ -38,6 +38,7 @@ class CombinedOrchestrator:
         max_parallel_devices: Optional[int] = None,
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
         dev_pyats_only: bool = False,
+        dev_robot_only: bool = False,
     ):
         """Initialize the combined orchestrator.
 
@@ -55,6 +56,7 @@ class CombinedOrchestrator:
             max_parallel_devices: Max parallel devices for PyATS D2D tests
             verbosity: Logging verbosity level
             dev_pyats_only: Development mode - run only PyATS tests (skip Robot)
+            dev_robot_only: Development mode - run only Robot Framework tests (skip PyATS)
         """
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
@@ -73,20 +75,21 @@ class CombinedOrchestrator:
         self.max_parallel_devices = max_parallel_devices
         self.verbosity = verbosity
 
-        # Development mode
+        # Development modes
         self.dev_pyats_only = dev_pyats_only
+        self.dev_robot_only = dev_robot_only
 
     def run_tests(self) -> None:
         """Main entry point for combined test execution.
 
-        Handles both development mode (PyATS only) and production mode (combined).
+        Handles development modes (PyATS only, Robot only) and production mode (combined).
         """
         # Note: Output directory and merged data file created by main.py
 
         # Handle development mode (PyATS only)
         if self.dev_pyats_only:
             typer.secho(
-                "⚠️  WARNING: --pyats flag is for development use only. Production runs should use combined execution.",
+                "\n\n⚠️  WARNING: --pyats flag is for development use only. Production runs should use combined execution.",
                 fg=typer.colors.YELLOW,
             )
             typer.echo("🧪 Running PyATS tests only (development mode)...")
@@ -100,6 +103,31 @@ class CombinedOrchestrator:
             )
             if self.max_parallel_devices is not None:
                 orchestrator.max_parallel_devices = self.max_parallel_devices
+            orchestrator.run_tests()
+            return
+
+        # Handle development mode (Robot only)
+        if self.dev_robot_only:
+            typer.secho(
+                "\n\n⚠️  WARNING: --robot flag is for development use only. Production runs should use combined execution.",
+                fg=typer.colors.YELLOW,
+            )
+            typer.echo("🤖 Running Robot Framework tests only (development mode)...")
+
+            # Direct call to Robot orchestrator (base directory) - orchestrator manages its own structure
+            orchestrator = RobotOrchestrator(
+                data_paths=self.data_paths,
+                templates_dir=self.templates_dir,
+                output_dir=self.output_dir,
+                merged_data_filename=self.merged_data_filename,
+                filters_path=self.filters_path,
+                tests_path=self.tests_path,
+                include_tags=self.include_tags,
+                exclude_tags=self.exclude_tags,
+                render_only=self.render_only,
+                dry_run=self.dry_run,
+                verbosity=self.verbosity,
+            )
             orchestrator.run_tests()
             return
 
@@ -179,6 +207,10 @@ class CombinedOrchestrator:
 
     def _print_execution_summary(self, has_pyats: bool, has_robot: bool) -> None:
         """Print execution summary."""
+        # Skip combined summary for development modes - individual orchestrators handle their own summaries
+        if self.dev_pyats_only or self.dev_robot_only:
+            return
+            
         typer.echo("\n" + "=" * 50)
         typer.echo("📋 Combined Test Execution Summary")
         typer.echo("=" * 50)
