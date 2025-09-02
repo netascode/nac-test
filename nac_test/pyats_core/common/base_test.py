@@ -129,6 +129,10 @@ class NACTestBase(aetest.Testcase):
 
         # Initialize batching reporter to prevent reporter bottleneck
         self._initialize_batching_reporter()
+        
+        # Initialize recovery tracking for controller connectivity issues
+        self._controller_recovery_count = 0
+        self._total_recovery_downtime = 0.0
 
     def _initialize_result_collector(self) -> None:
         """Initialize the result collector for this test.
@@ -771,10 +775,27 @@ class NACTestBase(aetest.Testcase):
                 try:
                     response = await original_method(url, *args, **kwargs)
 
-                    # If we succeed after retries, log recovery
+                    # If we succeed after retries, log recovery prominently
                     if attempt > 0:
+                        # Calculate total downtime for this recovery
+                        recovery_downtime = sum(
+                            min(INITIAL_DELAY * (2**i), MAX_DELAY) for i in range(attempt)
+                        )
+                        
+                        # Track recovery statistics
+                        self._controller_recovery_count += 1
+                        self._total_recovery_downtime += recovery_downtime
+                        
+                        # Use WARNING level to match failure visibility
+                        self.logger.warning(
+                            f"✅ CONTROLLER RECOVERED: {method_name} {url} is responding again "
+                            f"(recovered after {attempt} attempt{'s' if attempt > 1 else ''}, "
+                            f"~{recovery_downtime:.1f}s downtime)"
+                        )
+                        
+                        # Also log at INFO for detailed tracking
                         self.logger.info(
-                            f"{method_name} {url} recovered after {attempt} retries"
+                            f"API connectivity restored to controller after {attempt} retry attempts"
                         )
 
                     return response
@@ -841,9 +862,8 @@ class NACTestBase(aetest.Testcase):
                         error_type = e.__class__.__name__
 
                     self.logger.warning(
-                        f"{method_name} {url} failed ({error_type}), "
-                        f"attempt {attempt + 1}/{MAX_RETRIES}, "
-                        f"backing off for {delay}s to let APIC recover..."
+                        f"⏳ BACKING OFF: {method_name} {url} failed ({error_type}), "
+                        f"attempt {attempt + 1}/{MAX_RETRIES}, waiting {delay}s for APIC recovery..."
                     )
 
                     # Ensure connection is closed before retry
@@ -1085,6 +1105,29 @@ class NACTestBase(aetest.Testcase):
             except Exception as e:
                 self.logger.error("Error during batching reporter cleanup: %s", e)
                 # Don't fail the test due to cleanup issues
+
+        # Report controller recovery statistics
+        if hasattr(self, "_controller_recovery_count") and self._controller_recovery_count > 0:
+            self.logger.warning(
+                f"📊 CONTROLLER RECOVERY SUMMARY: {self._controller_recovery_count} recovery event{'s' if self._controller_recovery_count > 1 else ''} "
+                f"during test execution (total downtime: ~{self._total_recovery_downtime:.1f}s)"
+            )
+            
+            # TODO: Add controller recovery statistics to HTML reports for operational analysis
+            # This would track recovery patterns, downtime trends, and controller health metrics
+            # in the HTML reports for post-test analysis and capacity planning. Benefits include:
+            # - Historical recovery pattern analysis
+            # - Controller performance trending
+            # - Network reliability metrics for reporting
+            # Currently commented out - needs testing to ensure proper integration with report generation
+            # 
+            # if hasattr(self, "result_collector"):
+            #     from nac_test.pyats_core.reporting.types import ResultStatus
+            #     self.result_collector.add_result(
+            #         ResultStatus.INFO,
+            #         f"Controller experienced {self._controller_recovery_count} connectivity issue(s) "
+            #         f"with total downtime of ~{self._total_recovery_downtime:.1f}s (all recovered successfully)"
+            #     )
 
         # Save test results for HTML report generation
         if hasattr(self, "result_collector"):
