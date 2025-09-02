@@ -210,7 +210,7 @@ class CombinedOrchestrator:
         # Skip combined summary for development modes - individual orchestrators handle their own summaries
         if self.dev_pyats_only or self.dev_robot_only:
             return
-            
+
         typer.echo("\n" + "=" * 50)
         typer.echo("📋 Combined Test Execution Summary")
         typer.echo("=" * 50)

@@ -526,7 +526,16 @@ class PyATSOrchestrator:
         result = await generator.generate_reports_from_archives(archive_paths)
 
         if result["status"] in ["success", "partial"]:
-            print(f"Total report generation time: {result['duration']:.2f} seconds")
+            # Format duration (minutes and seconds)
+            duration = result['duration']
+            if duration < 60:
+                duration_str = f"{duration:.2f} seconds"
+            else:
+                minutes = int(duration / 60)
+                secs = duration % 60
+                duration_str = f"{minutes} minutes {secs:.2f} seconds"
+            
+            print(f"{terminal.info('Total report generation time:')} {duration_str}")
 
             # Print archive info at the bottom
             for info in archive_info:
