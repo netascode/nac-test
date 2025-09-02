@@ -16,6 +16,7 @@ import nac_test
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.utils.logging import configure_logging, VerbosityLevel
 from nac_test.data_merger import DataMerger
+from datetime import datetime
 
 
 app = typer.Typer(add_completion=False)
@@ -174,6 +175,16 @@ PyATS = Annotated[
 ]
 
 
+Robot = Annotated[
+    bool,
+    typer.Option(
+        "--robot",
+        help="[DEV ONLY] Run only Robot Framework tests (skips PyATS). Use for faster development cycles.",
+        envvar="NAC_TEST_ROBOT",
+    ),
+]
+
+
 MaxParallelDevices = Annotated[
     int,
     typer.Option(
@@ -209,6 +220,7 @@ def main(
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
     pyats: PyATS = False,
+    robot: Robot = False,
     max_parallel_devices: Optional[MaxParallelDevices] = None,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,
@@ -217,10 +229,28 @@ def main(
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
     configure_logging(verbosity, error_handler)
 
+    # Validate development flag combinations
+    if pyats and robot:
+        typer.echo(typer.style("Error: Cannot use both --pyats and --robot flags simultaneously.", fg=typer.colors.RED))
+        typer.echo("Use one development flag at a time, or neither for combined execution.")
+        raise typer.Exit(1)
+
     # Create output directory and shared merged data file (SOT)
     output.mkdir(parents=True, exist_ok=True)
+    
+    # Merge data files with timing
+    start_time = datetime.now()
+    start_timestamp = start_time.strftime("%H:%M:%S")
+    typer.echo(f"\n\n[{start_timestamp}] 📄 Merging data model files...")
+    
     merged_data = DataMerger.merge_data_files(data)
     DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
+    
+    end_time = datetime.now()
+    end_timestamp = end_time.strftime("%H:%M:%S")
+    duration = (end_time - start_time).total_seconds()
+    duration_str = f"{duration:.1f}s" if duration < 60 else f"{int(duration//60)}m {duration%60:.0f}s"
+    typer.echo(f"[{end_timestamp}] ✅ Data model merging completed ({duration_str})")
 
     # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
     orchestrator = CombinedOrchestrator(
@@ -237,9 +267,32 @@ def main(
         max_parallel_devices=max_parallel_devices,
         verbosity=verbosity,
         dev_pyats_only=pyats,
+        dev_robot_only=robot,
     )
     
-    orchestrator.run_tests()
+    # Track total runtime for benchmarking
+    runtime_start = datetime.now()
+    
+    try:
+        orchestrator.run_tests()
+    except Exception as e:
+        # Ensure runtime is shown even if orchestrator fails
+        typer.echo(f"Error during execution: {e}")
+        raise
+    
+    # Display total runtime before exit
+    runtime_end = datetime.now()
+    total_runtime = (runtime_end - runtime_start).total_seconds()
+    
+    # Format like other timing outputs
+    if total_runtime < 60:
+        runtime_str = f"{total_runtime:.2f} seconds"
+    else:
+        minutes = int(total_runtime / 60)
+        secs = total_runtime % 60
+        runtime_str = f"{minutes} minutes {secs:.2f} seconds"
+    
+    typer.echo(f"\nTotal runtime: {runtime_str}")
     exit()
 
 
