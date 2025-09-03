@@ -94,9 +94,13 @@ class SubprocessRunner:
 
         try:
             # Get buffer limit from environment or use default
-            buffer_limit = int(os.environ.get('PYATS_OUTPUT_BUFFER_LIMIT', DEFAULT_BUFFER_LIMIT))
-            logger.debug(f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB")
-            
+            buffer_limit = int(
+                os.environ.get("PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT)
+            )
+            logger.debug(
+                f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB"
+            )
+
             # Increase the buffer limit to handle large output lines (default 10MB instead of asyncio's 64KB)
             # otherwise this may trigger a `chunk exceeded` error nad nac-test WILL hang
             process = await asyncio.create_subprocess_exec(
@@ -109,11 +113,16 @@ class SubprocessRunner:
             )
 
             # Process output in real-time if we have a handler
-            if self.output_handler and process.stdout:
+            return_code: Optional[int]
+            if self.output_handler is not None and process.stdout is not None:
                 return_code = await self._process_output_realtime(process)
             else:
-                stdout, _ = await process.communicate()
+                await process.communicate()
                 return_code = process.returncode
+
+            if return_code is None:
+                logger.error("PyATS job did not terminate as expected.")
+                return None
 
             if return_code != 0:
                 # Return code 1 = some tests failed (expected)
@@ -122,7 +131,7 @@ class SubprocessRunner:
                     logger.info(
                         f"PyATS job completed with test failures (return code: {return_code})"
                     )
-                elif return_code is not None and return_code > 1:
+                elif return_code > 1:
                     logger.error(f"PyATS job failed with return code: {return_code}")
                     return None
 
@@ -204,9 +213,13 @@ class SubprocessRunner:
 
         try:
             # Get buffer limit from environment or use default
-            buffer_limit = int(os.environ.get('PYATS_OUTPUT_BUFFER_LIMIT', DEFAULT_BUFFER_LIMIT))
-            logger.debug(f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB")
-            
+            buffer_limit = int(
+                os.environ.get("PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT)
+            )
+            logger.debug(
+                f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB"
+            )
+
             # Increase the buffer limit to handle large output lines (default 10MB instead of asyncio's 64KB)
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -261,7 +274,7 @@ class SubprocessRunner:
         try:
             consecutive_errors = 0
             max_consecutive_errors = 5
-            
+
             while True:
                 try:
                     line_bytes = await process.stdout.readline()
@@ -271,33 +284,37 @@ class SubprocessRunner:
                     line = line_bytes.decode("utf-8", errors="replace").rstrip()
 
                     # Process the line if we have a handler
-                    if self.output_handler:
+                    if self.output_handler is not None:
                         self.output_handler(line)
                     else:
                         # Default: just print it
                         print(line)
-                    
+
                     # Reset error counter on successful read
                     consecutive_errors = 0
-                    
+
                 except asyncio.LimitOverrunError as e:
                     # Handle lines that exceed the buffer limit
                     consecutive_errors += 1
-                    logger.warning(f"Output line exceeded buffer limit: {e}. Attempting to clear buffer...")
-                    
+                    logger.warning(
+                        f"Output line exceeded buffer limit: {e}. Attempting to clear buffer..."
+                    )
+
                     # Try to consume the oversized data in chunks
                     try:
                         # Read and discard data until we find a newline or EOF
                         while True:
                             chunk = await process.stdout.read(8192)  # Read 8KB chunks
-                            if not chunk or b'\n' in chunk:
+                            if not chunk or b"\n" in chunk:
                                 break
                         logger.info("Successfully cleared oversized output buffer")
                     except Exception as clear_error:
                         logger.error(f"Failed to clear buffer: {clear_error}")
-                        
+
                     if consecutive_errors >= max_consecutive_errors:
-                        logger.error(f"Too many consecutive buffer overrun errors ({consecutive_errors}). Stopping output processing.")
+                        logger.error(
+                            f"Too many consecutive buffer overrun errors ({consecutive_errors}). Stopping output processing."
+                        )
                         # Continue running the process but stop processing output
                         break
 

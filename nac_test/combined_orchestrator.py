@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 import typer
 
-from nac_test.data_merger import DataMerger
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.robot.orchestrator import RobotOrchestrator
@@ -31,8 +30,8 @@ class CombinedOrchestrator:
         merged_data_filename: str,
         filters_path: Optional[Path] = None,
         tests_path: Optional[Path] = None,
-        include_tags: List[str] = None,
-        exclude_tags: List[str] = None,
+        include_tags: Optional[List[str]] = None,
+        exclude_tags: Optional[List[str]] = None,
         render_only: bool = False,
         dry_run: bool = False,
         max_parallel_devices: Optional[int] = None,
@@ -115,7 +114,7 @@ class CombinedOrchestrator:
             typer.echo("🤖 Running Robot Framework tests only (development mode)...")
 
             # Direct call to Robot orchestrator (base directory) - orchestrator manages its own structure
-            orchestrator = RobotOrchestrator(
+            robot_orchestrator = RobotOrchestrator(
                 data_paths=self.data_paths,
                 templates_dir=self.templates_dir,
                 output_dir=self.output_dir,
@@ -128,7 +127,7 @@ class CombinedOrchestrator:
                 dry_run=self.dry_run,
                 verbosity=self.verbosity,
             )
-            orchestrator.run_tests()
+            robot_orchestrator.run_tests()
             return
 
         # Production mode: Combined execution
@@ -159,7 +158,7 @@ class CombinedOrchestrator:
             typer.echo("\n🤖 Running Robot Framework tests...\n")
 
             # Direct call to Robot orchestrator (base directory) - orchestrator manages its own structure
-            orchestrator = RobotOrchestrator(
+            robot_orchestrator2 = RobotOrchestrator(
                 data_paths=self.data_paths,
                 templates_dir=self.templates_dir,
                 output_dir=self.output_dir,
@@ -172,7 +171,7 @@ class CombinedOrchestrator:
                 dry_run=self.dry_run,
                 verbosity=self.verbosity,
             )
-            orchestrator.run_tests()
+            robot_orchestrator2.run_tests()
 
         # Summary
         self._print_execution_summary(has_pyats, has_robot)

@@ -176,7 +176,7 @@ class OutputProcessor:
             r"%WARNINGS-WARNING:",
             r"%GENIE-INFO:",
             r"%UNICON-INFO:",
-            r"%SCRIPT-INFO:", # Suppress script-level info logs from tests
+            r"%SCRIPT-INFO:",  # Suppress script-level info logs from tests
             r"NAC_PROGRESS_PLUGIN:",  # Suppress plugin debug output
             r"^\s*$",  # Empty lines
             r"^\+[-=]+\+$",  # PyATS table borders
@@ -197,8 +197,8 @@ class OutputProcessor:
             r"CRITICAL",
             r"Traceback",
             r"Exception.*Error",
-            r"RECOVERED", # Controller recovered messages
-            r"RECOVERY", # Controller recovery messages
+            r"RECOVERED",  # Controller recovered messages
+            r"RECOVERY",  # Controller recovery messages
         ]
 
         for pattern in show_patterns:

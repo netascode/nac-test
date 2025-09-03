@@ -9,7 +9,7 @@ pattern as PyATSOrchestrator.
 
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import typer
 
@@ -23,10 +23,10 @@ logger = logging.getLogger(__name__)
 
 class RobotOrchestrator:
     """Orchestrates Robot Framework test execution with clean directory management.
-    
+
     This class follows the same architectural pattern as PyATSOrchestrator:
     - Receives base output directory from caller
-    - Creates its own robot_results subdirectory  
+    - Creates its own robot_results subdirectory
     - Manages complete Robot Framework lifecycle
     - Reuses existing RobotWriter and pabot components (DRY principle)
     """
@@ -62,10 +62,14 @@ class RobotOrchestrator:
         """
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
-        self.base_output_dir = Path(output_dir)  # Store base directory for merged data file access
-        self.output_dir = self.base_output_dir / "robot_results"  # Robot works in its own subdirectory
+        self.base_output_dir = Path(
+            output_dir
+        )  # Store base directory for merged data file access
+        self.output_dir = (
+            self.base_output_dir / "robot_results"
+        )  # Robot works in its own subdirectory
         self.merged_data_filename = merged_data_filename
-        
+
         # Robot-specific parameters
         self.filters_path = filters_path
         self.tests_path = tests_path
@@ -86,41 +90,49 @@ class RobotOrchestrator:
 
     def run_tests(self) -> None:
         """Execute the complete Robot Framework test lifecycle.
-        
+
         This method:
         1. Creates the robot_results output directory
         2. Renders Robot test templates using RobotWriter
         3. Creates merged data model file in robot_results directory
         4. Executes tests using pabot (unless render_only mode)
-        
+
         Follows the same pattern as PyATSOrchestrator.run_tests().
         """
         # Create Robot Framework output directory (orchestrator owns its structure)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
-        logger.info(f"Robot Framework orchestrator initialized")
+
+        logger.info("Robot Framework orchestrator initialized")
         logger.info(f"Base output directory: {self.base_output_dir}")
         logger.info(f"Robot working directory: {self.output_dir}")
         logger.info(f"Templates directory: {self.templates_dir}")
-        
+
         # Phase 1: Template rendering (delegate to existing RobotWriter)
         start_time = datetime.now()
         start_timestamp = start_time.strftime("%H:%M:%S")
         typer.echo(f"[{start_timestamp}] 📝 Rendering Robot Framework templates...")
-        
+
         self.robot_writer.write(self.templates_dir, self.output_dir)
-        
+
         end_time = datetime.now()
         end_timestamp = end_time.strftime("%H:%M:%S")
         duration = (end_time - start_time).total_seconds()
-        duration_str = f"{duration:.1f}s" if duration < 60 else f"{int(duration//60)}m {duration%60:.0f}s"
-        typer.echo(f"[{end_timestamp}] ✅ Template rendering completed ({duration_str})")
-        
+        duration_str = (
+            f"{duration:.1f}s"
+            if duration < 60
+            else f"{int(duration // 60)}m {duration % 60:.0f}s"
+        )
+        typer.echo(
+            f"[{end_timestamp}] ✅ Template rendering completed ({duration_str})"
+        )
+
         # Phase 2: Create merged data model in Robot working directory
         # Note: Robot tests expect the merged data file in their working directory
         typer.echo("📄 Creating merged data model for Robot tests...")
-        self.robot_writer.write_merged_data_model(self.output_dir, self.merged_data_filename)
-        
+        self.robot_writer.write_merged_data_model(
+            self.output_dir, self.merged_data_filename
+        )
+
         # Phase 3: Test execution (unless render-only mode)
         if not self.render_only:
             typer.echo("🤖 Executing Robot Framework tests...\n\n")
@@ -135,9 +147,9 @@ class RobotOrchestrator:
         else:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
 
-    def get_output_summary(self) -> dict:
+    def get_output_summary(self) -> dict[str, Any]:
         """Get summary information about Robot Framework outputs.
-        
+
         Returns:
             Dictionary containing output directory and key files information
         """

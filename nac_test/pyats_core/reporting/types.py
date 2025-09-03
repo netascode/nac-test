@@ -32,7 +32,7 @@ class CommandExecution(TypedDict):
     device_name: str  # Device name (router, switch, APIC, vManage, etc.)
     command: str  # Command or API endpoint
     output: str  # Raw output/response
-    data: dict  # Parsed data (if applicable)
+    data: dict[str, Any]  # Parsed data (if applicable)
 
 
 ParameterData = dict[str, Any]

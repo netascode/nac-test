@@ -4,7 +4,7 @@
 
 import threading
 import httpx
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 
 class ConnectionPool:
@@ -51,15 +51,15 @@ class ConnectionPool:
             timeout = httpx.Timeout(30.0)
 
         # Build kwargs dict, only including base_url if it's not None
-        client_kwargs = {
-            'limits': self.limits,
-            'headers': headers or {},
-            'timeout': timeout,
-            'verify': verify
+        client_kwargs: Dict[str, Any] = {
+            "limits": self.limits,
+            "headers": headers or {},
+            "timeout": timeout,
+            "verify": verify,
         }
-        
+
         # Only add base_url if it's not None (httpx fails with base_url=None)
         if base_url is not None:
-            client_kwargs['base_url'] = base_url
-            
+            client_kwargs["base_url"] = base_url
+
         return httpx.AsyncClient(**client_kwargs)

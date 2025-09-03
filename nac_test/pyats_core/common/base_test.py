@@ -10,7 +10,7 @@ import logging
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, List, TypeVar, Callable, Awaitable, Optional
+from typing import Any, Dict, List, TypeVar, Callable, Awaitable, Optional, Iterator
 from functools import lru_cache
 from datetime import datetime
 from contextlib import contextmanager
@@ -21,7 +21,7 @@ from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.batching_reporter import BatchingReporter
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
-import markdown
+import markdown  # type: ignore[import-untyped]
 import asyncio
 import httpx
 
@@ -38,6 +38,11 @@ class NACTestBase(aetest.Testcase):
     - Connection pooling and retry logic (HTTP/API)
     - SSH command execution and tracking (SSH/Device)
     """
+
+    # Explicit attribute types to avoid type comments later
+    batching_reporter: Optional[BatchingReporter] = None
+    step_interceptor: Optional[StepInterceptor] = None
+    _current_test_context: Optional[str] = None
 
     @classmethod
     @lru_cache(maxsize=1)
@@ -92,7 +97,7 @@ class NACTestBase(aetest.Testcase):
             return ""
 
         # Configure markdown with useful extensions
-        md = markdown.Markdown(
+        md = markdown.Markdown(  # type: ignore[no-any-return]
             extensions=[
                 "extra",  # Includes tables, footnotes, abbreviations, etc.
                 "nl2br",  # Converts newlines to <br> tags
@@ -101,7 +106,7 @@ class NACTestBase(aetest.Testcase):
         )
 
         # Convert markdown to HTML
-        html = md.convert(text)
+        html = str(md.convert(text))
 
         return html
 
@@ -129,7 +134,7 @@ class NACTestBase(aetest.Testcase):
 
         # Initialize batching reporter to prevent reporter bottleneck
         self._initialize_batching_reporter()
-        
+
         # Initialize recovery tracking for controller connectivity issues
         self._controller_recovery_count = 0
         self._total_recovery_downtime = 0.0
@@ -156,7 +161,8 @@ class NACTestBase(aetest.Testcase):
         # Generate unique test ID
         test_id = self._generate_test_id()
         self.result_collector = TestResultCollector(test_id, html_report_data_dir)
-        self.result_collector._test_instance = self
+        # mypy: allow private attribute set for linking test instance
+        self.result_collector._test_instance = self  # type: ignore[attr-defined]
 
         # Attach pre-rendered metadata to collector
         metadata = self.get_rendered_metadata()
@@ -240,7 +246,7 @@ class NACTestBase(aetest.Testcase):
             self.batching_reporter = None
             self.step_interceptor = None
 
-    def _send_batch_to_pyats(self, messages: List[Dict[str, Any]]) -> bool:
+    def _send_batch_to_pyats(self, messages: List[Any]) -> bool:
         """Send a batch of messages to PyATS reporter with dual-path reporting.
 
         This is the callback used by BatchingReporter. It implements:
@@ -439,9 +445,7 @@ class NACTestBase(aetest.Testcase):
             self.logger.debug("Error sending message to PyATS: %s", e)
             return False
 
-    def _handle_batching_error(
-        self, error: Exception, messages: List[Dict[str, Any]]
-    ) -> None:
+    def _handle_batching_error(self, error: Exception, messages: List[Any]) -> None:
         """Handle errors from batching reporter.
 
         This callback is invoked when the batching reporter encounters
@@ -595,7 +599,7 @@ class NACTestBase(aetest.Testcase):
                 dump_file = Path(f"/tmp/{filename}")
 
             # Prepare data for dumping
-            dump_data = {
+            dump_data: Dict[str, Any] = {
                 "test_name": test_name,
                 "test_id": getattr(self, "_test_id", "unknown"),
                 "timestamp": datetime.now().isoformat(),
@@ -749,8 +753,12 @@ class NACTestBase(aetest.Testcase):
         MAX_DELAY = 300.0  # Cap at 5 minutes per retry
 
         async def execute_with_retry(
-            method_name, original_method, url, *args, **kwargs
-        ):
+            method_name: str,
+            original_method: Callable[..., Awaitable[Any]],
+            url: str,
+            *args: Any,
+            **kwargs: Any,
+        ) -> Any:
             """Execute HTTP method with aggressive retry logic for APIC recovery.
 
             Handles all HTTP errors including:
@@ -779,20 +787,21 @@ class NACTestBase(aetest.Testcase):
                     if attempt > 0:
                         # Calculate total downtime for this recovery
                         recovery_downtime = sum(
-                            min(INITIAL_DELAY * (2**i), MAX_DELAY) for i in range(attempt)
+                            min(INITIAL_DELAY * (2**i), MAX_DELAY)
+                            for i in range(attempt)
                         )
-                        
+
                         # Track recovery statistics
                         self._controller_recovery_count += 1
                         self._total_recovery_downtime += recovery_downtime
-                        
+
                         # Use WARNING level to match failure visibility
                         self.logger.warning(
                             f"✅ CONTROLLER RECOVERED: {method_name} {url} is responding again "
                             f"(recovered after {attempt} attempt{'s' if attempt > 1 else ''}, "
                             f"~{recovery_downtime:.1f}s downtime)"
                         )
-                        
+
                         # Also log at INFO for detailed tracking
                         self.logger.info(
                             f"API connectivity restored to controller after {attempt} retry attempts"
@@ -884,7 +893,9 @@ class NACTestBase(aetest.Testcase):
 
                     await asyncio.sleep(delay)
 
-        async def tracked_get(url, *args, test_context=None, **kwargs):
+        async def tracked_get(
+            url: str, *args: Any, test_context: Optional[str] = None, **kwargs: Any
+        ) -> Any:
             """Tracked GET method with retry and connection cleanup."""
             response = await execute_with_retry(
                 "GET", original_get, url, *args, **kwargs
@@ -894,7 +905,9 @@ class NACTestBase(aetest.Testcase):
             )
             return response
 
-        async def tracked_post(url, *args, test_context=None, **kwargs):
+        async def tracked_post(
+            url: str, *args: Any, test_context: Optional[str] = None, **kwargs: Any
+        ) -> Any:
             """Tracked POST method with retry and connection cleanup."""
             response = await execute_with_retry(
                 "POST", original_post, url, *args, **kwargs
@@ -909,7 +922,9 @@ class NACTestBase(aetest.Testcase):
             )
             return response
 
-        async def tracked_put(url, *args, test_context=None, **kwargs):
+        async def tracked_put(
+            url: str, *args: Any, test_context: Optional[str] = None, **kwargs: Any
+        ) -> Any:
             """Tracked PUT method with retry and connection cleanup."""
             response = await execute_with_retry(
                 "PUT", original_put, url, *args, **kwargs
@@ -924,7 +939,9 @@ class NACTestBase(aetest.Testcase):
             )
             return response
 
-        async def tracked_delete(url, *args, test_context=None, **kwargs):
+        async def tracked_delete(
+            url: str, *args: Any, test_context: Optional[str] = None, **kwargs: Any
+        ) -> Any:
             """Tracked DELETE method with retry and connection cleanup."""
             response = await execute_with_retry(
                 "DELETE", original_delete, url, *args, **kwargs
@@ -934,7 +951,9 @@ class NACTestBase(aetest.Testcase):
             )
             return response
 
-        async def tracked_patch(url, *args, test_context=None, **kwargs):
+        async def tracked_patch(
+            url: str, *args: Any, test_context: Optional[str] = None, **kwargs: Any
+        ) -> Any:
             """Tracked PATCH method with retry and connection cleanup."""
             response = await execute_with_retry(
                 "PATCH", original_patch, url, *args, **kwargs
@@ -964,7 +983,7 @@ class NACTestBase(aetest.Testcase):
         url: str,
         response: Any,
         device_name: str,
-        request_data: Optional[Dict] = None,
+        request_data: Optional[Dict[str, Any]] = None,
         test_context: Optional[str] = None,
     ) -> None:
         """Track an API response in the result collector.
@@ -1049,7 +1068,7 @@ class NACTestBase(aetest.Testcase):
         self._current_test_context = None
 
     @contextmanager
-    def test_context(self, context: str):
+    def test_context(self, context: str) -> Iterator[None]:
         """Context manager for setting test context temporarily.
 
         This provides a clean way to set context for a block of code
@@ -1107,12 +1126,15 @@ class NACTestBase(aetest.Testcase):
                 # Don't fail the test due to cleanup issues
 
         # Report controller recovery statistics
-        if hasattr(self, "_controller_recovery_count") and self._controller_recovery_count > 0:
+        if (
+            hasattr(self, "_controller_recovery_count")
+            and self._controller_recovery_count > 0
+        ):
             self.logger.warning(
                 f"📊 CONTROLLER RECOVERY SUMMARY: {self._controller_recovery_count} recovery event{'s' if self._controller_recovery_count > 1 else ''} "
                 f"during test execution (total downtime: ~{self._total_recovery_downtime:.1f}s)"
             )
-            
+
             # TODO: Add controller recovery statistics to HTML reports for operational analysis
             # This would track recovery patterns, downtime trends, and controller health metrics
             # in the HTML reports for post-test analysis and capacity planning. Benefits include:
@@ -1120,7 +1142,7 @@ class NACTestBase(aetest.Testcase):
             # - Controller performance trending
             # - Network reliability metrics for reporting
             # Currently commented out - needs testing to ensure proper integration with report generation
-            # 
+            #
             # if hasattr(self, "result_collector"):
             #     from nac_test.pyats_core.reporting.types import ResultStatus
             #     self.result_collector.add_result(

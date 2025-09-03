@@ -6,9 +6,8 @@ import asyncio
 import tempfile
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import List, Any, Optional
 import os
-import sys
 
 from .testbed_generator import TestbedGenerator
 from nac_test.utils.path_setup import get_pythonpath_for_tests
@@ -19,7 +18,13 @@ logger = logging.getLogger(__name__)
 class DeviceExecutor:
     """Handles device-centric test execution."""
 
-    def __init__(self, job_generator, subprocess_runner, test_status: Dict[str, Any], test_dir: Path):
+    def __init__(
+        self,
+        job_generator: Any,
+        subprocess_runner: Any,
+        test_status: dict[str, Any],
+        test_dir: Path,
+    ):
         """Initialize device executor.
 
         Args:
@@ -34,7 +39,10 @@ class DeviceExecutor:
         self.test_dir = test_dir
 
     async def run_device_job_with_semaphore(
-        self, device: Dict, test_files: List[Path], semaphore: asyncio.Semaphore
+        self,
+        device: dict[str, Any],
+        test_files: List[Path],
+        semaphore: asyncio.Semaphore,
     ) -> Optional[Path]:
         """Run PyATS tests for a specific device with semaphore control.
 
@@ -79,17 +87,24 @@ class DeviceExecutor:
                 # Set up environment for this device
                 # Always start with a copy of os.environ to preserve PATH and other variables
                 env = os.environ.copy()
-                nac_test_dir = Path(__file__).parent.parent.parent.parent  # nac-test root
-                env.update({
-                    "HOSTNAME": hostname,
-                    "DEVICE_INFO": str(device),  # Will be loaded by the job file
-                    # Environment variables are used because PyATS tests run as separate subprocess processes.
-                    # The merged data file is created by main.py at the base output level.
-                    "DATA_MODEL_PATH": str(
-                        self.subprocess_runner.output_dir.parent / "merged_data_model_test_variables.yaml"
-                    ),
-                    "PYTHONPATH": get_pythonpath_for_tests(self.test_dir, [nac_test_dir]),
-                })
+                nac_test_dir = Path(
+                    __file__
+                ).parent.parent.parent.parent  # nac-test root
+                env.update(
+                    {
+                        "HOSTNAME": hostname,
+                        "DEVICE_INFO": str(device),  # Will be loaded by the job file
+                        # Environment variables are used because PyATS tests run as separate subprocess processes.
+                        # The merged data file is created by main.py at the base output level.
+                        "DATA_MODEL_PATH": str(
+                            self.subprocess_runner.output_dir.parent
+                            / "merged_data_model_test_variables.yaml"
+                        ),
+                        "PYTHONPATH": get_pythonpath_for_tests(
+                            self.test_dir, [nac_test_dir]
+                        ),
+                    }
+                )
 
                 # Track test status for this device
                 for test_file in test_files:
@@ -100,7 +115,7 @@ class DeviceExecutor:
                         "test_file": str(test_file),
                     }
 
-                # TEMP DEBUG: Print environment and command for D2D/SSH subprocess -- REMOVE ME AFTER TESTING
+                # FIXME: TEMP DEBUG: Print environment and command for D2D/SSH subprocess -- REMOVE ME AFTER TESTING
                 # print("=== D2D/SSH SUBPROCESS ENV ===")
                 # print("sys.executable:", sys.executable)
                 # print("os.getcwd():", os.getcwd())
@@ -139,7 +154,7 @@ class DeviceExecutor:
                 else:
                     logger.error(f"Failed to run tests for device {hostname}")
 
-                return archive_path
+                return Path(archive_path) if archive_path else None
 
             except Exception as e:
                 logger.error(f"Error running tests for device {hostname}: {e}")

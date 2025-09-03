@@ -8,7 +8,7 @@ including connection pooling, resource limits, and per-device locking.
 
 import asyncio
 import logging
-from typing import Dict, Any, Optional, TYPE_CHECKING
+from typing import Dict, Any, Optional, TYPE_CHECKING, AsyncIterator
 from contextlib import asynccontextmanager
 
 # Only import for type checking to avoid early PyATS initialization
@@ -376,7 +376,9 @@ class DeviceConnectionManager:
             await self.close_connection(hostname)
 
     @asynccontextmanager
-    async def device_connection(self, hostname: str, device_info: Dict[str, Any]):
+    async def device_connection(
+        self, hostname: str, device_info: Dict[str, Any]
+    ) -> AsyncIterator["Connection"]:
         """Context manager for device connections with automatic cleanup.
 
         Args:

@@ -13,6 +13,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from typing import cast
 
 from nac_test.pyats_core.reporting.generator import ReportGenerator
 from nac_test.pyats_core.reporting.templates import get_jinja_environment, TEMPLATES_DIR
@@ -85,7 +86,7 @@ class MultiArchiveReportGenerator:
         self.pyats_results_dir.mkdir(parents=True)
 
         # Process each archive
-        results = {}
+        results: Dict[str, Dict[str, Any]] = {}
         tasks = []
 
         for archive_path in archive_paths:
@@ -114,7 +115,7 @@ class MultiArchiveReportGenerator:
                         "error": str(task_results[idx]),
                     }
                 else:
-                    results[archive_type] = task_results[idx]
+                    results[archive_type] = cast(Dict[str, Any], task_results[idx])
 
         # Generate combined summary if we have multiple successful archives
         combined_summary_path = None
@@ -200,7 +201,7 @@ class MultiArchiveReportGenerator:
         """
         loop = asyncio.get_event_loop()
 
-        def extract():
+        def extract() -> None:
             # The target_dir already contains the full path like output_dir/pyats_results/api
             # So we just need to get the relative path from output_dir
             target_subdir = str(target_dir.relative_to(self.output_dir))
@@ -274,17 +275,23 @@ class MultiArchiveReportGenerator:
                                 "overall_status", ResultStatus.SKIPPED.value
                             )
 
-                            stats["total_tests"] += 1
+                            stats["total_tests"] = int(stats.get("total_tests", 0)) + 1
 
                             if status == ResultStatus.PASSED.value:
-                                stats["passed_tests"] += 1
+                                stats["passed_tests"] = (
+                                    int(stats.get("passed_tests", 0)) + 1
+                                )
                             elif status in [
                                 ResultStatus.FAILED.value,
                                 ResultStatus.ERRORED.value,
                             ]:
-                                stats["failed_tests"] += 1
+                                stats["failed_tests"] = (
+                                    int(stats.get("failed_tests", 0)) + 1
+                                )
                             elif status == ResultStatus.SKIPPED.value:
-                                stats["skipped_tests"] += 1
+                                stats["skipped_tests"] = (
+                                    int(stats.get("skipped_tests", 0)) + 1
+                                )
 
                         except Exception as e:
                             logger.warning(
@@ -292,27 +299,39 @@ class MultiArchiveReportGenerator:
                             )
 
                 # Calculate success rate for this test type
-                tests_with_results = stats["total_tests"] - stats["skipped_tests"]
+                total_tests = int(stats.get("total_tests", 0))
+                skipped_tests = int(stats.get("skipped_tests", 0))
+                passed_tests = int(stats.get("passed_tests", 0))
+
+                tests_with_results = total_tests - skipped_tests
                 if tests_with_results > 0:
-                    stats["success_rate"] = (
-                        stats["passed_tests"] / tests_with_results
-                    ) * 100
+                    stats["success_rate"] = (passed_tests / tests_with_results) * 100
 
                 # Add to overall stats
-                overall_stats["total_tests"] += stats["total_tests"]
-                overall_stats["passed_tests"] += stats["passed_tests"]
-                overall_stats["failed_tests"] += stats["failed_tests"]
-                overall_stats["skipped_tests"] += stats["skipped_tests"]
+                overall_stats["total_tests"] = (
+                    int(overall_stats.get("total_tests", 0)) + total_tests
+                )
+                overall_stats["passed_tests"] = (
+                    int(overall_stats.get("passed_tests", 0)) + passed_tests
+                )
+                overall_stats["failed_tests"] = int(
+                    overall_stats.get("failed_tests", 0)
+                ) + int(stats.get("failed_tests", 0))
+                overall_stats["skipped_tests"] = (
+                    int(overall_stats.get("skipped_tests", 0)) + skipped_tests
+                )
 
                 test_type_stats[archive_type.upper()] = stats
 
             # Calculate overall success rate
-            overall_tests_with_results = (
-                overall_stats["total_tests"] - overall_stats["skipped_tests"]
-            )
+            overall_total_tests = int(overall_stats.get("total_tests", 0))
+            overall_skipped_tests = int(overall_stats.get("skipped_tests", 0))
+            overall_passed_tests = int(overall_stats.get("passed_tests", 0))
+
+            overall_tests_with_results = overall_total_tests - overall_skipped_tests
             if overall_tests_with_results > 0:
                 overall_stats["success_rate"] = (
-                    overall_stats["passed_tests"] / overall_tests_with_results
+                    overall_passed_tests / overall_tests_with_results
                 ) * 100
 
             # Render the combined summary template

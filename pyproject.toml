@@ -1,14 +1,21 @@
+[project]
+name = "nac-test"
+version = "1.1.0-beta"
+description = "A CLI tool to render to execute Robot Framework (RF) and PyATS tests for Network as Code (NAC)."
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
 [tool.poetry]
-authors = ["Daniel Schmidt <danischm@cisco.com>"]
+authors = ["Daniel Schmidt <danischm@cisco.com>", "Andrea Testino <atestini@cisco.com>"]
 description = "A CLI tool to render and execute Robot Framework tests using Jinja templating."
 documentation = "https://github.com/netascode/nac-test"
 homepage = "https://github.com/netascode/nac-test"
 license = "LICENSE"
-maintainers = ["Daniel Schmidt <danischm@cisco.com>"]
+maintainers = ["Daniel Schmidt <danischm@cisco.com>", "Andrea Testino <atestini@cisco.com>"]
 name = "nac-test"
 readme = "README.md"
 repository = "https://github.com/netascode/nac-test"
-version = "1.0.0"
+version = "1.1.0-beta"
 
 [tool.poetry.scripts]
 iac-test = "nac_test.cli.main:app"
@@ -76,3 +83,13 @@ markers = ["unit", "integration"]
 [build-system]
 build-backend = "poetry.core.masonry.api"
 requires = ["poetry_core>=1.0.0"]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17.1",
+    "pre-commit>=4.3.0",
+    "ruff>=0.12.11",
+    "types-aiofiles>=24.1.0.20250822",
+    "types-markdown>=3.8.0.20250809",
+    "types-pyyaml>=6.0.12.20250822",
+]

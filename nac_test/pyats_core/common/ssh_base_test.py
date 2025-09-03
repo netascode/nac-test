@@ -6,7 +6,7 @@ from pyats import aetest
 import logging
 import os
 import json
-from typing import Any, Optional
+from typing import Any, Optional, Callable, Coroutine
 
 
 class SSHTestBase(NACTestBase):
@@ -156,7 +156,7 @@ class SSHTestBase(NACTestBase):
 
     def parse_output(
         self, command: str, output: Optional[str] = None
-    ) -> Optional[dict]:
+    ) -> Optional[dict[str, Any]]:
         """Parse command output using Genie parser if available.
 
         This method attempts to use Genie parsers when a PyATS testbed is available.
@@ -175,10 +175,12 @@ class SSHTestBase(NACTestBase):
             try:
                 if output is not None:
                     # Parse provided output
-                    return self.testbed_device.parse(command, output=output)
+                    result = self.testbed_device.parse(command, output=output)
+                    return dict(result) if result is not None else None
                 else:
                     # Execute and parse in one step
-                    return self.testbed_device.parse(command)
+                    result = self.testbed_device.parse(command)
+                    return dict(result) if result is not None else None
             except Exception as e:
                 self.logger.warning(f"Genie parser failed for '{command}': {e}")
                 return None
@@ -188,7 +190,7 @@ class SSHTestBase(NACTestBase):
 
     def _create_execute_command_method(
         self, connection: Any, command_cache: CommandCache
-    ):
+    ) -> Callable[[str], Coroutine[Any, Any, str]]:
         """Create an async command execution method for the test.
 
         Args:

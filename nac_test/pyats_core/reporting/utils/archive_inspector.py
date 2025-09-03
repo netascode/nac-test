@@ -93,7 +93,7 @@ class ArchiveInspector:
             Dictionary mapping archive types to lists of archive paths,
             sorted by modification time (newest first)
         """
-        archives = {"api": [], "d2d": [], "legacy": []}
+        archives: dict[str, list[Path]] = {"api": [], "d2d": [], "legacy": []}
 
         # Find all archives
         all_archives = list(output_dir.glob("nac_test_job_*.zip"))

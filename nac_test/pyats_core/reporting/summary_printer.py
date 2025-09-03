@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class SummaryPrinter:
     """Handles printing of test execution summaries and archive information."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the SummaryPrinter."""
         pass  # No dependencies needed currently
 
@@ -73,6 +73,7 @@ class SummaryPrinter:
         if d2d_test_status:
             all_test_status.update(d2d_test_status)
 
+        # TODO: No longer need this - remove
         # Fall back to test_status if no separate tracking (backward compatibility)
         if not all_test_status:
             all_test_status = test_status

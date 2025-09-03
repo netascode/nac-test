@@ -8,7 +8,7 @@ command execution when multiple tests need the same show command outputs.
 
 import time
 import logging
-from typing import Dict, Optional
+from typing import Optional, Any
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +33,9 @@ class CommandCache:
         """
         self.hostname = hostname
         self.ttl = ttl
-        self.cache: Dict[str, Dict] = {}  # command -> {output, timestamp}
+        self.cache: dict[str, dict[str, Any]] = {}  # command -> {output, timestamp}
 
-        logger.debug(
-            f"Initialized command cache for device {hostname} with TTL {ttl}s"
-        )
+        logger.debug(f"Initialized command cache for device {hostname} with TTL {ttl}s")
 
     def get(self, command: str) -> Optional[str]:
         """Get cached command output if valid.
@@ -52,7 +50,7 @@ class CommandCache:
             entry = self.cache[command]
             if time.time() - entry["timestamp"] < self.ttl:
                 logger.debug(f"Cache hit for '{command}' on {self.hostname}")
-                return entry["output"]
+                return str(entry["output"])
             else:
                 # Entry has expired, remove it
                 del self.cache[command]
@@ -78,7 +76,7 @@ class CommandCache:
         self.cache.clear()
         logger.debug(f"Cleared {entry_count} cached entries for {self.hostname}")
 
-    def get_cache_stats(self) -> Dict[str, int]:
+    def get_cache_stats(self) -> dict[str, int]:
         """Get cache statistics.
 
         Returns:

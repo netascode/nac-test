@@ -23,7 +23,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import aiofiles
+import aiofiles  # type: ignore[import-untyped]
 
 from nac_test.pyats_core.reporting.templates import get_jinja_environment
 from nac_test.pyats_core.reporting.types import ResultStatus
@@ -144,16 +144,16 @@ class ReportGenerator:
 
     async def _read_jsonl_results(self, jsonl_path: Path) -> Dict[str, Any]:
         """Read JSONL file asynchronously with robust error handling.
-        
+
         Reads a streaming JSONL file produced by TestResultCollector and reconstructs
         the expected data structure for HTML template generation.
-        
+
         Args:
             jsonl_path: Path to the JSONL result file.
-            
+
         Returns:
             Dictionary containing test data in expected format for templates.
-            
+
         Raises:
             Exception: If file cannot be read or is completely malformed.
         """
@@ -161,18 +161,18 @@ class ReportGenerator:
         command_executions = []
         metadata = {}
         summary = {}
-        
+
         try:
-            async with aiofiles.open(jsonl_path, 'r') as f:
+            async with aiofiles.open(jsonl_path, "r") as f:
                 async for line in f:
                     line = line.strip()
                     if not line:
                         continue
-                    
+
                     try:
                         record = json.loads(line)
                         record_type = record.get("type")
-                        
+
                         if record_type == "metadata":
                             metadata = record
                         elif record_type == "result":
@@ -183,26 +183,30 @@ class ReportGenerator:
                             summary = record
                         elif record_type == "emergency_close":
                             # Log but continue processing - emergency close indicates crash recovery
-                            logger.debug(f"Found emergency close record in {jsonl_path}")
-                            
+                            logger.debug(
+                                f"Found emergency close record in {jsonl_path}"
+                            )
+
                     except json.JSONDecodeError as e:
-                        logger.warning(f"Skipping malformed JSONL line in {jsonl_path}: {e}")
+                        logger.warning(
+                            f"Skipping malformed JSONL line in {jsonl_path}: {e}"
+                        )
                         continue
-                        
+
         except Exception as e:
             logger.error(f"Failed to read JSONL file {jsonl_path}: {e}")
             raise
-        
+
         # Return in expected format for existing templates
         return {
             "test_id": metadata.get("test_id") or summary.get("test_id"),
-            "start_time": metadata.get("start_time") or summary.get("start_time"), 
+            "start_time": metadata.get("start_time") or summary.get("start_time"),
             "end_time": summary.get("end_time"),
             "duration": summary.get("duration"),
             "results": results,
             "command_executions": command_executions,
             "overall_status": summary.get("overall_status"),
-            "metadata": summary.get("metadata", {})
+            "metadata": summary.get("metadata", {}),
         }
 
     async def _generate_report_safe(

@@ -91,7 +91,7 @@ class DeviceInventoryDiscovery:
         # For future NXOS: all tests under /d2d/ would inherit from NXOSTestBase
         test_file = test_files[0]
         try:
-            # I dont love this but we need to clean sys.argv before 
+            # I dont love this but we need to clean sys.argv before
             # importing to prevent PyATS argument parser conflict
             # PyATS configuration module parses sys.argv at import time looking for --pyats-configuration
             # Our --pyats flag gets interpreted as an incomplete --pyats-configuration argument
@@ -104,7 +104,7 @@ class DeviceInventoryDiscovery:
                 # Here we need to set up sys.path to enable test module imports
                 # D2D test files contain imports like "from tests.pyats_common.base import ..."
                 # but Python doesn't know where to find the 'tests' package when `nac-test` is run.
-                # 
+                #
                 # In the API test flow, the orchestrator sets up PYTHONPATH before discovery,
                 # but for D2D tests, DeviceInventoryDiscovery runs BEFORE any path setup.
                 # So we get into a bit of a pickle.
@@ -120,12 +120,12 @@ class DeviceInventoryDiscovery:
                 # - Find 'tests' dir: /home/user/nac-sdwan-terraform/tests
                 # - Add to sys.path: /home/user/nac-sdwan-terraform
                 # - Now "from tests.pyats_common..." resolves correctly
-                
+
                 # DEBUG: Log sys.path before adding
                 logger.info(f"sys.path before add_tests_parent_to_syspath: {sys.path}")
-                
+
                 add_tests_parent_to_syspath(test_file)
-                
+
                 # DEBUG: Log sys.path after adding
                 logger.info(f"sys.path after add_tests_parent_to_syspath: {sys.path}")
                 logger.info(f"Attempting to import test file: {test_file}")
@@ -162,7 +162,7 @@ class DeviceInventoryDiscovery:
                             )
                             devices = cls.get_ssh_device_inventory(data_model)
 
-                            return devices
+                            return list(devices)  # Ensure we return a list
 
         except Exception as e:
             logger.error(f"Failed to get device inventory from {test_file}: {e}")

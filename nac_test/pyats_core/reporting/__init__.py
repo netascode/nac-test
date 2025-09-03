@@ -4,7 +4,9 @@
 
 from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.generator import ReportGenerator
-from nac_test.pyats_core.reporting.multi_archive_generator import MultiArchiveReportGenerator
+from nac_test.pyats_core.reporting.multi_archive_generator import (
+    MultiArchiveReportGenerator,
+)
 from nac_test.pyats_core.reporting.summary_printer import SummaryPrinter
 from nac_test.pyats_core.reporting.types import CommandExecution, ResultStatus
 

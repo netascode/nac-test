@@ -25,7 +25,6 @@ from nac_test.pyats_core.execution import (
     OutputProcessor,
 )
 from nac_test.pyats_core.execution.device import DeviceExecutor
-from nac_test.data_merger import DataMerger
 from nac_test.pyats_core.progress import ProgressReporter
 from nac_test.pyats_core.reporting.multi_archive_generator import (
     MultiArchiveReportGenerator,
@@ -91,13 +90,15 @@ class PyATSOrchestrator:
 
         # Initialize execution components
         self.job_generator = JobGenerator(self.max_workers, self.output_dir)
-        self.output_processor = (
+        self.output_processor: Optional[OutputProcessor] = (
             None  # Will be initialized when progress reporter is ready
         )
-        self.subprocess_runner = (
+        self.subprocess_runner: Optional[SubprocessRunner] = (
             None  # Will be initialized when output processor is ready
         )
-        self.device_executor = None  # Will be initialized when needed
+        self.device_executor: Optional[DeviceExecutor] = (
+            None  # Will be initialized when needed
+        )
 
         # Initialize reporting components
         self.summary_printer = SummaryPrinter()
@@ -113,7 +114,7 @@ class PyATSOrchestrator:
 
         return cpu_workers
 
-    def _build_reporter_config(self) -> dict:
+    def _build_reporter_config(self) -> Dict[str, Any]:
         """Build the configuration for PyATS reporters.
 
         This centralizes the reporter setup to use an asynchronous QueueHandler
@@ -259,6 +260,10 @@ class PyATSOrchestrator:
                 self.test_dir,
             )
 
+        # Use a local narrowed variable to satisfy mypy
+        device_executor = self.device_executor
+        assert device_executor is not None
+
         # Note: Progress reporter is already initialized at orchestration level
         # with the correct total_operations count
 
@@ -295,7 +300,7 @@ class PyATSOrchestrator:
             semaphore_size = min(self.max_workers, len(device_batch))
             semaphore = asyncio.Semaphore(semaphore_size)
             tasks = [
-                self.device_executor.run_device_job_with_semaphore(
+                device_executor.run_device_job_with_semaphore(
                     device, test_files, semaphore
                 )
                 for device in device_batch
@@ -368,7 +373,7 @@ class PyATSOrchestrator:
                 exc_info=True,
             )
 
-    async def _run_tests_async(self):
+    async def _run_tests_async(self) -> None:
         """Main async orchestration logic."""
         # Track overall start time for combined summary
         self.overall_start_time = datetime.now()
@@ -409,7 +414,7 @@ class PyATSOrchestrator:
         self.progress_reporter = ProgressReporter(
             total_tests=len(test_files), max_workers=self.max_workers
         )
-        self.test_status = {}
+        self.test_status: Dict[str, Any] = {}
         self.start_time = datetime.now()
 
         # Set the test_status reference in progress reporter
@@ -426,7 +431,8 @@ class PyATSOrchestrator:
         # Generate the plugin config and pass it to the runner
         with tempfile.TemporaryDirectory() as temp_dir:
             plugin_config_path = self._generate_plugin_config(Path(temp_dir))
-            self.subprocess_runner.plugin_config_path = plugin_config_path
+            if self.subprocess_runner is not None:
+                self.subprocess_runner.plugin_config_path = plugin_config_path
 
             # Execute tests based on their type
             tasks = []
@@ -510,6 +516,7 @@ class PyATSOrchestrator:
             archive_info.append(f"Found D2D archive: {archives['d2d'][0].name}")
 
         if not archive_paths and archives["legacy"]:
+            # TODO: No longer need this -- remove
             # Fallback to legacy archives for backward compatibility
             archive_paths.append(archives["legacy"][0])
             archive_info.append(f"Found legacy archive: {archives['legacy'][0].name}")
@@ -527,14 +534,14 @@ class PyATSOrchestrator:
 
         if result["status"] in ["success", "partial"]:
             # Format duration (minutes and seconds)
-            duration = result['duration']
+            duration = result["duration"]
             if duration < 60:
                 duration_str = f"{duration:.2f} seconds"
             else:
                 minutes = int(duration / 60)
                 secs = duration % 60
                 duration_str = f"{minutes} minutes {secs:.2f} seconds"
-            
+
             print(f"{terminal.info('Total report generation time:')} {duration_str}")
 
             # Print archive info at the bottom
@@ -573,18 +580,24 @@ class PyATSOrchestrator:
                 print(
                     f"\n{terminal.warning('Warning:')} Failed to process archives: {', '.join(failed_archives)}"
                 )
-            
+
             # Clean up archives after successful extraction and report generation
             # (unless in debug mode or user wants to keep data)
-            if not (os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA")):
+            if not (
+                os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA")
+            ):
                 for archive_path in archive_paths:
                     try:
                         archive_path.unlink()
                         logger.debug(f"Cleaned up archive: {archive_path}")
                     except Exception as e:
-                        logger.warning(f"Failed to clean up archive {archive_path}: {e}")
+                        logger.warning(
+                            f"Failed to clean up archive {archive_path}: {e}"
+                        )
             else:
-                logger.info("Keeping archive files (debug mode or KEEP_HTML_REPORT_DATA is set)")
+                logger.info(
+                    "Keeping archive files (debug mode or KEEP_HTML_REPORT_DATA is set)"
+                )
         else:
             print(f"\n{terminal.error('Failed to generate reports')}")
             if result.get("error"):
