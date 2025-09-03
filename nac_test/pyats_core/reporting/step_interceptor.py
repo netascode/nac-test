@@ -64,6 +64,7 @@ class StepInterceptor:
             True if batching should be used, False for original behavior
         """
         # Check environment variable
+        # FIXME: There's a bug here perhaps.
         env_enabled = (
             os.environ.get("NAC_TEST_BATCHING_REPORTER", "false").lower() == "true"
         )

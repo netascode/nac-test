@@ -60,10 +60,10 @@ class PyATSOrchestrator:
             merged_data_filename: Name of the merged data model file
         """
         self.data_paths = data_paths
-        self.test_dir = Path(test_dir)
+        self.test_dir = Path(test_dir).resolve()
         self.base_output_dir = Path(
             output_dir
-        )  # Store base directory for merged data file access
+        ).resolve()  # Store base directory for merged data file access (absolute)
         self.output_dir = (
             self.base_output_dir / "pyats_results"
         )  # PyATS works in its own subdirectory
@@ -199,7 +199,10 @@ class PyATSOrchestrator:
             # so we use env vars to communicate
             # configuration (like data file paths) from the orchestrator to the test subprocess.
             # The merged data file is created by main.py at the base output level.
-            env["DATA_FILE"] = str(self.base_output_dir / self.merged_data_filename)
+            # Pass absolute path so the child process (with cwd set) can locate it.
+            env["DATA_FILE"] = str(
+                (self.base_output_dir / self.merged_data_filename).resolve()
+            )
             nac_test_dir = str(Path(__file__).parent.parent.parent)
             env["PYTHONPATH"] = get_pythonpath_for_tests(self.test_dir, [nac_test_dir])
 

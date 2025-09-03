@@ -85,7 +85,7 @@ class TestDiscovery:
                             skipped_files.append((test_path, "No test definitions"))
                             continue
 
-                        test_files.append(test_path)
+                        test_files.append(test_path.resolve())
 
                     except Exception as e:
                         # File read error - warn and skip

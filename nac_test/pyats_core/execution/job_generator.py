@@ -32,8 +32,10 @@ class JobGenerator:
         Returns:
             Job file content as a string
         """
-        # Convert test file paths to strings for the job file
-        test_files_str = ",\n        ".join([f'"{str(tf)}"' for tf in test_files])
+        # Convert all paths to absolute to be cwd-agnostic in the job process
+        test_files_str = ",\n        ".join(
+            [f'"{str(Path(tf).resolve())}"' for tf in test_files]
+        )
 
         job_content = textwrap.dedent(f'''
         """Auto-generated PyATS job file by nac-test"""
@@ -84,7 +86,10 @@ class JobGenerator:
             Job file content as a string
         """
         hostname = device["hostname"]  # Required field per nac-test contract
-        test_files_str = ",\n        ".join([f'"{str(tf)}"' for tf in test_files])
+        # Use absolute paths so device-centric jobs are independent of cwd
+        test_files_str = ",\n        ".join(
+            [f'"{str(Path(tf).resolve())}"' for tf in test_files]
+        )
 
         job_content = textwrap.dedent(f'''
         """Auto-generated PyATS job file for device {hostname}"""
