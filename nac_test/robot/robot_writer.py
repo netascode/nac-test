@@ -10,7 +10,7 @@ import pathlib
 import re
 import shutil
 import sys
-from typing import Any
+from typing import Any, Dict, cast
 
 from jinja2 import Undefined, ChainableUndefined, Environment, FileSystemLoader  # type: ignore
 from pathlib import Path
@@ -36,6 +36,9 @@ class RobotWriter:
         exclude_tags: list[str] = [],
     ) -> None:
         self.data = DataMerger.merge_data_files(data_paths)
+        # Convert OrderedDict to dict once during initialization instead of per-template
+        # This eliminates expensive JSON round-trip serialization for each template render
+        self.template_data = self._convert_data_model_for_templates(self.data)
         self.filters: dict[str, Any] = {}
         self.include_tags = include_tags
         self.exclude_tags = exclude_tags
@@ -69,6 +72,36 @@ class RobotWriter:
                             spec.loader.exec_module(mod)
                             self.tests[mod.Test.name] = mod.Test
 
+    def _convert_data_model_for_templates(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert nested OrderedDict to dict to avoid duplicate dict keys.
+
+        This method performs the same conversion that was previously done per-template,
+        but centralizes it during initialization for performance efficiency.
+
+        Args:
+            data: Raw data model from DataMerger (may contain OrderedDict structures)
+
+        Returns:
+            Converted data model safe for Jinja template rendering
+
+        Note:
+            JSON round-trip approach is used as it's safe for all serializable data
+            and handles nested OrderedDict structures reliably.
+        """
+        logger.debug(
+            "Converting data model for template rendering (one-time conversion)"
+        )
+        try:
+            # JSON round-trip to convert nested OrderedDict to dict
+            # This preserves all data while fixing duplicate key issues (e.g., 'tag' fields)
+            converted_data = cast(Dict[str, Any], json.loads(json.dumps(data)))
+            logger.debug("Data model conversion completed successfully")
+            return converted_data
+        except Exception as e:
+            logger.warning(f"Data model conversion failed: {e}. Using original data.")
+            # Fallback to original data if conversion fails
+            return data
+
     def render_template(
         self, template_path: Path, output_path: Path, env: Environment, **kwargs: Any
     ) -> None:
@@ -81,10 +114,8 @@ class RobotWriter:
         pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 
         template = env.get_template(str(template_path))
-        # hack to convert nested ordereddict to dict, to avoid duplicate dict keys, e.g. 'tag'
-        # json roundtrip should be safe as everything should be serializable
-        data = json.loads(json.dumps(self.data))
-        result = template.render(data, **kwargs)
+        # Use pre-converted data model (converted once during initialization)
+        result = template.render(self.template_data, **kwargs)
 
         # remove extra empty lines
         lines = result.splitlines()
@@ -158,7 +189,7 @@ class RobotWriter:
                         next_template = True
                         path = params[2].split(".")
                         attr = params[3]
-                        elem = self.data
+                        elem = self.template_data
                         for p in path:
                             elem = elem.get(p, {})
                         if not isinstance(elem, list):

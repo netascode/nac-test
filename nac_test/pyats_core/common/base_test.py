@@ -1012,19 +1012,6 @@ class NACTestBase(aetest.Testcase):
                     f"<Unable to read response - Status: {response.status_code}>"
                 )
 
-            # Try to parse JSON response if successful
-            parsed_data = None
-            if response.status_code == 200:
-                try:
-                    parsed_data = response.json()
-                except Exception:
-                    # Not JSON or parsing failed
-                    parsed_data = None
-
-            # Add request data to parsed_data if available
-            if request_data:
-                parsed_data = {"request": request_data, "response": parsed_data}
-
             # Use explicit test context parameter (eliminates race conditions)
             # test_context is now passed as parameter instead of reading shared state
 
@@ -1033,7 +1020,6 @@ class NACTestBase(aetest.Testcase):
                 device_name=device_name,
                 command=command,
                 output=response_text,
-                data=parsed_data,
                 test_context=test_context,
             )
 

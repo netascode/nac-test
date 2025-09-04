@@ -138,48 +138,6 @@ def format_skip_message(message: str) -> str:
     return "\n".join(formatted_lines)
 
 
-def format_json_output(output: str) -> str:
-    """Format output as JSON if possible, otherwise return as-is.
-
-    This filter attempts to parse and pretty-print JSON output.
-    If the output is not valid JSON, it returns the original string.
-
-    Args:
-        output: Command output string that might be JSON
-
-    Returns:
-        Pretty-printed JSON string or original output
-    """
-    import json
-
-    if not output or not output.strip():
-        return output
-
-    try:
-        # Try to parse the entire output first
-        parsed = json.loads(output.strip())
-        # Ensure it's structured data (dict or list)
-        if isinstance(parsed, (dict, list)):
-            return json.dumps(parsed, indent=2, sort_keys=False)
-    except json.JSONDecodeError:
-        # If that fails, try to find JSON within the output
-        # (e.g., after command echo or other prefix text)
-        for i, char in enumerate(output):
-            if char in "{[":
-                try:
-                    json_content = output[i:]
-                    parsed = json.loads(json_content)
-                    if isinstance(parsed, (dict, list)):
-                        # Preserve any prefix text
-                        prefix = output[:i]
-                        return prefix + json.dumps(parsed, indent=2, sort_keys=False)
-                except json.JSONDecodeError:
-                    continue
-
-    # Not valid JSON or not structured data, return as-is
-    return output
-
-
 def get_jinja_environment(directory: Optional[Union[str, Path]] = None) -> Environment:
     """Create a Jinja2 environment for rendering templates.
 
@@ -217,7 +175,6 @@ def get_jinja_environment(directory: Optional[Union[str, Path]] = None) -> Envir
     )
     environment.filters["format_datetime"] = format_datetime
     environment.filters["status_style"] = get_status_style
-    environment.filters["format_json_output"] = format_json_output
     environment.filters["format_skip_message"] = format_skip_message
 
     return environment

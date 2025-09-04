@@ -519,6 +519,90 @@
                 padding: 15px;
             }
         }
+
+        /* Client-side JSON formatting styles */
+        .command-output {
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .raw-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;  /* CRITICAL: Prevent layout breaks from extremely long unbreakable strings */
+            margin: 0;
+        }
+
+        .format-json-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 0.8em;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            min-width: 100px;  /* Consistent button width for toggle states */
+            text-align: center;
+        }
+
+        .format-json-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .format-json-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Toggle button states for better UX */
+        .format-json-btn.toggle-state {
+            background-color: #28a745;  /* Green when showing formatted JSON */
+        }
+
+        .format-json-btn.toggle-state:hover {
+            background-color: #1e7e34;
+        }
+
+        .formatted-json {
+            color: #333;
+        }
+
+        /* JSON syntax highlighting colors */
+        .json-key {
+            color: #0451a5;
+            font-weight: bold;
+        }
+
+        .json-string {
+            color: #0f7b0f;
+        }
+
+        .json-number {
+            color: #098658;
+        }
+
+        .json-boolean {
+            color: #0000ff;
+        }
+
+        .json-null {
+            color: #795e26;
+        }
     </style>
 </head>
 <body>
@@ -608,6 +692,7 @@
                     {% set sorted_results = failed_results + passed_results + skipped_results %}
                     
                     {% for result in sorted_results %}
+                        {% set result_idx = loop.index0 %}
                         {% set result_style = result.status|status_style %}
                         <div class="result-item result-{{ result_style.css_class|replace('-status', '') }}">
                             
@@ -632,29 +717,26 @@
                             {% if result.context and result.context in context_to_commands %}
                             <div class="result-commands content-collapsed" id="result-commands-{{ loop.index }}">
                                 {% for execution in context_to_commands[result.context] %}
+                                    {% set exec_idx = loop.index0 %}
                                     <!-- REUSE existing command template code (no duplication) -->
-                                    <div class="cli-container" id="cmd-{{ loop.index0 }}-{{ loop.index }}">
-                                        <div class="cli-header" onclick="toggleCollapse('cmd-content-{{ loop.index0 }}-{{ loop.index }}')">
+                                    <div class="cli-container" id="cmd-result{{ result_idx }}-exec{{ exec_idx }}">
+                                        <div class="cli-header" onclick="toggleCollapse('cmd-content-result{{ result_idx }}-exec{{ exec_idx }}')">
                                             <span>Device: {{ execution.device_name }}</span>
                                             <span class="chevron"></span>
                                         </div>
-                                        <div class="device-content" id="cmd-content-{{ loop.index0 }}-{{ loop.index }}">
+                                        <div class="device-content" id="cmd-content-result{{ result_idx }}-exec{{ exec_idx }}">
                                             <div class="cli-content">
 <span class="cli-prompt">{{ execution.device_name }}#</span> <span class="cli-command">{{ execution.command }}</span>
-{% set formatted_output = execution.output | format_json_output %}
-{% if formatted_output != execution.output %}
-<div class="json-output">{{ formatted_output }}</div>
-{% else %}
-<span class="cli-output">{{ execution.output }}</span>
-{% endif %}
+<div class="command-output">
+    <pre class="raw-output" id="raw-result{{ result_idx }}-exec{{ exec_idx }}" data-raw-output="{{ execution.output | e }}">{{ execution.output }}</pre>
+    {% if execution.output and '{' in execution.output[:50] %}
+    <button class="format-json-btn" onclick="toggleJSONFormatting('raw-result{{ result_idx }}-exec{{ exec_idx }}', this)" title="Format JSON for readability">
+        📋 Format JSON
+    </button>
+    {% endif %}
+</div>
                                             </div>
-                                            {% if execution.data %}
-                                            <div class="parsed-data-header" onclick="toggleCollapse('parsed-data-{{ loop.index0 }}-{{ loop.index }}')">
-                                                <span>Parsed Data</span>
-                                                <span class="chevron"></span>
-                                            </div>
-                                            <div class="parsed-data-content" id="parsed-data-{{ loop.index0 }}-{{ loop.index }}">{{ execution.data | tojson(indent=2) }}</div>
-                                            {% endif %}
+
                                         </div>
                                     </div>
                                 {% endfor %}
@@ -701,20 +783,16 @@
                         <div class="device-content" id="orphaned-cmd-content-{{ loop.index }}">
                             <div class="cli-content">
 <span class="cli-prompt">{{ execution.device_name }}#</span> <span class="cli-command">{{ execution.command }}</span>
-{% set formatted_output = execution.output | format_json_output %}
-{% if formatted_output != execution.output %}
-<div class="json-output">{{ formatted_output }}</div>
-{% else %}
-<span class="cli-output">{{ execution.output }}</span>
-{% endif %}
+<div class="command-output">
+    <pre class="raw-output" id="orphaned-raw-{{ loop.index }}" data-raw-output="{{ execution.output | e }}">{{ execution.output }}</pre>
+    {% if execution.output and '{' in execution.output[:50] %}
+    <button class="format-json-btn" onclick="toggleJSONFormatting('orphaned-raw-{{ loop.index }}', this)" title="Format JSON for readability">
+        📋 Format JSON
+    </button>
+    {% endif %}
+</div>
                             </div>
-                            {% if execution.data %}
-                            <div class="parsed-data-header" onclick="toggleCollapse('orphaned-parsed-data-{{ loop.index }}')">
-                                <span>Parsed Data</span>
-                                <span class="chevron"></span>
-                            </div>
-                            <div class="parsed-data-content" id="orphaned-parsed-data-{{ loop.index }}">{{ execution.data | tojson(indent=2) }}</div>
-                            {% endif %}
+
                         </div>
                     </div>
                 {% endfor %}
@@ -742,15 +820,6 @@
                         content.classList.toggle('content-collapsed');
                     }
                 }
-                // For parsed data sections, toggle them directly and update the header chevron
-                else if (id.startsWith('parsed-data-') || id.startsWith('orphaned-parsed-data-')) {
-                    element.classList.toggle('content-collapsed');
-                    // Find and toggle the chevron in the header that triggered this
-                    const header = element.previousElementSibling;
-                    if (header && header.classList.contains('parsed-data-header')) {
-                        header.classList.toggle('collapsed');
-                    }
-                }
                 // For main sections toggle the content-collapsed class
                 else if (id.startsWith('section-')) {
                     element.classList.toggle('content-collapsed');
@@ -772,18 +841,112 @@
             }
         }
 
+        // JSON formatting toggle function with enhanced UX
+        function toggleJSONFormatting(elementId, button) {
+            const element = document.getElementById(elementId);
+            const isFormatted = element.classList.contains('formatted-json');
+            
+            if (isFormatted) {
+                // Switch back to raw
+                const rawOutput = element.dataset.rawOutput;
+                element.textContent = rawOutput;
+                element.classList.remove('formatted-json');
+                
+                // Update button to format state
+                button.textContent = '📋 Format JSON';
+                button.title = 'Format JSON for readability';
+                button.classList.remove('toggle-state');
+                button.disabled = false;
+                
+            } else {
+                try {
+                    const rawText = element.textContent;
+                    
+                    // Store original text in data attribute if not already stored
+                    if (!element.dataset.rawOutput) {
+                        element.dataset.rawOutput = rawText;
+                    }
+                    
+                    // Show loading state for potentially large JSON
+                    button.textContent = '⏳ Formatting...';
+                    button.disabled = true;
+                    
+                    // Use setTimeout to allow UI update and prevent blocking
+                    setTimeout(() => {
+                        try {
+                            // Check for JSON support (defensive programming)
+                            if (typeof JSON === 'undefined' || !JSON.parse) {
+                                button.textContent = '❌ Browser too old';
+                                button.title = 'Browser does not support JSON formatting';
+                                return;
+                            }
+                            
+                            // Attempt to parse JSON
+                            const parsed = JSON.parse(rawText);
+                            
+                            // Pretty-print with 2-space indentation
+                            const formatted = JSON.stringify(parsed, null, 2);
+                            
+                            // Apply syntax highlighting
+                            const highlighted = syntaxHighlightJSON(formatted);
+                            
+                            // Replace content
+                            element.innerHTML = highlighted;
+                            element.classList.add('formatted-json');
+                            
+                            // Update button to raw state
+                            button.textContent = '⬅️ Show Raw';
+                            button.title = 'Show raw, unformatted output';
+                            button.classList.add('toggle-state');
+                            button.disabled = false;
+                            
+                        } catch (error) {
+                            // Not valid JSON or parsing failed
+                            console.warn('JSON formatting failed:', error);
+                            button.textContent = '❌ Invalid JSON';
+                            button.title = `Invalid JSON format: ${error.message}`;
+                            button.style.backgroundColor = '#dc3545';
+                            // Keep button disabled
+                        }
+                    }, 10);
+                    
+                } catch (error) {
+                    // Immediate error
+                    console.warn('JSON formatting failed:', error);
+                    button.textContent = '❌ Invalid JSON';
+                    button.disabled = true;
+                    button.title = 'Invalid JSON format';
+                }
+            }
+        }
+
+        // Enhanced syntax highlighting function
+        function syntaxHighlightJSON(json) {
+            // Escape HTML entities first
+            return json
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
         // Initialize sections
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize all parsed data sections as collapsed by default
-            const parsedDataSections = document.querySelectorAll('[id^="parsed-data-"], [id^="orphaned-parsed-data-"]');
-            parsedDataSections.forEach(function(section) {
-                section.classList.add('content-collapsed');
-                const header = section.previousElementSibling;
-                if (header && header.classList.contains('parsed-data-header')) {
-                    header.classList.add('collapsed');
-                }
-            });
-            
+
             // Initialize all result command sections as collapsed by default
             const resultCommandSections = document.querySelectorAll('[id^="result-commands-"]');
             resultCommandSections.forEach(function(section) {
