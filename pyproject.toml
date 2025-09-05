@@ -26,16 +26,16 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 dependencies = [
-    "Jinja2~=3.1",
-    "RESTinstance~=1.5",
-    "jmespath~=1.0",
-    "nac-yaml~=1.0",
-    "robotframework~=7.2",
-    "robotframework-jsonlibrary~=0.5",
-    "robotframework-pabot~=4.1",
-    "robotframework-requests~=0.9",
-    "ruamel.yaml~=0.16",
-    "typer~=0.15",
+    "Jinja2>=3.1.6",
+    "RESTinstance>=1.5.2",
+    "jmespath>=1.0.1",
+    "nac-yaml>=1.0.0",
+    "robotframework>=7.3.2",
+    "robotframework-jsonlibrary>=0.5",
+    "robotframework-pabot>=4.3.2",
+    "robotframework-requests>=0.9.7",
+    "ruamel.yaml>=0.18.15",
+    "typer>=0.17.4",
 ]
 
 [project.urls]
@@ -50,13 +50,13 @@ nac-test = "nac_test.cli.main:app"
 [project.optional-dependencies]
 dev = [
     "ansible-core~=2.17",
-    "bandit[toml]>=1.7.0",
+    "bandit[toml]>=1.8.6",
     "mypy>=1.17",
-    "pre-commit>=4.0",
-    "pytest~=8.2",
-    "pytest-cov~=6.0",
-    "pytest-mock~=3.14",
-    "ruff>=0.12",
+    "pre-commit>=4.3",
+    "pytest>=8.4",
+    "pytest-cov>=6.2",
+    "pytest-mock>=3.15",
+    "ruff>=0.12.12",
 ]
 
 [tool.coverage.run]
