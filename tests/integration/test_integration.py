@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
 import os
 import filecmp
 
-from typer.testing import CliRunner
 import pytest
+from typer.testing import CliRunner
 
 import nac_test.cli.main
 

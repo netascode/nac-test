@@ -1,5 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
-# Copyright (c) 2025 Daniel Schmidt
+# Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
 import nac_test.cli.main
 
