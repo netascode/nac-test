@@ -76,5 +76,7 @@ tmp/
 
 .mypy_cache/
 
+logs/
+
 # Pabot
 .pabotsuitenames
