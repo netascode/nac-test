@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
-
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
 import logging
 import sys
 
-import errorhandler
-
 import typer
-from typing_extensions import Annotated
+from typing import Annotated
 from enum import Enum
 
 from pathlib import Path
@@ -21,7 +17,6 @@ app = typer.Typer(add_completion=False)
 
 logger = logging.getLogger(__name__)
 
-error_handler = errorhandler.ErrorHandler()
 
 
 def configure_logging(level: str) -> None:
@@ -35,12 +30,13 @@ def configure_logging(level: str) -> None:
         lev = logging.ERROR
     else:
         lev = logging.CRITICAL
-    logger = logging.getLogger()
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter("%(levelname)s - %(message)s"))
-    logger.addHandler(handler)
-    logger.setLevel(lev)
-    error_handler.reset()
+    
+    logging.basicConfig(
+        level=lev,
+        format="%(levelname)s - %(message)s",
+        stream=sys.stdout,
+        force=True
+    )
 
 
 class VerbosityLevel(str, Enum):
@@ -203,22 +199,20 @@ def main(
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
     verbosity: Verbosity = VerbosityLevel.WARNING,
-    version: Version = False,
+    version: Version = False,  # noqa: ARG001
 ) -> None:
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
     configure_logging(verbosity)
 
-    writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
-    writer.write(templates, output)
-    if not render_only:
-        nac_test.pabot.run_pabot(
-            output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
-        )
-    exit()
+    try:
+        writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
+        writer.write(templates, output)
+        if not render_only:
+            nac_test.pabot.run_pabot(
+                output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
+            )
+    except Exception as e:
+        logger.error(f"Error during execution: {e}")
+        raise typer.Exit(code=1) from e
 
 
-def exit() -> None:
-    if error_handler.fired:
-        raise typer.Exit(1)
-    else:
-        raise typer.Exit(0)

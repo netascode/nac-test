@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
 from pathlib import Path

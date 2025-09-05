@@ -28,7 +28,6 @@ classifiers = [
 dependencies = [
     "Jinja2~=3.1",
     "RESTinstance~=1.5",
-    "errorhandler~=2.0",
     "jmespath~=1.0",
     "nac-yaml~=1.0",
     "robotframework~=7.2",

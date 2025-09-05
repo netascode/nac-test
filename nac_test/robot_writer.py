@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
 import importlib.util
@@ -147,8 +145,8 @@ class RobotWriter:
                 try:
                     with open(Path(dir, filename), "r") as file:
                         content = file.read()
-                except:  # noqa: E722
-                    logger.warning("Could not open/read file: %s", Path(dir, filename))
+                except (OSError, IOError) as e:
+                    logger.warning("Could not open/read file: %s - %s", Path(dir, filename), e)
                     continue
                 for match in re.finditer(pattern, content):
                     params = match.group().split(" ")
