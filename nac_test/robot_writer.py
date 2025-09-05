@@ -8,11 +8,15 @@ import pathlib
 import re
 import shutil
 import sys
+from pathlib import Path
 from typing import Any
 
-from jinja2 import Undefined, ChainableUndefined, Environment, FileSystemLoader  # type: ignore
-from pathlib import Path
-
+from jinja2 import (  # type: ignore
+    ChainableUndefined,
+    Environment,
+    FileSystemLoader,
+    Undefined,
+)
 from nac_yaml import yaml
 
 logger = logging.getLogger(__name__)
@@ -30,14 +34,14 @@ class RobotWriter:
         data_paths: list[Path],
         filters_path: Path | None,
         tests_path: Path | None,
-        include_tags: list[str] = [],
-        exclude_tags: list[str] = [],
+        include_tags: list[str] | None = None,
+        exclude_tags: list[str] | None = None,
     ) -> None:
         logger.info("Loading yaml files from %s", data_paths)
         self.data = yaml.load_yaml_files(data_paths)
         self.filters: dict[str, Any] = {}
-        self.include_tags = include_tags
-        self.exclude_tags = exclude_tags
+        self.include_tags = include_tags or []
+        self.exclude_tags = exclude_tags or []
         if filters_path:
             logger.info("Loading filters")
             for filename in os.listdir(filters_path):
@@ -80,7 +84,7 @@ class RobotWriter:
         pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 
         template = env.get_template(str(template_path))
-        # hack to convert nested ordereddict to dict, to avoid duplicate dict keys, e.g. 'tag'
+        # hack to convert nested ordereddict to dict, to avoid duplicate dict keys
         # json roundtrip should be safe as everything should be serializable
         data = json.loads(json.dumps(self.data))
         result = template.render(data, **kwargs)
@@ -102,7 +106,10 @@ class RobotWriter:
             file.write(result)
 
     def _fix_duplicate_path(self, *paths: str) -> Path:
-        """Helper function to detect existing paths with non-matching case. Returns a unique path to work with case-insensitve filesystems."""
+        """Helper function to detect existing paths with non-matching case.
+
+        Returns a unique path to work with case-insensitive filesystems.
+        """
         directory = os.path.join(*paths[:-1])
         if os.path.exists(directory):
             entries = os.listdir(directory)
@@ -113,7 +120,7 @@ class RobotWriter:
 
     def write(self, templates_path: Path, output_path: Path) -> None:
         """Render Robot test suites."""
-        env = Environment(
+        env = Environment(  # nosec B701
             loader=FileSystemLoader(templates_path),
             undefined=StrictChainableUndefined,
             lstrip_blocks=True,
@@ -128,7 +135,7 @@ class RobotWriter:
             for filename in files:
                 if Path(filename).suffix not in [".robot", ".resource", ".j2"]:
                     logger.info(
-                        "Skip file with unknown file extension (not one of .robot, .resource or .j2): %s",
+                        "Skip file with unknown file extension: %s",
                         Path(dir, filename),
                     )
                     out = Path(output_path, os.path.relpath(dir, templates_path))
@@ -143,10 +150,12 @@ class RobotWriter:
                 content = ""
                 next_template = False
                 try:
-                    with open(Path(dir, filename), "r") as file:
+                    with open(Path(dir, filename)) as file:
                         content = file.read()
-                except (OSError, IOError) as e:
-                    logger.warning("Could not open/read file: %s - %s", Path(dir, filename), e)
+                except OSError as e:
+                    logger.warning(
+                        "Could not open/read file: %s - %s", Path(dir, filename), e
+                    )
                     continue
                 for match in re.finditer(pattern, content):
                     params = match.group().split(" ")

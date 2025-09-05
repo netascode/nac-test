@@ -2,21 +2,18 @@
 
 import logging
 import sys
+from enum import Enum
+from pathlib import Path
+from typing import Annotated
 
 import typer
-from typing import Annotated
-from enum import Enum
-
-from pathlib import Path
 
 import nac_test.pabot
 import nac_test.robot_writer
 
-
 app = typer.Typer(add_completion=False)
 
 logger = logging.getLogger(__name__)
-
 
 
 def configure_logging(level: str) -> None:
@@ -30,12 +27,9 @@ def configure_logging(level: str) -> None:
         lev = logging.ERROR
     else:
         lev = logging.CRITICAL
-    
+
     logging.basicConfig(
-        level=lev,
-        format="%(levelname)s - %(message)s",
-        stream=sys.stdout,
-        force=True
+        level=lev, format="%(levelname)s - %(message)s", stream=sys.stdout, force=True
     )
 
 
@@ -135,7 +129,7 @@ Output = Annotated[
 
 
 Include = Annotated[
-    list[str],
+    list[str] | None,
     typer.Option(
         "-i",
         "--include",
@@ -146,7 +140,7 @@ Include = Annotated[
 
 
 Exclude = Annotated[
-    list[str],
+    list[str] | None,
     typer.Option(
         "-e",
         "--exclude",
@@ -194,8 +188,8 @@ def main(
     output: Output,
     filters: Filters = None,
     tests: Tests = None,
-    include: Include = [],
-    exclude: Exclude = [],
+    include: Include = None,
+    exclude: Exclude = None,
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
     verbosity: Verbosity = VerbosityLevel.WARNING,
@@ -205,7 +199,9 @@ def main(
     configure_logging(verbosity)
 
     try:
-        writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
+        writer = nac_test.robot_writer.RobotWriter(
+            data, filters, tests, include, exclude
+        )
         writer.write(templates, output)
         if not render_only:
             nac_test.pabot.run_pabot(
@@ -214,5 +210,3 @@ def main(
     except Exception as e:
         logger.error(f"Error during execution: {e}")
         raise typer.Exit(code=1) from e
-
-
