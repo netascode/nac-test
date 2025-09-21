@@ -39,7 +39,13 @@ def configure_logging(
     }
 
     # Convert to logging level, defaulting to CRITICAL for unknown levels
-    log_level = level_map.get(str(level).upper(), logging.CRITICAL)
+    # Handle both enum values and string inputs
+    if isinstance(level, VerbosityLevel):
+        level_str = level.value.upper()
+    else:
+        level_str = str(level).upper()
+
+    log_level = level_map.get(level_str, logging.CRITICAL)
 
     # Configure root logger
     logger = logging.getLogger()
@@ -50,3 +56,7 @@ def configure_logging(
 
     # Reset error handler
     error_handler.reset()
+
+    logger.debug(
+        "Logging configured with level: %s (numeric: %s)", level_str, log_level
+    )
