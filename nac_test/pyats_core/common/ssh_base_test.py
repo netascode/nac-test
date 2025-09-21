@@ -82,11 +82,31 @@ class SSHTestBase(NACTestBase):
 
         try:
             self.device_info = json.loads(device_info_json)
+        except json.JSONDecodeError as e:
+            self.failed(
+                f"Framework Error: Could not parse device info JSON from environment variable DEVICE_INFO: {e}\n"
+                f"Raw content: {device_info_json}"
+            )
+            return
+
+        try:
             with open(data_file_path, "r") as f:
                 self.data_model = json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError) as e:
+        except FileNotFoundError:
             self.failed(
-                f"Framework Error: Could not load test context from environment: {e}"
+                f"Framework Error: Could not find data model file at path: {data_file_path}"
+            )
+            return
+        except json.JSONDecodeError as e:
+            try:
+                with open(data_file_path, "r") as f:
+                    file_content = f.read()
+            except Exception:
+                file_content = "[Could not read file content]"
+
+            self.failed(
+                f"Framework Error: Could not parse JSON from data model file '{data_file_path}': {e}\n"
+                f"File content: {file_content}"
             )
             return
 
