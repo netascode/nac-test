@@ -53,18 +53,21 @@ class SSHTestBase(NACTestBase):
         return None
 
     @aetest.setup
-    def setup_ssh_context(self) -> None:
+    def setup(self) -> None:
         """
-        Automatically sets up the SSH context before the test runs.
+        Combined setup that calls parent setup then sets up SSH context.
 
-        This lifecycle hook is called by PyATS automatically. It reads the
-        device info and the main data model from environment variables set by
-        the orchestrator. It then establishes a connection and injects the
-        necessary tools (like self.execute_command) into the test instance.
+        This lifecycle hook is called by PyATS automatically. It first calls
+        the parent NACTestBase setup, then reads device info and establishes
+        SSH connections with necessary tools (like self.execute_command).
 
         If a PyATS testbed is available, it also ensures the device connection
         is established through the testbed for Genie parser access.
         """
+        # Call parent setup first
+        super().setup()
+
+        # Then do SSH-specific setup
         # These environment variables are not set by the user, but are passed
         # by the nac-test orchestrator to provide context to this isolated
         # PyATS job process.
