@@ -148,7 +148,10 @@ class NACTestBase(aetest.Testcase):
         # Get output directory from merged data model file path (already set by orchestrator)
         data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", "")
         data_file = Path(data_file_path) if data_file_path else None
-        output_dir = data_file.parent if data_file and data_file.exists() else Path(".")
+        if data_file and data_file.exists():
+            output_dir = data_file.parent / "pyats_results"
+        else:
+            output_dir = Path(".")
 
         # Store output directory for emergency dumps
         self.output_dir = output_dir
