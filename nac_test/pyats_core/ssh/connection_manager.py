@@ -118,7 +118,7 @@ class DeviceConnectionManager:
         """
         # Import unicon exceptions here to delay PyATS initialization
         from unicon.core.errors import (
-            UniconConnectionError,
+            ConnectionError,
             CredentialsExhaustedError,
             StateMachineError,
             TimeoutError as UniconTimeoutError,
@@ -148,7 +148,7 @@ class DeviceConnectionManager:
                 logger.error(error_msg)
                 raise ConnectionError(error_msg) from e
 
-            except (UniconConnectionError, StateMachineError, UniconTimeoutError) as e:
+            except (ConnectionError, StateMachineError, UniconTimeoutError) as e:
                 # Connection-related errors
                 error_msg = self._format_connection_error(hostname, device_info, e)
                 logger.error(error_msg)
@@ -249,7 +249,7 @@ class DeviceConnectionManager:
                 "Check if the device CLI behavior matches expected patterns",
                 "Device may be in an unexpected state or mode",
             ]
-        else:  # UniconConnectionError or other connection errors
+        else:  # ConnectionError or other connection errors
             category = "Connection failure"
             hints = [
                 f"Failed to establish SSH connection to {host}",
