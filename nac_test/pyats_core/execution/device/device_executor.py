@@ -99,7 +99,7 @@ class DeviceExecutor:
                         # Environment variables are used because PyATS tests run as separate subprocess processes.
                         # The merged data file is created by main.py at the base output level.
                         "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
-                            self.subprocess_runner.output_dir.parent
+                            self.subprocess_runner.output_dir
                             / "merged_data_model_test_variables.yaml"
                         ),
                         "PYTHONPATH": get_pythonpath_for_tests(
