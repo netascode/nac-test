@@ -182,7 +182,7 @@ class DeviceConnectionManager:
             "hostname": device_info["host"],
             "username": device_info["username"],
             "password": device_info["password"],
-            "platform": device_info.get("platform", "ios"),
+            "platform": device_info.get("platform"),
             "timeout": device_info.get("timeout", 120),
             "init_exec_commands": [],
             "init_config_commands": [],
@@ -312,7 +312,7 @@ class DeviceConnectionManager:
             Formatted error message
         """
         host = device_info.get("host", "unknown")
-        platform = device_info.get("platform", "unknown")
+        platform = device_info.get("platform", "Not Defined")
 
         return (
             f"Unexpected error connecting to device '{hostname}'\n"
