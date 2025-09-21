@@ -200,7 +200,7 @@ class PyATSOrchestrator:
             # configuration (like data file paths) from the orchestrator to the test subprocess.
             # The merged data file is created by main.py at the base output level.
             # Pass absolute path so the child process (with cwd set) can locate it.
-            env["DATA_FILE"] = str(
+            env["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = str(
                 (self.base_output_dir / self.merged_data_filename).resolve()
             )
             nac_test_dir = str(Path(__file__).parent.parent.parent)

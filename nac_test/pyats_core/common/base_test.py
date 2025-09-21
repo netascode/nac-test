@@ -145,9 +145,13 @@ class NACTestBase(aetest.Testcase):
         Sets up the TestResultCollector with a unique test ID and
         attaches pre-rendered metadata for efficient report generation.
         """
-        # Get output directory from DATA_FILE path (already set by orchestrator)
-        data_file = Path(os.environ.get("DATA_FILE", ""))
-        output_dir = data_file.parent if data_file else Path(".")
+        # Get output directory from merged data model file path (already set by orchestrator)
+        data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", "")
+        data_file = Path(data_file_path) if data_file_path else None
+        if data_file and data_file.exists():
+            output_dir = data_file.parent / "pyats_results"
+        else:
+            output_dir = Path(".")
 
         # Store output directory for emergency dumps
         self.output_dir = output_dir
@@ -684,10 +688,20 @@ class NACTestBase(aetest.Testcase):
         Returns:
             Merged data model dictionary
         """
-        data_file = Path(os.environ.get("DATA_FILE", "merged_data_model.yaml"))
+        data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH")
+        if not data_file_path:
+            raise FileNotFoundError(
+                "Environment variable MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH is not set"
+            )
+
+        data_file = Path(data_file_path)
+        if not data_file.exists():
+            raise FileNotFoundError(
+                f"Merged data model file not found: {data_file_path}"
+            )
+
         with open(data_file, "r") as f:
             data = yaml.safe_load(f)
-            # Ensure we always return a dict
             return data if isinstance(data, dict) else {}
 
     # =========================================================================
