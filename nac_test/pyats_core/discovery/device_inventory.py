@@ -159,7 +159,7 @@ class DeviceInventoryDiscovery:
                             return list(devices)  # Ensure we return a list
 
         except Exception as e:
-            logger.error(f"Failed to get device inventory from {test_file}: {e}")
+            logger.error(f"Failed to get device inventory from {test_file}: {e}", exc_info=True)
 
         # This should never happen if the architecture follows the contract btw
 

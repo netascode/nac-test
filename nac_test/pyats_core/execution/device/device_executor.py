@@ -159,7 +159,7 @@ class DeviceExecutor:
                 return Path(archive_path) if archive_path else None
 
             except Exception as e:
-                logger.error(f"Error running tests for device {hostname}: {e}")
+                logger.error(f"Error running tests for device {hostname}: {e}", exc_info=True)
 
                 # Mark all tests as errored
                 for test_file in test_files:

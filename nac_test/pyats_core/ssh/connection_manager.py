@@ -145,19 +145,19 @@ class DeviceConnectionManager:
             except CredentialsExhaustedError as e:
                 # Authentication failure - no point retrying
                 error_msg = self._format_auth_error(hostname, device_info, e)
-                logger.error(error_msg)
+                logger.error(error_msg, exc_info=True)
                 raise ConnectionError(error_msg) from e
 
             except (ConnectionError, StateMachineError, UniconTimeoutError) as e:
                 # Connection-related errors
                 error_msg = self._format_connection_error(hostname, device_info, e)
-                logger.error(error_msg)
+                logger.error(error_msg, exc_info=True)
                 raise ConnectionError(error_msg) from e
 
             except Exception as e:
                 # Unexpected errors
                 error_msg = self._format_unexpected_error(hostname, device_info, e)
-                logger.error(error_msg)
+                logger.error(error_msg, exc_info=True)
                 raise ConnectionError(error_msg) from e
 
     def _unicon_connect(
@@ -352,7 +352,7 @@ class DeviceConnectionManager:
                 await loop.run_in_executor(None, self._disconnect_unicon, conn)
                 logger.info(f"Closed connection to {hostname}")
             except Exception as e:
-                logger.error(f"Error closing connection to {hostname}: {e}")
+                logger.error(f"Error closing connection to {hostname}: {e}", exc_info=True)
             finally:
                 # Always remove from connections dict
                 del self.connections[hostname]
