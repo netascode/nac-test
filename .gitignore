@@ -78,3 +78,6 @@ tmp/
 
 # Pabot
 .pabotsuitenames
+
+# Application execution logs (as well as Claude Code logs)
+logs/
