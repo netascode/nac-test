@@ -11,6 +11,8 @@ import os
 
 from .testbed_generator import TestbedGenerator
 from nac_test.utils.path_setup import get_pythonpath_for_tests
+from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
+from nac_test.pyats_core.execution.job_generator import JobGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +22,8 @@ class DeviceExecutor:
 
     def __init__(
         self,
-        job_generator: Any,
-        subprocess_runner: Any,
+        job_generator: JobGenerator,
+        subprocess_runner: SubprocessRunner,
         test_status: dict[str, Any],
         test_dir: Path,
     ):
