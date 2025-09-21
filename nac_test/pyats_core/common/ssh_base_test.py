@@ -72,11 +72,11 @@ class SSHTestBase(NACTestBase):
         # by the nac-test orchestrator to provide context to this isolated
         # PyATS job process.
         device_info_json = os.environ.get("DEVICE_INFO")
-        data_file_path = os.environ.get("DATA_FILE")
+        data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH")
 
         if not device_info_json or not data_file_path:
             self.failed(
-                "Framework Error: DEVICE_INFO and DATA_FILE env vars must be set by the orchestrator."
+                "Framework Error: DEVICE_INFO and MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH env vars must be set by the orchestrator."
             )
             return
 
