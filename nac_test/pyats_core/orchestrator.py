@@ -85,7 +85,7 @@ class PyATSOrchestrator:
         # Initialize discovery components
         self.test_discovery = TestDiscovery(self.test_dir)
         self.device_inventory_discovery = DeviceInventoryDiscovery(
-            self.output_dir, self.merged_data_filename
+            self.base_output_dir / self.merged_data_filename
         )
 
         # Initialize execution components
