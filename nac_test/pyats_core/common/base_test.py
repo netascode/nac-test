@@ -246,7 +246,7 @@ class NACTestBase(aetest.Testcase):
             self.batching_reporter = None
             self.step_interceptor = None
         except Exception as e:
-            self.logger.error("Failed to initialize batching reporter: %s", e)
+            self.logger.error("Failed to initialize batching reporter: %s", e, exc_info=True)
             self.batching_reporter = None
             self.step_interceptor = None
 
@@ -338,7 +338,7 @@ class NACTestBase(aetest.Testcase):
             except AttributeError as e:
                 # Reporter became None or lost attributes
                 if "NoneType" in str(e):
-                    self.logger.error("PyATS reporter became None: %s", e)
+                    self.logger.error("PyATS reporter became None: %s", e, exc_info=True)
                     break  # No point retrying if reporter is gone
                 else:
                     raise  # Re-raise unexpected AttributeErrors

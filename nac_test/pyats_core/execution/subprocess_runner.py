@@ -139,7 +139,7 @@ class SubprocessRunner:
             return self.output_dir / archive_name
 
         except Exception as e:
-            logger.error(f"Error executing PyATS job: {e}")
+            logger.error(f"Error executing PyATS job: {e}", exc_info=True)
             return None
         # finally:  -- UNCOMMENT ME
         #     # Clean up the temporary plugin config file
@@ -247,7 +247,7 @@ class SubprocessRunner:
             return self.output_dir / f"{archive_name}.zip"
 
         except Exception as e:
-            logger.error(f"Error executing PyATS job with testbed: {e}")
+            logger.error(f"Error executing PyATS job with testbed: {e}", exc_info=True)
             return None
         # finally:
         #     # Clean up the temporary plugin config file
@@ -322,7 +322,7 @@ class SubprocessRunner:
             return await process.wait()
 
         except Exception as e:
-            logger.error(f"Error processing output: {e}")
+            logger.error(f"Error processing output: {e}", exc_info=True)
             # Try to terminate the process
             try:
                 process.terminate()

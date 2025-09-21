@@ -56,7 +56,7 @@ class OutputProcessor:
                 if os.environ.get("PYATS_DEBUG"):
                     print(f"Failed to parse progress event: {line}")
             except Exception as e:
-                logger.error(f"Error processing progress event: {e}")
+                logger.error(f"Error processing progress event: {e}", exc_info=True)
         else:
             # Show line if it matches our criteria
             if self._should_show_line(line):
