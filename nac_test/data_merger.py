@@ -23,7 +23,9 @@ class DataMerger:
         Returns:
             Merged dictionary containing all data from the YAML files
         """
-        logger.info("Loading yaml files from %s", data_paths)
+        logger.info(
+            "Loading yaml files from %s", ", ".join([str(path) for path in data_paths])
+        )
         data = yaml.load_yaml_files(data_paths)
         # Ensure we always return a dict, even if yaml returns None
         return data if isinstance(data, dict) else {}
