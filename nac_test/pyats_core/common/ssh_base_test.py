@@ -89,26 +89,26 @@ class SSHTestBase(NACTestBase):
             )
             return
 
-        try:
-            with open(data_file_path, "r") as f:
-                self.data_model = json.load(f)
-        except FileNotFoundError:
-            self.failed(
-                f"Framework Error: Could not find data model file at path: {data_file_path}"
-            )
-            return
-        except json.JSONDecodeError as e:
-            try:
-                with open(data_file_path, "r") as f:
-                    file_content = f.read()
-            except Exception:
-                file_content = "[Could not read file content]"
+        # try:
+        #     with open(data_file_path, "r") as f:
+        #         self.data_model = json.load(f)
+        # except FileNotFoundError:
+        #     self.failed(
+        #         f"Framework Error: Could not find data model file at path: {data_file_path}"
+        #     )
+        #     return
+        # except json.JSONDecodeError as e:
+        #     try:
+        #         with open(data_file_path, "r") as f:
+        #             file_content = f.read()
+        #     except Exception:
+        #         file_content = "[Could not read file content]"
 
-            self.failed(
-                f"Framework Error: Could not parse JSON from data model file '{data_file_path}': {e}\n"
-                f"File content: {file_content}"
-            )
-            return
+        #     self.failed(
+        #         f"Framework Error: Could not parse JSON from data model file '{data_file_path}': {e}\n"
+        #         f"File content: {file_content}"
+        #     )
+        #     return
 
         # The ConnectionManager is instantiated within the job's process space
         # We'll attach it to the runtime object for the test's duration
