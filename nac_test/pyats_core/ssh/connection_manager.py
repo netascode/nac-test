@@ -184,6 +184,9 @@ class DeviceConnectionManager:
             "password": device_info["password"],
             "platform": device_info.get("platform"),
             "timeout": device_info.get("timeout", 120),
+            # Chassis type MUST be defined for the connection to successfully
+            # establish.
+            "chassis_type": device_info.get("chassis_type", "single_rp"),
             "init_exec_commands": [],
             "init_config_commands": [],
         }
