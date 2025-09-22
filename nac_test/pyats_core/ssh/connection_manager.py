@@ -8,13 +8,17 @@ including connection pooling, resource limits, and per-device locking.
 
 import asyncio
 import logging
-from typing import Dict, Any, Optional, TYPE_CHECKING, AsyncIterator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Optional
 
 # Only import for type checking to avoid early PyATS initialization
 if TYPE_CHECKING:
     from unicon import Connection
 
+from nac_test.pyats_core.ssh.connection_utils import (
+    build_connection_start_command,
+    determine_chassis_type,
+)
 from nac_test.utils.system_resources import SystemResourceCalculator
 
 logger = logging.getLogger(__name__)
@@ -166,7 +170,16 @@ class DeviceConnectionManager:
         """Create Unicon connection (runs in thread pool).
 
         Args:
-            device_info: Device connection information
+            device_info: Device connection information containing:
+                - host: Device IP address or hostname
+                - username: SSH username
+                - password: SSH password
+                - platform: Device platform (optional)
+                - protocol: Connection protocol (optional, defaults to 'ssh')
+                - port: SSH port (optional, defaults to 22)
+                - ssh_options: Additional SSH options (optional)
+                - chassis_type: Device chassis type (optional, auto-determined)
+                - timeout: Connection timeout (optional, defaults to 120)
 
         Returns:
             Connected Unicon Connection object
@@ -177,19 +190,48 @@ class DeviceConnectionManager:
         # Import unicon here to delay PyATS initialization until actually needed
         from unicon import Connection
 
-        # Extract connection parameters
+        # Extract connection details
+        host = device_info["host"]
+        username = device_info["username"]
+        protocol = device_info.get("protocol", "ssh")  # Default to SSH
+        port = device_info.get("port")  # Optional port
+        ssh_options = device_info.get("ssh_options")  # Optional SSH options
+
+        # Build the connection start command using our utility
+        # This resolves the "list index out of range" error by providing the missing start parameter
+        try:
+            start_command = build_connection_start_command(
+                protocol=protocol,
+                host=host,
+                username=username,
+                port=port,
+                ssh_options=ssh_options,
+            )
+        except ValueError as e:
+            raise ConnectionError(f"Failed to build connection command: {e}") from e
+
+        # Determine chassis type (can be overridden in device_info)
+        chassis_type = device_info.get("chassis_type")
+        if not chassis_type:
+            # Default to single_rp for single connection
+            chassis_type = determine_chassis_type(1)
+
+        # Build connection parameters with the start command
         connection_params = {
-            "hostname": device_info["host"],
-            "username": device_info["username"],
+            "hostname": host,
+            "start": [start_command],
+            "username": username,
             "password": device_info["password"],
             "platform": device_info.get("platform"),
             "timeout": device_info.get("timeout", 120),
             # Chassis type MUST be defined for the connection to successfully
             # establish.
-            "chassis_type": device_info.get("chassis_type", "single_rp"),
+            "chassis_type": chassis_type,
             "init_exec_commands": [],
             "init_config_commands": [],
         }
+
+        logger.debug(f"Creating Connection with start command: {start_command}")
 
         # Create and connect - let exceptions bubble up
         conn = Connection(**connection_params)
@@ -229,6 +271,8 @@ class DeviceConnectionManager:
         # Import unicon exceptions here for error type checking
         from unicon.core.errors import (
             StateMachineError,
+        )
+        from unicon.core.errors import (
             TimeoutError as UniconTimeoutError,
         )
 
