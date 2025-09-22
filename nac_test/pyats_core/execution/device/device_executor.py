@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import List, Any, Optional
 import os
+import json
 
 from .testbed_generator import TestbedGenerator
 from nac_test.utils.path_setup import get_pythonpath_for_tests
@@ -95,7 +96,7 @@ class DeviceExecutor:
                 env.update(
                     {
                         "HOSTNAME": hostname,
-                        "DEVICE_INFO": str(device),  # Will be loaded by the job file
+                        "DEVICE_INFO": json.dumps(device),  # Will be loaded by the job file
                         # Environment variables are used because PyATS tests run as separate subprocess processes.
                         # The merged data file is created by main.py at the base output level.
                         "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
