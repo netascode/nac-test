@@ -1,6 +1,6 @@
 from nac_test.pyats_core.common.base_test import NACTestBase
 from nac_test.pyats_core.ssh.command_cache import CommandCache
-from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
+from nac_test.pyats_core.broker.broker_client import BrokerClient, BrokerCommandExecutor
 import asyncio
 from pyats import aetest
 import logging
@@ -110,11 +110,11 @@ class SSHTestBase(NACTestBase):
         #     )
         #     return
 
-        # The ConnectionManager is instantiated within the job's process space
+        # The BrokerClient communicates with the centralized connection broker
         # We'll attach it to the runtime object for the test's duration
-        if not hasattr(self.parent, "connection_manager"):
-            self.parent.connection_manager = DeviceConnectionManager()
-        self.connection_manager = self.parent.connection_manager
+        if not hasattr(self.parent, "broker_client"):
+            self.parent.broker_client = BrokerClient()
+        self.broker_client = self.parent.broker_client
 
         try:
             hostname = self.device_info["hostname"]
@@ -148,13 +148,19 @@ class SSHTestBase(NACTestBase):
                 # Store the testbed device connection for command execution
                 self.connection = self.testbed_device
             else:
-                # Fall back to standard nac-test connection
+                # Use broker client for connection management
                 self.logger.info(
-                    f"Connecting to device {hostname} via nac-test connection manager"
+                    f"Connecting to device {hostname} via connection broker"
                 )
-                self.connection = await self.connection_manager.get_connection(
-                    hostname, self.device_info
-                )
+                # Connect to broker service
+                await self.broker_client.connect()
+
+                # Create broker command executor for this device
+                self.connection = BrokerCommandExecutor(hostname, self.broker_client)
+
+                # Ensure device connection through broker
+                await self.connection.connect()
+
         except Exception as e:
             # Connection failed - raise exception to be caught in setup_ssh_context
             error_msg = f"Failed to connect to device {hostname}: {str(e)}"
@@ -243,10 +249,18 @@ class SSHTestBase(NACTestBase):
                 test_instance._track_ssh_command(command, cached_output)
                 return cached_output
 
-            # Execute command via Unicon in thread pool
+            # Execute command via connection (broker or testbed device)
             logging.debug(f"Executing command: {command}")
-            loop = asyncio.get_event_loop()
-            output = await loop.run_in_executor(None, connection.execute, command)
+
+            if hasattr(connection, "execute") and asyncio.iscoroutinefunction(
+                connection.execute
+            ):
+                # Broker command executor - already async
+                output = await connection.execute(command)
+            else:
+                # Testbed device or legacy connection - run in thread pool
+                loop = asyncio.get_event_loop()
+                output = await loop.run_in_executor(None, connection.execute, command)
 
             # Convert output to string to ensure consistent type
             output_str = str(output)
