@@ -25,6 +25,8 @@ from nac_test.pyats_core.execution import (
     OutputProcessor,
 )
 from nac_test.pyats_core.execution.device import DeviceExecutor
+from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
+from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.progress import ProgressReporter
 from nac_test.pyats_core.reporting.multi_archive_generator import (
     MultiArchiveReportGenerator,
@@ -232,9 +234,10 @@ class PyATSOrchestrator:
         """
         Run tests in device-centric mode for SSH.
 
-        This method iterates through each device from the inventory and launches a
-        dedicated PyATS job subprocess for it, managed by a semaphore to
-        control concurrency.
+        This method starts a connection broker service, iterates through each device
+        from the inventory and launches dedicated PyATS job subprocesses, managed by
+        a semaphore to control concurrency. The broker enables connection sharing
+        across all subprocesses.
 
         Args:
             test_files: List of SSH test files to execute
@@ -244,7 +247,7 @@ class PyATSOrchestrator:
             Path to the aggregated D2D archive file, or None if no tests were executed
         """
         logger.info(
-            f"Executing {len(test_files)} SSH tests using device-centric execution"
+            f"Executing {len(test_files)} SSH tests using device-centric execution with connection broker"
         )
 
         # Devices are passed from the orchestration level
@@ -253,13 +256,62 @@ class PyATSOrchestrator:
             logger.error("No devices provided for D2D test execution")
             return None
 
+        # Generate consolidated testbed for broker
+        logger.info(f"Creating consolidated testbed for {len(devices)} devices")
+        try:
+            consolidated_testbed_yaml = (
+                TestbedGenerator.generate_consolidated_testbed_yaml(devices)
+            )
+
+            # Write testbed to temporary file
+            testbed_file = self.output_dir / "broker_testbed.yaml"
+            with open(testbed_file, "w") as f:
+                f.write(consolidated_testbed_yaml)
+
+            logger.info(f"Consolidated testbed written to: {testbed_file}")
+
+        except Exception as e:
+            logger.error(f"Failed to create consolidated testbed: {e}", exc_info=True)
+            return None
+
+        # Start connection broker with consolidated testbed
+        broker = ConnectionBroker(
+            testbed_path=testbed_file,
+            max_connections=min(50, len(devices) * 2),  # Reasonable connection limit
+            output_dir=self.output_dir,  # Pass output directory for Unicon CLI logs
+        )
+
+        try:
+            async with broker.run_context():
+                logger.info(f"Connection broker started at: {broker.socket_path}")
+
+                # Set environment variable for test subprocesses to find broker
+                os.environ["NAC_TEST_BROKER_SOCKET"] = str(broker.socket_path)
+
+                # Execute device tests with broker running
+                return await self._execute_device_tests_with_broker(test_files, devices)
+
+        except Exception as e:
+            logger.error(
+                f"Error running tests with connection broker: {e}", exc_info=True
+            )
+            return None
+        finally:
+            # Clean up environment variable
+            os.environ.pop("NAC_TEST_BROKER_SOCKET", None)
+
+    async def _execute_device_tests_with_broker(
+        self, test_files: List[Path], devices: List[Dict[str, Any]]
+    ) -> Optional[Path]:
+        """Execute device tests with broker running."""
+
         # Initialize device executor if not already done
         if self.device_executor is None:
             assert self.subprocess_runner is not None  # Should be initialized
             self.device_executor = DeviceExecutor(
                 self.job_generator,
                 self.subprocess_runner,
-                self.test_status,
+                self.d2d_test_status,  # Use d2d_test_status for device tests
                 self.test_dir,
             )
 
@@ -321,10 +373,6 @@ class PyATSOrchestrator:
 
             logger.info(f"Completed batch {batch_idx + 1}/{len(device_batches)}")
 
-        # Copy test status to d2d_test_status for combined reporting
-        if hasattr(self, "d2d_test_status"):
-            self.d2d_test_status.update(self.test_status)
-
         # Print summary for D2D tests
         start_time = (
             self.overall_start_time
@@ -332,7 +380,7 @@ class PyATSOrchestrator:
             else getattr(self, "start_time", datetime.now())
         )
         self.summary_printer.print_summary(
-            self.test_status,
+            self.d2d_test_status,
             start_time,
             output_dir=self.output_dir,
             archive_path=None,  # Archive will be created after this

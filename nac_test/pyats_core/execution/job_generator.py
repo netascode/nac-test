@@ -2,10 +2,10 @@
 
 """PyATS job file generation functionality."""
 
-from pathlib import Path
-from typing import List, Dict, Any
-import textwrap
 import json
+import textwrap
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from nac_test.pyats_core.constants import DEFAULT_TEST_TIMEOUT
 
@@ -71,16 +71,21 @@ class JobGenerator:
         return job_content
 
     def generate_device_centric_job(
-        self, device: Dict[str, Any], test_files: List[Path]
+        self,
+        device: Dict[str, Any],
+        test_files: List[Path],
+        broker_socket_path: Optional[str] = None,
     ) -> str:
         """Generate PyATS job file content for a specific device.
 
         This job file sets up the environment for SSH tests to run against a single device.
-        It ensures the SSHTestBase has access to device info and the data model.
+        It ensures the SSHTestBase has access to device info and can communicate with the
+        connection broker service.
 
         Args:
             device: Device dictionary with connection information
             test_files: List of test files to run on this device
+            broker_socket_path: Optional path to the broker's Unix socket
 
         Returns:
             Job file content as a string
@@ -91,32 +96,39 @@ class JobGenerator:
             [f'"{str(Path(tf).resolve())}"' for tf in test_files]
         )
 
+        # Include broker socket setup if provided
+        broker_socket_setup = ""
+        if broker_socket_path:
+            broker_socket_setup = f'''
+            # Set broker socket path for SSHTestBase to use
+            os.environ['NAC_TEST_BROKER_SOCKET'] = "{broker_socket_path}"
+            '''
+
         job_content = textwrap.dedent(f'''
         """Auto-generated PyATS job file for device {hostname}"""
-        
+
         import os
         import json
         from pathlib import Path
-        from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
-        
+
         # Device being tested (using hostname)
         HOSTNAME = "{hostname}"
         DEVICE_INFO = {json.dumps(device)}
-        
+
         # Test files to execute
         TEST_FILES = [
             {test_files_str}
         ]
-        
+
         def main(runtime):
             """Main job file entry point for device-centric execution"""
             # Set up environment variables that SSHTestBase expects
             os.environ['DEVICE_INFO'] = json.dumps(DEVICE_INFO)
-            
-            # Create and attach connection manager to runtime
-            # This will be shared across all tests for this device
-            runtime.connection_manager = DeviceConnectionManager(max_concurrent=1)
-            
+            {broker_socket_setup}
+
+            # Note: SSHTestBase will automatically create and use a BrokerClient
+            # to communicate with the connection broker service for command execution
+
             # Run all test files for this device
             for idx, test_file in enumerate(TEST_FILES):
                 # Create meaningful task ID from test file name and hostname
