@@ -248,7 +248,9 @@ class NACTestBase(aetest.Testcase):
             self.batching_reporter = None
             self.step_interceptor = None
         except Exception as e:
-            self.logger.error("Failed to initialize batching reporter: %s", e, exc_info=True)
+            self.logger.error(
+                "Failed to initialize batching reporter: %s", e, exc_info=True
+            )
             self.batching_reporter = None
             self.step_interceptor = None
 
@@ -340,7 +342,9 @@ class NACTestBase(aetest.Testcase):
             except AttributeError as e:
                 # Reporter became None or lost attributes
                 if "NoneType" in str(e):
-                    self.logger.error("PyATS reporter became None: %s", e, exc_info=True)
+                    self.logger.error(
+                        "PyATS reporter became None: %s", e, exc_info=True
+                    )
                     break  # No point retrying if reporter is gone
                 else:
                     raise  # Re-raise unexpected AttributeErrors
@@ -1091,6 +1095,71 @@ class NACTestBase(aetest.Testcase):
             yield
         finally:
             self.clear_test_context()
+
+    # =========================================================================
+    # RESULT PROCESSING METHODS (Phase 1: Result Formatting Standardization)
+    # =========================================================================
+
+    def format_verification_result(
+        self,
+        status,
+        context: Dict[str, Any],
+        reason: str,
+        api_duration: float = 0,
+        api_details: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Standard result formatter for all verification types.
+
+        This method provides a consistent format for verification results across
+        all test types in the NAC test framework. It standardizes the structure
+        and content of result dictionaries to ensure uniform reporting and
+        processing throughout the system.
+
+        Args:
+            status: Verification outcome (PASSED, FAILED, SKIPPED from ResultStatus enum)
+            context: Complete context object containing all verification details
+                    including tenant names, item identifiers, resolved names, and
+                    any additional metadata needed for reporting and debugging
+            reason: Customer-facing explanation of the verification result
+                   Should be descriptive and actionable for network operators
+            api_duration: API call timing in seconds for performance analysis
+                        Defaults to 0 for non-API operations
+            api_details: Optional API transaction details including URL, response code,
+                       and response body for debugging purposes
+
+        Returns:
+            dict: Standardized result structure for nac-test framework containing:
+                - status: The verification outcome
+                - context: Complete context object for detailed reporting
+                - reason: Human-readable explanation of the result
+                - api_duration: Performance timing information
+                - timestamp: When the result was created for audit trail
+                - api_details: Optional API transaction details (if provided)
+
+        Example:
+            result = self.format_verification_result(
+                status=ResultStatus.PASSED,
+                context={
+                    "tenant_name": "production",
+                    "bd_name": "web_bd",
+                    "resolved_bd_name": "web_bd_prod"
+                },
+                reason="Bridge Domain attributes verified successfully",
+                api_duration=0.245
+            )
+        """
+        result = {
+            "status": status,
+            "context": context,
+            "reason": reason,
+            "api_duration": api_duration,
+            "timestamp": time.time(),
+        }
+
+        if api_details:
+            result["api_details"] = api_details
+
+        return result
 
     @aetest.cleanup
     def cleanup(self) -> None:
