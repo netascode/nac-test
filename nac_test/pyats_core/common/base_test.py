@@ -20,6 +20,7 @@ from nac_test.pyats_core.common.retry_strategy import SmartRetry
 from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.batching_reporter import BatchingReporter
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
+from nac_test.pyats_core.reporting.types import ResultStatus
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
 import markdown  # type: ignore[import-untyped]
 import asyncio
@@ -1102,7 +1103,7 @@ class NACTestBase(aetest.Testcase):
 
     def format_verification_result(
         self,
-        status,
+        status: ResultStatus,
         context: Dict[str, Any],
         reason: str,
         api_duration: float = 0,
@@ -1160,6 +1161,120 @@ class NACTestBase(aetest.Testcase):
             result["api_details"] = api_details
 
         return result
+
+    def create_comprehensive_skip_result(
+        self,
+        test_scope: str,
+        schema_paths: List[str],
+        managed_objects: List[str],
+        interpretation: str,
+        api_queries: Optional[List[str]] = None,
+        additional_sections: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Generate detailed skip results with comprehensive documentation.
+
+        This method creates standardized skip result documentation that provides
+        valuable information about test scope even when no configuration exists.
+        It generates detailed skip results that help with deployment planning
+        and feature coverage analysis by documenting exactly what the test
+        would verify if data were present.
+
+        Args:
+            test_scope: Description of what this test verifies (e.g., "BGP Peers Operational State")
+            schema_paths: List of data model paths checked (e.g., ["tenants[].l3outs[]"])
+            managed_objects: List of technology-specific managed objects (e.g., ["bgpPeerEntry", "fvBD"])
+            interpretation: Explanation of why test is skipped and what it means
+            api_queries: Optional list of API query pattern examples for documentation
+            additional_sections: Optional list of additional documentation sections
+
+        Returns:
+            dict: Detailed skip result with comprehensive documentation
+
+        Example:
+            skip_result = self.create_comprehensive_skip_result(
+                test_scope="BGP Peers Operational State",
+                schema_paths=["tenants[].l3outs[].bgp_peers[]"],
+                managed_objects=["bgpPeerEntry", "bgpPeerAf"],
+                interpretation="No BGP peers are configured in L3Outs",
+                api_queries=[
+                    "/api/node/mo/topology/pod-*/node-*/sys/bgp/inst/dom-*/peer-*/ent-*.json",
+                    "/api/node/class/bgpPeerEntry.json"
+                ]
+            )
+        """
+        # Build the detailed skip documentation message
+        skip_details = []
+
+        # Validate technology-specific implementation for non-generic base classes
+        if self.__class__.__name__ != "NACTestBase":
+            if not hasattr(self, "TECHNOLOGY_NAME"):
+                raise NotImplementedError(
+                    f"{self.__class__.__name__} must define TECHNOLOGY_NAME class variable. "
+                    f"Example: TECHNOLOGY_NAME = 'ACI' or 'SD-WAN' or 'Catalyst Center'"
+                )
+            if not hasattr(self, "MANAGED_OBJECTS_LABEL"):
+                raise NotImplementedError(
+                    f"{self.__class__.__name__} must define MANAGED_OBJECTS_LABEL class variable. "
+                    f"Example: MANAGED_OBJECTS_LABEL = 'ACI managed objects' or 'SD-WAN managed objects'"
+                )
+
+        # Use technology-specific name if available, otherwise generic
+        technology_name = getattr(self, "TECHNOLOGY_NAME", "Network")
+        skip_details.append(f"📋 **{technology_name} Test Scope Documentation**\\n")
+
+        # Use technology-specific label if available, otherwise generic
+        managed_objects_label = getattr(
+            self, "MANAGED_OBJECTS_LABEL", "managed objects"
+        )
+        skip_details.append(
+            f"\\n**This test verifies the following {managed_objects_label}:**"
+        )
+
+        # Add managed objects documentation
+        for managed_object in managed_objects:
+            skip_details.append(f"• {managed_object}")
+
+        # Add data model paths section
+        skip_details.append("\\n**Data model paths checked:**")
+        for path in schema_paths:
+            skip_details.append(f"• `{path}`")
+
+        # Add API queries if provided
+        if api_queries:
+            skip_details.append("\\n**API Queries:**")
+            for query in api_queries:
+                skip_details.append(f"• `{query}`")
+
+        # Add any additional sections
+        if additional_sections:
+            for section in additional_sections:
+                skip_details.append(f"\\n{section}")
+
+        # Add standard conclusion sections
+        skip_details.append("\\n**Result:** No matching configurations found")
+        skip_details.append(f"**Interpretation:** {interpretation}")
+        skip_details.append(
+            "**Action:** Test appropriately SKIPPED - no verification needed"
+        )
+
+        detailed_message = "\\n".join(skip_details)
+
+        # Log the skip information
+        self.logger.info(f"Test will be skipped - {interpretation}")
+        self.logger.info(f"Checked {len(schema_paths)} data model paths")
+
+        # Create and return the skip result using the centralized formatter
+        return self.format_verification_result(
+            status=ResultStatus.SKIPPED,
+            context={
+                "test_scope": test_scope,
+                "schema_paths_checked": schema_paths,
+                "managed_objects": managed_objects,
+                "skip_type": "no_data_found",
+            },
+            reason=detailed_message,
+            api_duration=0,
+        )
 
     @aetest.cleanup
     def cleanup(self) -> None:
