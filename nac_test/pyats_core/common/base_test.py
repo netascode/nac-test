@@ -149,17 +149,19 @@ class NACTestBase(aetest.Testcase):
         data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", "")
         data_file = Path(data_file_path) if data_file_path else None
         if data_file and data_file.exists():
-            output_dir = data_file.parent / "pyats_results"
+            # Use base output directory (parent of data file) to avoid conflict with pyats_results cleanup
+            base_output_dir = data_file.parent
+            output_dir = base_output_dir / "pyats_results"  # Keep for emergency dumps
         else:
+            base_output_dir = Path(".")
             output_dir = Path(".")
 
         # Store output directory for emergency dumps
         self.output_dir = output_dir
 
-        # Create html_report_data subdirectory inside pyats_results/html_reports
-        # Note: pyats_results doesn't exist yet during test execution, so we use a temp location
-        # The orchestrator will move these files to the correct location after extraction
-        html_report_data_dir = output_dir / "html_report_data_temp"
+        # Create html_report_data_temp in base output directory to avoid deletion during report generation
+        # This directory will NOT include pyats_results path to prevent cleanup conflicts
+        html_report_data_dir = base_output_dir / "html_report_data_temp"
         html_report_data_dir.mkdir(exist_ok=True)
 
         # Generate unique test ID
