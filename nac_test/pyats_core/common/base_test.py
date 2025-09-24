@@ -10,7 +10,7 @@ import logging
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, List, TypeVar, Callable, Awaitable, Optional, Iterator
+from typing import Any, Dict, List, TypeVar, Callable, Awaitable, Optional, Iterator, Union
 from functools import lru_cache
 from datetime import datetime
 from contextlib import contextmanager
@@ -44,6 +44,15 @@ class NACTestBase(aetest.Testcase):
     batching_reporter: Optional[BatchingReporter] = None
     step_interceptor: Optional[StepInterceptor] = None
     _current_test_context: Optional[str] = None
+
+    # Status mapping for converting string status to ResultStatus enum (Phase 4)
+    STATUS_MAPPING: Dict[str, ResultStatus] = {
+        "PASSED": ResultStatus.PASSED,
+        "FAILED": ResultStatus.FAILED,
+        "SKIPPED": ResultStatus.SKIPPED,
+        "ERRORED": ResultStatus.ERRORED,
+        "INFO": ResultStatus.INFO,
+    }
 
     @classmethod
     @lru_cache(maxsize=1)
@@ -1275,6 +1284,165 @@ class NACTestBase(aetest.Testcase):
             reason=detailed_message,
             api_duration=0,
         )
+
+    # =========================================================================
+    # RESULT PROCESSING METHODS (Phase 4: Result Collector Integration)
+    # =========================================================================
+
+    def build_api_context(self, test_type: str, primary_item: str, **additional_context) -> str:
+        """Build standardized API context strings for result tracking.
+
+        This method creates consistent API context strings that link API calls
+        to test results in HTML reports. It follows a standardized format:
+        "{TestType}: {PrimaryItem} ({Key}: {Value}, {Key}: {Value})"
+
+        Args:
+            test_type: Type of test or verification being performed
+                      Examples: "BGP Peer", "Bridge Domain", "BFD Session"
+            primary_item: Primary identifier for the item being tested
+                         Examples: IP address, name, ID
+            **additional_context: Additional context items as key-value pairs
+                                Examples: tenant="MyTenant", node="101", l3out="External"
+
+        Returns:
+            str: Formatted API context string for result collector
+
+        Examples:
+            >>> self.build_api_context("BGP Peer", "192.168.1.1", tenant="Production", node="101")
+            "BGP Peer: 192.168.1.1 (Tenant: Production, Node: 101)"
+
+            >>> self.build_api_context("Bridge Domain", "web_bd", tenant="MyTenant", vrf="common")
+            "Bridge Domain: web_bd (Tenant: MyTenant, Vrf: common)"
+
+            >>> self.build_api_context("BFD Session", "10.0.0.1")
+            "BFD Session: 10.0.0.1"
+        """
+        context_parts = [f"{test_type}: {primary_item}"]
+
+        if additional_context:
+            # Sort keys for consistent ordering and capitalize first letter
+            details = ", ".join(
+                f"{k.title()}: {v}" for k, v in sorted(additional_context.items())
+            )
+            context_parts.append(f"({details})")
+
+        return " ".join(context_parts)
+
+    def add_verification_result(
+        self,
+        status: Union[str, ResultStatus],
+        test_type: str,
+        item_identifier: str,
+        details: Optional[str] = None,
+        test_context: Optional[str] = None,
+    ) -> None:
+        """Add verification result to collector with standardized messaging.
+
+        This method standardizes the format of messages added to the result collector,
+        ensuring consistent messaging patterns across all test types. It eliminates
+        the need for manual message building in individual tests. It accepts either
+        string status values (e.g., "PASSED", "FAILED") or ResultStatus enum values.
+
+        Args:
+            status: Result status - either string ("PASSED", "FAILED", "SKIPPED")
+                   or ResultStatus enum value. String values are automatically
+                   converted to enum using the centralized STATUS_MAPPING.
+            test_type: Type of verification being performed
+                      Examples: "BGP peer", "Bridge Domain subnet", "BFD session"
+            item_identifier: Identifier for the specific item being tested
+                           Examples: IP address, name, ID
+            details: Additional details for failed/skipped results
+                    For FAILED: error description or reason for failure
+                    For SKIPPED: reason why verification was skipped
+                    For PASSED: optional additional success details (usually None)
+            test_context: API context string for linking to commands/API calls
+                        Use build_api_context() to create consistent format
+
+        Message Patterns:
+            - PASSED: "{test_type} {item_identifier} verified successfully"
+            - FAILED: "{test_type} {item_identifier} failed: {details}"
+            - SKIPPED: "{test_type} {item_identifier} skipped: {details}"
+
+        Examples:
+            >>> # Success case with enum
+            >>> self.add_verification_result(
+            ...     ResultStatus.PASSED,
+            ...     "BGP peer",
+            ...     "192.168.1.1",
+            ...     test_context="BGP Peer: 192.168.1.1 (Tenant: Production, Node: 101)"
+            ... )
+
+            >>> # Success case with string (more convenient)
+            >>> self.add_verification_result(
+            ...     "PASSED",
+            ...     "BGP peer",
+            ...     "192.168.1.1",
+            ...     test_context="BGP Peer: 192.168.1.1 (Tenant: Production, Node: 101)"
+            ... )
+            # Both add: "BGP peer 192.168.1.1 verified successfully"
+
+            >>> # Failure case with string from result dictionary
+            >>> self.add_verification_result(
+            ...     result["status"],  # e.g., "FAILED"
+            ...     "Bridge Domain subnet",
+            ...     "10.1.1.1/24",
+            ...     details=result.get("reason", "Unknown error"),
+            ...     test_context="Bridge Domain: web_bd (Tenant: Production)"
+            ... )
+            # Adds: "Bridge Domain subnet 10.1.1.1/24 failed: Connection timeout"
+        """
+        # Convert string status to enum if needed
+        if isinstance(status, str):
+            status_enum = self.map_string_status_to_enum(status)
+        else:
+            status_enum = status
+
+        # Build standardized message based on status
+        if status_enum == ResultStatus.PASSED:
+            message = f"{test_type} {item_identifier} verified successfully"
+            if details:
+                message += f" - {details}"
+        elif status_enum == ResultStatus.FAILED:
+            if details:
+                message = f"{test_type} {item_identifier} failed: {details}"
+            else:
+                message = f"{test_type} {item_identifier} failed"
+        elif status_enum == ResultStatus.SKIPPED:
+            if details:
+                message = f"{test_type} {item_identifier} skipped: {details}"
+            else:
+                message = f"{test_type} {item_identifier} skipped"
+        else:
+            # Handle other status types (ERRORED, INFO, etc.)
+            if details:
+                message = f"{test_type} {item_identifier} {status_enum.value.lower()}: {details}"
+            else:
+                message = f"{test_type} {item_identifier} {status_enum.value.lower()}"
+
+        # Add to result collector
+        self.result_collector.add_result(status_enum, message, test_context=test_context)
+
+    def map_string_status_to_enum(self, status_string: str) -> ResultStatus:
+        """Convert string status to ResultStatus enum using centralized mapping.
+
+        This helper method provides a convenient way to convert string status values
+        (like "PASSED", "FAILED", "SKIPPED") to their corresponding ResultStatus enum
+        values. It uses the centralized STATUS_MAPPING class variable.
+
+        Args:
+            status_string: String status value (e.g., "PASSED", "FAILED", "SKIPPED")
+
+        Returns:
+            ResultStatus: Corresponding enum value, or ResultStatus.INFO if not found
+
+        Examples:
+            >>> status = self.map_string_status_to_enum("PASSED")
+            >>> # Returns ResultStatus.PASSED
+
+            >>> status = self.map_string_status_to_enum("UNKNOWN")
+            >>> # Returns ResultStatus.INFO (fallback)
+        """
+        return self.STATUS_MAPPING.get(status_string, ResultStatus.INFO)
 
     @aetest.cleanup
     def cleanup(self) -> None:
