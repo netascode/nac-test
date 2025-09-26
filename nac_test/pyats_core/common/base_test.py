@@ -24,7 +24,6 @@ from typing import (
 from functools import lru_cache
 from datetime import datetime
 from contextlib import contextmanager
-from abc import ABC, abstractmethod
 
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
@@ -1594,7 +1593,6 @@ class NACTestBase(aetest.Testcase):
     # ABSTRACT RESULT FORMATTING METHODS (Phase 6: Standardized Method Names)
     # =========================================================================
 
-    @abstractmethod
     def format_failure_message(self, failed_results: List[Dict[str, Any]]) -> str:
         """Format failure message for test-specific verification failures.
 
@@ -1613,9 +1611,8 @@ class NACTestBase(aetest.Testcase):
         Example:
             "5 BGP peers failed: 192.168.1.1 (session down), 192.168.1.2 (wrong AS)"
         """
-        pass
+        raise NotImplementedError("Subclasses must implement this method")
 
-    @abstractmethod
     def format_success_message(self, passed_results: List[Dict[str, Any]],
                               skipped_results: List[Dict[str, Any]]) -> str:
         """Format success message for test-specific verification successes.
@@ -1635,7 +1632,7 @@ class NACTestBase(aetest.Testcase):
         Example:
             "15 BGP peers verified successfully, 2 skipped (maintenance mode)"
         """
-        pass
+        raise NotImplementedError("Subclasses must implement this method")
 
     def format_skip_message(self, skipped_results: List[Dict[str, Any]]) -> str:
         """Format skip message for all-skipped scenarios.
