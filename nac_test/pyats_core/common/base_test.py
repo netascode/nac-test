@@ -1589,9 +1589,9 @@ class NACTestBase(aetest.Testcase):
             success_message = self.format_success_message(passed, skipped)
             self.passed(success_message)
 
-    # ==================================
-    # ABSTRACT RESULT FORMATTING METHODS
-    # ==================================
+    # ===================================
+    # REQUIRED RESULT FORMATTING METHODS
+    # ===================================
 
     def format_failure_message(self, failed_results: List[Dict[str, Any]]) -> str:
         """Format failure message for test-specific verification failures.
@@ -1611,7 +1611,7 @@ class NACTestBase(aetest.Testcase):
         Example:
             "5 BGP peers failed: 192.168.1.1 (session down), 192.168.1.2 (wrong AS)"
         """
-        raise NotImplementedError("Subclasses must implement this method")
+        raise NotImplementedError("Subclasses must implement format_failure_message()")
 
     def format_success_message(
         self,
@@ -1635,7 +1635,7 @@ class NACTestBase(aetest.Testcase):
         Example:
             "15 BGP peers verified successfully, 2 skipped (maintenance mode)"
         """
-        raise NotImplementedError("Subclasses must implement this method")
+        raise NotImplementedError("Subclasses must implement format_success_message()")
 
     def format_skip_message(self, skipped_results: List[Dict[str, Any]]) -> str:
         """Format skip message for all-skipped scenarios.
@@ -1654,6 +1654,291 @@ class NACTestBase(aetest.Testcase):
             "All 8 BGP peer verifications were skipped (no peers configured)"
         """
         return f"All {len(skipped_results)} verifications were skipped"
+
+    def get_test_type_name(self) -> str:
+        """Return human-readable test type name for logging and reporting.
+
+        This is used in log messages and step names to identify what type of
+        verification is being performed.
+
+        Returns:
+            str: Test type name (e.g., 'BGP Peer', 'Bridge Domain Subnet', 'BFD Session')
+
+        Examples:
+            return "BGP Peer"
+            return "Bridge Domain Subnet"
+            return "BFD Session"
+        """
+        raise NotImplementedError("Subclasses must implement get_test_type_name()")
+
+    def extract_step_context(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract relevant context fields from a result for PyATS step creation.
+
+        This method should extract the key identification fields from the result
+        that are needed to create meaningful step names and descriptions.
+
+        Args:
+            result: Individual verification result dictionary
+
+        Returns:
+            dict: Context object with standardized keys for step formatting
+
+        Examples:
+            # BGP test might return:
+            return {
+                "peer_ip": result["peer"]["ip"],
+                "tenant": result["peer"].get("tenant", "N/A"),
+                "node": result["peer"].get("node", "N/A")
+            }
+
+            # Bridge Domain test might return:
+            return {
+                "tenant": result["context"].get("tenant_name", "N/A"),
+                "bd": result["context"].get("bd_name", "N/A"),
+                "subnet": result["context"].get("subnet_ip", "N/A")
+            }
+        """
+        raise NotImplementedError("Subclasses must implement extract_step_context()")
+
+    def format_step_name(self, context: Dict[str, Any]) -> str:
+        """Format the PyATS step name from extracted context.
+
+        Creates a concise, informative step name that will appear in PyATS reports.
+        Should be descriptive enough to identify the specific verification.
+
+        Args:
+            context: Context dict returned by extract_step_context()
+
+        Returns:
+            str: Formatted step name for PyATS reporting
+
+        Examples:
+            return f"Verify BGP peer {context['peer_ip']} on node {context['node']}"
+            return f"Verify BD '{context['tenant']}/{context['bd']}' -> Subnet '{context['subnet']}'"
+        """
+        raise NotImplementedError("Subclasses must implement format_step_name()")
+
+    def format_step_description(self, result: Dict[str, Any], context: Dict[str, Any]) -> str:
+        """Format detailed step description with key verification details.
+
+        Provides detailed information that will be logged for each step,
+        including the verification context and any relevant metadata.
+
+        Args:
+            result: Full verification result dictionary
+            context: Context dict returned by extract_step_context()
+
+        Returns:
+            str: Detailed description for logging and troubleshooting
+
+        Examples:
+            return f"Tenant: {context['tenant']}, L3Out: {context['l3out']}, Node: {context['node']}"
+            return f"Tenant: {context['tenant']}, BD: {context['bd']}, Subnet: {context['subnet']}"
+        """
+        raise NotImplementedError("Subclasses must implement format_step_description()")
+
+    def process_results_with_steps(self, results: List[Dict[str, Any]], steps) -> None:
+        """Generic result processor with customization through abstract methods.
+
+        This method provides a standardized implementation of result processing
+        that eliminates code duplication across test files. It handles:
+        - Result categorization and summary logging
+        - PyATS step creation with customizable formatting
+        - HTML report collection integration
+        - Overall test result determination
+
+        Subclasses customize behavior by implementing the required methods:
+        - get_test_type_name(): Provides test type for logging
+        - extract_step_context(): Extracts relevant fields from results
+        - format_step_name(): Creates PyATS step names
+        - format_step_description(): Creates detailed descriptions
+        - build_item_identifier_from_context(): Creates HTML report identifiers
+
+        Note: These methods will raise NotImplementedError if not overridden by subclasses.
+        Cannot use ABC due to metaclass conflict with aetest.Testcase.
+
+        Args:
+            results: List of verification result dictionaries
+            steps: PyATS steps object for creating test step reports
+        """
+        # Categorize results for summary and decision making
+        failed, skipped, passed = self.categorize_results(results)
+
+        # Log standardized result summary using abstract method
+        test_type = self.get_test_type_name()
+        self.log_result_summary(test_type, failed, skipped, passed)
+
+        # Log skipped items with customizable formatting
+        if skipped:
+            self.log_skipped_items(skipped)
+
+        # Create PyATS steps for each result using abstract methods
+        self.create_pyats_steps(results, steps)
+
+        # Determine overall test result using existing helper
+        self.determine_overall_test_result(failed, skipped, passed)
+
+    def create_pyats_steps(self, results: List[Dict[str, Any]], steps) -> None:
+        """Create PyATS steps from results using abstract formatting methods.
+
+        This method handles the generic step creation logic while delegating
+        formatting decisions to abstract methods implemented by subclasses.
+
+        Args:
+            results: List of verification result dictionaries
+            steps: PyATS steps object for creating test step reports
+        """
+        for result in results:
+            if not isinstance(result, dict):
+                self.logger.warning(f"Unexpected result format: {result}")
+                continue
+
+            try:
+                # Use abstract methods for customization
+                context = self.extract_step_context(result)
+                step_name = self.format_step_name(context)
+
+                with steps.start(step_name, continue_=True) as step:
+                    # Add result to HTML collector using existing helpers
+                    self.add_step_to_html_collector(result, context)
+
+                    # Log step details for troubleshooting
+                    if self.should_log_step_details(result):
+                        description = self.format_step_description(result, context)
+                        self.logger.info(description)
+                        self.log_additional_step_details(result, context)
+
+                    # Set PyATS step status
+                    self.set_step_status(step, result)
+
+            except Exception as e:
+                self.logger.error(f"Error creating step for result: {e}", exc_info=True)
+                # Create a generic failure step for this result
+                with steps.start("Failed to process result", continue_=True) as step:
+                    step.failed(f"Step creation failed: {str(e)}")
+
+    def log_skipped_items(self, skipped_results: List[Dict[str, Any]]) -> None:
+        """Log skipped items with customizable formatting.
+
+        Default implementation provides generic logging. Subclasses can override
+        to provide domain-specific skip item formatting.
+
+        Args:
+            skipped_results: List of skipped verification results
+        """
+        test_type = self.get_test_type_name()
+        self.logger.warning(f"{len(skipped_results)} {test_type} verifications skipped")
+
+        # Log first few skipped items as examples
+        for i, result in enumerate(skipped_results[:5]):  # Limit to first 5
+            try:
+                context = self.extract_step_context(result)
+                reason = result.get("reason", "Unknown reason")
+                self.logger.info(f"  - Skipped: {context} ({reason})")
+            except Exception:
+                self.logger.info(f"  - Skipped result: {result.get('reason', 'Unknown')}")
+
+        if len(skipped_results) > 5:
+            self.logger.info(f"  ... and {len(skipped_results) - 5} more")
+
+    def should_log_step_details(self, result: Dict[str, Any]) -> bool:
+        """Determine whether to log detailed information for a step.
+
+        Default implementation logs details for failed results only.
+        Subclasses can override to customize when details are logged.
+
+        Args:
+            result: Verification result dictionary
+
+        Returns:
+            bool: True if step details should be logged
+        """
+        return result.get("status") == "FAILED"
+
+    def log_additional_step_details(self, result: Dict[str, Any], context: Dict[str, Any]) -> None:
+        """Log additional step-specific details.
+
+        Default implementation does nothing. Subclasses can override to add
+        custom logging for each step (e.g., API details, timing info).
+
+        Args:
+            result: Full verification result dictionary
+            context: Context dict returned by extract_step_context()
+        """
+        pass  # Default: no additional logging
+
+    def add_step_to_html_collector(self, result: Dict[str, Any], context: Dict[str, Any]) -> None:
+        """Add step result to HTML report collector.
+
+        Default implementation uses existing result collector methods.
+        Subclasses can override for custom HTML report integration.
+
+        Args:
+            result: Full verification result dictionary
+            context: Context dict returned by extract_step_context()
+        """
+        # Use existing standardized method for adding results
+        # This assumes subclass has implemented proper item identification
+        try:
+            # Extract basic info for the standardized method
+            status = result.get("status", "UNKNOWN")
+            reason = result.get("reason", "")
+            test_type = self.get_test_type_name()
+
+            # Try to build item identifier from context
+            item_identifier = self.build_item_identifier_from_context(result, context)
+
+            # Use existing add_verification_result method
+            self.add_verification_result(
+                status=status,
+                test_type=test_type.lower(),  # Convert to lowercase for consistency
+                item_identifier=item_identifier,
+                details=reason if reason else None,
+                test_context=None  # Could be enhanced by subclasses
+            )
+        except Exception as e:
+            self.logger.debug(f"Failed to add result to HTML collector: {e}")
+            # Don't fail the test due to reporting issues
+
+    def build_item_identifier_from_context(self, result: Dict[str, Any], context: Dict[str, Any]) -> str:
+        """Build item identifier string from extracted context for HTML reporting.
+
+        This method should create a concise, descriptive identifier that uniquely
+        identifies the test item in HTML reports and logs. The identifier should
+        be meaningful to network operators for troubleshooting.
+
+        Args:
+            result: Full verification result dictionary
+            context: Context dict returned by extract_step_context()
+
+        Returns:
+            str: Item identifier for HTML reporting
+
+        Examples:
+            return f"{context['peer_ip']} on node {context['node']}"
+            return f"BD '{context['tenant']}/{context['bd']}' -> Subnet '{context['subnet']}'"
+            return f"RR {context['rr_node']} to Leaf {context['leaf_node']}"
+        """
+        raise NotImplementedError("Subclasses must implement build_item_identifier_from_context()")
+
+    def set_step_status(self, step, result: Dict[str, Any]) -> None:
+        """Set PyATS step status based on verification result.
+
+        Args:
+            step: PyATS step object
+            result: Verification result dictionary
+        """
+        status = result.get("status", "UNKNOWN")
+        reason = result.get("reason", "Unknown reason")
+
+        if status == "PASSED":
+            step.passed()
+        elif status == "SKIPPED":
+            step.skipped(reason)
+        elif status == "FAILED":
+            step.failed(reason)
+        else:
+            step.errored(f"Unknown status: {status}")  # Handle unexpected statuses
 
     @aetest.cleanup
     def cleanup(self) -> None:
