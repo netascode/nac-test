@@ -1613,8 +1613,11 @@ class NACTestBase(aetest.Testcase):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def format_success_message(self, passed_results: List[Dict[str, Any]],
-                              skipped_results: List[Dict[str, Any]]) -> str:
+    def format_success_message(
+        self,
+        passed_results: List[Dict[str, Any]],
+        skipped_results: List[Dict[str, Any]],
+    ) -> str:
         """Format success message for test-specific verification successes.
 
         This method must be implemented by subclasses to provide domain-specific
