@@ -1510,6 +1510,101 @@ class NACTestBase(aetest.Testcase):
 
         return failed, skipped, passed
 
+    def log_result_summary(
+        self,
+        test_type: str,
+        failed: List[Dict[str, Any]],
+        skipped: List[Dict[str, Any]],
+        passed: List[Dict[str, Any]],
+        total_results: Optional[int] = None,
+    ) -> None:
+        """Log standardized result summary for process_results_with_steps implementations.
+
+        This method provides consistent result summary logging across all test types.
+        It supports both simple and detailed logging formats based on the test's needs.
+
+        Args:
+            test_type: Descriptive name for the test type (e.g. "Bridge Domain Subnet", "BGP Peer")
+            failed: List of failed verification results
+            skipped: List of skipped verification results
+            passed: List of passed verification results
+            total_results: Optional total count override (defaults to sum of all results)
+
+        Example Usage:
+            >>> failed, skipped, passed = self.categorize_results(results)
+            >>> self.log_result_summary("BGP Peer", failed, skipped, passed)
+
+            >>> # With custom total count
+            >>> self.log_result_summary("Bridge Domain", failed, skipped, passed, len(all_items))
+        """
+        if total_results is None:
+            total_results = len(failed) + len(skipped) + len(passed)
+
+        # Log detailed summary with counts
+        self.logger.info(f"{test_type} Verification Summary:")
+        self.logger.info(f"  - Total configurations processed: {total_results}")
+        self.logger.info(f"  - Passed: {len(passed)}")
+        self.logger.info(f"  - Failed: {len(failed)}")
+        self.logger.info(f"  - Skipped: {len(skipped)}")
+
+    def determine_overall_test_result(
+        self,
+        failed: List[Dict[str, Any]],
+        skipped: List[Dict[str, Any]],
+        passed: List[Dict[str, Any]],
+        failure_formatter: Callable[[List[Dict[str, Any]]], str],
+        success_formatter: Callable[[List[Dict[str, Any]], List[Dict[str, Any]]], str],
+        skip_message_provider: Optional[Callable[[List[Dict[str, Any]]], str]] = None,
+    ) -> None:
+        """Determine and set overall test result using standardized logic.
+
+        This method provides the common if/elif/else logic pattern used across all
+        process_results_with_steps implementations while allowing test-specific
+        message formatting through callback functions.
+
+        Args:
+            failed: List of failed verification results
+            skipped: List of skipped verification results
+            passed: List of passed verification results
+            failure_formatter: Callback to format failure message from failed results
+                              Signature: (failed_results) -> failure_message
+            success_formatter: Callback to format success message from passed/skipped results
+                              Signature: (passed_results, skipped_results) -> success_message
+            skip_message_provider: Optional callback to generate skip message for all-skipped case
+                                  Signature: (skipped_results) -> skip_message
+                                  If None, uses a default skip message
+
+        Example Usage:
+            >>> def format_failures(failed_results):
+            ...     details = [f"- {r['peer']['ip']}: {r['reason']}" for r in failed_results]
+            ...     return f"{len(failed_results)} BGP peers failed:\\n{'\\n'.join(details)}"
+
+            >>> def format_success(passed_results, skipped_results):
+            ...     skip_msg = f", {len(skipped_results)} skipped" if skipped_results else ""
+            ...     return f"{len(passed_results)} BGP peers verified successfully{skip_msg}"
+
+            >>> self.determine_overall_test_result(failed, skipped, passed,
+            ...                                   format_failures, format_success)
+        """
+        if failed:
+            # Format failure message using provided formatter
+            failure_message = failure_formatter(failed)
+            self.failed(failure_message)
+
+        elif skipped and not passed:
+            # Handle case where all individual verifications were skipped
+            if skip_message_provider:
+                skip_message = skip_message_provider(skipped)
+            else:
+                # Provide default skip message if no custom provider given
+                skip_message = f"All {len(skipped)} verifications were skipped"
+            self.skipped(skip_message)
+
+        else:
+            # Success case - format success message using provided formatter
+            success_message = success_formatter(passed, skipped)
+            self.passed(success_message)
+
     @aetest.cleanup
     def cleanup(self) -> None:
         """Clean up test resources and save test results.
