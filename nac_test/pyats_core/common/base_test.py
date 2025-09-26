@@ -24,6 +24,7 @@ from typing import (
 from functools import lru_cache
 from datetime import datetime
 from contextlib import contextmanager
+from abc import ABC, abstractmethod
 
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
@@ -1552,58 +1553,107 @@ class NACTestBase(aetest.Testcase):
         failed: List[Dict[str, Any]],
         skipped: List[Dict[str, Any]],
         passed: List[Dict[str, Any]],
-        failure_formatter: Callable[[List[Dict[str, Any]]], str],
-        success_formatter: Callable[[List[Dict[str, Any]], List[Dict[str, Any]]], str],
-        skip_message_provider: Optional[Callable[[List[Dict[str, Any]]], str]] = None,
     ) -> None:
-        """Determine and set overall test result using standardized logic.
+        """Determine and set overall test result using standardized abstract methods.
 
         This method provides the common if/elif/else logic pattern used across all
-        process_results_with_steps implementations while allowing test-specific
-        message formatting through callback functions.
+        process_results_with_steps implementations. It now uses the standardized
+        abstract formatting methods that subclasses must implement.
 
         Args:
             failed: List of failed verification results
             skipped: List of skipped verification results
             passed: List of passed verification results
-            failure_formatter: Callback to format failure message from failed results
-                              Signature: (failed_results) -> failure_message
-            success_formatter: Callback to format success message from passed/skipped results
-                              Signature: (passed_results, skipped_results) -> success_message
-            skip_message_provider: Optional callback to generate skip message for all-skipped case
-                                  Signature: (skipped_results) -> skip_message
-                                  If None, uses a default skip message
+
+        The method automatically calls the appropriate abstract formatter:
+        - format_failure_message() for failures
+        - format_success_message() for successes
+        - format_skip_message() for all-skipped scenarios
 
         Example Usage:
-            >>> def format_failures(failed_results):
-            ...     details = [f"- {r['peer']['ip']}: {r['reason']}" for r in failed_results]
-            ...     return f"{len(failed_results)} BGP peers failed:\\n{'\\n'.join(details)}"
-
-            >>> def format_success(passed_results, skipped_results):
-            ...     skip_msg = f", {len(skipped_results)} skipped" if skipped_results else ""
-            ...     return f"{len(passed_results)} BGP peers verified successfully{skip_msg}"
-
-            >>> self.determine_overall_test_result(failed, skipped, passed,
-            ...                                   format_failures, format_success)
+            >>> failed, skipped, passed = self.categorize_results(results)
+            >>> self.determine_overall_test_result(failed, skipped, passed)
         """
         if failed:
-            # Format failure message using provided formatter
-            failure_message = failure_formatter(failed)
+            # Use abstract method implemented by subclass
+            failure_message = self.format_failure_message(failed)
             self.failed(failure_message)
 
         elif skipped and not passed:
             # Handle case where all individual verifications were skipped
-            if skip_message_provider:
-                skip_message = skip_message_provider(skipped)
-            else:
-                # Provide default skip message if no custom provider given
-                skip_message = f"All {len(skipped)} verifications were skipped"
+            # Use the format_skip_message method (has default implementation)
+            skip_message = self.format_skip_message(skipped)
             self.skipped(skip_message)
 
         else:
-            # Success case - format success message using provided formatter
-            success_message = success_formatter(passed, skipped)
+            # Success case - use abstract method implemented by subclass
+            success_message = self.format_success_message(passed, skipped)
             self.passed(success_message)
+
+    # =========================================================================
+    # ABSTRACT RESULT FORMATTING METHODS (Phase 6: Standardized Method Names)
+    # =========================================================================
+
+    @abstractmethod
+    def format_failure_message(self, failed_results: List[Dict[str, Any]]) -> str:
+        """Format failure message for test-specific verification failures.
+
+        This method must be implemented by subclasses to provide domain-specific
+        failure details that are meaningful to network operators. The message
+        should summarize key failures and provide actionable information.
+
+        Args:
+            failed_results: List of failed verification result dictionaries
+                          Each result should contain context about what failed
+                          and why it failed
+
+        Returns:
+            str: Formatted failure message for the overall test result
+
+        Example:
+            "5 BGP peers failed: 192.168.1.1 (session down), 192.168.1.2 (wrong AS)"
+        """
+        pass
+
+    @abstractmethod
+    def format_success_message(self, passed_results: List[Dict[str, Any]],
+                              skipped_results: List[Dict[str, Any]]) -> str:
+        """Format success message for test-specific verification successes.
+
+        This method must be implemented by subclasses to provide domain-specific
+        success summaries that give operators confidence in their network state.
+        Should include both passed and skipped counts where relevant.
+
+        Args:
+            passed_results: List of successful verification result dictionaries
+            skipped_results: List of skipped verification result dictionaries
+                           (may be empty)
+
+        Returns:
+            str: Formatted success message for the overall test result
+
+        Example:
+            "15 BGP peers verified successfully, 2 skipped (maintenance mode)"
+        """
+        pass
+
+    def format_skip_message(self, skipped_results: List[Dict[str, Any]]) -> str:
+        """Format skip message for all-skipped scenarios.
+
+        This method provides a default implementation that subclasses can override
+        if they need custom skip message formatting. Called when all individual
+        verifications were skipped.
+
+        Args:
+            skipped_results: List of skipped verification result dictionaries
+
+        Returns:
+            str: Formatted skip message for the overall test result
+
+        Example:
+            "All 8 BGP peer verifications were skipped (no peers configured)"
+        """
+        return f"All {len(skipped_results)} verifications were skipped"
 
     @aetest.cleanup
     def cleanup(self) -> None:
