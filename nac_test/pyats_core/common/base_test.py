@@ -10,7 +10,17 @@ import logging
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, List, TypeVar, Callable, Awaitable, Optional, Iterator, Union
+from typing import (
+    Any,
+    Dict,
+    List,
+    TypeVar,
+    Callable,
+    Awaitable,
+    Optional,
+    Iterator,
+    Union,
+)
 from functools import lru_cache
 from datetime import datetime
 from contextlib import contextmanager
@@ -1289,7 +1299,9 @@ class NACTestBase(aetest.Testcase):
     # RESULT PROCESSING METHODS (Phase 4: Result Collector Integration)
     # =========================================================================
 
-    def build_api_context(self, test_type: str, primary_item: str, **additional_context) -> str:
+    def build_api_context(
+        self, test_type: str, primary_item: str, **additional_context
+    ) -> str:
         """Build standardized API context strings for result tracking.
 
         This method creates consistent API context strings that link API calls
@@ -1420,7 +1432,9 @@ class NACTestBase(aetest.Testcase):
                 message = f"{test_type} {item_identifier} {status_enum.value.lower()}"
 
         # Add to result collector
-        self.result_collector.add_result(status_enum, message, test_context=test_context)
+        self.result_collector.add_result(
+            status_enum, message, test_context=test_context
+        )
 
     def map_string_status_to_enum(self, status_string: str) -> ResultStatus:
         """Convert string status to ResultStatus enum using centralized mapping.
@@ -1443,6 +1457,58 @@ class NACTestBase(aetest.Testcase):
             >>> # Returns ResultStatus.INFO (fallback)
         """
         return self.STATUS_MAPPING.get(status_string, ResultStatus.INFO)
+
+    # =========================================================================
+    # RESULT PROCESSING METHODS (Phase 5: Common process_results_with_steps Logic)
+    # =========================================================================
+
+    def categorize_results(
+        self, results: List[Dict[str, Any]]
+    ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Categorize verification results into failed, skipped, and passed lists.
+
+        This method provides the standard categorization logic used by all
+        process_results_with_steps() implementations. It separates results
+        based on their status field for further processing and reporting.
+
+        Handles both string status values ("FAILED", "SKIPPED", "PASSED") and
+        ResultStatus enum values (ResultStatus.FAILED, etc.).
+
+        Args:
+            results: List of verification result dictionaries containing status field
+
+        Returns:
+            tuple: (failed_results, skipped_results, passed_results)
+                - failed_results: Results with status "FAILED" or ResultStatus.FAILED
+                - skipped_results: Results with status "SKIPPED" or ResultStatus.SKIPPED
+                - passed_results: Results with status "PASSED" or ResultStatus.PASSED
+
+        Example:
+            >>> failed, skipped, passed = self.categorize_results(results)
+            >>> self.logger.info(f"Summary: {len(passed)} passed, {len(failed)} failed, {len(skipped)} skipped")
+        """
+        failed = [
+            r
+            for r in results
+            if isinstance(r, dict)
+            and (r.get("status") == "FAILED" or r.get("status") == ResultStatus.FAILED)
+        ]
+        skipped = [
+            r
+            for r in results
+            if isinstance(r, dict)
+            and (
+                r.get("status") == "SKIPPED" or r.get("status") == ResultStatus.SKIPPED
+            )
+        ]
+        passed = [
+            r
+            for r in results
+            if isinstance(r, dict)
+            and (r.get("status") == "PASSED" or r.get("status") == ResultStatus.PASSED)
+        ]
+
+        return failed, skipped, passed
 
     @aetest.cleanup
     def cleanup(self) -> None:
