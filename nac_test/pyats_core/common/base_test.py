@@ -27,6 +27,11 @@ from contextlib import contextmanager
 
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
+from nac_test.pyats_core.common.types import (
+    VerificationResult,
+    BaseVerificationResultOptional,
+    ApiDetails,
+)
 from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.batching_reporter import BatchingReporter
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
@@ -37,6 +42,7 @@ import asyncio
 import httpx
 
 T = TypeVar("T")
+
 
 
 class NACTestBase(aetest.Testcase):
@@ -1126,8 +1132,8 @@ class NACTestBase(aetest.Testcase):
         context: Dict[str, Any],
         reason: str,
         api_duration: float = 0,
-        api_details: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        api_details: Optional[ApiDetails] = None,
+    ) -> BaseVerificationResultOptional:
         """Standard result formatter for all verification types.
 
         This method provides a consistent format for verification results across
@@ -1463,8 +1469,8 @@ class NACTestBase(aetest.Testcase):
     # =========================
 
     def categorize_results(
-        self, results: List[Dict[str, Any]]
-    ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+        self, results: List[VerificationResult]
+    ) -> tuple[List[VerificationResult], List[VerificationResult], List[VerificationResult]]:
         """Categorize verification results into failed, skipped, and passed lists.
 
         This method provides the standard categorization logic used by all
@@ -1513,9 +1519,9 @@ class NACTestBase(aetest.Testcase):
     def log_result_summary(
         self,
         test_type: str,
-        failed: List[Dict[str, Any]],
-        skipped: List[Dict[str, Any]],
-        passed: List[Dict[str, Any]],
+        failed: List[VerificationResult],
+        skipped: List[VerificationResult],
+        passed: List[VerificationResult],
         total_results: Optional[int] = None,
     ) -> None:
         """Log standardized result summary for process_results_with_steps implementations.
@@ -1549,9 +1555,9 @@ class NACTestBase(aetest.Testcase):
 
     def determine_overall_test_result(
         self,
-        failed: List[Dict[str, Any]],
-        skipped: List[Dict[str, Any]],
-        passed: List[Dict[str, Any]],
+        failed: List[VerificationResult],
+        skipped: List[VerificationResult],
+        passed: List[VerificationResult],
     ) -> None:
         """Determine and set overall test result using standardized abstract methods.
 
@@ -1593,7 +1599,7 @@ class NACTestBase(aetest.Testcase):
     # REQUIRED RESULT FORMATTING METHODS
     # ===================================
 
-    def format_failure_message(self, failed_results: List[Dict[str, Any]]) -> str:
+    def format_failure_message(self, failed_results: List[VerificationResult]) -> str:
         """Format failure message for test-specific verification failures.
 
         This method must be implemented by subclasses to provide domain-specific
@@ -1615,8 +1621,8 @@ class NACTestBase(aetest.Testcase):
 
     def format_success_message(
         self,
-        passed_results: List[Dict[str, Any]],
-        skipped_results: List[Dict[str, Any]],
+        passed_results: List[VerificationResult],
+        skipped_results: List[VerificationResult],
     ) -> str:
         """Format success message for test-specific verification successes.
 
@@ -1637,7 +1643,7 @@ class NACTestBase(aetest.Testcase):
         """
         raise NotImplementedError("Subclasses must implement format_success_message()")
 
-    def format_skip_message(self, skipped_results: List[Dict[str, Any]]) -> str:
+    def format_skip_message(self, skipped_results: List[VerificationResult]) -> str:
         """Format skip message for all-skipped scenarios.
 
         This method provides a default implementation that subclasses can override
@@ -1671,7 +1677,7 @@ class NACTestBase(aetest.Testcase):
         """
         raise NotImplementedError("Subclasses must implement get_test_type_name()")
 
-    def extract_step_context(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    def extract_step_context(self, result: VerificationResult) -> Dict[str, Any]:
         """Extract relevant context fields from a result for PyATS step creation.
 
         This method should extract the key identification fields from the result
@@ -1718,7 +1724,7 @@ class NACTestBase(aetest.Testcase):
         """
         raise NotImplementedError("Subclasses must implement format_step_name()")
 
-    def format_step_description(self, result: Dict[str, Any], context: Dict[str, Any]) -> str:
+    def format_step_description(self, result: VerificationResult, context: Dict[str, Any]) -> str:
         """Format detailed step description with key verification details.
 
         Provides detailed information that will be logged for each step,
@@ -1737,7 +1743,7 @@ class NACTestBase(aetest.Testcase):
         """
         raise NotImplementedError("Subclasses must implement format_step_description()")
 
-    def process_results_with_steps(self, results: List[Dict[str, Any]], steps) -> None:
+    def process_results_with_steps(self, results: List[VerificationResult], steps) -> None:
         """Generic result processor with customization through abstract methods.
 
         This method provides a standardized implementation of result processing
@@ -1778,7 +1784,7 @@ class NACTestBase(aetest.Testcase):
         # Determine overall test result using existing helper
         self.determine_overall_test_result(failed, skipped, passed)
 
-    def create_pyats_steps(self, results: List[Dict[str, Any]], steps) -> None:
+    def create_pyats_steps(self, results: List[VerificationResult], steps) -> None:
         """Create PyATS steps from results using abstract formatting methods.
 
         This method handles the generic step creation logic while delegating
@@ -1817,7 +1823,7 @@ class NACTestBase(aetest.Testcase):
                 with steps.start("Failed to process result", continue_=True) as step:
                     step.failed(f"Step creation failed: {str(e)}")
 
-    def log_skipped_items(self, skipped_results: List[Dict[str, Any]]) -> None:
+    def log_skipped_items(self, skipped_results: List[VerificationResult]) -> None:
         """Log skipped items with customizable formatting.
 
         Default implementation provides generic logging. Subclasses can override
@@ -1841,7 +1847,7 @@ class NACTestBase(aetest.Testcase):
         if len(skipped_results) > 5:
             self.logger.info(f"  ... and {len(skipped_results) - 5} more")
 
-    def should_log_step_details(self, result: Dict[str, Any]) -> bool:
+    def should_log_step_details(self, result: VerificationResult) -> bool:
         """Determine whether to log detailed information for a step.
 
         Default implementation logs details for failed results only.
@@ -1855,7 +1861,7 @@ class NACTestBase(aetest.Testcase):
         """
         return result.get("status") == "FAILED"
 
-    def log_additional_step_details(self, result: Dict[str, Any], context: Dict[str, Any]) -> None:
+    def log_additional_step_details(self, result: VerificationResult, context: Dict[str, Any]) -> None:
         """Log additional step-specific details.
 
         Default implementation does nothing. Subclasses can override to add
@@ -1867,7 +1873,7 @@ class NACTestBase(aetest.Testcase):
         """
         pass  # Default: no additional logging
 
-    def add_step_to_html_collector(self, result: Dict[str, Any], context: Dict[str, Any]) -> None:
+    def add_step_to_html_collector(self, result: VerificationResult, context: Dict[str, Any]) -> None:
         """Add step result to HTML report collector.
 
         Default implementation uses existing result collector methods.
@@ -1900,7 +1906,7 @@ class NACTestBase(aetest.Testcase):
             self.logger.debug(f"Failed to add result to HTML collector: {e}")
             # Don't fail the test due to reporting issues
 
-    def build_item_identifier_from_context(self, result: Dict[str, Any], context: Dict[str, Any]) -> str:
+    def build_item_identifier_from_context(self, result: VerificationResult, context: Dict[str, Any]) -> str:
         """Build item identifier string from extracted context for HTML reporting.
 
         This method should create a concise, descriptive identifier that uniquely
@@ -1921,7 +1927,7 @@ class NACTestBase(aetest.Testcase):
         """
         raise NotImplementedError("Subclasses must implement build_item_identifier_from_context()")
 
-    def set_step_status(self, step, result: Dict[str, Any]) -> None:
+    def set_step_status(self, step, result: VerificationResult) -> None:
         """Set PyATS step status based on verification result.
 
         Args:
