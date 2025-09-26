@@ -55,7 +55,7 @@ class NACTestBase(aetest.Testcase):
     step_interceptor: Optional[StepInterceptor] = None
     _current_test_context: Optional[str] = None
 
-    # Status mapping for converting string status to ResultStatus enum (Phase 4)
+    # Status mapping for converting string status to ResultStatus enum
     STATUS_MAPPING: Dict[str, ResultStatus] = {
         "PASSED": ResultStatus.PASSED,
         "FAILED": ResultStatus.FAILED,
@@ -1116,9 +1116,9 @@ class NACTestBase(aetest.Testcase):
         finally:
             self.clear_test_context()
 
-    # =========================================================================
-    # RESULT PROCESSING METHODS (Phase 1: Result Formatting Standardization)
-    # =========================================================================
+    # =========================
+    # RESULT PROCESSING METHODS
+    # =========================
 
     def format_verification_result(
         self,
@@ -1295,9 +1295,9 @@ class NACTestBase(aetest.Testcase):
             api_duration=0,
         )
 
-    # =========================================================================
-    # RESULT PROCESSING METHODS (Phase 4: Result Collector Integration)
-    # =========================================================================
+    # =========================
+    # RESULT PROCESSING METHODS
+    # =========================
 
     def build_api_context(
         self, test_type: str, primary_item: str, **additional_context
@@ -1458,9 +1458,9 @@ class NACTestBase(aetest.Testcase):
         """
         return self.STATUS_MAPPING.get(status_string, ResultStatus.INFO)
 
-    # =========================================================================
-    # RESULT PROCESSING METHODS (Phase 5: Common process_results_with_steps Logic)
-    # =========================================================================
+    # =========================
+    # RESULT PROCESSING METHODS
+    # =========================
 
     def categorize_results(
         self, results: List[Dict[str, Any]]
@@ -1589,9 +1589,9 @@ class NACTestBase(aetest.Testcase):
             success_message = self.format_success_message(passed, skipped)
             self.passed(success_message)
 
-    # =========================================================================
-    # ABSTRACT RESULT FORMATTING METHODS (Phase 6: Standardized Method Names)
-    # =========================================================================
+    # ==================================
+    # ABSTRACT RESULT FORMATTING METHODS
+    # ==================================
 
     def format_failure_message(self, failed_results: List[Dict[str, Any]]) -> str:
         """Format failure message for test-specific verification failures.
