@@ -16,9 +16,12 @@ import os
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Optional, Set
 
 from ..ssh.command_cache import CommandCache
+
+if TYPE_CHECKING:
+    from pyats.topology import Testbed
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +50,7 @@ class ConnectionBroker:
         self.output_dir = Path(output_dir) if output_dir else Path("/tmp")
 
         # Connection management
-        self.testbed = None
+        self.testbed: Optional[Testbed] = None
         self.connected_devices: Dict[str, Any] = {}  # hostname -> device connection
         self.connection_locks: Dict[str, asyncio.Lock] = {}
         self.connection_semaphore = asyncio.Semaphore(max_connections)
@@ -90,6 +93,9 @@ class ConnectionBroker:
 
             # Load testbed using pyATS loader
             self.testbed = loader.load(str(self.testbed_path))
+
+            if self.testbed is None:
+                raise RuntimeError("Failed to load testbed - loader returned None")
 
             logger.info(f"Loaded testbed with {len(self.testbed.devices)} devices")
 
@@ -416,7 +422,7 @@ class ConnectionBroker:
         logger.info("Connection broker shutdown complete")
 
     @asynccontextmanager
-    async def run_context(self):
+    async def run_context(self) -> AsyncGenerator[Any, None]:
         """Context manager for running the broker."""
         try:
             await self.start()

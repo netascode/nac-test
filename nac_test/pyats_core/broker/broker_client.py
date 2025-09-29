@@ -11,7 +11,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional, Type
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +88,12 @@ class BrokerClient:
 
     async def _send_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Send request to broker and return response."""
-        if not self._connected:
+        if not self._connected or not self.writer or not self.reader:
             await self.connect()
+
+        # Bail out if self.reader and self.writer are not set
+        if not self.reader or not self.writer:
+            raise ConnectionError("Broker client not connected")
 
         try:
             # Serialize request
@@ -106,7 +110,7 @@ class BrokerClient:
 
             # Read response data
             response_data = await self.reader.readexactly(response_length)
-            response = json.loads(response_data.decode("utf-8"))
+            response: Dict[str, Any] = json.loads(response_data.decode("utf-8"))
 
             # Check for errors
             if response.get("status") == "error":
@@ -140,7 +144,7 @@ class BrokerClient:
             {"command": "execute", "hostname": hostname, "cmd": command}
         )
 
-        result = response.get("result", "")
+        result: str = response.get("result", "")
         logger.debug(f"Command output length: {len(result)} characters")
 
         return result
@@ -158,7 +162,8 @@ class BrokerClient:
             response = await self._send_request(
                 {"command": "connect", "hostname": hostname}
             )
-            return response.get("result", False)
+            result: bool = response.get("result", False)
+            return result
 
         except Exception as e:
             logger.error(f"Failed to ensure connection to {hostname}: {e}")
@@ -184,7 +189,8 @@ class BrokerClient:
             Status dictionary
         """
         response = await self._send_request({"command": "status"})
-        return response.get("result", {})
+        result: Dict[str, Any] = response.get("result", {})
+        return result
 
     async def ping(self) -> bool:
         """Ping the broker to test connectivity.
@@ -194,18 +200,19 @@ class BrokerClient:
         """
         try:
             response = await self._send_request({"command": "ping"})
-            return response.get("result") == "pong"
+            result: bool = response.get("result") == "pong"
+            return result
 
         except Exception as e:
             logger.debug(f"Broker ping failed: {e}")
             return False
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "BrokerClient":
         """Async context manager entry."""
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, *exc_info: Dict[str, Any]) -> None:
         """Async context manager exit."""
         await self.disconnect()
 

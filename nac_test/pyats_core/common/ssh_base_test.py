@@ -6,8 +6,10 @@ from pyats import aetest
 import logging
 import os
 import json
-from typing import Any, Optional, Callable, Coroutine
+from typing import Any, Optional, Callable, Coroutine, TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from pyats.topology import Testbed
 
 class SSHTestBase(NACTestBase):
     """Base class for all SSH-based device tests.
@@ -21,7 +23,7 @@ class SSHTestBase(NACTestBase):
     """
 
     @property
-    def testbed(self) -> Optional[Any]:
+    def testbed(self) -> Optional["Testbed"]:
         """Access the PyATS testbed object if available.
 
         When tests are run via PyATS with --testbed-file, the testbed is loaded
@@ -32,8 +34,9 @@ class SSHTestBase(NACTestBase):
             The PyATS testbed object if available, None otherwise.
         """
         # In PyATS aetest, the testbed is available via self.parent (runtime)
-        if hasattr(self.parent, "testbed"):
-            return self.parent.testbed
+        if hasattr(self.parent, "testbed"):  # type: ignore[attr-defined]
+            obj: "Testbed" = self.parent.testbed  # type: ignore[attr-defined]
+            return obj
         return None
 
     @property
@@ -91,9 +94,9 @@ class SSHTestBase(NACTestBase):
 
         # The BrokerClient communicates with the centralized connection broker
         # We'll attach it to the runtime object for the test's duration
-        if not hasattr(self.parent, "broker_client"):
-            self.parent.broker_client = BrokerClient()
-        self.broker_client = self.parent.broker_client
+        if not hasattr(self.parent, "broker_client"):  # type: ignore[attr-defined]
+            self.parent.broker_client = BrokerClient()  # type: ignore[attr-defined]
+        self.broker_client = self.parent.broker_client  # type: ignore[attr-defined]
 
         try:
             hostname = self.device_info["hostname"]

@@ -2,7 +2,7 @@
 
 """PyATS testbed generation functionality."""
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 from typing import Dict, Any, List
 
 

@@ -62,6 +62,7 @@ omit = ["*/__main__.py"]
 
 [tool.mypy]
 # The mypy configurations: http://bit.ly/2zEl9WI
+mypy_path = "stubs"
 check_untyped_defs = true
 disallow_any_generics = true
 disallow_incomplete_defs = true
