@@ -1447,10 +1447,14 @@ class NACTestBase(aetest.Testcase):
             # Adds: "Bridge Domain subnet 10.1.1.1/24 failed: Connection timeout"
         """
         # Convert string status to enum if needed
-        if isinstance(status, str):
+        if isinstance(status, ResultStatus):
+            status_enum = status
+        elif isinstance(status, str):
             status_enum = self.map_string_status_to_enum(status)
         else:
-            status_enum = status
+            # Raise an error here in case type of status is not respected
+            # by implemented test automation.
+            raise ValueError(f"Invalid status: {status}")
 
         # Build standardized message based on status
         if status_enum == ResultStatus.PASSED:
