@@ -1975,11 +1975,11 @@ class NACTestBase(aetest.Testcase):
         status = result.get("status", "UNKNOWN")
         reason = result.get("reason", "Unknown reason")
 
-        if status == "PASSED":
+        if status == "PASSED" or status == ResultStatus.PASSED:
             step.passed()
-        elif status == "SKIPPED":
+        elif status == "SKIPPED" or status == ResultStatus.SKIPPED:
             step.skipped(reason)
-        elif status == "FAILED":
+        elif status == "FAILED" or status == ResultStatus.FAILED:
             step.failed(reason)
         else:
             step.errored(f"Unknown status: {status}")  # Handle unexpected statuses
