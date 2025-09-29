@@ -1680,14 +1680,13 @@ class NACTestBase(aetest.Testcase):
         """
         raise NotImplementedError("Subclasses must implement format_step_name()")
 
-    def format_step_description(self, result: VerificationResult, context: Dict[str, Any]) -> str:
+    def format_step_description(self, context: Dict[str, Any]) -> str:
         """Format detailed step description with key verification details.
 
         Provides detailed information that will be logged for each step,
         including the verification context and any relevant metadata.
 
         Args:
-            result: Full verification result dictionary
             context: Context dict returned by extract_step_context()
 
         Returns:
@@ -1765,7 +1764,7 @@ class NACTestBase(aetest.Testcase):
 
                     # Log step details for troubleshooting
                     if self.should_log_step_details(result):
-                        description = self.format_step_description(result, context)
+                        description = self.format_step_description(context)
                         self.logger.info(description)
                         self.log_additional_step_details(result, context)
 
