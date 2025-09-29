@@ -1617,103 +1617,17 @@ class NACTestBase(aetest.Testcase):
             >>> self.determine_overall_test_result(failed, skipped, passed)
         """
         if failed:
-            # Use abstract method implemented by subclass
-            failure_message = self.format_failure_message(failed)
-            self.failed(failure_message)
+            self.failed()
 
         elif skipped and not passed:
-            # Handle case where all individual verifications were skipped
-            # Use the format_skip_message method (has default implementation)
-            skip_message = self.format_skip_message(skipped)
-            self.skipped(skip_message)
+            self.skipped()
 
         else:
-            # Success case - use abstract method implemented by subclass
-            success_message = self.format_success_message(passed, skipped)
-            self.passed(success_message)
+            self.passed()
 
     # ===================================
     # REQUIRED RESULT FORMATTING METHODS
     # ===================================
-
-    def format_failure_message(self, failed_results: List[VerificationResult]) -> str:
-        """Format failure message for test-specific verification failures.
-
-        This method must be implemented by subclasses to provide domain-specific
-        failure details that are meaningful to network operators. The message
-        should summarize key failures and provide actionable information.
-
-        Args:
-            failed_results: List of failed verification result dictionaries
-                          Each result should contain context about what failed
-                          and why it failed
-
-        Returns:
-            str: Formatted failure message for the overall test result
-
-        Example:
-            "5 BGP peers failed: 192.168.1.1 (session down), 192.168.1.2 (wrong AS)"
-        """
-        raise NotImplementedError("Subclasses must implement format_failure_message()")
-
-    def format_success_message(
-        self,
-        passed_results: List[VerificationResult],
-        skipped_results: List[VerificationResult],
-    ) -> str:
-        """Format success message for test-specific verification successes.
-
-        This method must be implemented by subclasses to provide domain-specific
-        success summaries that give operators confidence in their network state.
-        Should include both passed and skipped counts where relevant.
-
-        Args:
-            passed_results: List of successful verification result dictionaries
-            skipped_results: List of skipped verification result dictionaries
-                           (may be empty)
-
-        Returns:
-            str: Formatted success message for the overall test result
-
-        Example:
-            "15 BGP peers verified successfully, 2 skipped (maintenance mode)"
-        """
-        raise NotImplementedError("Subclasses must implement format_success_message()")
-
-    def format_skip_message(self, skipped_results: List[VerificationResult]) -> str:
-        """Format skip message for all-skipped scenarios.
-
-        This method provides a default implementation that subclasses can override
-        if they need custom skip message formatting. Called when all individual
-        verifications were skipped.
-
-        Args:
-            skipped_results: List of skipped verification result dictionaries
-
-        Returns:
-            str: Formatted skip message for the overall test result
-
-        Example:
-            "All 8 BGP peer verifications were skipped (no peers configured)"
-        """
-        return f"All {len(skipped_results)} verifications were skipped"
-
-    def get_test_type_name(self) -> str:
-        """Return human-readable test type name for logging and reporting.
-
-        This method returns the value of the TEST_TYPE_NAME class variable,
-        which is enforced by __init_subclass__ to ensure all concrete test
-        classes define it.
-
-        Returns:
-            str: Test type name from TEST_TYPE_NAME class variable
-                (e.g., 'BGP Peer', 'Bridge Domain Subnet', 'BFD Session')
-
-        Note:
-            The TEST_TYPE_NAME class variable is enforced at class definition time,
-            so this method will always have a valid value for concrete test classes.
-        """
-        return self.__class__.TEST_TYPE_NAME
 
     def extract_step_context(self, result: VerificationResult) -> Dict[str, Any]:
         """Extract relevant context fields from a result for PyATS step creation.
@@ -1792,7 +1706,6 @@ class NACTestBase(aetest.Testcase):
         - Overall test result determination
 
         Subclasses customize behavior by implementing the required methods:
-        - get_test_type_name(): Provides test type for logging
         - extract_step_context(): Extracts relevant fields from results
         - format_step_name(): Creates PyATS step names
         - format_step_description(): Creates detailed descriptions
@@ -1809,7 +1722,7 @@ class NACTestBase(aetest.Testcase):
         failed, skipped, passed = self.categorize_results(results)
 
         # Log standardized result summary using abstract method
-        test_type = self.get_test_type_name()
+        test_type = self.__class__.TEST_TYPE_NAME
         self.log_result_summary(test_type, failed, skipped, passed)
 
         # Log skipped items with customizable formatting
@@ -1870,7 +1783,7 @@ class NACTestBase(aetest.Testcase):
         Args:
             skipped_results: List of skipped verification results
         """
-        test_type = self.get_test_type_name()
+        test_type = self.__class__.TEST_TYPE_NAME
         self.logger.warning(f"{len(skipped_results)} {test_type} verifications skipped")
 
         # Log first few skipped items as examples
@@ -1927,7 +1840,7 @@ class NACTestBase(aetest.Testcase):
             # Extract basic info for the standardized method
             status = result.get("status", "UNKNOWN")
             reason = result.get("reason", "")
-            test_type = self.get_test_type_name()
+            test_type = self.__class__.TEST_TYPE_NAME
 
             # Try to build item identifier from context
             item_identifier = self.build_item_identifier_from_context(result, context)
