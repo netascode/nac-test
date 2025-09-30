@@ -20,6 +20,9 @@ class CombinedOrchestrator:
 
     This class discovers test types and delegates execution to existing orchestrators,
     following DRY and SRP principles by reusing proven orchestration logic.
+
+    Note: Robot Framework results are placed at the root output directory for backward
+    compatibility, while PyATS results use a subdirectory for organization.
     """
 
     def __init__(
@@ -221,11 +224,9 @@ class CombinedOrchestrator:
 
         if has_robot:
             typer.echo("\n✅ Robot Framework tests: Completed")
-            typer.echo(f"   📁 Results: {self.output_dir}/robot_results/")
+            typer.echo(f"   📁 Results: {self.output_dir}/")
             if not self.render_only:
-                typer.echo(
-                    f"   📊 Reports: {self.output_dir}/robot_results/report.html"
-                )
+                typer.echo(f"   📊 Reports: {self.output_dir}/report.html")
 
         typer.echo(
             f"\n📄 Merged data model: {self.output_dir}/{self.merged_data_filename}"

@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 class RobotOrchestrator:
     """Orchestrates Robot Framework test execution with clean directory management.
 
-    This class follows the same architectural pattern as PyATSOrchestrator:
+    This class follows a similar architectural pattern as PyATSOrchestrator:
     - Receives base output directory from caller
-    - Creates its own robot_results subdirectory
+    - Uses root output directory for backward compatibility (unlike PyATS which uses subdirectory)
     - Manages complete Robot Framework lifecycle
     - Reuses existing RobotWriter and pabot components (DRY principle)
     """
@@ -66,8 +66,8 @@ class RobotOrchestrator:
             output_dir
         )  # Store base directory for merged data file access
         self.output_dir = (
-            self.base_output_dir / "robot_results"
-        )  # Robot works in its own subdirectory
+            self.base_output_dir
+        )  # Keep at root for backward compatibility
         self.merged_data_filename = merged_data_filename
 
         # Robot-specific parameters
@@ -92,9 +92,9 @@ class RobotOrchestrator:
         """Execute the complete Robot Framework test lifecycle.
 
         This method:
-        1. Creates the robot_results output directory
+        1. Creates the output directory (uses root for backward compatibility)
         2. Renders Robot test templates using RobotWriter
-        3. Creates merged data model file in robot_results directory
+        3. Creates merged data model file in output directory
         4. Executes tests using pabot (unless render_only mode)
 
         Follows the same pattern as PyATSOrchestrator.run_tests().
