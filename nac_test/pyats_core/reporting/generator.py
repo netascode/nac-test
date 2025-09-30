@@ -94,10 +94,16 @@ class ReportGenerator:
 
         # Move files from temp location to final location
         if self.temp_data_dir.exists():
+            # Debug the number of jsonl files in the temp directory
+            logger.debug(
+                f"Found {len(list(self.temp_data_dir.glob('*.jsonl')))} jsonl files in the temp directory"
+            )
             for jsonl_file in self.temp_data_dir.glob("*.jsonl"):
                 jsonl_file.rename(self.html_report_data_dir / jsonl_file.name)
             # Clean up temp directory
             self.temp_data_dir.rmdir()
+        else:
+            logger.warning("No temp data directory found at %s", self.temp_data_dir)
 
         # Find all test result files in html_report_data directory
         result_files = list(self.html_report_data_dir.glob("*.jsonl"))

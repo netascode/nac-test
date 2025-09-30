@@ -20,15 +20,13 @@ logger = logging.getLogger(__name__)
 class DeviceInventoryDiscovery:
     """Handles device inventory discovery from test architectures."""
 
-    def __init__(self, output_dir: Path, merged_data_filename: str):
+    def __init__(self, merged_data_filepath: Path):
         """Initialize device inventory discovery.
 
         Args:
-            output_dir: Directory containing merged data model
-            merged_data_filename: Name of the merged data model file
+            merged_data_filepath: Path to the merged data model file
         """
-        self.output_dir = Path(output_dir)
-        self.merged_data_filename = merged_data_filename
+        self.merged_data_filepath = merged_data_filepath
 
     def get_device_inventory(self, test_files: List[Path]) -> List[Dict[str, Any]]:
         """Get device inventory from test architecture in an architecture-agnostic way.
@@ -75,15 +73,11 @@ class DeviceInventoryDiscovery:
             logger.error("No test files provided for device inventory discovery")
             return []
 
-        # Load merged data model that contains device information
-        # Each architecture decides how to parse this data model
-        merged_data_path = self.output_dir / self.merged_data_filename
-
-        if not merged_data_path.exists():
-            logger.error(f"Merged data model not found at {merged_data_path}")
+        if not self.merged_data_filepath.exists():
+            logger.error(f"Merged data model not found at {self.merged_data_filepath}")
             return []
 
-        with open(merged_data_path, "r") as f:
+        with open(self.merged_data_filepath, "r") as f:
             data_model = yaml.safe_load(f)
 
         # Import the first D2D test file - all D2D tests in an architecture share the same SSH base class
@@ -165,7 +159,7 @@ class DeviceInventoryDiscovery:
                             return list(devices)  # Ensure we return a list
 
         except Exception as e:
-            logger.error(f"Failed to get device inventory from {test_file}: {e}")
+            logger.error(f"Failed to get device inventory from {test_file}: {e}", exc_info=True)
 
         # This should never happen if the architecture follows the contract btw
 

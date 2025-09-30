@@ -1,6 +1,6 @@
 from nac_test.pyats_core.common.base_test import NACTestBase
 from nac_test.pyats_core.ssh.command_cache import CommandCache
-from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
+from nac_test.pyats_core.broker.broker_client import BrokerClient, BrokerCommandExecutor
 import asyncio
 from pyats import aetest
 import logging
@@ -53,45 +53,68 @@ class SSHTestBase(NACTestBase):
         return None
 
     @aetest.setup
-    def setup_ssh_context(self) -> None:
+    def setup(self) -> None:
         """
-        Automatically sets up the SSH context before the test runs.
+        Combined setup that calls parent setup then sets up SSH context.
 
-        This lifecycle hook is called by PyATS automatically. It reads the
-        device info and the main data model from environment variables set by
-        the orchestrator. It then establishes a connection and injects the
-        necessary tools (like self.execute_command) into the test instance.
+        This lifecycle hook is called by PyATS automatically. It first calls
+        the parent NACTestBase setup, then reads device info and establishes
+        SSH connections with necessary tools (like self.execute_command).
 
         If a PyATS testbed is available, it also ensures the device connection
         is established through the testbed for Genie parser access.
         """
+        # Call parent setup first
+        super().setup()
+
+        # Then do SSH-specific setup
         # These environment variables are not set by the user, but are passed
         # by the nac-test orchestrator to provide context to this isolated
         # PyATS job process.
         device_info_json = os.environ.get("DEVICE_INFO")
-        data_file_path = os.environ.get("DATA_FILE")
+        data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH")
 
         if not device_info_json or not data_file_path:
             self.failed(
-                "Framework Error: DEVICE_INFO and DATA_FILE env vars must be set by the orchestrator."
+                "Framework Error: DEVICE_INFO and MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH env vars must be set by the orchestrator."
             )
             return
 
         try:
             self.device_info = json.loads(device_info_json)
-            with open(data_file_path, "r") as f:
-                self.data_model = json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError) as e:
+        except json.JSONDecodeError as e:
             self.failed(
-                f"Framework Error: Could not load test context from environment: {e}"
+                f"Framework Error: Could not parse device info JSON from environment variable DEVICE_INFO: {e}\n"
+                f"Raw content: {device_info_json}"
             )
             return
 
-        # The ConnectionManager is instantiated within the job's process space
+        # try:
+        #     with open(data_file_path, "r") as f:
+        #         self.data_model = json.load(f)
+        # except FileNotFoundError:
+        #     self.failed(
+        #         f"Framework Error: Could not find data model file at path: {data_file_path}"
+        #     )
+        #     return
+        # except json.JSONDecodeError as e:
+        #     try:
+        #         with open(data_file_path, "r") as f:
+        #             file_content = f.read()
+        #     except Exception:
+        #         file_content = "[Could not read file content]"
+
+        #     self.failed(
+        #         f"Framework Error: Could not parse JSON from data model file '{data_file_path}': {e}\n"
+        #         f"File content: {file_content}"
+        #     )
+        #     return
+
+        # The BrokerClient communicates with the centralized connection broker
         # We'll attach it to the runtime object for the test's duration
-        if not hasattr(self.parent, "connection_manager"):
-            self.parent.connection_manager = DeviceConnectionManager()
-        self.connection_manager = self.parent.connection_manager
+        if not hasattr(self.parent, "broker_client"):
+            self.parent.broker_client = BrokerClient()
+        self.broker_client = self.parent.broker_client
 
         try:
             hostname = self.device_info["hostname"]
@@ -125,13 +148,19 @@ class SSHTestBase(NACTestBase):
                 # Store the testbed device connection for command execution
                 self.connection = self.testbed_device
             else:
-                # Fall back to standard nac-test connection
+                # Use broker client for connection management
                 self.logger.info(
-                    f"Connecting to device {hostname} via nac-test connection manager"
+                    f"Connecting to device {hostname} via connection broker"
                 )
-                self.connection = await self.connection_manager.get_connection(
-                    hostname, self.device_info
-                )
+                # Connect to broker service
+                await self.broker_client.connect()
+
+                # Create broker command executor for this device
+                self.connection = BrokerCommandExecutor(hostname, self.broker_client)
+
+                # Ensure device connection through broker
+                await self.connection.connect()
+
         except Exception as e:
             # Connection failed - raise exception to be caught in setup_ssh_context
             error_msg = f"Failed to connect to device {hostname}: {str(e)}"
@@ -220,10 +249,18 @@ class SSHTestBase(NACTestBase):
                 test_instance._track_ssh_command(command, cached_output)
                 return cached_output
 
-            # Execute command via Unicon in thread pool
+            # Execute command via connection (broker or testbed device)
             logging.debug(f"Executing command: {command}")
-            loop = asyncio.get_event_loop()
-            output = await loop.run_in_executor(None, connection.execute, command)
+
+            if hasattr(connection, "execute") and asyncio.iscoroutinefunction(
+                connection.execute
+            ):
+                # Broker command executor - already async
+                output = await connection.execute(command)
+            else:
+                # Testbed device or legacy connection - run in thread pool
+                loop = asyncio.get_event_loop()
+                output = await loop.run_in_executor(None, connection.execute, command)
 
             # Convert output to string to ensure consistent type
             output_str = str(output)

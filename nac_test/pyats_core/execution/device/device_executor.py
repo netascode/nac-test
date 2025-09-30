@@ -8,9 +8,12 @@ import logging
 from pathlib import Path
 from typing import List, Any, Optional
 import os
+import json
 
 from .testbed_generator import TestbedGenerator
 from nac_test.utils.path_setup import get_pythonpath_for_tests
+from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
+from nac_test.pyats_core.execution.job_generator import JobGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +23,8 @@ class DeviceExecutor:
 
     def __init__(
         self,
-        job_generator: Any,
-        subprocess_runner: Any,
+        job_generator: JobGenerator,
+        subprocess_runner: SubprocessRunner,
         test_status: dict[str, Any],
         test_dir: Path,
     ):
@@ -93,11 +96,11 @@ class DeviceExecutor:
                 env.update(
                     {
                         "HOSTNAME": hostname,
-                        "DEVICE_INFO": str(device),  # Will be loaded by the job file
+                        "DEVICE_INFO": json.dumps(device),  # Will be loaded by the job file
                         # Environment variables are used because PyATS tests run as separate subprocess processes.
                         # The merged data file is created by main.py at the base output level.
-                        "DATA_MODEL_PATH": str(
-                            self.subprocess_runner.output_dir.parent
+                        "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
+                            self.subprocess_runner.output_dir
                             / "merged_data_model_test_variables.yaml"
                         ),
                         "PYTHONPATH": get_pythonpath_for_tests(
@@ -157,7 +160,7 @@ class DeviceExecutor:
                 return Path(archive_path) if archive_path else None
 
             except Exception as e:
-                logger.error(f"Error running tests for device {hostname}: {e}")
+                logger.error(f"Error running tests for device {hostname}: {e}", exc_info=True)
 
                 # Mark all tests as errored
                 for test_file in test_files:

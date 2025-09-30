@@ -10,22 +10,39 @@ import logging
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, List, TypeVar, Callable, Awaitable, Optional, Iterator
+from typing import (
+    Any,
+    Dict,
+    List,
+    TypeVar,
+    Callable,
+    Awaitable,
+    Optional,
+    Iterator,
+    Union,
+)
 from functools import lru_cache
 from datetime import datetime
 from contextlib import contextmanager
 
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
+from nac_test.pyats_core.common.types import (
+    VerificationResult,
+    BaseVerificationResultOptional,
+    ApiDetails,
+)
 from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.batching_reporter import BatchingReporter
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
+from nac_test.pyats_core.reporting.types import ResultStatus
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
 import markdown  # type: ignore[import-untyped]
 import asyncio
 import httpx
 
 T = TypeVar("T")
+
 
 
 class NACTestBase(aetest.Testcase):
@@ -37,12 +54,58 @@ class NACTestBase(aetest.Testcase):
     - Result collection during test execution
     - Connection pooling and retry logic (HTTP/API)
     - SSH command execution and tracking (SSH/Device)
+    - Class variable enforcement for test metadata
     """
+
+    # Test metadata class variables (enforced in subclasses)
+    TEST_TYPE_NAME: Optional[str] = None
 
     # Explicit attribute types to avoid type comments later
     batching_reporter: Optional[BatchingReporter] = None
     step_interceptor: Optional[StepInterceptor] = None
     _current_test_context: Optional[str] = None
+
+    # Status mapping for converting string status to ResultStatus enum
+    STATUS_MAPPING: Dict[str, ResultStatus] = {
+        "PASSED": ResultStatus.PASSED,
+        "FAILED": ResultStatus.FAILED,
+        "SKIPPED": ResultStatus.SKIPPED,
+        "ERRORED": ResultStatus.ERRORED,
+        "INFO": ResultStatus.INFO,
+    }
+
+    def __init_subclass__(cls, **kwargs):
+        """Enforce required class variables in subclasses.
+
+        This method validates that concrete test classes define required
+        class variables for proper test metadata and reporting.
+
+        Args:
+            **kwargs: Additional keyword arguments passed to super().__init_subclass__
+
+        Raises:
+            TypeError: If required class variables are not defined
+        """
+        super().__init_subclass__(**kwargs)
+
+        # Skip validation for known abstract intermediate classes
+        # These classes extend NACTestBase but are still meant to be subclassed
+        abstract_classes = {
+            'APICTestBase',
+            'SSHTestBase',
+            'NACTestBase'  # Include self to handle edge cases
+        }
+
+        if cls.__name__ in abstract_classes:
+            return
+
+        # Enforce TEST_TYPE_NAME for concrete test classes
+        if not hasattr(cls, 'TEST_TYPE_NAME') or cls.TEST_TYPE_NAME is None:
+            raise TypeError(
+                f"{cls.__name__} must define TEST_TYPE_NAME class variable. "
+                f"Example: TEST_TYPE_NAME = 'BGP Peer' or 'Bridge Domain' or 'BFD Session'. "
+                f"This should be a human-readable name for the type of network element being tested."
+            )
 
     @classmethod
     @lru_cache(maxsize=1)
@@ -145,17 +208,23 @@ class NACTestBase(aetest.Testcase):
         Sets up the TestResultCollector with a unique test ID and
         attaches pre-rendered metadata for efficient report generation.
         """
-        # Get output directory from DATA_FILE path (already set by orchestrator)
-        data_file = Path(os.environ.get("DATA_FILE", ""))
-        output_dir = data_file.parent if data_file else Path(".")
+        # Get output directory from merged data model file path (already set by orchestrator)
+        data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", "")
+        data_file = Path(data_file_path) if data_file_path else None
+        if data_file and data_file.exists():
+            # Use base output directory (parent of data file) to avoid conflict with pyats_results cleanup
+            base_output_dir = data_file.parent
+            output_dir = base_output_dir / "pyats_results"  # Keep for emergency dumps
+        else:
+            base_output_dir = Path(".")
+            output_dir = Path(".")
 
         # Store output directory for emergency dumps
         self.output_dir = output_dir
 
-        # Create html_report_data subdirectory inside pyats_results/html_reports
-        # Note: pyats_results doesn't exist yet during test execution, so we use a temp location
-        # The orchestrator will move these files to the correct location after extraction
-        html_report_data_dir = output_dir / "html_report_data_temp"
+        # Create html_report_data_temp in base output directory to avoid deletion during report generation
+        # This directory will NOT include pyats_results path to prevent cleanup conflicts
+        html_report_data_dir = base_output_dir / "html_report_data_temp"
         html_report_data_dir.mkdir(exist_ok=True)
 
         # Generate unique test ID
@@ -242,7 +311,9 @@ class NACTestBase(aetest.Testcase):
             self.batching_reporter = None
             self.step_interceptor = None
         except Exception as e:
-            self.logger.error("Failed to initialize batching reporter: %s", e)
+            self.logger.error(
+                "Failed to initialize batching reporter: %s", e, exc_info=True
+            )
             self.batching_reporter = None
             self.step_interceptor = None
 
@@ -334,7 +405,9 @@ class NACTestBase(aetest.Testcase):
             except AttributeError as e:
                 # Reporter became None or lost attributes
                 if "NoneType" in str(e):
-                    self.logger.error("PyATS reporter became None: %s", e)
+                    self.logger.error(
+                        "PyATS reporter became None: %s", e, exc_info=True
+                    )
                     break  # No point retrying if reporter is gone
                 else:
                     raise  # Re-raise unexpected AttributeErrors
@@ -684,10 +757,20 @@ class NACTestBase(aetest.Testcase):
         Returns:
             Merged data model dictionary
         """
-        data_file = Path(os.environ.get("DATA_FILE", "merged_data_model.yaml"))
+        data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH")
+        if not data_file_path:
+            raise FileNotFoundError(
+                "Environment variable MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH is not set"
+            )
+
+        data_file = Path(data_file_path)
+        if not data_file.exists():
+            raise FileNotFoundError(
+                f"Merged data model file not found: {data_file_path}"
+            )
+
         with open(data_file, "r") as f:
             data = yaml.safe_load(f)
-            # Ensure we always return a dict
             return data if isinstance(data, dict) else {}
 
     # =========================================================================
@@ -1075,6 +1158,747 @@ class NACTestBase(aetest.Testcase):
             yield
         finally:
             self.clear_test_context()
+
+    # =========================
+    # RESULT PROCESSING METHODS
+    # =========================
+
+    def format_verification_result(
+        self,
+        status: ResultStatus,
+        context: Dict[str, Any],
+        reason: str,
+        api_duration: float = 0,
+        api_details: Optional[ApiDetails] = None,
+    ) -> BaseVerificationResultOptional:
+        """Standard result formatter for all verification types.
+
+        This method provides a consistent format for verification results across
+        all test types in the NAC test framework. It standardizes the structure
+        and content of result dictionaries to ensure uniform reporting and
+        processing throughout the system.
+
+        Args:
+            status: Verification outcome (PASSED, FAILED, SKIPPED from ResultStatus enum)
+            context: Complete context object containing all verification details
+                    including tenant names, item identifiers, resolved names, and
+                    any additional metadata needed for reporting and debugging
+            reason: Customer-facing explanation of the verification result
+                   Should be descriptive and actionable for network operators
+            api_duration: API call timing in seconds for performance analysis
+                        Defaults to 0 for non-API operations
+            api_details: Optional API transaction details including URL, response code,
+                       and response body for debugging purposes
+
+        Returns:
+            dict: Standardized result structure for nac-test framework containing:
+                - status: The verification outcome
+                - context: Complete context object for detailed reporting
+                - reason: Human-readable explanation of the result
+                - api_duration: Performance timing information
+                - timestamp: When the result was created for audit trail
+                - api_details: Optional API transaction details (if provided)
+
+        Example:
+            result = self.format_verification_result(
+                status=ResultStatus.PASSED,
+                context={
+                    "tenant_name": "production",
+                    "bd_name": "web_bd",
+                    "resolved_bd_name": "web_bd_prod"
+                },
+                reason="Bridge Domain attributes verified successfully",
+                api_duration=0.245
+            )
+        """
+        result = {
+            "status": status,
+            "context": context,
+            "reason": reason,
+            "api_duration": api_duration,
+            "timestamp": time.time(),
+        }
+
+        if api_details:
+            result["api_details"] = api_details
+
+        return result
+
+    def create_comprehensive_skip_result(
+        self,
+        test_scope: str,
+        schema_paths: List[str],
+        managed_objects: List[str],
+        interpretation: str,
+        api_queries: Optional[List[str]] = None,
+        additional_sections: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Generate detailed skip results with comprehensive documentation.
+
+        This method creates standardized skip result documentation that provides
+        valuable information about test scope even when no configuration exists.
+        It generates detailed skip results that help with deployment planning
+        and feature coverage analysis by documenting exactly what the test
+        would verify if data were present.
+
+        Args:
+            test_scope: Description of what this test verifies (e.g., "BGP Peers Operational State")
+            schema_paths: List of data model paths checked (e.g., ["tenants[].l3outs[]"])
+            managed_objects: List of technology-specific managed objects (e.g., ["bgpPeerEntry", "fvBD"])
+            interpretation: Explanation of why test is skipped and what it means
+            api_queries: Optional list of API query pattern examples for documentation
+            additional_sections: Optional list of additional documentation sections
+
+        Returns:
+            dict: Detailed skip result with comprehensive documentation
+
+        Example:
+            skip_result = self.create_comprehensive_skip_result(
+                test_scope="BGP Peers Operational State",
+                schema_paths=["tenants[].l3outs[].bgp_peers[]"],
+                managed_objects=["bgpPeerEntry", "bgpPeerAf"],
+                interpretation="No BGP peers are configured in L3Outs",
+                api_queries=[
+                    "/api/node/mo/topology/pod-*/node-*/sys/bgp/inst/dom-*/peer-*/ent-*.json",
+                    "/api/node/class/bgpPeerEntry.json"
+                ]
+            )
+        """
+        # Build the detailed skip documentation message
+        skip_details = []
+
+        # Validate technology-specific implementation for non-generic base classes
+        if self.__class__.__name__ != "NACTestBase":
+            if not hasattr(self, "TECHNOLOGY_NAME"):
+                raise NotImplementedError(
+                    f"{self.__class__.__name__} must define TECHNOLOGY_NAME class variable. "
+                    f"Example: TECHNOLOGY_NAME = 'ACI' or 'SD-WAN' or 'Catalyst Center'"
+                )
+            if not hasattr(self, "MANAGED_OBJECTS_LABEL"):
+                raise NotImplementedError(
+                    f"{self.__class__.__name__} must define MANAGED_OBJECTS_LABEL class variable. "
+                    f"Example: MANAGED_OBJECTS_LABEL = 'ACI managed objects' or 'SD-WAN managed objects'"
+                )
+
+        # Use technology-specific name if available, otherwise generic
+        technology_name = getattr(self, "TECHNOLOGY_NAME", "Network")
+        skip_details.append(f"📋 **{technology_name} Test Scope Documentation**\\n")
+
+        # Use technology-specific label if available, otherwise generic
+        managed_objects_label = getattr(
+            self, "MANAGED_OBJECTS_LABEL", "managed objects"
+        )
+        skip_details.append(
+            f"\\n**This test verifies the following {managed_objects_label}:**"
+        )
+
+        # Add managed objects documentation
+        for managed_object in managed_objects:
+            skip_details.append(f"• {managed_object}")
+
+        # Add data model paths section
+        skip_details.append("\\n**Data model paths checked:**")
+        for path in schema_paths:
+            skip_details.append(f"• `{path}`")
+
+        # Add API queries if provided
+        if api_queries:
+            skip_details.append("\\n**API Queries:**")
+            for query in api_queries:
+                skip_details.append(f"• `{query}`")
+
+        # Add any additional sections
+        if additional_sections:
+            for section in additional_sections:
+                skip_details.append(f"\\n{section}")
+
+        # Add standard conclusion sections
+        skip_details.append("\\n**Result:** No matching configurations found")
+        skip_details.append(f"**Interpretation:** {interpretation}")
+        skip_details.append(
+            "**Action:** Test appropriately SKIPPED - no verification needed"
+        )
+
+        detailed_message = "\\n".join(skip_details)
+
+        # Log the skip information
+        self.logger.info(f"Test will be skipped - {interpretation}")
+        self.logger.info(f"Checked {len(schema_paths)} data model paths")
+
+        # Create and return the skip result using the centralized formatter
+        return self.format_verification_result(
+            status=ResultStatus.SKIPPED,
+            context={
+                "test_scope": test_scope,
+                "schema_paths_checked": schema_paths,
+                "managed_objects": managed_objects,
+                "skip_type": "no_data_found",
+            },
+            reason=detailed_message,
+            api_duration=0,
+        )
+
+    # =========================
+    # RESULT PROCESSING METHODS
+    # =========================
+
+    def build_api_context(
+        self, test_type: str, primary_item: str, **additional_context
+    ) -> str:
+        """Build standardized API context strings for result tracking.
+
+        This method creates consistent API context strings that link API calls
+        to test results in HTML reports. It follows a standardized format:
+        "{TestType}: {PrimaryItem} ({Key}: {Value}, {Key}: {Value})"
+
+        Args:
+            test_type: Type of test or verification being performed
+                      Examples: "BGP Peer", "Bridge Domain", "BFD Session"
+            primary_item: Primary identifier for the item being tested
+                         Examples: IP address, name, ID
+            **additional_context: Additional context items as key-value pairs
+                                Examples: tenant="MyTenant", node="101", l3out="External"
+
+        Returns:
+            str: Formatted API context string for result collector
+
+        Examples:
+            >>> self.build_api_context("BGP Peer", "192.168.1.1", tenant="Production", node="101")
+            "BGP Peer: 192.168.1.1 (Tenant: Production, Node: 101)"
+
+            >>> self.build_api_context("Bridge Domain", "web_bd", tenant="MyTenant", vrf="common")
+            "Bridge Domain: web_bd (Tenant: MyTenant, Vrf: common)"
+
+            >>> self.build_api_context("BFD Session", "10.0.0.1")
+            "BFD Session: 10.0.0.1"
+        """
+        context_parts = [f"{test_type}: {primary_item}"]
+
+        if additional_context:
+            # Sort keys for consistent ordering and capitalize first letter
+            details = ", ".join(
+                f"{k.title()}: {v}" for k, v in sorted(additional_context.items())
+            )
+            context_parts.append(f"({details})")
+
+        return " ".join(context_parts)
+
+    def add_verification_result(
+        self,
+        status: Union[str, ResultStatus],
+        test_type: str,
+        item_identifier: str,
+        details: Optional[str] = None,
+        test_context: Optional[str] = None,
+    ) -> None:
+        """Add verification result to collector with standardized messaging.
+
+        This method standardizes the format of messages added to the result collector,
+        ensuring consistent messaging patterns across all test types. It eliminates
+        the need for manual message building in individual tests. It accepts either
+        string status values (e.g., "PASSED", "FAILED") or ResultStatus enum values.
+
+        Args:
+            status: Result status - either string ("PASSED", "FAILED", "SKIPPED")
+                   or ResultStatus enum value. String values are automatically
+                   converted to enum using the centralized STATUS_MAPPING.
+            test_type: Type of verification being performed
+                      Examples: "BGP peer", "Bridge Domain subnet", "BFD session"
+            item_identifier: Identifier for the specific item being tested
+                           Examples: IP address, name, ID
+            details: Additional details for failed/skipped results
+                    For FAILED: error description or reason for failure
+                    For SKIPPED: reason why verification was skipped
+                    For PASSED: optional additional success details (usually None)
+            test_context: API context string for linking to commands/API calls
+                        Use build_api_context() to create consistent format
+
+        Message Patterns:
+            - PASSED: "{test_type} {item_identifier} verified successfully"
+            - FAILED: "{test_type} {item_identifier} failed: {details}"
+            - SKIPPED: "{test_type} {item_identifier} skipped: {details}"
+
+        Examples:
+            >>> # Success case with enum
+            >>> self.add_verification_result(
+            ...     ResultStatus.PASSED,
+            ...     "BGP peer",
+            ...     "192.168.1.1",
+            ...     test_context="BGP Peer: 192.168.1.1 (Tenant: Production, Node: 101)"
+            ... )
+
+            >>> # Success case with string (more convenient)
+            >>> self.add_verification_result(
+            ...     "PASSED",
+            ...     "BGP peer",
+            ...     "192.168.1.1",
+            ...     test_context="BGP Peer: 192.168.1.1 (Tenant: Production, Node: 101)"
+            ... )
+            # Both add: "BGP peer 192.168.1.1 verified successfully"
+
+            >>> # Failure case with string from result dictionary
+            >>> self.add_verification_result(
+            ...     result["status"],  # e.g., "FAILED"
+            ...     "Bridge Domain subnet",
+            ...     "10.1.1.1/24",
+            ...     details=result.get("reason", "Unknown error"),
+            ...     test_context="Bridge Domain: web_bd (Tenant: Production)"
+            ... )
+            # Adds: "Bridge Domain subnet 10.1.1.1/24 failed: Connection timeout"
+        """
+        # Convert string status to enum if needed
+        if isinstance(status, ResultStatus):
+            status_enum = status
+        elif isinstance(status, str):
+            status_enum = self.map_string_status_to_enum(status)
+        else:
+            # Raise an error here in case type of status is not respected
+            # by implemented test automation.
+            raise ValueError(f"Invalid status: {status}")
+
+        # Build standardized message based on status
+        if status_enum == ResultStatus.PASSED:
+            message = f"{test_type} {item_identifier} verified successfully"
+            if details:
+                message += f" - {details}"
+        elif status_enum == ResultStatus.FAILED:
+            if details:
+                message = f"{test_type} {item_identifier} failed: {details}"
+            else:
+                message = f"{test_type} {item_identifier} failed"
+        elif status_enum == ResultStatus.SKIPPED:
+            if details:
+                message = f"{test_type} {item_identifier} skipped: {details}"
+            else:
+                message = f"{test_type} {item_identifier} skipped"
+        else:
+            # Handle other status types (ERRORED, INFO, etc.)
+            if details:
+                message = f"{test_type} {item_identifier} {status_enum.value.lower()}: {details}"
+            else:
+                message = f"{test_type} {item_identifier} {status_enum.value.lower()}"
+
+        # Add to result collector
+        self.result_collector.add_result(
+            status_enum, message, test_context=test_context
+        )
+
+    def map_string_status_to_enum(self, status_string: str) -> ResultStatus:
+        """Convert string status to ResultStatus enum using centralized mapping.
+
+        This helper method provides a convenient way to convert string status values
+        (like "PASSED", "FAILED", "SKIPPED") to their corresponding ResultStatus enum
+        values. It uses the centralized STATUS_MAPPING class variable.
+
+        Args:
+            status_string: String status value (e.g., "PASSED", "FAILED", "SKIPPED")
+
+        Returns:
+            ResultStatus: Corresponding enum value, or ResultStatus.INFO if not found
+
+        Examples:
+            >>> status = self.map_string_status_to_enum("PASSED")
+            >>> # Returns ResultStatus.PASSED
+
+            >>> status = self.map_string_status_to_enum("UNKNOWN")
+            >>> # Returns ResultStatus.INFO (fallback)
+        """
+        return self.STATUS_MAPPING.get(status_string, ResultStatus.INFO)
+
+    # =========================
+    # RESULT PROCESSING METHODS
+    # =========================
+
+    def categorize_results(
+        self, results: List[VerificationResult]
+    ) -> tuple[List[VerificationResult], List[VerificationResult], List[VerificationResult]]:
+        """Categorize verification results into failed, skipped, and passed lists.
+
+        This method provides the standard categorization logic used by all
+        process_results_with_steps() implementations. It separates results
+        based on their status field for further processing and reporting.
+
+        Handles both string status values ("FAILED", "SKIPPED", "PASSED") and
+        ResultStatus enum values (ResultStatus.FAILED, etc.).
+
+        Args:
+            results: List of verification result dictionaries containing status field
+
+        Returns:
+            tuple: (failed_results, skipped_results, passed_results)
+                - failed_results: Results with status "FAILED" or ResultStatus.FAILED
+                - skipped_results: Results with status "SKIPPED" or ResultStatus.SKIPPED
+                - passed_results: Results with status "PASSED" or ResultStatus.PASSED
+
+        Example:
+            >>> failed, skipped, passed = self.categorize_results(results)
+            >>> self.logger.info(f"Summary: {len(passed)} passed, {len(failed)} failed, {len(skipped)} skipped")
+        """
+        failed = [
+            r
+            for r in results
+            if isinstance(r, dict)
+            and (r.get("status") == "FAILED" or r.get("status") == ResultStatus.FAILED)
+        ]
+        skipped = [
+            r
+            for r in results
+            if isinstance(r, dict)
+            and (
+                r.get("status") == "SKIPPED" or r.get("status") == ResultStatus.SKIPPED
+            )
+        ]
+        passed = [
+            r
+            for r in results
+            if isinstance(r, dict)
+            and (r.get("status") == "PASSED" or r.get("status") == ResultStatus.PASSED)
+        ]
+
+        return failed, skipped, passed
+
+    def log_result_summary(
+        self,
+        test_type: str,
+        failed: List[VerificationResult],
+        skipped: List[VerificationResult],
+        passed: List[VerificationResult],
+        total_results: Optional[int] = None,
+    ) -> None:
+        """Log standardized result summary for process_results_with_steps implementations.
+
+        This method provides consistent result summary logging across all test types.
+        It supports both simple and detailed logging formats based on the test's needs.
+
+        Args:
+            test_type: Descriptive name for the test type (e.g. "Bridge Domain Subnet", "BGP Peer")
+            failed: List of failed verification results
+            skipped: List of skipped verification results
+            passed: List of passed verification results
+            total_results: Optional total count override (defaults to sum of all results)
+
+        Example Usage:
+            >>> failed, skipped, passed = self.categorize_results(results)
+            >>> self.log_result_summary("BGP Peer", failed, skipped, passed)
+
+            >>> # With custom total count
+            >>> self.log_result_summary("Bridge Domain", failed, skipped, passed, len(all_items))
+        """
+        if total_results is None:
+            total_results = len(failed) + len(skipped) + len(passed)
+
+        # Log detailed summary with counts
+        self.logger.info(f"{test_type} Verification Summary:")
+        self.logger.info(f"  - Total configurations processed: {total_results}")
+        self.logger.info(f"  - Passed: {len(passed)}")
+        self.logger.info(f"  - Failed: {len(failed)}")
+        self.logger.info(f"  - Skipped: {len(skipped)}")
+
+    def determine_overall_test_result(
+        self,
+        failed: List[VerificationResult],
+        skipped: List[VerificationResult],
+        passed: List[VerificationResult],
+    ) -> None:
+        """Determine and set overall test result using standardized abstract methods.
+
+        This method provides the common if/elif/else logic pattern used across all
+        process_results_with_steps implementations. It now uses the standardized
+        abstract formatting methods that subclasses must implement.
+
+        Args:
+            failed: List of failed verification results
+            skipped: List of skipped verification results
+            passed: List of passed verification results
+
+        The method automatically calls the appropriate abstract formatter:
+        - format_failure_message() for failures
+        - format_success_message() for successes
+        - format_skip_message() for all-skipped scenarios
+
+        Example Usage:
+            >>> failed, skipped, passed = self.categorize_results(results)
+            >>> self.determine_overall_test_result(failed, skipped, passed)
+        """
+        if failed:
+            self.failed()
+
+        elif skipped and not passed:
+            self.skipped()
+
+        else:
+            self.passed()
+
+    # ===================================
+    # REQUIRED RESULT FORMATTING METHODS
+    # ===================================
+
+    def extract_step_context(self, result: VerificationResult) -> Dict[str, Any]:
+        """Extract relevant context fields from a result for PyATS step creation.
+
+        This method should extract the key identification fields from the result
+        that are needed to create meaningful step names and descriptions.
+
+        Args:
+            result: Individual verification result dictionary
+
+        Returns:
+            dict: Context object with standardized keys for step formatting
+
+        Examples:
+            # BGP test might return:
+            return {
+                "peer_ip": result["peer"]["ip"],
+                "tenant": result["peer"].get("tenant", "N/A"),
+                "node": result["peer"].get("node", "N/A")
+            }
+
+            # Bridge Domain test might return:
+            return {
+                "tenant": result["context"].get("tenant_name", "N/A"),
+                "bd": result["context"].get("bd_name", "N/A"),
+                "subnet": result["context"].get("subnet_ip", "N/A")
+            }
+        """
+        raise NotImplementedError("Subclasses must implement extract_step_context()")
+
+    def format_step_name(self, context: Dict[str, Any]) -> str:
+        """Format the PyATS step name from extracted context.
+
+        Creates a concise, informative step name that will appear in PyATS reports.
+        Should be descriptive enough to identify the specific verification.
+
+        Args:
+            context: Context dict returned by extract_step_context()
+
+        Returns:
+            str: Formatted step name for PyATS reporting
+
+        Examples:
+            return f"Verify BGP peer {context['peer_ip']} on node {context['node']}"
+            return f"Verify BD '{context['tenant']}/{context['bd']}' -> Subnet '{context['subnet']}'"
+        """
+        raise NotImplementedError("Subclasses must implement format_step_name()")
+
+    def format_step_description(self, context: Dict[str, Any]) -> str:
+        """Format detailed step description with key verification details.
+
+        Provides detailed information that will be logged for each step,
+        including the verification context and any relevant metadata.
+
+        Args:
+            context: Context dict returned by extract_step_context()
+
+        Returns:
+            str: Detailed description for logging and troubleshooting
+
+        Examples:
+            return f"Tenant: {context['tenant']}, L3Out: {context['l3out']}, Node: {context['node']}"
+            return f"Tenant: {context['tenant']}, BD: {context['bd']}, Subnet: {context['subnet']}"
+        """
+        raise NotImplementedError("Subclasses must implement format_step_description()")
+
+    def process_results_with_steps(self, results: List[VerificationResult], steps) -> None:
+        """Generic result processor with customization through abstract methods.
+
+        This method provides a standardized implementation of result processing
+        that eliminates code duplication across test files. It handles:
+        - Result categorization and summary logging
+        - PyATS step creation with customizable formatting
+        - HTML report collection integration
+        - Overall test result determination
+
+        Subclasses customize behavior by implementing the required methods:
+        - extract_step_context(): Extracts relevant fields from results
+        - format_step_name(): Creates PyATS step names
+        - format_step_description(): Creates detailed descriptions
+        - build_item_identifier_from_context(): Creates HTML report identifiers
+
+        Note: These methods will raise NotImplementedError if not overridden by subclasses.
+        Cannot use ABC due to metaclass conflict with aetest.Testcase.
+
+        Args:
+            results: List of verification result dictionaries
+            steps: PyATS steps object for creating test step reports
+        """
+        # Categorize results for summary and decision making
+        failed, skipped, passed = self.categorize_results(results)
+
+        # Log standardized result summary using abstract method
+        test_type = self.__class__.TEST_TYPE_NAME
+        self.log_result_summary(test_type, failed, skipped, passed)
+
+        # Log skipped items with customizable formatting
+        if skipped:
+            self.log_skipped_items(skipped)
+
+        # Create PyATS steps for each result using abstract methods
+        self.create_pyats_steps(results, steps)
+
+        # Determine overall test result using existing helper
+        self.determine_overall_test_result(failed, skipped, passed)
+
+    def create_pyats_steps(self, results: List[VerificationResult], steps) -> None:
+        """Create PyATS steps from results using abstract formatting methods.
+
+        This method handles the generic step creation logic while delegating
+        formatting decisions to abstract methods implemented by subclasses.
+
+        Args:
+            results: List of verification result dictionaries
+            steps: PyATS steps object for creating test step reports
+        """
+        for result in results:
+            if not isinstance(result, dict):
+                self.logger.warning(f"Unexpected result format: {result}")
+                continue
+
+            try:
+                # Use abstract methods for customization
+                context = self.extract_step_context(result)
+                step_name = self.format_step_name(context)
+
+                with steps.start(step_name, continue_=True) as step:
+                    # Add result to HTML collector using existing helpers
+                    self.add_step_to_html_collector(result, context)
+
+                    # Log step details for troubleshooting
+                    if self.should_log_step_details(result):
+                        description = self.format_step_description(context)
+                        self.logger.info(description)
+                        self.log_additional_step_details(result, context)
+
+                    # Set PyATS step status
+                    self.set_step_status(step, result)
+
+            except Exception as e:
+                self.logger.error(f"Error creating step for result: {e}", exc_info=True)
+                # Create a generic failure step for this result
+                with steps.start("Failed to process result", continue_=True) as step:
+                    step.failed(f"Step creation failed: {str(e)}")
+
+    def log_skipped_items(self, skipped_results: List[VerificationResult]) -> None:
+        """Log skipped items with customizable formatting.
+
+        Default implementation provides generic logging. Subclasses can override
+        to provide domain-specific skip item formatting.
+
+        Args:
+            skipped_results: List of skipped verification results
+        """
+        test_type = self.__class__.TEST_TYPE_NAME
+        self.logger.warning(f"{len(skipped_results)} {test_type} verifications skipped")
+
+        # Log first few skipped items as examples
+        for i, result in enumerate(skipped_results[:5]):  # Limit to first 5
+            try:
+                context = self.extract_step_context(result)
+                reason = result.get("reason", "Unknown reason")
+                self.logger.info(f"  - Skipped: {context} ({reason})")
+            except Exception:
+                self.logger.info(f"  - Skipped result: {result.get('reason', 'Unknown')}")
+
+        if len(skipped_results) > 5:
+            self.logger.info(f"  ... and {len(skipped_results) - 5} more")
+
+    def should_log_step_details(self, result: VerificationResult) -> bool:
+        """Determine whether to log detailed information for a step.
+
+        Default implementation logs details for failed results only.
+        Subclasses can override to customize when details are logged.
+
+        Args:
+            result: Verification result dictionary
+
+        Returns:
+            bool: True if step details should be logged
+        """
+        return result.get("status") == "FAILED"
+
+    def log_additional_step_details(self, result: VerificationResult, context: Dict[str, Any]) -> None:
+        """Log additional step-specific details.
+
+        Default implementation does nothing. Subclasses can override to add
+        custom logging for each step (e.g., API details, timing info).
+
+        Args:
+            result: Full verification result dictionary
+            context: Context dict returned by extract_step_context()
+        """
+        pass  # Default: no additional logging
+
+    def add_step_to_html_collector(self, result: VerificationResult, context: Dict[str, Any]) -> None:
+        """Add step result to HTML report collector.
+
+        Default implementation uses existing result collector methods.
+        Subclasses can override for custom HTML report integration.
+
+        Args:
+            result: Full verification result dictionary
+            context: Context dict returned by extract_step_context()
+        """
+        # Use existing standardized method for adding results
+        # This assumes subclass has implemented proper item identification
+        try:
+            # Extract basic info for the standardized method
+            status = result.get("status", "UNKNOWN")
+            reason = result.get("reason", "")
+            test_type = self.__class__.TEST_TYPE_NAME
+
+            # Try to build item identifier from context
+            item_identifier = self.build_item_identifier_from_context(result, context)
+
+            # Use existing add_verification_result method
+            self.add_verification_result(
+                status=status,
+                test_type=test_type.lower(),  # Convert to lowercase for consistency
+                item_identifier=item_identifier,
+                details=reason if reason else None,
+                test_context=None  # Could be enhanced by subclasses
+            )
+        except Exception as e:
+            self.logger.debug(f"Failed to add result to HTML collector: {e}")
+            # Don't fail the test due to reporting issues
+
+    def build_item_identifier_from_context(self, result: VerificationResult, context: Dict[str, Any]) -> str:
+        """Build item identifier string from extracted context for HTML reporting.
+
+        This method should create a concise, descriptive identifier that uniquely
+        identifies the test item in HTML reports and logs. The identifier should
+        be meaningful to network operators for troubleshooting.
+
+        Args:
+            result: Full verification result dictionary
+            context: Context dict returned by extract_step_context()
+
+        Returns:
+            str: Item identifier for HTML reporting
+
+        Examples:
+            return f"{context['peer_ip']} on node {context['node']}"
+            return f"BD '{context['tenant']}/{context['bd']}' -> Subnet '{context['subnet']}'"
+            return f"RR {context['rr_node']} to Leaf {context['leaf_node']}"
+        """
+        raise NotImplementedError("Subclasses must implement build_item_identifier_from_context()")
+
+    def set_step_status(self, step, result: VerificationResult) -> None:
+        """Set PyATS step status based on verification result.
+
+        Args:
+            step: PyATS step object
+            result: Verification result dictionary
+        """
+        status = result.get("status", "UNKNOWN")
+        reason = result.get("reason", "Unknown reason")
+
+        if status == "PASSED" or status == ResultStatus.PASSED:
+            step.passed()
+        elif status == "SKIPPED" or status == ResultStatus.SKIPPED:
+            step.skipped(reason)
+        elif status == "FAILED" or status == ResultStatus.FAILED:
+            step.failed(reason)
+        else:
+            step.errored(f"Unknown status: {status}")  # Handle unexpected statuses
 
     @aetest.cleanup
     def cleanup(self) -> None:
