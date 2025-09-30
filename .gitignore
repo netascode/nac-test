@@ -75,9 +75,14 @@ ENV/
 tmp/
 
 .mypy_cache/
+.ruff_cache/
 
 # Pabot
 .pabotsuitenames
 
-# Application execution logs (as well as Claude Code logs)
+# Application execution logs (including Claude Code logs)
 logs/
+
+# Claude configuration
+.claude/
+CLAUDE.md
