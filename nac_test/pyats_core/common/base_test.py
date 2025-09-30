@@ -74,38 +74,38 @@ class NACTestBase(aetest.Testcase):
         "INFO": ResultStatus.INFO,
     }
 
-    def __init_subclass__(cls, **kwargs):
-        """Enforce required class variables in subclasses.
+    # def __init_subclass__(cls, **kwargs):
+    #     """Enforce required class variables in subclasses.
 
-        This method validates that concrete test classes define required
-        class variables for proper test metadata and reporting.
+    #     This method validates that concrete test classes define required
+    #     class variables for proper test metadata and reporting.
 
-        Args:
-            **kwargs: Additional keyword arguments passed to super().__init_subclass__
+    #     Args:
+    #         **kwargs: Additional keyword arguments passed to super().__init_subclass__
 
-        Raises:
-            TypeError: If required class variables are not defined
-        """
-        super().__init_subclass__(**kwargs)
+    #     Raises:
+    #         TypeError: If required class variables are not defined
+    #     """
+    #     super().__init_subclass__(**kwargs)
 
-        # Skip validation for known abstract intermediate classes
-        # These classes extend NACTestBase but are still meant to be subclassed
-        abstract_classes = {
-            'APICTestBase',
-            'SSHTestBase',
-            'NACTestBase'  # Include self to handle edge cases
-        }
+    #     # Skip validation for known abstract intermediate classes
+    #     # These classes extend NACTestBase but are still meant to be subclassed
+    #     abstract_classes = {
+    #         'APICTestBase',
+    #         'SSHTestBase',
+    #         'NACTestBase'  # Include self to handle edge cases
+    #     }
 
-        if cls.__name__ in abstract_classes:
-            return
+    #     if cls.__name__ in abstract_classes:
+    #         return
 
-        # Enforce TEST_TYPE_NAME for concrete test classes
-        if not hasattr(cls, 'TEST_TYPE_NAME') or cls.TEST_TYPE_NAME is None:
-            raise TypeError(
-                f"{cls.__name__} must define TEST_TYPE_NAME class variable. "
-                f"Example: TEST_TYPE_NAME = 'BGP Peer' or 'Bridge Domain' or 'BFD Session'. "
-                f"This should be a human-readable name for the type of network element being tested."
-            )
+    #     # Enforce TEST_TYPE_NAME for concrete test classes
+    #     if not hasattr(cls, 'TEST_TYPE_NAME') or cls.TEST_TYPE_NAME is None:
+    #         raise TypeError(
+    #             f"{cls.__name__} must define TEST_TYPE_NAME class variable. "
+    #             f"Example: TEST_TYPE_NAME = 'BGP Peer' or 'Bridge Domain' or 'BFD Session'. "
+    #             f"This should be a human-readable name for the type of network element being tested."
+    #         )
 
     @classmethod
     @lru_cache(maxsize=1)
