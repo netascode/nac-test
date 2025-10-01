@@ -82,56 +82,84 @@ def get_status_style(status: Union[ResultStatus, str]) -> Dict[str, str]:
         return {"css_class": "neutral-status", "display_text": str(status)}
 
 
-def format_skip_message(message: str) -> str:
-    """Format enhanced skip messages with rich content.
+def format_result_message(message: str) -> str:
+    """Format result messages with rich content for all result types.
 
-    This filter formats skip messages that contain markdown-like formatting
-    (bullet points, bold text, code blocks) into proper HTML.
+    This universal filter formats messages containing markdown-like formatting
+    (bullet points, bold text, code blocks, line breaks) into proper HTML.
+    Works for PASSED, FAILED, SKIPPED, and all other result types.
+
+    The formatter detects and handles:
+    - Multiple newlines (paragraph breaks)
+    - Single newlines (line breaks)
+    - Bullet points (•) into HTML lists
+    - Bold text (**text**) into <strong> tags
+    - Code snippets (`code`) into <code> tags
+    - Special emoji markers for enhanced display
 
     Args:
-        message: Skip message potentially containing markdown-like formatting
+        message: Result message potentially containing markdown-like formatting
 
     Returns:
         HTML-formatted message with proper styling
+
+    Example:
+        >>> format_result_message("Error occurred\\n\\nPlease verify:\\n• Item 1\\n• Item 2")
+        "<p>Error occurred</p>\\n<p>Please verify:</p>\\n<ul>...</ul>"
     """
-    if not message or "📋" not in message:
-        # Not an enhanced skip message, return as-is
+    if not message:
         return message
 
-    # Convert markdown-like formatting to HTML
-    html = message
-
-    # Replace emoji
-    html = html.replace("📋", '<span style="font-size: 1.2em;">📋</span>')
-
-    # Convert bold text
     import re
 
+    html = message
+
+    # Replace common emoji markers with styled spans
+    html = html.replace("📋", '<span style="font-size: 1.2em;">📋</span>')
+    html = html.replace("✓", '<span style="color: var(--success);">✓</span>')
+    html = html.replace("✗", '<span style="color: var(--danger);">✗</span>')
+    html = html.replace("⚠", '<span style="color: var(--warning);">⚠</span>')
+
+    # Convert bold text (**text** -> <strong>)
     html = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", html)
 
-    # Convert bullet points to list items
+    # Convert bullet points to HTML lists
     lines = html.split("\n")
     formatted_lines = []
     in_list = False
 
     for line in lines:
-        if line.strip().startswith("•"):
+        stripped = line.strip()
+
+        # Handle bullet points
+        if stripped.startswith("•"):
             if not in_list:
-                formatted_lines.append('<ul class="skip-detail-list">')
+                formatted_lines.append('<ul class="result-detail-list">')
                 in_list = True
-            # Extract the content after the bullet
-            content = line.strip()[1:].strip()
-            # Check if it's a code item (contains backticks)
+            # Extract content after bullet
+            content = stripped[1:].strip()
+            # Convert inline code (`code` -> <code>)
             if "`" in content:
                 content = re.sub(r"`([^`]+)`", r"<code>\1</code>", content)
             formatted_lines.append(f"<li>{content}</li>")
         else:
+            # Close list if we were in one
             if in_list:
                 formatted_lines.append("</ul>")
                 in_list = False
-            if line.strip():
-                formatted_lines.append(f"<p>{line}</p>")
 
+            # Handle non-bullet lines
+            if stripped:
+                # Convert inline code in regular lines too
+                if "`" in stripped:
+                    stripped = re.sub(r"`([^`]+)`", r"<code>\1</code>", stripped)
+                formatted_lines.append(f"<p>{stripped}</p>")
+            elif formatted_lines:  # Preserve intentional blank lines between content
+                # Only add blank paragraph if there's already content
+                # This creates visual spacing between sections
+                formatted_lines.append('<p class="spacer"></p>')
+
+    # Close list if still open at end
     if in_list:
         formatted_lines.append("</ul>")
 
@@ -151,7 +179,7 @@ def get_jinja_environment(directory: Optional[Union[str, Path]] = None) -> Envir
 
     Returns:
         Configured Jinja2 Environment instance with:
-            - Custom filters registered (format_datetime, status_style)
+            - Custom filters registered (format_datetime, status_style, format_result_message)
             - Strict undefined handling
             - Whitespace trimming enabled
             - 'do' extension for template logic
@@ -175,7 +203,9 @@ def get_jinja_environment(directory: Optional[Union[str, Path]] = None) -> Envir
     )
     environment.filters["format_datetime"] = format_datetime
     environment.filters["status_style"] = get_status_style
-    environment.filters["format_skip_message"] = format_skip_message
+    environment.filters["format_result_message"] = (
+        format_result_message  # Universal formatter for all result types
+    )
 
     return environment
 
