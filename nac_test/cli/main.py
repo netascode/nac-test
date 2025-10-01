@@ -197,6 +197,16 @@ MaxParallelDevices = Annotated[
 ]
 
 
+MinimalReports = Annotated[
+    bool,
+    typer.Option(
+        "--minimal-reports",
+        help="Only include detailed command outputs for failed/errored tests in HTML reports (80-95%% artifact size reduction).",
+        envvar="NAC_TEST_MINIMAL_REPORTS",
+    ),
+]
+
+
 Version = Annotated[
     bool,
     typer.Option(
@@ -222,6 +232,7 @@ def main(
     pyats: PyATS = False,
     robot: Robot = False,
     max_parallel_devices: Optional[MaxParallelDevices] = None,
+    minimal_reports: MinimalReports = False,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
@@ -276,6 +287,7 @@ def main(
         render_only=render_only,
         dry_run=dry_run,
         max_parallel_devices=max_parallel_devices,
+        minimal_reports=minimal_reports,
         verbosity=verbosity,
         dev_pyats_only=pyats,
         dev_robot_only=robot,
