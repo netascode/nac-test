@@ -305,73 +305,142 @@
             margin-bottom: 15px;
         }
 
+        /* ===== Universal Result Message Formatting (All Result Types) ===== */
+
         .result-message {
             margin: 0;
+            line-height: 1.6;
         }
-        
-        /* CSS for nested result-command structure */
+
+        /* Apply consistent formatting to all result messages */
+        .result-message p {
+            margin: 0.5em 0;
+            line-height: 1.6;
+        }
+
+        .result-message p:first-child {
+            margin-top: 0;
+        }
+
+        .result-message p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Spacer paragraphs for visual separation */
+        .result-message p.spacer {
+            height: 0.75em;
+            margin: 0;
+        }
+
+        /* Strong emphasis in all result messages */
+        .result-message strong {
+            font-weight: 600;
+            color: inherit;  /* Inherit from parent result type */
+        }
+
+        /* Inline code formatting in all result messages */
+        .result-message code {
+            background-color: rgba(52, 73, 94, 0.08);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+
+        /* Universal bullet list styling for all result types */
+        .result-detail-list {
+            margin: 0.75em 0;
+            padding-left: 1.5em;
+            list-style: disc outside;
+        }
+
+        .result-detail-list li {
+            margin: 0.4em 0;
+            line-height: 1.5;
+            color: inherit;  /* Inherit from parent result type */
+        }
+
+        .result-detail-list li code {
+            /* Inline code within list items */
+            font-size: 0.85em;
+        }
+
+        /* Emoji styling in result messages */
+        .result-message span[style*="font-size: 1.2em"] {
+            margin-right: 0.3em;
+        }
+
+        /* ===== Result Type Specific Styling ===== */
+
+        /* Skip results - softer appearance */
+        .result-skip {
+            background-color: rgba(149, 165, 166, 0.08);
+            border-left: 4px solid var(--skip);
+            color: #5d6d7e;
+        }
+
+        .result-skip .result-message strong {
+            color: #5a6c7d;
+        }
+
+        .result-skip .result-message code {
+            background-color: rgba(149, 165, 166, 0.1);
+        }
+
+        /* Failed results - clear error presentation */
+        .result-fail {
+            background-color: rgba(231, 76, 60, 0.05);
+            border-left: 4px solid var(--danger);
+            color: #5a2321;
+        }
+
+        .result-fail .result-message strong {
+            color: #c0392b;
+            font-weight: 600;
+        }
+
+        .result-fail .result-message code {
+            background-color: rgba(231, 76, 60, 0.08);
+            color: #922b21;
+        }
+
+        /* Passed results - subtle success indication */
+        .result-pass {
+            background-color: rgba(46, 204, 113, 0.05);
+            border-left: 4px solid var(--success);
+            color: #1e4620;
+        }
+
+        .result-pass .result-message strong {
+            color: #27ae60;
+        }
+
+        .result-pass .result-message code {
+            background-color: rgba(46, 204, 113, 0.08);
+            color: #186a3b;
+        }
+
+        /* ===== Nested Result-Command Structure ===== */
+
         .result-header.expandable {
             cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .result-commands {
             margin-top: 15px;
             padding-left: 20px;
             border-left: 2px solid #e9ecef;
         }
-        
+
         .cmd-count {
             font-size: 0.9em;
             color: #6c757d;
             font-style: italic;
-        }
-        
-        /* Enhanced skip result styling */
-        .result-skip {
-            background-color: rgba(149, 165, 166, 0.08);
-            border-left: 4px solid var(--skip);
-            color: #5d6d7e;
-        }
-        
-        .result-skip .result-message {
-            white-space: pre-line;
-            line-height: 1.8;
-        }
-        
-        .result-skip .result-message strong {
-            color: #5a6c7d;              /* Softer than #34495e */
-            display: inline-block;        /* Less prominent than block */
-            font-weight: 500;            /* Medium weight instead of bold */
-            margin: 8px 0 3px 0;         /* Reduced margins */
-        }
-        
-        .skip-detail-list {
-            margin: 8px 0;               /* Reduced from 10px */
-            padding-left: 18px;          /* Slightly less indentation */
-            list-style: disc outside;    /* Simple standard bullets */
-        }
-        
-        .skip-detail-list li {
-            margin: 3px 0;               /* Reduced spacing */
-            line-height: 1.5;            /* Slightly tighter */
-            color: #6c7b8a;              /* Softer text color */
-        }
-        
-        /* Remove the custom bullet styling */
-        .skip-detail-list li:before {
-            display: none;
-        }
-        
-        .result-skip .result-message code {
-            background-color: rgba(149, 165, 166, 0.1);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
-            font-size: 0.9em;
-            color: #2c3e50;
         }
 
         footer {
@@ -697,15 +766,11 @@
                         <div class="result-item result-{{ result_style.css_class|replace('-status', '') }}">
                             
                             <!-- Result header (clickable if has commands) -->
-                            <div class="result-header {% if result.context and result.context in context_to_commands %}expandable{% endif %}" 
+                            <div class="result-header {% if result.context and result.context in context_to_commands %}expandable{% endif %}"
                                  onclick="{% if result.context and result.context in context_to_commands %}toggleCollapse('result-commands-{{ loop.index }}'){% endif %}">
                                 <div class="result-message">
-                                    {% if result.status == 'skipped' %}
-                                        <!-- Enhanced skip result with formatted content -->
-                                        {{ result.message|format_skip_message|safe }}
-                                    {% else %}
-                                        {{ result.message }}
-                                    {% endif %}
+                                    <!-- Universal formatting applied to ALL result types for consistent, readable output -->
+                                    {{ result.message|format_result_message|safe }}
                                 </div>
                                 {% if result.context and result.context in context_to_commands %}
                                     <span class="cmd-count">({{ context_to_commands[result.context]|length }} commands)</span>
