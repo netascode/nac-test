@@ -38,6 +38,7 @@ class CombinedOrchestrator:
         render_only: bool = False,
         dry_run: bool = False,
         max_parallel_devices: Optional[int] = None,
+        minimal_reports: bool = False,
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
@@ -56,6 +57,7 @@ class CombinedOrchestrator:
             render_only: Only render tests without executing (Robot only)
             dry_run: Dry run mode (Robot only)
             max_parallel_devices: Max parallel devices for PyATS D2D tests
+            minimal_reports: Only include command outputs for failed/errored tests (PyATS only)
             verbosity: Logging verbosity level
             dev_pyats_only: Development mode - run only PyATS tests (skip Robot)
             dev_robot_only: Development mode - run only Robot Framework tests (skip PyATS)
@@ -75,6 +77,7 @@ class CombinedOrchestrator:
 
         # PyATS-specific parameters
         self.max_parallel_devices = max_parallel_devices
+        self.minimal_reports = minimal_reports
         self.verbosity = verbosity
 
         # Development modes
@@ -102,6 +105,7 @@ class CombinedOrchestrator:
                 test_dir=self.templates_dir,
                 output_dir=self.output_dir,
                 merged_data_filename=self.merged_data_filename,
+                minimal_reports=self.minimal_reports,
             )
             if self.max_parallel_devices is not None:
                 orchestrator.max_parallel_devices = self.max_parallel_devices
@@ -152,6 +156,7 @@ class CombinedOrchestrator:
                 test_dir=self.templates_dir,
                 output_dir=self.output_dir,
                 merged_data_filename=self.merged_data_filename,
+                minimal_reports=self.minimal_reports,
             )
             if self.max_parallel_devices is not None:
                 orchestrator.max_parallel_devices = self.max_parallel_devices

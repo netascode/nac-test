@@ -52,6 +52,7 @@ class PyATSOrchestrator:
         test_dir: Path,
         output_dir: Path,
         merged_data_filename: str,
+        minimal_reports: bool = False,
     ):
         """Initialize the PyATS orchestrator.
 
@@ -60,6 +61,7 @@ class PyATSOrchestrator:
             test_dir: Directory containing PyATS test files
             output_dir: Base output directory (orchestrator creates pyats_results subdirectory)
             merged_data_filename: Name of the merged data model file
+            minimal_reports: Only include command outputs for failed/errored tests in reports
         """
         self.data_paths = data_paths
         self.test_dir = Path(test_dir).resolve()
@@ -70,6 +72,7 @@ class PyATSOrchestrator:
             self.base_output_dir / "pyats_results"
         )  # PyATS works in its own subdirectory
         self.merged_data_filename = merged_data_filename
+        self.minimal_reports = minimal_reports
 
         # Track test status by type for combined summary
         self.api_test_status: Dict[str, Dict[str, Any]] = {}
@@ -580,7 +583,9 @@ class PyATSOrchestrator:
 
         # Use MultiArchiveReportGenerator for all cases (handles single archive too)
         # Pass base directory to avoid double-nesting of pyats_results directories
-        generator = MultiArchiveReportGenerator(self.base_output_dir)
+        generator = MultiArchiveReportGenerator(
+            self.base_output_dir, minimal_reports=self.minimal_reports
+        )
         result = await generator.generate_reports_from_archives(archive_paths)
 
         if result["status"] in ["success", "partial"]:
