@@ -18,23 +18,24 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
 def format_datetime(dt_str: Union[str, datetime]) -> str:
-    """Format an ISO datetime string to a human-readable format.
+    """Format an ISO datetime string to a human-readable format with milliseconds.
 
     Args:
         dt_str: Either an ISO format datetime string or a datetime object.
 
     Returns:
-        Formatted datetime string in "YYYY-MM-DD HH:MM" format.
+        Formatted datetime string in "YYYY-MM-DD HH:MM:SS.mmm" format.
 
     Example:
         >>> format_datetime("2024-01-15T14:30:45.123456")
-        "2024-01-15 14:30"
+        "2024-01-15 14:30:45.123"
     """
     if isinstance(dt_str, str):
         dt = datetime.fromisoformat(dt_str)
     else:
         dt = dt_str
-    return dt.strftime("%Y-%m-%d %H:%M")
+    # Include milliseconds (first 3 digits of microseconds)
+    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 
 def get_status_style(status: Union[ResultStatus, str]) -> Dict[str, str]:
