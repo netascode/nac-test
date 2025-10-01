@@ -37,14 +37,16 @@ class MultiArchiveReportGenerator:
         env: Jinja2 environment for template rendering
     """
 
-    def __init__(self, output_dir: Path) -> None:
+    def __init__(self, output_dir: Path, minimal_reports: bool = False) -> None:
         """Initialize the multi-archive report generator.
 
         Args:
             output_dir: Base output directory for all operations
+            minimal_reports: Only include command outputs for failed/errored tests
         """
         self.output_dir = output_dir
         self.pyats_results_dir = output_dir / "pyats_results"
+        self.minimal_reports = minimal_reports
 
         # Initialize Jinja2 environment for combined summary
         self.env = get_jinja_environment(TEMPLATES_DIR)
@@ -168,7 +170,9 @@ class MultiArchiveReportGenerator:
             await self._extract_archive(archive_path, extract_dir)
 
             # Run ReportGenerator on extracted contents
-            generator = ReportGenerator(self.output_dir, extract_dir)
+            generator = ReportGenerator(
+                self.output_dir, extract_dir, minimal_reports=self.minimal_reports
+            )
             result = await generator.generate_all_reports()
 
             # Add archive info to result

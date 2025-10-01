@@ -48,7 +48,11 @@ class ReportGenerator:
     """
 
     def __init__(
-        self, output_dir: Path, pyats_results_dir: Path, max_concurrent: int = 10
+        self,
+        output_dir: Path,
+        pyats_results_dir: Path,
+        max_concurrent: int = 10,
+        minimal_reports: bool = False,
     ) -> None:
         """Initialize the report generator.
 
@@ -57,6 +61,7 @@ class ReportGenerator:
             pyats_results_dir: Directory where PyATS results are extracted
             max_concurrent: Maximum number of concurrent report generations.
                            Defaults to 10.
+            minimal_reports: Only include command outputs for failed/errored tests
         """
         self.output_dir = output_dir
         self.pyats_results_dir = pyats_results_dir
@@ -67,6 +72,7 @@ class ReportGenerator:
         # Temporary location where tests write their JSON files
         self.temp_data_dir = output_dir / "html_report_data_temp"
         self.max_concurrent = max_concurrent
+        self.minimal_reports = minimal_reports
         self.failed_reports: List[str] = []
 
         # Initialize Jinja2 environment using our templates module
@@ -203,6 +209,17 @@ class ReportGenerator:
             logger.error(f"Failed to read JSONL file {jsonl_path}: {e}")
             raise
 
+        # Filter command executions if minimal_reports is enabled and test passed
+        # Only include commands for failed or errored tests
+        overall_status = summary.get("overall_status")
+        if self.minimal_reports and overall_status not in ["failed", "errored"]:
+            # Clear command executions for passed/skipped tests to save space
+            command_count = len(command_executions)
+            command_executions = []
+            logger.debug(
+                f"Minimal reports mode: Excluded {command_count} command executions for {overall_status} test"
+            )
+
         # Return in expected format for existing templates
         return {
             "test_id": metadata.get("test_id") or summary.get("test_id"),
@@ -211,7 +228,7 @@ class ReportGenerator:
             "duration": summary.get("duration"),
             "results": results,
             "command_executions": command_executions,
-            "overall_status": summary.get("overall_status"),
+            "overall_status": overall_status,
             "metadata": summary.get("metadata", {}),
         }
 
