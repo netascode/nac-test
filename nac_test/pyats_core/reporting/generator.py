@@ -390,8 +390,22 @@ class ReportGenerator:
                 except Exception as e:
                     logger.warning(f"Failed to read metadata from {result_file}: {e}")
 
-            # Sort results by timestamp
-            all_results.sort(key=lambda x: x["timestamp"])
+            # Sort results by status priority (failed first), then timestamp
+            # Priority: Failed/Errored → Blocked → Skipped → Passed → Aborted
+            status_priority = {
+                "failed": 0,
+                "errored": 0,
+                "blocked": 1,
+                "skipped": 2,
+                "passed": 3,
+                "aborted": 4,
+            }
+            all_results.sort(
+                key=lambda x: (
+                    status_priority.get(x["status"], 99),  # Unknown statuses go to end
+                    x["timestamp"],
+                )
+            )
 
             # Calculate statistics
             total_tests = len(all_results)
