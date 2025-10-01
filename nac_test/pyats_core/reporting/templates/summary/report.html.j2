@@ -88,6 +88,29 @@
             padding: 20px;
             border-radius: 8px;
             text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .summary-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--shadow);
+        }
+
+        .summary-item:focus {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .summary-item.active {
+            opacity: 1 !important;
+            box-shadow: 0 0 0 3px var(--accent);
+            transform: scale(1.05);
+        }
+
+        .summary-item.filtered-out {
+            opacity: 0.4;
         }
 
         .summary-item h3 {
@@ -236,6 +259,72 @@
             text-decoration: none;
         }
 
+        /* Filter indicator styles */
+        .filter-indicator {
+            background: linear-gradient(135deg, var(--accent), var(--info));
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .filter-indicator.active {
+            display: flex;
+        }
+
+        .filter-indicator strong {
+            text-transform: capitalize;
+        }
+
+        .filter-indicator button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .filter-indicator button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Sortable table header styles */
+        table.results-table thead th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        table.results-table thead th.sortable:hover {
+            background: var(--secondary);
+        }
+
+        table.results-table thead th.sortable::after {
+            content: ' ↕';
+            opacity: 0.5;
+        }
+
+        table.results-table thead th.sortable.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        table.results-table thead th.sortable.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
+        /* Hidden row for filtering */
+        tr.hidden {
+            display: none !important;
+        }
+
         /* Responsive table */
         @media (max-width: 768px) {
             table.results-table thead {
@@ -301,15 +390,27 @@
                     <p>Total Tests</p>
                     <h3>{{ total_tests }}</h3>
                 </div>
-                <div class="summary-item passed">
+                <div class="summary-item passed"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Filter by passed tests"
+                     data-filter="passed">
                     <p>Passed</p>
                     <h3>{{ passed_tests }}</h3>
                 </div>
-                <div class="summary-item failed">
+                <div class="summary-item failed"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Filter by failed tests"
+                     data-filter="failed">
                     <p>Failed</p>
                     <h3>{{ failed_tests }}</h3>
                 </div>
-                <div class="summary-item skipped">
+                <div class="summary-item skipped"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Filter by skipped tests"
+                     data-filter="skipped">
                     <p>Skipped</p>
                     <h3>{{ skipped_tests }}</h3>
                 </div>
@@ -323,21 +424,26 @@
             </div>
         </div>
 
+        <div id="filter-indicator" class="filter-indicator">
+            <span>Showing: <strong id="filter-type"></strong> tests</span>
+            <button onclick="clearFilter()" aria-label="Clear filter">✕ Clear Filter</button>
+        </div>
+
         <h2>Test Results</h2>
         <div class="results-table-container">
             <table class="results-table">
                 <thead>
                     <tr>
-                        <th>Test Name</th>
-                        <th>Status</th>
-                        <th>Date</th>
+                        <th class="sortable" data-column="0" role="button" tabindex="0" aria-label="Sort by test name">Test Name</th>
+                        <th class="sortable" data-column="1" role="button" tabindex="0" aria-label="Sort by status">Status</th>
+                        <th class="sortable" data-column="2" role="button" tabindex="0" aria-label="Sort by date">Date</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for result in results %}
                     {% set status_style = result.status|status_style %}
-                    <tr>
+                    <tr data-status="{{ result.status }}">
                         <td data-label="Test Name">{{ result.title }}</td>
                         <td data-label="Status" class="status-cell {{ status_style.css_class }}">
                             {{ status_style.display_text }}
@@ -358,5 +464,147 @@
             <p>Generated by Cisco's Network as Code <code>nac-test</code> Tool</p>
         </footer>
     </div>
+
+    <script>
+        // State management
+        let currentFilter = '';
+        let sortState = { column: null, direction: 'asc' };
+
+        // Filter functionality
+        function filterTests(status) {
+            // Toggle filter on/off if clicking same status
+            currentFilter = (currentFilter === status) ? '' : status;
+
+            const rows = document.querySelectorAll('.results-table tbody tr');
+            const filterIndicator = document.getElementById('filter-indicator');
+            const filterType = document.getElementById('filter-type');
+            const summaryItems = document.querySelectorAll('.summary-item[data-filter]');
+
+            if (currentFilter) {
+                // Apply filter
+                rows.forEach(row => {
+                    const rowStatus = row.getAttribute('data-status');
+                    if (rowStatus === currentFilter) {
+                        row.classList.remove('hidden');
+                    } else {
+                        row.classList.add('hidden');
+                    }
+                });
+
+                // Update visual feedback on summary cards
+                summaryItems.forEach(item => {
+                    const itemFilter = item.getAttribute('data-filter');
+                    if (itemFilter === currentFilter) {
+                        item.classList.add('active');
+                        item.classList.remove('filtered-out');
+                    } else {
+                        item.classList.remove('active');
+                        item.classList.add('filtered-out');
+                    }
+                });
+
+                // Show filter indicator
+                filterType.textContent = currentFilter;
+                filterIndicator.classList.add('active');
+            } else {
+                // Clear filter
+                rows.forEach(row => row.classList.remove('hidden'));
+                summaryItems.forEach(item => {
+                    item.classList.remove('active', 'filtered-out');
+                });
+                filterIndicator.classList.remove('active');
+            }
+        }
+
+        function clearFilter() {
+            currentFilter = '';
+            filterTests('');
+        }
+
+        // Sort functionality with direction toggle
+        function sortTable(column) {
+            const table = document.querySelector('.results-table tbody');
+            const rows = Array.from(table.querySelectorAll('tr'));
+            const headers = document.querySelectorAll('.results-table thead th.sortable');
+
+            // Determine sort direction
+            if (sortState.column === column) {
+                sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.column = column;
+                sortState.direction = 'asc';
+            }
+
+            // Update header visual indicators
+            headers.forEach((header, idx) => {
+                header.classList.remove('sort-asc', 'sort-desc');
+                if (idx === column) {
+                    header.classList.add(sortState.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+
+            // Sort rows
+            rows.sort((a, b) => {
+                const aText = a.children[column].textContent.trim();
+                const bText = b.children[column].textContent.trim();
+
+                let comparison = 0;
+                // Numeric comparison for dates or numbers, otherwise string comparison
+                const aNum = parseFloat(aText);
+                const bNum = parseFloat(bText);
+
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    comparison = aNum - bNum;
+                } else {
+                    comparison = aText.localeCompare(bText);
+                }
+
+                return sortState.direction === 'asc' ? comparison : -comparison;
+            });
+
+            // Re-append sorted rows
+            rows.forEach(row => table.appendChild(row));
+        }
+
+        // Event delegation for summary card clicks
+        document.querySelector('.summary-grid').addEventListener('click', (e) => {
+            const card = e.target.closest('.summary-item[data-filter]');
+            if (card) {
+                filterTests(card.getAttribute('data-filter'));
+            }
+        });
+
+        // Event delegation for table header clicks
+        document.querySelector('.results-table thead').addEventListener('click', (e) => {
+            const header = e.target.closest('th.sortable');
+            if (header) {
+                const column = parseInt(header.getAttribute('data-column'));
+                sortTable(column);
+            }
+        });
+
+        // Keyboard support for summary cards (Enter/Space)
+        document.querySelector('.summary-grid').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                const card = e.target.closest('.summary-item[data-filter]');
+                if (card) {
+                    e.preventDefault();
+                    filterTests(card.getAttribute('data-filter'));
+                }
+            }
+        });
+
+        // Keyboard support for table headers (Enter/Space)
+        document.querySelector('.results-table thead').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                const header = e.target.closest('th.sortable');
+                if (header) {
+                    e.preventDefault();
+                    const column = parseInt(header.getAttribute('data-column'));
+                    sortTable(column);
+                }
+            }
+        });
+    </script>
 </body>
 </html>
