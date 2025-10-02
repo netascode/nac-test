@@ -391,13 +391,13 @@ class ReportGenerator:
                     logger.warning(f"Failed to read metadata from {result_file}: {e}")
 
             # Sort results by status priority (failed first), then timestamp
-            # Priority: Failed/Errored → Blocked → Skipped → Passed → Aborted
+            # Priority: Failed/Errored → Blocked → Passed → Skipped → Aborted
             status_priority = {
                 "failed": 0,
                 "errored": 0,
                 "blocked": 1,
-                "skipped": 2,
-                "passed": 3,
+                "passed": 2,
+                "skipped": 3,
                 "aborted": 4,
             }
             all_results.sort(
