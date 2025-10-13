@@ -53,7 +53,7 @@ def _run_pabot_with_args(
         args.extend(["--exclude", SPLIT_TAG])
 
     if verbose:
-        args.append("--verbose")
+        args.extend(["--verbose", "--loglevel", "TRACE"])
     if dry_run:
         args.append("--dryrun")
 
@@ -63,8 +63,6 @@ def _run_pabot_with_args(
             str(outdir),
             "--skiponfailure",
             "non-critical",
-            # "-x",
-            # "xunit.xml",
             str(path),
         ]
     )
