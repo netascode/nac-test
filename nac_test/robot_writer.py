@@ -36,29 +36,31 @@ class TestCollector(SuiteVisitor):
     def __init__(self, filename: Path) -> None:
         self.test_names: list[str] = []
         self.suite_name: str
-        self.seen_testlevelsplit: bool  = False
+        self.seen_testlevelsplit: bool = False
 
         # convert the directory to Robot Suite syntax (ignoring root dir '/' in case an
         # absolute path is passsed, shouldn't happen)
-        self.suite_dirname = '.'.join([printable_name(p) for p in filename.parent.parts if p != '/'])
+        self.suite_dirname = ".".join(
+            [printable_name(p) for p in filename.parent.parts if p != "/"]
+        )
 
     def start_suite(self, suite: Any) -> None:
         if self.suite_dirname:
-            self.suite_name = self.suite_dirname + '.' + suite.full_name
+            self.suite_name = self.suite_dirname + "." + suite.full_name
         else:
             self.suite_name = suite.full_name
 
     def start_test(self, test: Any) -> None:
         """Visit a test case."""
         if self.suite_dirname:
-            test_name = self.suite_dirname + '.' + test.full_name
+            test_name = self.suite_dirname + "." + test.full_name
         else:
             test_name = test.full_name
         self.test_names.append(test_name)
 
         # as alternative we might also leverage Suite Metadata, which looks to be cleaner
         # as this is a suite-level settings (while tags are test case settings)
-        if 'nac:testlevelsplit' in test.tags:
+        if "nac:testlevelsplit" in test.tags:
             self.seen_testlevelsplit = True
 
 
@@ -247,10 +249,12 @@ class RobotWriter:
 
         # Process each rendered robot file
         for file_path in self.rendered_files:
-            if file_path.suffix == '.robot':
+            if file_path.suffix == ".robot":
                 try:
                     # Parse the robot file into a TestSuite object and visit it
-                    suite = TestSuite.from_file_system(str(file_path), allow_empty_suite=True)
+                    suite = TestSuite.from_file_system(
+                        str(file_path), allow_empty_suite=True
+                    )
                     collector = TestCollector(filename=file_path)
                     suite.visit(collector)
 
@@ -266,7 +270,9 @@ class RobotWriter:
                     logger.warning("Could not parse robot file %s: %s", file_path, e)
 
         logger.info("Creating ordering file: %s", output_path)
-        with open(output_path, 'w') as f:
-            f.write("# This file was created by nac-test, manual changes will be overwritten\n")
+        with open(output_path, "w") as f:
+            f.write(
+                "# This file was created by nac-test, manual changes will be overwritten\n"
+            )
             for entry in ordering_entries:
                 f.write(f"{entry}\n")
