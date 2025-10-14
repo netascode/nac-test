@@ -249,17 +249,17 @@ class RobotWriter:
         for file_path in self.rendered_files:
             if file_path.suffix == '.robot':
                 try:
-                    # Parse the robot file into a TestSuite object
+                    # Parse the robot file into a TestSuite object and visit it
                     suite = TestSuite.from_file_system(str(file_path), allow_empty_suite=True)
-
-                    # Collect test/suite names using visitor
                     collector = TestCollector(filename=file_path)
                     suite.visit(collector)
 
                     if collector.seen_testlevelsplit:
+                        # run test cases in parallel for those suites which have been refactored
                         for testcase in collector.test_names:
                             ordering_entries.append(f"--test {testcase}")
                     else:
+                        # non-refactored suites are run in a single pabot run
                         ordering_entries.append(f"--suite {collector.suite_name}")
 
                 except Exception as e:
