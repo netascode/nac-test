@@ -202,12 +202,13 @@ def main(
         writer = nac_test.robot_writer.RobotWriter(
             data, filters, tests, include, exclude
         )
-        writer.write(templates, output)
-        writer.create_ordering_file(output / nac_test.pabot.ORDERING_FILE)
+        writer.write(
+            templates, output, ordering_file=output / nac_test.pabot.ORDERING_FILE
+        )
         if not render_only:
             nac_test.pabot.run_pabot(
                 output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
             )
-    except Exception as e:
+    except OSError as e:
         logger.error(f"Error during execution: {e}")
         raise typer.Exit(code=1) from e

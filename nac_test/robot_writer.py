@@ -19,7 +19,7 @@ from jinja2 import (  # type: ignore
 )
 from nac_yaml import yaml
 from robot.api import SuiteVisitor, TestSuite  # type: ignore
-from robot.utils import printable_name
+from robot.utils import is_truthy, printable_name
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class TestCollector(SuiteVisitor):
     def __init__(self, filename: Path) -> None:
         self.test_names: list[str] = []
         self.suite_name: str
-        self.seen_testlevelsplit: bool = False
+        self.test_concurrency: bool = False
 
         # convert the directory to Robot Suite syntax (ignoring root dir '/' in case an
         # absolute path is passsed, shouldn't happen)
@@ -49,6 +49,8 @@ class TestCollector(SuiteVisitor):
             self.suite_name = self.suite_dirname + "." + suite.full_name
         else:
             self.suite_name = suite.full_name
+        if is_truthy(suite.metadata.get("Test Concurrency")):
+            self.test_concurrency = True
 
     def start_test(self, test: Any) -> None:
         """Visit a test case."""
@@ -57,11 +59,6 @@ class TestCollector(SuiteVisitor):
         else:
             test_name = test.full_name
         self.test_names.append(test_name)
-
-        # as alternative we might also leverage Suite Metadata, which looks to be cleaner
-        # as this is a suite-level settings (while tags are test case settings)
-        if "nac:testlevelsplit" in test.tags:
-            self.seen_testlevelsplit = True
 
 
 class RobotWriter:
@@ -107,7 +104,7 @@ class RobotWriter:
                         if spec.loader is not None:
                             spec.loader.exec_module(mod)
                             self.tests[mod.Test.name] = mod.Test
-        self.rendered_files: list[Path] = []
+        self.ordering_entries: list[str] = []
 
     def render_template(
         self, template_path: Path, output_path: Path, env: Environment, **kwargs: Any
@@ -141,7 +138,28 @@ class RobotWriter:
 
         with open(output_path, "w") as file:
             file.write(result)
-        self.rendered_files.append(output_path)
+
+        # parse the resulting files and check if a) has at least one test case
+        # and b) if it has the "Test Concurrency" metadata set indicating that it
+        # the individual tests can be run in parallel (helps for large suites with many test cases,
+        # like epg or l3out). Empty rendered suites without any test cases will be removed here.
+        suite = TestSuite.from_file_system(str(output_path), allow_empty_suite=True)
+        collector = TestCollector(filename=output_path)
+        suite.visit(collector)
+
+        if len(collector.test_names) == 0:
+            logger.info(
+                "Removing empty rendered robot file without any test cases: %s",
+                output_path,
+            )
+            os.remove(output_path)
+        elif collector.test_concurrency:
+            # run test cases in parallel for those suites which have been refactored
+            for testcase in collector.test_names:
+                self.ordering_entries.append(f"--test {testcase}")
+        else:
+            # non-refactored suites are run in a single pabot run
+            self.ordering_entries.append(f"--suite {collector.suite_name}")
 
     def _fix_duplicate_path(self, *paths: str) -> Path:
         """Helper function to detect existing paths with non-matching case.
@@ -156,7 +174,9 @@ class RobotWriter:
                 return Path(*paths[:-1], "_" + paths[-1])
         return Path(os.path.join(*paths))
 
-    def write(self, templates_path: Path, output_path: Path) -> None:
+    def write(
+        self, templates_path: Path, output_path: Path, ordering_file: Path | None = None
+    ) -> None:
         """Render Robot test suites."""
         env = Environment(  # nosec B701
             loader=FileSystemLoader(templates_path),
@@ -206,7 +226,11 @@ class RobotWriter:
                         attr = params[3]
                         elem = self.data
                         for p in path:
-                            elem = elem.get(p, {})
+                            try:
+                                elem = elem.get(p, {})
+                            except AttributeError:
+                                # corner case with empty data model ('NoneType' object has no attribute 'get')
+                                break
                         if not isinstance(elem, list):
                             continue
                         for item in elem:
@@ -242,37 +266,14 @@ class RobotWriter:
                 o_path = Path(output_path, rel, filename)
                 self.render_template(t_path, o_path, env)
 
-    def create_ordering_file(self, output_path: Path) -> None:
-        """Create a Pabot execution ordering file."""
+        if ordering_file and len(self.ordering_entries) > 0:
+            # sort the entries to keep the order by suite in the same way as robot/pabot would
+            self.ordering_entries.sort(key=lambda x: x.split(" ")[1])
 
-        ordering_entries: list[str] = []
-
-        # Process each rendered robot file
-        for file_path in self.rendered_files:
-            if file_path.suffix == ".robot":
-                try:
-                    # Parse the robot file into a TestSuite object and visit it
-                    suite = TestSuite.from_file_system(
-                        str(file_path), allow_empty_suite=True
-                    )
-                    collector = TestCollector(filename=file_path)
-                    suite.visit(collector)
-
-                    if collector.seen_testlevelsplit:
-                        # run test cases in parallel for those suites which have been refactored
-                        for testcase in collector.test_names:
-                            ordering_entries.append(f"--test {testcase}")
-                    else:
-                        # non-refactored suites are run in a single pabot run
-                        ordering_entries.append(f"--suite {collector.suite_name}")
-
-                except Exception as e:
-                    logger.warning("Could not parse robot file %s: %s", file_path, e)
-
-        logger.info("Creating ordering file: %s", output_path)
-        with open(output_path, "w") as f:
-            f.write(
-                "# This file was created by nac-test, manual changes will be overwritten\n"
-            )
-            for entry in ordering_entries:
-                f.write(f"{entry}\n")
+            logger.info(f"Creating ordering file: {ordering_file}")
+            with open(ordering_file, "w") as file:
+                file.write(
+                    "# This file was created by nac-test, manual changes will be overwritten\n"
+                )
+                for entry in self.ordering_entries:
+                    file.write(f"{entry}\n")
