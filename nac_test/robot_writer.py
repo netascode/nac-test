@@ -18,6 +18,8 @@ from jinja2 import (  # type: ignore
     Undefined,
 )
 from nac_yaml import yaml
+from robot.api import SuiteVisitor, TestSuite  # type: ignore
+from robot.utils import printable_name
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,38 @@ class StrictChainableUndefined(ChainableUndefined):
     __iter__ = __str__ = __len__ = Undefined._fail_with_undefined_error  # type: ignore
     __eq__ = __ne__ = __bool__ = __hash__ = Undefined._fail_with_undefined_error  # type: ignore
     __contains__ = Undefined._fail_with_undefined_error  # type: ignore
+
+
+class TestCollector(SuiteVisitor):
+    """Visitor to collect test or suite names to construct the pabot ordering file."""
+
+    def __init__(self, filename: Path) -> None:
+        self.test_names: list[str] = []
+        self.suite_name: str
+        self.seen_testlevelsplit: bool  = False
+
+        # convert the directory to Robot Suite syntax (ignoring root dir '/' in case an
+        # absolute path is passsed, shouldn't happen)
+        self.suite_dirname = '.'.join([printable_name(p) for p in filename.parent.parts if p != '/'])
+
+    def start_suite(self, suite: Any) -> None:
+        if self.suite_dirname:
+            self.suite_name = self.suite_dirname + '.' + suite.full_name
+        else:
+            self.suite_name = suite.full_name
+
+    def start_test(self, test: Any) -> None:
+        """Visit a test case."""
+        if self.suite_dirname:
+            test_name = self.suite_dirname + '.' + test.full_name
+        else:
+            test_name = test.full_name
+        self.test_names.append(test_name)
+
+        # as alternative we might also leverage Suite Metadata, which looks to be cleaner
+        # as this is a suite-level settings (while tags are test case settings)
+        if 'nac:testlevelsplit' in test.tags:
+            self.seen_testlevelsplit = True
 
 
 class RobotWriter:
@@ -71,6 +105,7 @@ class RobotWriter:
                         if spec.loader is not None:
                             spec.loader.exec_module(mod)
                             self.tests[mod.Test.name] = mod.Test
+        self.rendered_files: list[Path] = []
 
     def render_template(
         self, template_path: Path, output_path: Path, env: Environment, **kwargs: Any
@@ -104,6 +139,7 @@ class RobotWriter:
 
         with open(output_path, "w") as file:
             file.write(result)
+        self.rendered_files.append(output_path)
 
     def _fix_duplicate_path(self, *paths: str) -> Path:
         """Helper function to detect existing paths with non-matching case.
@@ -203,3 +239,34 @@ class RobotWriter:
 
                 o_path = Path(output_path, rel, filename)
                 self.render_template(t_path, o_path, env)
+
+    def create_ordering_file(self, output_path: Path) -> None:
+        """Create a Pabot execution ordering file."""
+
+        ordering_entries: list[str] = []
+
+        # Process each rendered robot file
+        for file_path in self.rendered_files:
+            if file_path.suffix == '.robot':
+                try:
+                    # Parse the robot file into a TestSuite object
+                    suite = TestSuite.from_file_system(str(file_path), allow_empty_suite=True)
+
+                    # Collect test/suite names using visitor
+                    collector = TestCollector(filename=file_path)
+                    suite.visit(collector)
+
+                    if collector.seen_testlevelsplit:
+                        for testcase in collector.test_names:
+                            ordering_entries.append(f"--test {testcase}")
+                    else:
+                        ordering_entries.append(f"--suite {collector.suite_name}")
+
+                except Exception as e:
+                    logger.warning("Could not parse robot file %s: %s", file_path, e)
+
+        logger.info("Creating ordering file: %s", output_path)
+        with open(output_path, 'w') as f:
+            f.write("# This file was created by nac-test, manual changes will be overwritten\n")
+            for entry in ordering_entries:
+                f.write(f"{entry}\n")

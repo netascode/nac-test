@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pabot.pabot
 
+ORDERING_FILE = "ordering.txt"
 
 def run_pabot(
     path: Path,
@@ -16,6 +17,8 @@ def run_pabot(
     include = include or []
     exclude = exclude or []
     args = ["--pabotlib", "--pabotlibport", "0"]
+    if (path / ORDERING_FILE).exists():
+        args.extend(["--ordering", str(path / ORDERING_FILE)])
     if verbose:
         args.append("--verbose")
     if dry_run:

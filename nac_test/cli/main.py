@@ -203,6 +203,7 @@ def main(
             data, filters, tests, include, exclude
         )
         writer.write(templates, output)
+        writer.create_ordering_file(output / nac_test.pabot.ORDERING_FILE)
         if not render_only:
             nac_test.pabot.run_pabot(
                 output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
