@@ -382,6 +382,7 @@ class ReportGenerator:
                                 "timestamp": test_data.get(
                                     "start_time", datetime.now().isoformat()
                                 ),
+                                "duration": test_data.get("duration"),
                                 "result_file_path": report_map[
                                     test_id
                                 ].name,  # Just the filename since they're in the same directory

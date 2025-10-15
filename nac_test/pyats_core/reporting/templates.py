@@ -38,6 +38,57 @@ def format_datetime(dt_str: Union[str, datetime]) -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 
+def format_duration(duration_seconds: Union[float, int, None]) -> str:
+    """Format a duration in seconds to a human-readable format.
+
+    Uses smart formatting to display durations in the most readable way:
+    - Less than 1 second: "< 1s"
+    - 1-59 seconds: "X.Xs" (e.g., "2.5s", "45.2s")
+    - 1-59 minutes: "Xm XXs" (e.g., "1m 23s", "15m 8s")
+    - 1+ hours: "Xh Xm" (e.g., "1h 5m", "2h 45m")
+
+    Args:
+        duration_seconds: Duration in seconds as a float or int, or None.
+
+    Returns:
+        Formatted duration string, or "N/A" if duration is None.
+
+    Examples:
+        >>> format_duration(0.5)
+        "< 1s"
+        >>> format_duration(2.456)
+        "2.5s"
+        >>> format_duration(83.2)
+        "1m 23s"
+        >>> format_duration(3725.8)
+        "1h 2m"
+    """
+    if duration_seconds is None:
+        return "N/A"
+
+    # Convert to float for calculations
+    duration = float(duration_seconds)
+
+    # Less than 1 second
+    if duration < 1.0:
+        return "< 1s"
+
+    # 1-59 seconds: show one decimal place
+    if duration < 60:
+        return f"{duration:.1f}s"
+
+    # 1-59 minutes: show minutes and seconds
+    if duration < 3600:
+        minutes = int(duration // 60)
+        seconds = int(duration % 60)
+        return f"{minutes}m {seconds}s"
+
+    # 1+ hours: show hours and minutes (drop seconds for brevity)
+    hours = int(duration // 3600)
+    minutes = int((duration % 3600) // 60)
+    return f"{hours}h {minutes}m"
+
+
 def get_status_style(status: Union[ResultStatus, str]) -> Dict[str, str]:
     """Get the CSS class and display text for a result status.
 
@@ -203,6 +254,7 @@ def get_jinja_environment(directory: Optional[Union[str, Path]] = None) -> Envir
         undefined=StrictUndefined,
     )
     environment.filters["format_datetime"] = format_datetime
+    environment.filters["format_duration"] = format_duration
     environment.filters["status_style"] = get_status_style
     environment.filters["format_result_message"] = (
         format_result_message  # Universal formatter for all result types

@@ -436,7 +436,8 @@
                     <tr>
                         <th class="sortable" data-column="0" role="button" tabindex="0" aria-label="Sort by test name">Test Name</th>
                         <th class="sortable" data-column="1" role="button" tabindex="0" aria-label="Sort by status">Status</th>
-                        <th class="sortable" data-column="2" role="button" tabindex="0" aria-label="Sort by date">Date</th>
+                        <th class="sortable" data-column="2" role="button" tabindex="0" aria-label="Sort by duration">Duration</th>
+                        <th class="sortable" data-column="3" role="button" tabindex="0" aria-label="Sort by date">Date</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -447,6 +448,9 @@
                         <td data-label="Test Name">{{ result.title }}</td>
                         <td data-label="Status" class="status-cell {{ status_style.css_class }}">
                             {{ status_style.display_text }}
+                        </td>
+                        <td data-label="Duration" data-duration="{{ result.duration }}">
+                            {{ result.duration|format_duration }}
                         </td>
                         <td data-label="Date">{{ result.timestamp|format_datetime }}</td>
                         <td data-label="Action" class="action-cell">
@@ -545,18 +549,34 @@
 
             // Sort rows
             rows.sort((a, b) => {
-                const aText = a.children[column].textContent.trim();
-                const bText = b.children[column].textContent.trim();
+                const aCell = a.children[column];
+                const bCell = b.children[column];
 
                 let comparison = 0;
-                // Numeric comparison for dates or numbers, otherwise string comparison
-                const aNum = parseFloat(aText);
-                const bNum = parseFloat(bText);
 
-                if (!isNaN(aNum) && !isNaN(bNum)) {
-                    comparison = aNum - bNum;
+                // Check for data-duration attribute (Duration column)
+                const aDuration = aCell.getAttribute('data-duration');
+                const bDuration = bCell.getAttribute('data-duration');
+
+                if (aDuration && bDuration) {
+                    // Sort by numeric duration value
+                    const aDur = parseFloat(aDuration) || 0;
+                    const bDur = parseFloat(bDuration) || 0;
+                    comparison = aDur - bDur;
                 } else {
-                    comparison = aText.localeCompare(bText);
+                    // For other columns, use text content
+                    const aText = aCell.textContent.trim();
+                    const bText = bCell.textContent.trim();
+
+                    // Numeric comparison for dates or numbers, otherwise string comparison
+                    const aNum = parseFloat(aText);
+                    const bNum = parseFloat(bText);
+
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                        comparison = aNum - bNum;
+                    } else {
+                        comparison = aText.localeCompare(bText);
+                    }
                 }
 
                 return sortState.direction === 'asc' ? comparison : -comparison;
