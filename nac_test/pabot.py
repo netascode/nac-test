@@ -1,10 +1,12 @@
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
+import os
 from pathlib import Path
 
 import pabot.pabot
 
 ORDERING_FILE = "ordering.txt"
+
 
 def run_pabot(
     path: Path,
@@ -19,6 +21,11 @@ def run_pabot(
     args = ["--pabotlib", "--pabotlibport", "0"]
     if (path / ORDERING_FILE).exists():
         args.extend(["--ordering", str(path / ORDERING_FILE)])
+        # remove possible leftover ".pabotsuitenames" as it can interfere with ordering
+        try:
+            os.remove(".pabotsuitnames")
+        except FileNotFoundError:
+            pass
     if verbose:
         args.append("--verbose")
     if dry_run:
@@ -38,4 +45,5 @@ def run_pabot(
             str(path),
         ]
     )
+
     pabot.pabot.main(args)

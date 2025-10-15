@@ -19,7 +19,7 @@ from jinja2 import (  # type: ignore
 )
 from nac_yaml import yaml
 from robot.api import SuiteVisitor, TestSuite  # type: ignore
-from robot.utils import is_truthy, printable_name
+from robot.utils import is_truthy
 
 logger = logging.getLogger(__name__)
 
@@ -33,31 +33,18 @@ class StrictChainableUndefined(ChainableUndefined):
 class TestCollector(SuiteVisitor):
     """Visitor to collect test or suite names to construct the pabot ordering file."""
 
-    def __init__(self, filename: Path) -> None:
+    def __init__(self, full_suite_name: str) -> None:
         self.test_names: list[str] = []
-        self.suite_name: str
+        self.full_suite_name = full_suite_name
         self.test_concurrency: bool = False
 
-        # convert the directory to Robot Suite syntax (ignoring root dir '/' in case an
-        # absolute path is passsed, shouldn't happen)
-        self.suite_dirname = ".".join(
-            [printable_name(p) for p in filename.parent.parts if p != "/"]
-        )
-
     def start_suite(self, suite: Any) -> None:
-        if self.suite_dirname:
-            self.suite_name = self.suite_dirname + "." + suite.full_name
-        else:
-            self.suite_name = suite.full_name
         if is_truthy(suite.metadata.get("Test Concurrency")):
             self.test_concurrency = True
 
     def start_test(self, test: Any) -> None:
         """Visit a test case."""
-        if self.suite_dirname:
-            test_name = self.suite_dirname + "." + test.full_name
-        else:
-            test_name = test.full_name
+        test_name = self.full_suite_name + "." + test.name
         self.test_names.append(test_name)
 
 
@@ -139,28 +126,6 @@ class RobotWriter:
         with open(output_path, "w") as file:
             file.write(result)
 
-        # parse the resulting files and check if a) has at least one test case
-        # and b) if it has the "Test Concurrency" metadata set indicating that it
-        # the individual tests can be run in parallel (helps for large suites with many test cases,
-        # like epg or l3out). Empty rendered suites without any test cases will be removed here.
-        suite = TestSuite.from_file_system(str(output_path), allow_empty_suite=True)
-        collector = TestCollector(filename=output_path)
-        suite.visit(collector)
-
-        if len(collector.test_names) == 0:
-            logger.info(
-                "Removing empty rendered robot file without any test cases: %s",
-                output_path,
-            )
-            os.remove(output_path)
-        elif collector.test_concurrency:
-            # run test cases in parallel for those suites which have been refactored
-            for testcase in collector.test_names:
-                self.ordering_entries.append(f"--test {testcase}")
-        else:
-            # non-refactored suites are run in a single pabot run
-            self.ordering_entries.append(f"--suite {collector.suite_name}")
-
     def _fix_duplicate_path(self, *paths: str) -> Path:
         """Helper function to detect existing paths with non-matching case.
 
@@ -173,6 +138,57 @@ class RobotWriter:
             if paths[-1].lower() in lower_case_entries and paths[-1] not in entries:
                 return Path(*paths[:-1], "_" + paths[-1])
         return Path(os.path.join(*paths))
+
+    @staticmethod
+    def _calculate_full_suite_name(output_path: Path, robot_file: Path) -> str:
+        """
+        We need to collect the final robot suite name (ex. Output.Config.Tenants.L3Out)
+        and note this in the ordering file. The suite name is derived from
+        1. the output path (the last part of it if the path is an absolute path)
+        2. the path of the robot file relative the the output path
+        Each part of 1 and 2 is passed through a robot API to (ex: config -> Config) and
+        joined with a dot (.) to form the suite name.
+        Example 1:
+            Input:  output_path = /tmp/foo/output
+                    filename = /tmp/foo/output/config/tenants/ABC/L3Out.robot
+            Result: suite_dirname = Output.Config.Tenants.ABC.L3Out
+        Example 2:
+            Input:  output_path = foobar
+                    filename = foobar/integration_tests/whatever.robot
+            Result: suite_dirname = Foobar.Integration Tests.Whatever
+        """
+        relative_path = robot_file.parent.relative_to(output_path)
+        path_parts = [output_path.name] + list(relative_path.parts) + [robot_file.stem]
+        return ".".join([TestSuite.name_from_source(p) for p in path_parts if p])
+
+    def _update_ordering_entries(self, output_path: Path, robot_file: Path) -> None:
+        """
+        parse the resulting files and check if a) has at least one test case
+        and b) if it has the "Test Concurrency" metadata set indicating that it
+        the individual tests can be run in parallel (helps for large suites with many test cases,
+        like epg or l3out). Empty rendered suites without any test cases will be removed here.
+        """
+        suite = TestSuite.from_file_system(str(robot_file), allow_empty_suite=True)
+        full_suite_name = self._calculate_full_suite_name(output_path, robot_file)
+        collector = TestCollector(full_suite_name)
+        suite.visit(collector)
+
+        if len(collector.test_names) == 0:
+            logger.info(
+                "Removing empty rendered robot file without any test cases: %s",
+                robot_file,
+            )
+            os.remove(robot_file)
+        elif collector.test_concurrency:
+            logger.info(
+                "%s has been marked to be suitable for test concurrency, will run the tests in parallel",
+                robot_file,
+            )
+            for testcase in collector.test_names:
+                self.ordering_entries.append(f"--test {testcase}")
+        else:
+            # non-refactored suites are run in a single pabot run
+            self.ordering_entries.append(f"--suite {collector.full_suite_name}")
 
     def write(
         self, templates_path: Path, output_path: Path, ordering_file: Path | None = None
@@ -260,11 +276,13 @@ class RobotWriter:
                                     str(output_path), rel, foldername, new_filename
                                 )
                             self.render_template(t_path, Path(o_path), env, **extra)
+                            self._update_ordering_entries(output_path, o_path)
                 if next_template:
                     continue
 
                 o_path = Path(output_path, rel, filename)
                 self.render_template(t_path, o_path, env)
+                self._update_ordering_entries(output_path, o_path)
 
         if ordering_file and len(self.ordering_entries) > 0:
             # sort the entries to keep the order by suite in the same way as robot/pabot would

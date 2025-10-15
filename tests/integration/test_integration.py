@@ -1,6 +1,10 @@
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
 import os
+import re
+import shutil
+import tempfile
+from collections.abc import Iterator
 
 import pytest
 from typer.testing import CliRunner
@@ -8,6 +12,17 @@ from typer.testing import CliRunner
 import nac_test.cli.main
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture
+def temp_cwd_dir() -> Iterator[str]:
+    """Create a unique temporary directory in the current working directory.
+    The directory is automatically cleaned up after the test completes.
+    """
+    temp_dir = tempfile.mkdtemp(dir=os.getcwd(), prefix="output_")
+    yield temp_dir
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
 
 
 def test_nac_test(tmpdir: str) -> None:
@@ -176,3 +191,41 @@ def test_nac_test_list_folder(tmpdir: str) -> None:
     assert os.path.exists(os.path.join(tmpdir, "test1", "DEF.robot"))
     assert os.path.exists(os.path.join(tmpdir, "test1", "_abC.robot"))
     assert result.exit_code == 0
+
+
+@pytest.mark.parametrize("fixture_name", ["tmpdir", "temp_cwd_dir"])
+def test_nac_test_ordering(request: pytest.FixtureRequest, fixture_name: str) -> None:
+    # Get the fixture value dynamically based on the parameter
+    output_dir = request.getfixturevalue(fixture_name)
+
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data_list/"
+    templates_path = "tests/integration/fixtures/templates_ordering/"
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            output_dir,
+        ],
+    )
+    assert result.exit_code == 0
+    assert os.path.exists(os.path.join(output_dir, "suite_1", "concurrent.robot"))
+    assert os.path.exists(os.path.join(output_dir, "suite_1", "non-concurrent.robot"))
+    assert not os.path.exists(os.path.join(output_dir, "suite_1", "empty_suite.robot"))
+
+    with open(os.path.join(output_dir, "ordering.txt")) as fd:
+        content = fd.read()
+        print(content)
+        assert re.search(
+            r"^--test.*Suite 1\.Concurrent\.Concurrent Test 1$", content, re.M
+        ), "First --test entry missing"
+        assert re.search(
+            r"^--test.*Suite 1.Concurrent.Concurrent Test 2$", content, re.M
+        ), "Second --test entry missing"
+        assert re.search(r"^--suite.*Suite 1.Non-Concurrent$", content, re.M), (
+            "Non-Concurrent suite entry missing"
+        )
