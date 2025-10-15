@@ -209,6 +209,6 @@ def main(
             nac_test.pabot.run_pabot(
                 output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
             )
-    except OSError as e:
+    except Exception as e:
         logger.error(f"Error during execution: {e}")
         raise typer.Exit(code=1) from e
