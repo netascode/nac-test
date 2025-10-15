@@ -216,6 +216,7 @@ def test_nac_test_ordering(request: pytest.FixtureRequest, fixture_name: str) ->
     assert os.path.exists(os.path.join(output_dir, "suite_1", "concurrent.robot"))
     assert os.path.exists(os.path.join(output_dir, "suite_1", "non-concurrent.robot"))
     assert not os.path.exists(os.path.join(output_dir, "suite_1", "empty_suite.robot"))
+    assert os.path.exists(os.path.join(output_dir, "keywords.resource"))
 
     with open(os.path.join(output_dir, "ordering.txt")) as fd:
         content = fd.read()

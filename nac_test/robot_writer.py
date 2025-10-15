@@ -170,20 +170,23 @@ class RobotWriter:
         the individual tests can be run in parallel (helps for large suites with many test cases,
         like epg or l3out). Empty rendered suites without any test cases will be removed here.
         """
+        if robot_file.suffix != ".robot":
+            # if resource files are stored as .robot they would be parsed and possibly removed!! need to think..
+            return
+
         suite = TestSuite.from_file_system(str(robot_file), allow_empty_suite=True)
         full_suite_name = self._calculate_full_suite_name(output_path, robot_file)
         collector = TestCollector(full_suite_name)
         suite.visit(collector)
 
-        if delete_empty_suite and len(collector.test_names) == 0:
-            logger.info(
-                "Removing empty rendered robot file without any test cases: %s",
-                robot_file,
-            )
-            os.remove(robot_file)
-            return
-
-        if collector.test_concurrency:
+        if len(collector.test_names) == 0:
+            if delete_empty_suite:
+                logger.info(
+                    "Removing empty rendered robot file without any test cases: %s",
+                    robot_file,
+                )
+                os.remove(robot_file)
+        elif collector.test_concurrency:
             logger.info(
                 "%s has been marked to be suitable for test concurrency, will run the tests in parallel",
                 robot_file,
