@@ -40,6 +40,7 @@ import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
 import markdown  # type: ignore[import-untyped]
 import asyncio
 import httpx
+import jmespath
 
 T = TypeVar("T")
 
@@ -1224,120 +1225,6 @@ class NACTestBase(aetest.Testcase):
 
         return result
 
-    def create_comprehensive_skip_result(
-        self,
-        test_scope: str,
-        schema_paths: List[str],
-        managed_objects: List[str],
-        interpretation: str,
-        api_queries: Optional[List[str]] = None,
-        additional_sections: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
-        """Generate detailed skip results with comprehensive documentation.
-
-        This method creates standardized skip result documentation that provides
-        valuable information about test scope even when no configuration exists.
-        It generates detailed skip results that help with deployment planning
-        and feature coverage analysis by documenting exactly what the test
-        would verify if data were present.
-
-        Args:
-            test_scope: Description of what this test verifies (e.g., "BGP Peers Operational State")
-            schema_paths: List of data model paths checked (e.g., ["tenants[].l3outs[]"])
-            managed_objects: List of technology-specific managed objects (e.g., ["bgpPeerEntry", "fvBD"])
-            interpretation: Explanation of why test is skipped and what it means
-            api_queries: Optional list of API query pattern examples for documentation
-            additional_sections: Optional list of additional documentation sections
-
-        Returns:
-            dict: Detailed skip result with comprehensive documentation
-
-        Example:
-            skip_result = self.create_comprehensive_skip_result(
-                test_scope="BGP Peers Operational State",
-                schema_paths=["tenants[].l3outs[].bgp_peers[]"],
-                managed_objects=["bgpPeerEntry", "bgpPeerAf"],
-                interpretation="No BGP peers are configured in L3Outs",
-                api_queries=[
-                    "/api/node/mo/topology/pod-*/node-*/sys/bgp/inst/dom-*/peer-*/ent-*.json",
-                    "/api/node/class/bgpPeerEntry.json"
-                ]
-            )
-        """
-        # Build the detailed skip documentation message
-        skip_details = []
-
-        # Validate technology-specific implementation for non-generic base classes
-        if self.__class__.__name__ != "NACTestBase":
-            if not hasattr(self, "TECHNOLOGY_NAME"):
-                raise NotImplementedError(
-                    f"{self.__class__.__name__} must define TECHNOLOGY_NAME class variable. "
-                    f"Example: TECHNOLOGY_NAME = 'ACI' or 'SD-WAN' or 'Catalyst Center'"
-                )
-            if not hasattr(self, "MANAGED_OBJECTS_LABEL"):
-                raise NotImplementedError(
-                    f"{self.__class__.__name__} must define MANAGED_OBJECTS_LABEL class variable. "
-                    f"Example: MANAGED_OBJECTS_LABEL = 'ACI managed objects' or 'SD-WAN managed objects'"
-                )
-
-        # Use technology-specific name if available, otherwise generic
-        technology_name = getattr(self, "TECHNOLOGY_NAME", "Network")
-        skip_details.append(f"📋 **{technology_name} Test Scope Documentation**\\n")
-
-        # Use technology-specific label if available, otherwise generic
-        managed_objects_label = getattr(
-            self, "MANAGED_OBJECTS_LABEL", "managed objects"
-        )
-        skip_details.append(
-            f"\\n**This test verifies the following {managed_objects_label}:**"
-        )
-
-        # Add managed objects documentation
-        for managed_object in managed_objects:
-            skip_details.append(f"• {managed_object}")
-
-        # Add data model paths section
-        skip_details.append("\\n**Data model paths checked:**")
-        for path in schema_paths:
-            skip_details.append(f"• `{path}`")
-
-        # Add API queries if provided
-        if api_queries:
-            skip_details.append("\\n**API Queries:**")
-            for query in api_queries:
-                skip_details.append(f"• `{query}`")
-
-        # Add any additional sections
-        if additional_sections:
-            for section in additional_sections:
-                skip_details.append(f"\\n{section}")
-
-        # Add standard conclusion sections
-        skip_details.append("\\n**Result:** No matching configurations found")
-        skip_details.append(f"**Interpretation:** {interpretation}")
-        skip_details.append(
-            "**Action:** Test appropriately SKIPPED - no verification needed"
-        )
-
-        detailed_message = "\\n".join(skip_details)
-
-        # Log the skip information
-        self.logger.info(f"Test will be skipped - {interpretation}")
-        self.logger.info(f"Checked {len(schema_paths)} data model paths")
-
-        # Create and return the skip result using the centralized formatter
-        return self.format_verification_result(
-            status=ResultStatus.SKIPPED,
-            context={
-                "test_scope": test_scope,
-                "schema_paths_checked": schema_paths,
-                "managed_objects": managed_objects,
-                "skip_type": "no_data_found",
-            },
-            reason=detailed_message,
-            api_duration=0,
-        )
-
     # =========================
     # RESULT PROCESSING METHODS
     # =========================
@@ -1899,6 +1786,530 @@ class NACTestBase(aetest.Testcase):
             step.failed(reason)
         else:
             step.errored(f"Unknown status: {status}")  # Handle unexpected statuses
+
+    # ============================================================================
+    # NEW PATTERN SUPPORT: Configuration-driven methods for 3-function pattern
+    # ============================================================================
+
+    async def run_verification_async(self):
+        """
+        Generic async orchestration that works for ANY verification test.
+
+        This method automatically detects verification pattern based on return type:
+        - Dict return → Grouped verification (one API call per group)
+        - List return → Item verification (one API call per item)
+
+        Grouped Verification (dict):
+        1. Calls get_items_to_verify() → {group_key: [contexts]}
+        2. Calls verify_group() for each group asynchronously
+        3. Flattens results from all groups
+
+        Item Verification (list):
+        1. Calls get_items_to_verify() → [contexts]
+        2. Calls verify_item() for each item asynchronously
+        3. Returns results
+
+        Subclasses implement either:
+        - get_items_to_verify() → dict + verify_group() for grouped pattern
+        - get_items_to_verify() → list + verify_item() for item pattern
+
+        Returns:
+            List[Dict]: List of verification results
+        """
+        # Get items to verify from subclass
+        items_to_verify = self.get_items_to_verify()
+
+        # Handle case where no items exist - use TEST_CONFIG for skip message
+        if not items_to_verify:
+            self.logger.info("No items found in data model for verification - test will be skipped")
+
+            # Build skip result from TEST_CONFIG (required in new pattern)
+            config = self.TEST_CONFIG
+            resource_type = config.get('resource_type', 'Resource')
+            paths = config.get('schema_paths_list', [])
+            managed_objects = config.get('managed_objects', [])
+
+            # Build comprehensive skip message from TEST_CONFIG
+            reason = f"No {resource_type} configurations found in data model.\n\n"
+            if managed_objects:
+                reason += "Managed Objects Checked:\n" + '\n'.join(f"• {mo}" for mo in managed_objects) + "\n\n"
+            if paths:
+                reason += "Schema Paths Checked:\n" + '\n'.join(f"• {path}" for path in paths[:20])
+                if len(paths) > 20:
+                    reason += f"\n• ... and {len(paths) - 20} more paths"
+
+            return [{
+                'status': ResultStatus.SKIPPED,
+                'context': {},
+                'reason': reason,
+                'api_duration': 0
+            }]
+
+        # Detect verification pattern based on return type
+        if isinstance(items_to_verify, dict):
+            # Grouped verification: {group_key: [contexts]}
+            return await self._run_grouped_verification(items_to_verify)
+        else:
+            # Item verification: [contexts]
+            return await self._run_item_verification(items_to_verify)
+
+    async def _run_grouped_verification(self, groups):
+        """
+        Orchestrates grouped verification where multiple items share one API call.
+
+        This pattern optimizes API efficiency by grouping items that can be fetched
+        together (e.g., all subnets in an L3out, all ports in an EPG). Makes ONE
+        API call per group instead of one per item.
+
+        Args:
+            groups (dict): Groups of items to verify
+                Format: {group_key: [context_objects]}
+                Example: {"tenant1/l3out1": [route1_ctx, route2_ctx, route3_ctx]}
+
+        Returns:
+            list: Flattened list of individual item verification results
+        """
+        # Filter out empty groups
+        non_empty_groups = {k: v for k, v in groups.items() if v}
+
+        if not non_empty_groups:
+            # Build skip result from TEST_CONFIG (required in new pattern)
+            config = self.TEST_CONFIG
+            resource_type = config.get('resource_type', 'Resource')
+            paths = config.get('schema_paths_list', [])
+            managed_objects = config.get('managed_objects', [])
+
+            # Build comprehensive skip message from TEST_CONFIG
+            reason = f"No {resource_type} configurations found in data model.\n\n"
+            if managed_objects:
+                reason += "Managed Objects Checked:\n" + '\n'.join(f"• {mo}" for mo in managed_objects) + "\n\n"
+            if paths:
+                reason += "Schema Paths Checked:\n" + '\n'.join(f"• {path}" for path in paths[:20])
+                if len(paths) > 20:
+                    reason += f"\n• ... and {len(paths) - 20} more paths"
+
+            return [{
+                'status': ResultStatus.SKIPPED,
+                'context': {},
+                'reason': reason,
+                'api_duration': 0
+            }]
+
+        # Validate that test implements verify_group()
+        if not hasattr(self, 'verify_group'):
+            error_msg = (
+                f"{self.__class__.__name__} returned dict from get_items_to_verify() "
+                f"but does not implement verify_group(). For grouped verification, "
+                f"implement: async def verify_group(self, semaphore, client, group_key, contexts)"
+            )
+            self.logger.error(error_msg)
+            raise NotImplementedError(error_msg)
+
+        # Set up concurrency control
+        from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
+        semaphore = asyncio.Semaphore(DEFAULT_API_CONCURRENCY)
+
+        # Create tasks for all groups
+        tasks = []
+        client = getattr(self, 'client', None)
+
+        for group_key, contexts in non_empty_groups.items():
+            task = self.verify_group(semaphore, client, group_key, contexts)
+            tasks.append(task)
+
+        # Execute all group verifications concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Flatten results (each group returns list of item results)
+        flattened_results = []
+        for result in results:
+            if isinstance(result, list):
+                # Normal case: group returned list of individual results
+                flattened_results.extend(result)
+            elif isinstance(result, Exception):
+                # Group verification raised exception
+                flattened_results.append({
+                    'status': ResultStatus.FAILED,
+                    'reason': f'Group verification exception: {str(result)}',
+                    'context': {},
+                    'api_duration': 0
+                })
+            else:
+                # Unexpected return type
+                flattened_results.append({
+                    'status': ResultStatus.FAILED,
+                    'reason': f'Unexpected group result type: {type(result)}',
+                    'context': {},
+                    'api_duration': 0
+                })
+
+        return flattened_results
+
+    async def _run_item_verification(self, items):
+        """
+        Orchestrates item-by-item verification where each item gets its own API call.
+
+        This is the traditional pattern where each item is verified independently
+        with a dedicated API call. Suitable for items that cannot be efficiently
+        grouped or require individual API queries.
+
+        Args:
+            items (list): Items to verify
+                Format: [context_objects]
+                Example: [bd1_ctx, bd2_ctx, bd3_ctx]
+
+        Returns:
+            list: List of individual item verification results
+        """
+        # Validate that test implements verify_item()
+        if not hasattr(self, 'verify_item'):
+            error_msg = (
+                f"{self.__class__.__name__} returned list from get_items_to_verify() "
+                f"but does not implement verify_item(). For item verification, "
+                f"implement: async def verify_item(self, semaphore, client, context)"
+            )
+            self.logger.error(error_msg)
+            raise NotImplementedError(error_msg)
+
+        # Set up concurrency control
+        from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
+        semaphore = asyncio.Semaphore(DEFAULT_API_CONCURRENCY)
+
+        # Create tasks for all items
+        tasks = []
+        client = getattr(self, 'client', None)
+
+        for context in items:
+            task = self.verify_item(semaphore, client, context)
+            tasks.append(task)
+
+        # Execute all tasks concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Handle exceptions gracefully
+        processed_results = []
+        for result in results:
+            if isinstance(result, dict):
+                processed_results.append(result)
+            else:
+                # Handle exceptions
+                processed_results.append({
+                    'status': ResultStatus.FAILED,
+                    'reason': f'Unexpected error during verification: {str(result)}',
+                    'context': {},
+                    'api_duration': 0
+                })
+
+        return processed_results
+
+    def format_mismatch(self, attribute, expected, actual, context):
+        """
+        Configuration-driven error formatting for attribute mismatches.
+
+        Reads from TEST_CONFIG to get test-specific metadata for formatting
+        professional error messages. Works for any resource type.
+
+        Args:
+            attribute: The attribute key that mismatched
+            expected: Expected value
+            actual: Actual value found
+            context: Full context object
+
+        Returns:
+            Dict: Formatted verification result with detailed error message
+        """
+        # Get test-specific configuration
+        config = getattr(self, 'TEST_CONFIG', {})
+        attr_names = config.get('attribute_names', {})
+        schema_paths = config.get('schema_paths', {})
+        resource_type = config.get('resource_type', 'Resource')
+
+        # Use test-specific names or fall back to attribute key
+        display_name = attr_names.get(attribute, attribute.replace('_', ' ').title())
+        schema_path = schema_paths.get(attribute, f"data model configuration for '{attribute}'")
+
+        # Build identifier from context
+        identifier = self.build_identifier(context)
+
+        return self.format_verification_result(
+            status=ResultStatus.FAILED,
+            context=context,
+            reason=(
+                f"{display_name} Mismatch\n\n"
+                f"Expected Configuration:\n"
+                f"• {display_name}: `{expected}`\n"
+                f"• Source: Data model with defaults applied\n\n"
+                f"Actual Configuration:\n"
+                f"• {display_name}: {actual}\n"
+                f"• Source: APIC fabric\n\n"
+                f"Please verify:\n"
+                f"• {schema_path}\n"
+                f"• {resource_type} is properly configured in APIC\n"
+                f"• Naming suffixes are correctly applied"
+            ),
+            api_duration=context.get('api_duration', 0),
+        )
+
+    def format_api_error(self, status_code, url, context):
+        """
+        Generic API error formatting.
+
+        Creates professional error messages for API failures.
+
+        Args:
+            status_code: HTTP status code
+            url: API endpoint URL
+            context: Full context object
+
+        Returns:
+            Dict: Formatted verification result with API error details
+        """
+        config = getattr(self, 'TEST_CONFIG', {})
+        resource_type = config.get('resource_type', 'Resource')
+        identifier = self.build_identifier(context)
+
+        return self.format_verification_result(
+            status=ResultStatus.FAILED,
+            context=context,
+            reason=(
+                f"API Error: HTTP {status_code}\n\n"
+                f"Failed to retrieve {resource_type} configuration from APIC.\n\n"
+                f"Request Details:\n"
+                f"• URL: {url}\n"
+                f"• Resource: {identifier}\n\n"
+                f"Please verify:\n"
+                f"• APIC connectivity and authentication\n"
+                f"• Network connectivity is stable\n"
+                f"• {resource_type} exists in APIC fabric\n"
+                f"• API endpoint is accessible"
+            ),
+            api_duration=context.get('api_duration', 0),
+        )
+
+    def format_not_found(self, resource_type, identifier, context):
+        """
+        Generic not-found error formatting.
+
+        Creates professional error messages when resources are not found.
+
+        Args:
+            resource_type: Type of resource not found
+            identifier: Resource identifier
+            context: Full context object
+
+        Returns:
+            Dict: Formatted verification result with not-found details
+        """
+        config = getattr(self, 'TEST_CONFIG', {})
+
+        # Get schema paths for better guidance
+        schema_paths = config.get('schema_paths', {})
+        relevant_paths = []
+        for key, path in schema_paths.items():
+            if 'name' in key.lower() or resource_type.lower() in path.lower():
+                relevant_paths.append(path)
+
+        return self.format_verification_result(
+            status=ResultStatus.FAILED,
+            context=context,
+            reason=(
+                f"{resource_type} Configuration Not Found\n\n"
+                f"Expected Configuration:\n"
+                f"• {resource_type}: `{identifier}`\n"
+                f"• Status: Exists in APIC\n\n"
+                f"Actual Configuration:\n"
+                f"• {resource_type}: Not found in APIC fabric\n"
+                f"• Status: Missing or not deployed\n\n"
+                f"Please verify:\n"
+                + ('\n'.join(f"• {path}" for path in relevant_paths[:3]) if relevant_paths else f"• {resource_type} is defined in data model\n")
+                + f"\n• {resource_type} has been deployed to APIC fabric\n"
+                f"• Naming suffixes are correctly applied\n"
+                f"• Parent objects exist in APIC"
+            ),
+            api_duration=context.get('api_duration', 0),
+        )
+
+    def build_identifier(self, context):
+        """
+        Build identifier string using TEST_CONFIG format string.
+
+        Args:
+            context: Context object with values to format
+
+        Returns:
+            str: Formatted identifier string
+        """
+        config = getattr(self, 'TEST_CONFIG', {})
+        format_str = config.get('identifier_format', 'Resource Verification')
+
+        try:
+            # Try to format using the provided format string
+            return format_str.format(**context)
+        except (KeyError, ValueError):
+            # Fallback if format fails
+            resource_type = config.get('resource_type', 'Resource')
+            # Try to build a basic identifier
+            if 'tenant_name' in context:
+                parts = [context.get('tenant_name')]
+                if 'ap_name' in context or 'application_profile_name' in context:
+                    parts.append(context.get('ap_name', context.get('application_profile_name')))
+                if 'epg_name' in context:
+                    parts.append(context.get('epg_name'))
+                elif 'bd_name' in context:
+                    parts.append(context.get('bd_name'))
+                return f"{resource_type} '{'/'.join(parts)}'"
+            return f"{resource_type} Verification"
+
+    def process_results_smart(self, results, steps):
+        """
+        Smart result processing using TEST_CONFIG for customization.
+
+        Replaces the 8 helper functions with intelligent processing that
+        reads from TEST_CONFIG to determine how to format and process results.
+
+        Args:
+            results: List of verification results
+            steps: PyATS steps object
+        """
+        config = getattr(self, 'TEST_CONFIG', {})
+
+        # If no TEST_CONFIG, fall back to existing process_results_with_steps
+        if not config:
+            self.process_results_with_steps(results, steps)
+            return
+
+        # Categorize results
+        failed, skipped, passed = self.categorize_results(results)
+
+        # Log summary
+        resource_type = config.get('resource_type', 'Resource')
+        test_type_name = config.get('test_type_name', f"{resource_type} Verification")
+        self.log_result_summary(test_type_name, failed, skipped, passed)
+
+        # Log skipped items
+        if skipped:
+            self._log_skipped_items_smart(skipped)
+
+        # Create PyATS steps
+        self._create_pyats_steps_smart(results, steps)
+
+        # Determine overall result
+        self.determine_overall_test_result(failed, skipped, passed)
+
+    def _create_pyats_steps_smart(self, results, steps):
+        """
+        Create PyATS steps using TEST_CONFIG for formatting (internal helper).
+
+        Args:
+            results: List of verification results
+            steps: PyATS steps object
+        """
+        config = getattr(self, 'TEST_CONFIG', {})
+        step_name_format = config.get('step_name_format', '{resource_type} Verification')
+        resource_type = config.get('resource_type', 'Resource')
+        test_type_name = config.get('test_type_name', f"{resource_type} Verification")
+
+        for result in results:
+            if not isinstance(result, dict):
+                self.logger.warning(f"Unexpected result format: {result}")
+                continue
+
+            try:
+                context = result.get('context', {})
+
+                # Build step name using format string
+                try:
+                    step_name = step_name_format.format(**context, resource_type=resource_type)
+                except (KeyError, ValueError):
+                    # Fallback to basic name
+                    step_name = self.build_identifier(context)
+
+                with steps.start(step_name, continue_=True) as step:
+                    # Add to HTML collector
+                    self._add_step_to_html_collector_smart(result, context)
+
+                    # Log details for failures
+                    if result.get('status') in [ResultStatus.FAILED, 'FAILED']:
+                        self._log_step_details_smart(result, context)
+
+                    # Set step status
+                    self.set_step_status(step, result)
+
+            except Exception as e:
+                self.logger.error(f"Error creating step for result: {e}", exc_info=True)
+                with steps.start("Failed to process result", continue_=True) as step:
+                    step.failed(f"Step creation failed: {str(e)}")
+
+    def _log_skipped_items_smart(self, skipped_results):
+        """
+        Log skipped items using TEST_CONFIG for formatting (internal helper).
+
+        Args:
+            skipped_results: List of skipped results
+        """
+        config = getattr(self, 'TEST_CONFIG', {})
+        resource_type = config.get('resource_type', 'Resource')
+
+        self.logger.warning(f"{len(skipped_results)} {resource_type} verifications skipped")
+
+        for i, result in enumerate(skipped_results[:5]):
+            context = result.get('context', {})
+            identifier = self.build_identifier(context)
+            reason = result.get('reason', 'Unknown reason')
+            self.logger.info(f"  - Skipped: {identifier} ({reason})")
+
+        if len(skipped_results) > 5:
+            self.logger.info(f"  ... and {len(skipped_results) - 5} more")
+
+    def _log_step_details_smart(self, result, context):
+        """
+        Log step details using TEST_CONFIG for field selection (internal helper).
+
+        Args:
+            result: Verification result
+            context: Context object
+        """
+        config = getattr(self, 'TEST_CONFIG', {})
+        log_fields = config.get('log_fields', [])
+
+        # Log configured fields
+        for field in log_fields:
+            value = context.get(field)
+            if value:
+                display_name = field.replace('_', ' ').title()
+                self.logger.info(f"  - {display_name}: {value}")
+
+        # Log API duration if available
+        api_duration = context.get('api_duration', 0)
+        if api_duration:
+            self.logger.info(f"  - API Duration: {api_duration:.3f}s")
+
+    def _add_step_to_html_collector_smart(self, result, context):
+        """
+        Add step to HTML collector using TEST_CONFIG (internal helper).
+
+        Args:
+            result: Verification result
+            context: Context object
+        """
+        config = getattr(self, 'TEST_CONFIG', {})
+        test_type_name = config.get('test_type_name', 'Verification')
+
+        # Build identifier
+        identifier = self.build_identifier(context)
+
+        # Get status and reason
+        status = result.get('status', 'UNKNOWN')
+        reason = result.get('reason', '')
+
+        # Add to collector
+        self.add_verification_result(
+            status=status,
+            test_type=test_type_name.lower(),
+            item_identifier=identifier,
+            details=reason if reason else None,
+            test_context=context.get('api_context')
+        )
 
     @aetest.cleanup
     def cleanup(self) -> None:
