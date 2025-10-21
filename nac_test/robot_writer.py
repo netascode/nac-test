@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import pathlib
+import random
 import re
 import shutil
 import sys
@@ -179,6 +180,7 @@ class RobotWriter:
         collector = TestCollector(full_suite_name)
         suite.visit(collector)
 
+        logger.debug("Parsed test names: %s", collector.test_names)
         if len(collector.test_names) == 0:
             if delete_empty_suite:
                 logger.info(
@@ -191,7 +193,10 @@ class RobotWriter:
                 "%s has been marked to be suitable for test concurrency, will run the tests in parallel",
                 robot_file,
             )
-            for testcase in collector.test_names:
+            # randomize test cases to avoid the first <n> test cases all fetch the same URL
+            randomized_test_names = collector.test_names.copy()
+            random.shuffle(randomized_test_names)
+            for testcase in randomized_test_names:
                 self.ordering_entries.append(f"--test {testcase}")
         else:
             # non-refactored suites are run in a single pabot run
@@ -301,8 +306,5 @@ class RobotWriter:
 
             logger.info(f"Creating ordering file: {ordering_file}")
             with open(ordering_file, "w") as file:
-                file.write(
-                    "# This file was created by nac-test, manual changes will be overwritten\n"
-                )
                 for entry in self.ordering_entries:
                     file.write(f"{entry}\n")

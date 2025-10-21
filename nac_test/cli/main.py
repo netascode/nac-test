@@ -21,7 +21,7 @@ def configure_logging(level: str) -> None:
         lev = logging.DEBUG
     elif level == "INFO":
         lev = logging.INFO
-    elif level == "WARNING":
+    elif level == "WARN":
         lev = logging.WARNING
     elif level == "ERROR":
         lev = logging.ERROR
@@ -34,11 +34,15 @@ def configure_logging(level: str) -> None:
 
 
 class VerbosityLevel(str, Enum):
+    TRACE = "TRACE"
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
     ERROR = "ERROR"
     CRITICAL = "CRITICAL"
+
+    def __str__(self) -> str:
+        return self.value
 
 
 def version_callback(value: bool) -> None:
@@ -206,9 +210,7 @@ def main(
             templates, output, ordering_file=output / nac_test.pabot.ORDERING_FILE
         )
         if not render_only:
-            nac_test.pabot.run_pabot(
-                output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
-            )
+            nac_test.pabot.run_pabot(output, include, exclude, dry_run, str(verbosity))
     except Exception as e:
         logger.error(f"Error during execution: {e}")
         raise typer.Exit(code=1) from e

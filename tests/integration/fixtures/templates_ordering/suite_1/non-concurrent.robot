@@ -3,7 +3,7 @@ Documentation   Suite not yet refactored
 
 *** Test Cases ***
 Sequential Test 1
-    No Operation
+    Set Suite Variable  $foo    bar
 
 Sequential Test 2
-    No Operation
+    Variable Should Exist   $foo
