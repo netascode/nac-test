@@ -174,7 +174,7 @@ Processes = Annotated[
     int | None,
     typer.Option(
         "--processes",
-        help="Number of parallel processes for test execution (pabot --processes option).",
+        help="Number of parallel processes for test execution (pabot --processes option), default is max(2, cpu count).",
         envvar="NAC_TEST_PROCESSES",
     ),
 ]
