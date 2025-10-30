@@ -42,6 +42,7 @@ class RobotWriter:
         self.filters: dict[str, Any] = {}
         self.include_tags = include_tags or []
         self.exclude_tags = exclude_tags or []
+        self._created_dirs: set[str] = set()
         if filters_path:
             logger.info("Loading filters")
             for filename in os.listdir(filters_path):
@@ -72,6 +73,12 @@ class RobotWriter:
                             spec.loader.exec_module(mod)
                             self.tests[mod.Test.name] = mod.Test
 
+    def _ensure_dir(self, dir_path: str | Path) -> None:
+        dir_str = str(dir_path)
+        if dir_str not in self._created_dirs:
+            pathlib.Path(dir_path).mkdir(parents=True, exist_ok=True)
+            self._created_dirs.add(dir_str)
+
     def render_template(
         self, template_path: Path, output_path: Path, env: Environment, **kwargs: Any
     ) -> None:
@@ -80,8 +87,6 @@ class RobotWriter:
         # add robot tags to kwargs
         kwargs["robot_include_tags"] = self.include_tags
         kwargs["robot_exclude_tags"] = self.exclude_tags
-        # create output directory if it does not exist yet
-        pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 
         template = env.get_template(str(template_path))
         # hack to convert nested ordereddict to dict, to avoid duplicate dict keys
@@ -102,6 +107,7 @@ class RobotWriter:
                         cleaned_lines.append(line)
         result = os.linesep.join(cleaned_lines)
 
+        self._ensure_dir(os.path.dirname(output_path))
         with open(output_path, "w") as file:
             file.write(result)
 
@@ -139,7 +145,7 @@ class RobotWriter:
                         Path(dir, filename),
                     )
                     out = Path(output_path, os.path.relpath(dir, templates_path))
-                    pathlib.Path(out).mkdir(parents=True, exist_ok=True)
+                    self._ensure_dir(out)
                     shutil.copy(Path(dir, filename), out)
                     continue
                 rel = os.path.relpath(dir, templates_path)
@@ -188,6 +194,12 @@ class RobotWriter:
                                 o_dir = self._fix_duplicate_path(
                                     str(output_path), rel, value
                                 )
+                                # IMPORTANT: Create the directory NOW (before rendering)
+                                # to ensure subsequent loop iterations can detect conflicts.
+                                # Example: On case-insensitive filesystems (macOS/Windows),
+                                # if we process "ABC" then "abC", the second call to
+                                # _fix_duplicate_path needs to see "ABC" exists to return "_abC"
+                                self._ensure_dir(o_dir)
                                 o_path = Path(o_dir, filename)
                             else:
                                 foldername = os.path.splitext(filename)[0]
@@ -197,6 +209,13 @@ class RobotWriter:
                                 o_path = self._fix_duplicate_path(
                                     str(output_path), rel, foldername, new_filename
                                 )
+                                # IMPORTANT: Create directory and touch file NOW (before rendering)
+                                # Same reason as above - on case-insensitive filesystems,
+                                # processing "ABC.robot" then "abC.robot" would conflict.
+                                # By touching "ABC.robot" first, _fix_duplicate_path can
+                                # detect the conflict and return "_abC.robot"
+                                self._ensure_dir(os.path.dirname(o_path))
+                                pathlib.Path(o_path).touch()
                             self.render_template(t_path, Path(o_path), env, **extra)
                 if next_template:
                     continue
