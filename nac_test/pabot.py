@@ -9,6 +9,7 @@ def run_pabot(
     path: Path,
     include: list[str] | None = None,
     exclude: list[str] | None = None,
+    processes: int | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> None:
@@ -16,6 +17,8 @@ def run_pabot(
     include = include or []
     exclude = exclude or []
     args = ["--pabotlib", "--pabotlibport", "0"]
+    if processes is not None:
+        args.extend(["--processes", str(processes)])
     if verbose:
         args.append("--verbose")
     if dry_run:
