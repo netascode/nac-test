@@ -40,8 +40,11 @@ class TestCollector(SuiteVisitor):
         self.test_concurrency: bool = False
 
     def start_suite(self, suite: Any) -> None:
-        if is_truthy(suite.metadata.get("Test Concurrency")):
-            self.test_concurrency = True
+        # Check for "Test Concurrency" metadata (case-insensitive)
+        for key, value in suite.metadata.items():
+            if key.lower() == "test concurrency" and is_truthy(value):
+                self.test_concurrency = True
+                break
 
     def start_test(self, test: Any) -> None:
         """Visit a test case."""

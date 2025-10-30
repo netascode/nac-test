@@ -213,20 +213,60 @@ def test_nac_test_ordering(request: pytest.FixtureRequest, fixture_name: str) ->
         ],
     )
     assert result.exit_code == 0
+    # Verify all robot files were rendered
     assert os.path.exists(os.path.join(output_dir, "suite_1", "concurrent.robot"))
     assert os.path.exists(os.path.join(output_dir, "suite_1", "non-concurrent.robot"))
+    assert os.path.exists(
+        os.path.join(output_dir, "suite_1", "lowercase-concurrent.robot")
+    )
+    assert os.path.exists(
+        os.path.join(output_dir, "suite_1", "mixedcase-concurrent.robot")
+    )
+    assert os.path.exists(
+        os.path.join(output_dir, "suite_1", "disabled-concurrent.robot")
+    )
     assert not os.path.exists(os.path.join(output_dir, "suite_1", "empty_suite.robot"))
     assert os.path.exists(os.path.join(output_dir, "keywords.resource"))
 
     with open(os.path.join(output_dir, "ordering.txt")) as fd:
         content = fd.read()
-        print(content)
-        assert re.search(
-            r"^--test.*Suite 1\.Concurrent\.Concurrent Test 1$", content, re.M
-        ), "First --test entry missing"
-        assert re.search(
-            r"^--test.*Suite 1.Concurrent.Concurrent Test 2$", content, re.M
-        ), "Second --test entry missing"
-        assert re.search(r"^--suite.*Suite 1.Non-Concurrent$", content, re.M), (
-            "Non-Concurrent suite entry missing"
-        )
+
+        # Test cases with Test Concurrency enabled (should use --test mode)
+        concurrent_tests = [
+            ("Suite 1.Concurrent.Concurrent Test 1", "Test Concurrency = True"),
+            ("Suite 1.Concurrent.Concurrent Test 2", "Test Concurrency = True"),
+            (
+                "Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 1",
+                "test concurrency = True",
+            ),
+            (
+                "Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 2",
+                "test concurrency = True",
+            ),
+            (
+                "Suite 1.Mixedcase-Concurrent.Mixed Case Concurrent Test 1",
+                "TeSt CoNcUrReNcY = True",
+            ),
+            (
+                "Suite 1.Mixedcase-Concurrent.Mixed Case Concurrent Test 2",
+                "TeSt CoNcUrReNcY = True",
+            ),
+        ]
+
+        for test_path, description in concurrent_tests:
+            pattern = rf"^--test.*{re.escape(test_path)}$"
+            assert re.search(pattern, content, re.M), (
+                f"Missing --test entry for '{test_path}' ({description})"
+            )
+
+        # Suites without concurrency (should use --suite mode)
+        non_concurrent_suites = [
+            ("Suite 1.Non-Concurrent", "no Test Concurrency metadata"),
+            ("Suite 1.Disabled-Concurrent", "Test Concurrency = False"),
+        ]
+
+        for suite_path, description in non_concurrent_suites:
+            pattern = rf"^--suite.*{re.escape(suite_path)}$"
+            assert re.search(pattern, content, re.M), (
+                f"Missing --suite entry for '{suite_path}' ({description})"
+            )
