@@ -1,6 +1,6 @@
 [project]
 name = "nac-test"
-version = "1.0.0"
+version = "1.1.0"
 description = "A CLI tool to render and execute Robot Framework tests using Jinja templating."
 license = { text = "MPL-2.0" }
 readme = "README.md"
@@ -29,7 +29,7 @@ dependencies = [
     "Jinja2>=3.1.6",
     "RESTinstance>=1.5.2",
     "jmespath>=1.0.1",
-    "nac-yaml>=1.0.0",
+    "nac-yaml>=1.1.1",
     "robotframework>=7.3.2",
     "robotframework-jsonlibrary>=0.5",
     "robotframework-pabot>=4.3.2",

@@ -1,3 +1,9 @@
+# 1.1.0
+
+- Enhance error handling and logging
+- Migrate to `uv` package manager
+- Update license references
+
 # 1.0.0
 
 - BREAKING CHANGE: Rename tool from `iac-test` to `nac-test`

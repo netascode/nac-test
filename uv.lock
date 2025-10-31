@@ -743,7 +743,7 @@ wheels = [
 
 [[package]]
 name = "nac-test"
-version = "1.0.0"
+version = "1.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "jinja2" },
@@ -778,7 +778,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "jmespath", specifier = ">=1.0.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
-    { name = "nac-yaml", specifier = ">=1.0.0" },
+    { name = "nac-yaml", specifier = ">=1.1.1" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.3.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.2" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.2.1" },
@@ -796,14 +796,14 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "nac-yaml"
-version = "1.0.0"
+version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ruamel-yaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/09/6b/0391a0af86ca81ede2536bb9afcd18689910bf3875af24b95212dbd847bb/nac_yaml-1.0.0.tar.gz", hash = "sha256:ce2125ab1dc568e394d70dd35917fd90bc09a845bfd52737112c20fa0bfafacb", size = 8208, upload-time = "2025-05-12T15:03:21.459Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1c/fa/b3edf92821c676c24be3259acba5d7e7520453cd35da9c73fbd02849b96a/nac_yaml-1.1.1.tar.gz", hash = "sha256:8ecb89439703aa7e55018ead08e7b2ba0515cabbe8b1ff78d717f5ee15b0220e", size = 61000, upload-time = "2025-10-10T15:25:33.162Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/b4/8578749182bceff46ce693226042364b879c63cc319a7aefd4b98d3decd1/nac_yaml-1.0.0-py3-none-any.whl", hash = "sha256:c2fd204f799e8e298e4aefa05a9450b033548e95677b0df64c89c20e8bd158e9", size = 9044, upload-time = "2025-05-12T15:03:20.217Z" },
+    { url = "https://files.pythonhosted.org/packages/dc/b2/c1ee7971e6e55558ae7cb72acae19f301f06cb8d6c63ec7922eb580d2436/nac_yaml-1.1.1-py3-none-any.whl", hash = "sha256:e5c20642b3a5f745d8620eb41ea5efccc9a62b2a3568f8e08e268f89394a0862", size = 9403, upload-time = "2025-10-10T15:25:32.375Z" },
 ]
 
 [[package]]

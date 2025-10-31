@@ -1,4 +1,5 @@
-# Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 import os
 import re
@@ -13,6 +14,7 @@ def run_pabot(
     path: Path,
     include: list[str] | None = None,
     exclude: list[str] | None = None,
+    processes: int | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> None:
@@ -32,6 +34,8 @@ def run_pabot(
             os.remove(".pabotsuitenames")
         except FileNotFoundError:
             pass
+    if processes is not None:
+        args.extend(["--processes", str(processes)])
     if verbose:
         args.append("--verbose")
     if dry_run:

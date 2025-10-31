@@ -1,4 +1,5 @@
-# Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 import logging
 import sys
@@ -170,6 +171,16 @@ DryRun = Annotated[
 ]
 
 
+Processes = Annotated[
+    int | None,
+    typer.Option(
+        "--processes",
+        help="Number of parallel processes for test execution (pabot --processes option), default is max(2, cpu count).",
+        envvar="NAC_TEST_PROCESSES",
+    ),
+]
+
+
 Version = Annotated[
     bool,
     typer.Option(
@@ -192,6 +203,7 @@ def main(
     exclude: Exclude = None,
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
+    processes: Processes = None,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,  # noqa: ARG001
 ) -> None:
@@ -207,7 +219,12 @@ def main(
         )
         if not render_only:
             nac_test.pabot.run_pabot(
-                output, include, exclude, dry_run, verbosity == VerbosityLevel.DEBUG
+                output,
+                include,
+                exclude,
+                processes,
+                dry_run,
+                verbosity == VerbosityLevel.DEBUG,
             )
     except Exception as e:
         logger.error(f"Error during execution: {e}")
