@@ -165,9 +165,7 @@ class RobotWriter:
         path_parts = [output_path.name] + list(relative_path.parts) + [robot_file.stem]
         return ".".join([TestSuite.name_from_source(p) for p in path_parts if p])
 
-    def _update_ordering_entries(
-        self, output_path: Path, robot_file: Path, delete_empty_suite: bool = False
-    ) -> None:
+    def _update_ordering_entries(self, output_path: Path, robot_file: Path) -> None:
         """
         parse the resulting files and check if a) has at least one test case
         and b) if it has the "Test Concurrency" metadata set indicating that it
@@ -184,14 +182,7 @@ class RobotWriter:
         suite.visit(collector)
 
         logger.debug("Parsed test names: %s", collector.test_names)
-        if len(collector.test_names) == 0:
-            if delete_empty_suite:
-                logger.info(
-                    "Removing empty rendered robot file without any test cases: %s",
-                    robot_file,
-                )
-                os.remove(robot_file)
-        elif collector.test_concurrency:
+        if collector.test_concurrency and len(collector.test_names) > 0:
             logger.info(
                 "%s has been marked to be suitable for test concurrency, will run the tests in parallel",
                 robot_file,
@@ -291,17 +282,13 @@ class RobotWriter:
                                     str(output_path), rel, foldername, new_filename
                                 )
                             self.render_template(t_path, Path(o_path), env, **extra)
-                            self._update_ordering_entries(
-                                output_path, o_path, delete_empty_suite=True
-                            )
+                            self._update_ordering_entries(output_path, o_path)
                 if next_template:
                     continue
 
                 o_path = Path(output_path, rel, filename)
                 self.render_template(t_path, o_path, env)
-                self._update_ordering_entries(
-                    output_path, o_path, delete_empty_suite=True
-                )
+                self._update_ordering_entries(output_path, o_path)
 
         if ordering_file and len(self.ordering_entries) > 0:
             # sort the entries to keep the order by suite in the same way as robot/pabot would

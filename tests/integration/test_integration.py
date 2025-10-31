@@ -213,20 +213,21 @@ def test_nac_test_ordering(request: pytest.FixtureRequest, fixture_name: str) ->
         ],
     )
     assert result.exit_code == 0
-    # Verify all robot files were rendered
-    assert os.path.exists(os.path.join(output_dir, "suite_1", "concurrent.robot"))
-    assert os.path.exists(os.path.join(output_dir, "suite_1", "non-concurrent.robot"))
-    assert os.path.exists(
-        os.path.join(output_dir, "suite_1", "lowercase-concurrent.robot")
-    )
-    assert os.path.exists(
-        os.path.join(output_dir, "suite_1", "mixedcase-concurrent.robot")
-    )
-    assert os.path.exists(
-        os.path.join(output_dir, "suite_1", "disabled-concurrent.robot")
-    )
-    assert not os.path.exists(os.path.join(output_dir, "suite_1", "empty_suite.robot"))
-    assert os.path.exists(os.path.join(output_dir, "keywords.resource"))
+
+    # Verify expected robot files were rendered
+    expected_files = [
+        "suite_1/concurrent.robot",
+        "suite_1/non-concurrent.robot",
+        "suite_1/lowercase-concurrent.robot",
+        "suite_1/mixedcase-concurrent.robot",
+        "suite_1/disabled-concurrent.robot",
+        "suite_1/empty_suite.robot",
+        "keywords.resource",
+    ]
+    for file_path in expected_files:
+        assert os.path.exists(os.path.join(output_dir, file_path)), (
+            f"Expected file missing: {file_path}"
+        )
 
     with open(os.path.join(output_dir, "ordering.txt")) as fd:
         content = fd.read()
