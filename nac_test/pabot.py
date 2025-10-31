@@ -8,21 +8,13 @@ import pabot.pabot
 
 ORDERING_FILE = "ordering.txt"
 
-ROBOT_LOGLEVEL_DICT = {
-    "TRACE": "TRACE",
-    "DEBUG": "DEBUG",
-    "INFO": "INFO",
-    "WARNING": "WARN",
-    "ERROR": "ERROR",
-}
-
 
 def run_pabot(
     path: Path,
     include: list[str] | None = None,
     exclude: list[str] | None = None,
     dry_run: bool = False,
-    verbosity: str = "INFO",
+    verbose: bool = False,
 ) -> None:
     """Run pabot"""
     include = include or []
@@ -40,7 +32,7 @@ def run_pabot(
             os.remove(".pabotsuitenames")
         except FileNotFoundError:
             pass
-    if verbosity in ["DEBUG", "TRACE"]:
+    if verbose:
         args.append("--verbose")
     if dry_run:
         args.append("--dryrun")
@@ -56,8 +48,6 @@ def run_pabot(
             "non-critical",
             "-x",
             "xunit.xml",
-            "--loglevel",
-            ROBOT_LOGLEVEL_DICT.get(verbosity, "INFO"),
             str(path),
         ]
     )
