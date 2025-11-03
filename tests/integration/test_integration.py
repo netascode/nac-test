@@ -177,3 +177,24 @@ def test_nac_test_list_folder(tmpdir: str) -> None:
     assert os.path.exists(os.path.join(tmpdir, "test1", "DEF.robot"))
     assert os.path.exists(os.path.join(tmpdir, "test1", "_abC.robot"))
     assert result.exit_code == 0
+
+
+def test_nac_test_verbosity_debug(tmpdir: str) -> None:
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data/"
+    templates_path = "tests/integration/fixtures/templates_debug/"
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            tmpdir,
+            "-v",
+            "DEBUG",
+        ],
+    )
+
+    assert result.exit_code == 0, "Robot/Pabot wasn't called with DEBUG loglevel"
