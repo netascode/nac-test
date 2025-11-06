@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
-
+import logging
 import os
 import re
 from pathlib import Path
 
 import pabot.pabot
+
+logger = logging.getLogger(__name__)
 
 ORDERING_FILE = "ordering.txt"
 
@@ -37,7 +39,7 @@ def run_pabot(
     if processes is not None:
         args.extend(["--processes", str(processes)])
     if verbose:
-        args.append("--verbose")
+        args.extend(["--verbose", "--loglevel", "DEBUG"])
     if dry_run:
         args.append("--dryrun")
     for i in include:
@@ -46,14 +48,14 @@ def run_pabot(
         args.extend(["--exclude", e])
     args.extend(
         [
-            "-d",
+            "--outputdir",
             str(path),
             "--skiponfailure",
             "non-critical",
-            "-x",
+            "--xunit",
             "xunit.xml",
             str(path),
         ]
     )
-
+    logger.info("Running pabot with args: %s", " ".join(args))
     pabot.pabot.main(args)

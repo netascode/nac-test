@@ -194,6 +194,27 @@ def test_nac_test_list_folder(tmpdir: str) -> None:
     assert result.exit_code == 0
 
 
+def test_nac_test_verbosity_debug(tmpdir: str) -> None:
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data/"
+    templates_path = "tests/integration/fixtures/templates_debug/"
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            tmpdir,
+            "-v",
+            "DEBUG",
+        ],
+    )
+
+    assert result.exit_code == 0, "Robot/Pabot wasn't called with DEBUG loglevel"
+
+
 @pytest.mark.parametrize("fixture_name", ["tmpdir", "temp_cwd_dir"])
 def test_nac_test_ordering(request: pytest.FixtureRequest, fixture_name: str) -> None:
     # Get the fixture value dynamically based on the parameter
