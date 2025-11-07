@@ -1,11 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 import logging
+import os
+import re
 from pathlib import Path
 
 import pabot.pabot
 
 logger = logging.getLogger(__name__)
+
+ORDERING_FILE = "ordering.txt"
 
 
 def run_pabot(
@@ -20,6 +24,18 @@ def run_pabot(
     include = include or []
     exclude = exclude or []
     args = ["--pabotlib", "--pabotlibport", "0"]
+
+    ordering_file = path / ORDERING_FILE
+    if ordering_file.exists():
+        with ordering_file.open() as f:
+            if re.search(r"^--test ", f.read(), re.MULTILINE):
+                args.extend(["--testlevelsplit"])
+        args.extend(["--ordering", str(ordering_file)])
+        # remove possible leftover ".pabotsuitenames" as it can interfere with ordering
+        try:
+            os.remove(".pabotsuitenames")
+        except FileNotFoundError:
+            pass
     if processes is not None:
         args.extend(["--processes", str(processes)])
     if verbose:

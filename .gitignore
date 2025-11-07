@@ -78,5 +78,12 @@ tmp/
 
 logs/
 
+# Robot artifacts
+output.xml
+log.html
+report.html
+
 # Pabot
 .pabotsuitenames
+
+.claude/

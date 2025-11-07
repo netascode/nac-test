@@ -214,7 +214,9 @@ def main(
         writer = nac_test.robot_writer.RobotWriter(
             data, filters, tests, include, exclude
         )
-        writer.write(templates, output)
+        writer.write(
+            templates, output, ordering_file=output / nac_test.pabot.ORDERING_FILE
+        )
         if not render_only:
             nac_test.pabot.run_pabot(
                 output,
