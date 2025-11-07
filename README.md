@@ -37,7 +37,15 @@ $ nac-test --help
 │                                                    tag (exclude).            │
 │                                                    [env var:                 │
 │                                                    NAC_TEST_EXCLUDE]         │
-│    --render-only                                   Only render tests without │
+│    --processes            INTEGER                  Number of parallel        │
+│                                                    processes for test        │
+│                                                    execution (pabot          │
+│                                                    --processes option),      │
+│                                                    default is max(2, cpu     │
+│                                                    count).                   │
+│                                                    [env var:                 │
+│                                                    NAC_TEST_PROCESS]         |
+|    --render-only                                   Only render tests without │
 │                                                    executing them.           │
 │                                                    [env var:                 │
 │                                                    NAC_TEST_RENDER_ONLY]     │
@@ -77,6 +85,7 @@ The following Robot libraries are included with `nac-test`:
 
 - [RESTinstance](https://github.com/asyrjasalo/RESTinstance) (≥1.5.2)
 - [robotframework-requests](https://github.com/MarketSquare/robotframework-requests) (≥0.9.7)
+- [robotframework-jmespath](hhttps://github.com/netascode/robotframework-jmespath)
 - [robotframework-jsonlibrary](https://github.com/robotframework-thailand/robotframework-jsonlibrary) (≥0.5)
 - [robotframework-pabot](https://pabot.org/) (≥4.3.2) for parallel test execution
 
