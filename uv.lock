@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.11'",
@@ -751,10 +751,12 @@ dependencies = [
     { name = "nac-yaml" },
     { name = "restinstance" },
     { name = "robotframework" },
+    { name = "robotframework-jmespath" },
     { name = "robotframework-jsonlibrary" },
     { name = "robotframework-pabot" },
     { name = "robotframework-requests" },
     { name = "ruamel-yaml" },
+    { name = "setuptools" },
     { name = "typer" },
 ]
 
@@ -785,11 +787,13 @@ requires-dist = [
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.15.0" },
     { name = "restinstance", specifier = ">=1.5.2" },
     { name = "robotframework", specifier = ">=7.3.2" },
+    { name = "robotframework-jmespath" },
     { name = "robotframework-jsonlibrary", specifier = ">=0.5" },
     { name = "robotframework-pabot", specifier = ">=4.3.2" },
     { name = "robotframework-requests", specifier = ">=0.9.7" },
     { name = "ruamel-yaml", specifier = ">=0.18.15" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.12" },
+    { name = "setuptools", specifier = "<81" },
     { name = "typer", specifier = ">=0.17.4" },
 ]
 provides-extras = ["dev"]
@@ -1186,6 +1190,19 @@ wheels = [
 ]
 
 [[package]]
+name = "robotframework-jmespath"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jmespath" },
+    { name = "robotframework" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9f/ac/b0e121c19583af62e03766ff57c3e43ab3f13130370bbb585d45ec45fa54/robotframework_jmespath-0.1.0.tar.gz", hash = "sha256:cccb14298ce291d4f8d88b0fb1b9f7e2780cb17cb025b6c48f2b4e7b92ba42b1", size = 49537, upload-time = "2025-11-07T07:19:40.622Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c5/4b/d64f0bcb7362493fda70c6ae2422643f8fb0439d42a45a15831e61218b0d/robotframework_jmespath-0.1.0-py3-none-any.whl", hash = "sha256:5acc4bb2c1d31a90962176492ccc4b675a1ce8f89275d1fada02490ed4471813", size = 12880, upload-time = "2025-11-07T07:19:38.511Z" },
+]
+
+[[package]]
 name = "robotframework-jsonlibrary"
 version = "0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1450,6 +1467,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/fa/05b6428a008e60f79546c943e54068316f32ec8ab5c4f73e4563934fbdc7/ruff-0.12.12-py3-none-win32.whl", hash = "sha256:173be2bfc142af07a01e3a759aba6f7791aa47acf3604f610b1c36db888df7b1", size = 12052870, upload-time = "2025-09-04T16:50:09.121Z" },
     { url = "https://files.pythonhosted.org/packages/85/60/d1e335417804df452589271818749d061b22772b87efda88354cf35cdb7a/ruff-0.12.12-py3-none-win_amd64.whl", hash = "sha256:e99620bf01884e5f38611934c09dd194eb665b0109104acae3ba6102b600fd0d", size = 13178016, upload-time = "2025-09-04T16:50:12.559Z" },
     { url = "https://files.pythonhosted.org/packages/28/7e/61c42657f6e4614a4258f1c3b0c5b93adc4d1f8575f5229d1906b483099b/ruff-0.12.12-py3-none-win_arm64.whl", hash = "sha256:2a8199cab4ce4d72d158319b63370abf60991495fb733db96cd923a34c52d093", size = 12256762, upload-time = "2025-09-04T16:50:15.737Z" },
+]
+
+[[package]]
+name = "setuptools"
+version = "80.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/5d/3bf57dcd21979b887f014ea83c24ae194cfcd12b9e0fda66b957c69d1fca/setuptools-80.9.0.tar.gz", hash = "sha256:f36b47402ecde768dbfafc46e8e4207b4360c654f1f3bb84475f0a28628fb19c", size = 1319958, upload-time = "2025-05-27T00:56:51.443Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922", size = 1201486, upload-time = "2025-05-27T00:56:49.664Z" },
 ]
 
 [[package]]
