@@ -8,6 +8,7 @@ import tempfile
 from collections.abc import Iterator
 
 import pytest
+from robot import run as robot_run
 from typer.testing import CliRunner
 
 import nac_test.cli.main
@@ -213,6 +214,14 @@ def test_nac_test_verbosity_debug(tmpdir: str) -> None:
     )
 
     assert result.exit_code == 0, "Robot/Pabot wasn't called with DEBUG loglevel"
+
+
+def test_load_robotlibs(tmpdir: str) -> None:
+    result = robot_run(
+        "tests/integration/fixtures/templates_robotlibs/robotlibs.robot",
+        outputdir=tmpdir,
+    )
+    assert result == 0
 
 
 @pytest.mark.parametrize("fixture_name", ["tmpdir", "temp_cwd_dir"])
