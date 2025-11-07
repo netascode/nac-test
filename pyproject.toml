@@ -31,6 +31,7 @@ dependencies = [
     "jmespath>=1.0.1",
     "nac-yaml>=1.1.1",
     "robotframework>=7.3.2",
+    "robotframework-jmespath",
     "robotframework-jsonlibrary>=0.5",
     "robotframework-pabot>=4.3.2",
     "robotframework-requests>=0.9.7",
