@@ -162,6 +162,7 @@ class RobotWriter:
                     params = match.group().split(" ")
                     if len(params) == 6 and params[1] in [
                         "iterate_list",
+                        "iterate_list_flat",
                         "iterate_list_folder",
                     ]:
                         next_template = True
@@ -190,7 +191,14 @@ class RobotWriter:
                                     str(output_path), rel, value
                                 )
                                 o_path = Path(o_dir, filename)
-                            else:
+                            elif params[1] == "iterate_list_flat":
+                                new_filename = (
+                                    value + "." + os.path.splitext(filename)[1][1:]
+                                )
+                                o_path = self._fix_duplicate_path(
+                                    str(output_path), rel, new_filename
+                                )
+                            else:  # iterate_list_folder
                                 foldername = os.path.splitext(filename)[0]
                                 new_filename = (
                                     value + "." + os.path.splitext(filename)[1][1:]
