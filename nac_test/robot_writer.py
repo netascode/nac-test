@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
+import copy
 import importlib.util
 import json
 import logging
@@ -74,7 +75,12 @@ class RobotWriter:
                             self.tests[mod.Test.name] = mod.Test
 
     def render_template(
-        self, template_path: Path, output_path: Path, env: Environment, **kwargs: Any
+        self,
+        template_path: Path,
+        output_path: Path,
+        env: Environment,
+        custom_data: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> None:
         """Render single robot jinja template"""
         logger.info("Render robot template: %s", template_path)
@@ -87,7 +93,8 @@ class RobotWriter:
         template = env.get_template(str(template_path))
         # hack to convert nested ordereddict to dict, to avoid duplicate dict keys
         # json roundtrip should be safe as everything should be serializable
-        data = json.loads(json.dumps(self.data))
+        data_source = custom_data if custom_data is not None else self.data
+        data = json.loads(json.dumps(data_source))
         result = template.render(data, **kwargs)
 
         # remove extra empty lines
@@ -118,6 +125,97 @@ class RobotWriter:
             if paths[-1].lower() in lower_case_entries and paths[-1] not in entries:
                 return Path(*paths[:-1], "_" + paths[-1])
         return Path(os.path.join(*paths))
+
+    def _chunk_nested_objects(
+        self, data: dict[str, Any], object_path: str, chunk_size: int
+    ) -> list[dict[str, Any]]:
+        """Split nested objects into chunks.
+
+        Args:
+            data: The data structure to chunk
+            object_path: Dot-separated path to objects to chunk (e.g., "application_profiles.endpoint_groups")
+            chunk_size: Number of objects per chunk
+
+        Returns:
+            List of modified data structures, each containing a subset of objects
+        """
+        path_parts = object_path.split(".")
+
+        # Handle simple path (single level) vs nested path
+        if len(path_parts) == 1:
+            # Simple case: chunk objects directly from the data
+            objects = data.get(path_parts[0], [])
+            if not isinstance(objects, list):
+                return [data]  # Return original if not a list
+
+            # Split objects into chunks
+            chunks = []
+            for i in range(0, len(objects), chunk_size):
+                chunks.append(objects[i : i + chunk_size])
+
+            # Create modified data for each chunk
+            chunked_data = []
+            for chunk in chunks:
+                chunked_item = copy.deepcopy(data)
+                chunked_item[path_parts[0]] = chunk
+                chunked_data.append(chunked_item)
+
+            return chunked_data
+
+        elif len(path_parts) == 2:
+            # Nested case: collect objects from nested structure
+            parent_key, child_key = path_parts
+            all_objects = []
+
+            # Collect all nested objects with their parent context
+            for parent in data.get(parent_key, []):
+                parent_name = parent.get("name", "")
+                for obj in parent.get(child_key, []):
+                    all_objects.append((parent_name, obj))
+
+            # Split into chunks
+            object_chunks = []
+            for i in range(0, len(all_objects), chunk_size):
+                object_chunks.append(all_objects[i : i + chunk_size])
+
+            # Create modified data for each chunk
+            chunked_data = []
+            for chunk in object_chunks:
+                chunked_item = copy.deepcopy(data)
+
+                # Group objects by parent for this chunk
+                parent_objects: dict[str, list[Any]] = {}
+                for parent_name, obj in chunk:
+                    if parent_name not in parent_objects:
+                        parent_objects[parent_name] = []
+                    parent_objects[parent_name].append(obj)
+
+                # Update parent objects to only include objects from this chunk
+                if parent_key in chunked_item:
+                    for parent in chunked_item[parent_key]:
+                        parent_name = parent.get("name", "")
+                        if parent_name in parent_objects:
+                            parent[child_key] = parent_objects[parent_name]
+                        else:
+                            parent[child_key] = []
+
+                    # Remove parents that have no objects in this chunk
+                    chunked_item[parent_key] = [
+                        parent
+                        for parent in chunked_item[parent_key]
+                        if parent.get(child_key, [])
+                    ]
+
+                chunked_data.append(chunked_item)
+
+            return chunked_data
+
+        else:
+            # More complex nesting not supported yet
+            logger.warning(
+                "Object path with more than 2 levels not supported: %s", object_path
+            )
+            return [data]
 
     def write(self, templates_path: Path, output_path: Path) -> None:
         """Render Robot test suites."""
@@ -160,10 +258,14 @@ class RobotWriter:
                     continue
                 for match in re.finditer(pattern, content):
                     params = match.group().split(" ")
-                    if len(params) == 6 and params[1] in [
-                        "iterate_list",
-                        "iterate_list_folder",
-                    ]:
+                    if (
+                        len(params) == 6
+                        and params[1]
+                        in [
+                            "iterate_list",
+                            "iterate_list_folder",
+                        ]
+                    ) or (len(params) == 8 and params[1] == "iterate_list_chunked"):
                         next_template = True
                         path = params[2].split(".")
                         attr = params[3]
@@ -172,33 +274,126 @@ class RobotWriter:
                             elem = elem.get(p, {})
                         if not isinstance(elem, list):
                             continue
-                        for item in elem:
-                            attr_value = item.get(attr)
-                            if attr_value is None:
-                                continue
-                            value = str(attr_value)
-                            extra: dict[str, Any] = {}
-                            if "[" in params[4]:
-                                index = params[4].split("[")[1].split("]")[0]
-                                extra_list: list[Any] = [None] * (int(index) + 1)
-                                extra_list[int(index)] = value
-                                extra = {params[4].split("[")[0]: extra_list}
-                            else:
-                                extra = {params[4]: value}
-                            if params[1] == "iterate_list":
-                                o_dir = self._fix_duplicate_path(
-                                    str(output_path), rel, value
+                        if params[1] == "iterate_list_chunked":
+                            # Handle chunked iteration
+                            object_path = params[5]
+                            chunk_size = int(params[6].rstrip("#}"))
+                            for item in elem:
+                                attr_value = item.get(attr)
+                                if attr_value is None:
+                                    continue
+                                value = str(attr_value)
+
+                                # Get chunked data using generic method
+                                chunked_items = self._chunk_nested_objects(
+                                    item, object_path, chunk_size
                                 )
-                                o_path = Path(o_dir, filename)
-                            else:
-                                foldername = os.path.splitext(filename)[0]
-                                new_filename = (
-                                    value + "." + os.path.splitext(filename)[1][1:]
+
+                                # Render multiple files for each chunk
+                                for chunk_index, chunked_item in enumerate(
+                                    chunked_items
+                                ):
+                                    # Create modified data structure for template
+                                    modified_data = copy.deepcopy(self.data)
+
+                                    # Replace the original tenant with chunked version in the data
+                                    tenant_path = (
+                                        path  # This is the path to the tenants list
+                                    )
+                                    current_elem = modified_data
+                                    for p in tenant_path[
+                                        :-1
+                                    ]:  # Navigate to parent of tenants
+                                        current_elem = current_elem.get(p, {})
+
+                                    if tenant_path[-1] in current_elem and isinstance(
+                                        current_elem[tenant_path[-1]], list
+                                    ):
+                                        # Find and replace the specific tenant
+                                        tenants_list = current_elem[tenant_path[-1]]
+                                        for i, tenant in enumerate(tenants_list):
+                                            if tenant.get(attr) == attr_value:
+                                                tenants_list[i] = chunked_item
+                                                break
+
+                                    # Pass the tenant name as item[2] (preserving template interface)
+                                    extra: dict[str, Any] = {}
+                                    if "[" in params[4]:
+                                        index = params[4].split("[")[1].split("]")[0]
+                                        extra_list: list[Any] = [None] * (
+                                            int(index) + 1
+                                        )
+                                        extra_list[int(index)] = (
+                                            value  # Keep as tenant name string
+                                        )
+                                        extra = {params[4].split("[")[0]: extra_list}
+                                    else:
+                                        extra = {
+                                            params[4]: value
+                                        }  # Keep as tenant name string
+
+                                    # Generate directory structure like iterate_list (tenant subdirectories)
+                                    o_dir = self._fix_duplicate_path(
+                                        str(output_path), rel, value
+                                    )
+
+                                    # Generate sequential filenames without tenant prefix
+                                    base_name = os.path.splitext(filename)[0]
+                                    extension = os.path.splitext(filename)[1][1:]
+
+                                    if chunk_index == 0:
+                                        # First chunk: endpoint_group.robot
+                                        new_filename = f"{base_name}.{extension}"
+                                    else:
+                                        # Subsequent chunks: endpoint_group2.robot, endpoint_group3.robot
+                                        new_filename = (
+                                            f"{base_name}{chunk_index + 1}.{extension}"
+                                        )
+
+                                    o_path = Path(o_dir, new_filename)
+
+                                    self.render_template(
+                                        t_path,
+                                        Path(o_path),
+                                        env,
+                                        custom_data=modified_data,
+                                        **extra,
+                                    )
+                        else:
+                            # Handle regular iteration (existing logic)
+                            for item in elem:
+                                attr_value = item.get(attr)
+                                if attr_value is None:
+                                    continue
+                                value = str(attr_value)
+                                template_extra: dict[str, Any] = {}
+                                if "[" in params[4]:
+                                    index = params[4].split("[")[1].split("]")[0]
+                                    template_extra_list: list[Any] = [None] * (
+                                        int(index) + 1
+                                    )
+                                    template_extra_list[int(index)] = value
+                                    template_extra = {
+                                        params[4].split("[")[0]: template_extra_list
+                                    }
+                                else:
+                                    template_extra = {params[4]: value}
+                                if params[1] == "iterate_list":
+                                    o_dir = self._fix_duplicate_path(
+                                        str(output_path), rel, value
+                                    )
+                                    o_path = Path(o_dir, filename)
+                                else:  # iterate_list_folder
+                                    foldername = os.path.splitext(filename)[0]
+                                    new_filename = (
+                                        value + "." + os.path.splitext(filename)[1][1:]
+                                    )
+                                    o_path = self._fix_duplicate_path(
+                                        str(output_path), rel, foldername, new_filename
+                                    )
+                                self.render_template(
+                                    t_path, Path(o_path), env, **template_extra
                                 )
-                                o_path = self._fix_duplicate_path(
-                                    str(output_path), rel, foldername, new_filename
-                                )
-                            self.render_template(t_path, Path(o_path), env, **extra)
                 if next_template:
                     continue
 
