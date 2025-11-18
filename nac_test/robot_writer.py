@@ -291,7 +291,12 @@ class RobotWriter:
                 self.render_template(t_path, o_path, env)
                 self._update_ordering_entries(output_path, o_path)
 
-        if ordering_file and len(self.ordering_entries) > 0:
+        if (
+            ordering_file
+            and len(self.ordering_entries) > 0
+            # only create ordering file if there is a need for test concurrency
+            and any(o.startswith("--test") for o in self.ordering_entries)
+        ):
             # sort the entries to keep the order by suite in the same way as robot/pabot would
             self.ordering_entries.sort(key=lambda x: x.split(" ")[1])
 
