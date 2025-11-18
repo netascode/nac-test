@@ -253,6 +253,73 @@ tests
     └── DEF.robot
 ```
 
+An additional directive exists to render a single test suite per (YAML) list item in chunks, which is useful for handling large datasets by splitting them across multiple template files.
+
+```
+{# iterate_list_chunked <YAML_PATH_TO_LIST> <LIST_ITEM_ID> <JINJA_VARIABLE_NAME> <OBJECT_PATH> <CHUNK_SIZE> #}
+```
+
+All objects under the OBJECT_PATH will be counted and if their number is greater than the specified chunk size, the list will be split into multiple test suites with suffix `_2`, `_3`, etc.
+
+Consider the following example:
+
+```yaml
+---
+root:
+  children:
+    - name: ABC
+      param: value
+      nested_children:
+        - name: Child1
+          param: value
+        - name: Child2
+          param: value
+        - name: Child3
+          param: value
+    - name: DEF
+      param: value
+      nested_children:
+        - name: Child1
+          param: value
+```
+
+After running `nac-test` with this data from the previous and the following template:
+
+```
+{# iterate_list_chunked root.children name child_name nested_children 2 #}
+*** Settings ***
+Documentation   Test1
+
+*** Test Cases ***
+{% for child in root.children | default([]) %}
+{% if child.name == child_name %}
+
+Test {{ child.name }}
+    Should Be Equal   {{ child.param }}   value
+
+{% for nested_child in child.nested_children | default([]) %}
+
+Test {{ child.name }} Child {{ nested_child.name }}
+    Should Be Equal   {{ nested_child.param }}   value
+{% endfor %}
+
+{% endif %}
+{% endfor %}
+```
+
+Objects from the `nested_children` path will be counted and if their number is greater than the specified chunk size (`2`), the list will be split into multiple test suites with suffix `_2`, `_3`, etc. The following test suites will be rendered:
+
+```shell
+$ tree -L 2 tests
+tests
+├── ABC
+│   ├── test1.robot
+│   └── test1_2.robot
+└── DEF
+    └── test1.robot
+```
+
+
 ## Select Test Cases By Tag
 
 It is possible to include and exclude test cases by tag names with the `--include` and `--exclude` CLI options. These options are directly passed to the Pabot/Robot executor and are documented [here](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#by-tag-names).
