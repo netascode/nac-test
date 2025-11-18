@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 import logging
-import os
 from pathlib import Path
 
 import pabot.pabot
@@ -26,10 +25,7 @@ def run_pabot(
     if ordering_file and ordering_file.exists():
         args.extend(["--testlevelsplit", "--ordering", str(ordering_file)])
         # remove possible leftover ".pabotsuitenames" as it can interfere with ordering
-        try:
-            os.remove(".pabotsuitenames")
-        except FileNotFoundError:
-            pass
+        Path(".pabotsuitenames").unlink(missing_ok=True)
     if processes is not None:
         args.extend(["--processes", str(processes)])
     if verbose:
