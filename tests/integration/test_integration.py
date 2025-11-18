@@ -180,6 +180,27 @@ def test_nac_test_list_folder(tmpdir: str) -> None:
     assert result.exit_code == 0
 
 
+def test_nac_test_list_chunked(tmpdir: str) -> None:
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data_list_chunked/"
+    templates_path = "tests/integration/fixtures/templates_list_chunked/"
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            tmpdir,
+        ],
+    )
+    assert os.path.exists(os.path.join(tmpdir, "ABC", "test1.robot"))
+    assert os.path.exists(os.path.join(tmpdir, "ABC", "test1_2.robot"))
+    assert os.path.exists(os.path.join(tmpdir, "DEF", "test1.robot"))
+    assert result.exit_code == 0
+
+
 def test_nac_test_verbosity_debug(tmpdir: str) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"

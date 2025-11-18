@@ -347,7 +347,7 @@ class RobotWriter:
                                     else:
                                         # Subsequent chunks: endpoint_group2.robot, endpoint_group3.robot
                                         new_filename = (
-                                            f"{base_name}{chunk_index + 1}.{extension}"
+                                            f"{base_name}_{chunk_index + 1}.{extension}"
                                         )
 
                                     o_path = Path(o_dir, new_filename)
