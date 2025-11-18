@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import pathlib
-import random
 import re
 import shutil
 import sys
@@ -188,10 +187,7 @@ class RobotWriter:
                 "%s has been marked to be suitable for test concurrency, will run the tests in parallel",
                 robot_file,
             )
-            # randomize test cases to avoid the first <n> test cases all fetch the same URL
-            randomized_test_names = collector.test_names.copy()
-            random.shuffle(randomized_test_names)
-            for testcase in randomized_test_names:
+            for testcase in collector.test_names:
                 self.ordering_entries.append(f"--test {testcase}")
         else:
             # non-refactored suites are run in a single pabot run
