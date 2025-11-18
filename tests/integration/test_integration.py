@@ -317,8 +317,6 @@ def test_nac_test_ordering_no_concurrent_suites(tmpdir: str) -> None:
             templates_path,
             "-o",
             tmpdir,
-            "-v",
-            "DEBUG",
         ],
     )
 
