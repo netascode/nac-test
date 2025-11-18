@@ -2,7 +2,6 @@
 # Copyright (c) 2025 Daniel Schmidt
 import logging
 import os
-import re
 from pathlib import Path
 
 import pabot.pabot
@@ -27,10 +26,7 @@ def run_pabot(
 
     ordering_file = path / ORDERING_FILE
     if ordering_file.exists():
-        with ordering_file.open() as f:
-            if re.search(r"^--test ", f.read(), re.MULTILINE):
-                args.extend(["--testlevelsplit"])
-        args.extend(["--ordering", str(ordering_file)])
+        args.extend(["--testlevelsplit", "--ordering", str(ordering_file)])
         # remove possible leftover ".pabotsuitenames" as it can interfere with ordering
         try:
             os.remove(".pabotsuitenames")
