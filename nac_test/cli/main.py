@@ -16,6 +16,8 @@ app = typer.Typer(add_completion=False)
 
 logger = logging.getLogger(__name__)
 
+ORDERING_FILE = "ordering.txt"
+
 
 def configure_logging(level: str) -> None:
     if level == "DEBUG":
@@ -211,12 +213,11 @@ def main(
     configure_logging(verbosity)
 
     try:
+        ordering_file = output / ORDERING_FILE
         writer = nac_test.robot_writer.RobotWriter(
             data, filters, tests, include, exclude
         )
-        writer.write(
-            templates, output, ordering_file=output / nac_test.pabot.ORDERING_FILE
-        )
+        writer.write(templates, output, ordering_file=ordering_file)
         if not render_only:
             nac_test.pabot.run_pabot(
                 output,
@@ -225,6 +226,7 @@ def main(
                 processes,
                 dry_run,
                 verbosity == VerbosityLevel.DEBUG,
+                ordering_file=ordering_file,
             )
     except Exception as e:
         logger.error(f"Error during execution: {e}")

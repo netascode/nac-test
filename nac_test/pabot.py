@@ -8,8 +8,6 @@ import pabot.pabot
 
 logger = logging.getLogger(__name__)
 
-ORDERING_FILE = "ordering.txt"
-
 
 def run_pabot(
     path: Path,
@@ -18,14 +16,14 @@ def run_pabot(
     processes: int | None = None,
     dry_run: bool = False,
     verbose: bool = False,
+    ordering_file: Path | None = None,
 ) -> None:
     """Run pabot"""
     include = include or []
     exclude = exclude or []
     args = ["--pabotlib", "--pabotlibport", "0"]
 
-    ordering_file = path / ORDERING_FILE
-    if ordering_file.exists():
+    if ordering_file and ordering_file.exists():
         args.extend(["--testlevelsplit", "--ordering", str(ordering_file)])
         # remove possible leftover ".pabotsuitenames" as it can interfere with ordering
         try:

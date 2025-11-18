@@ -287,9 +287,10 @@ class RobotWriter:
                 self.render_template(t_path, o_path, env)
                 self._update_ordering_entries(output_path, o_path)
 
+        if ordering_file is None:
+            return
         if (
-            ordering_file
-            and len(self.ordering_entries) > 0
+            len(self.ordering_entries) > 0
             # only create ordering file if there is a need for test concurrency
             and any(o.startswith("--test") for o in self.ordering_entries)
         ):
@@ -300,3 +301,6 @@ class RobotWriter:
             with open(ordering_file, "w") as file:
                 for entry in self.ordering_entries:
                     file.write(f"{entry}\n")
+        else:
+            # ensure we clean out a leftover ordering file if we don't want testlevelsplit
+            ordering_file.unlink(missing_ok=True)

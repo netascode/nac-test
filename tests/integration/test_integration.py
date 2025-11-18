@@ -308,6 +308,11 @@ def test_nac_test_ordering_no_concurrent_suites(tmpdir: str) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates_ordering_2/"
+    # create a leftover ordering.txt to also make sure the file
+    # is removed by nac-test
+    with open(os.path.join(tmpdir, "ordering.txt"), "w"):
+        pass
+
     result = runner.invoke(
         nac_test.cli.main.app,
         [
@@ -322,5 +327,5 @@ def test_nac_test_ordering_no_concurrent_suites(tmpdir: str) -> None:
 
     assert result.exit_code == 0
     assert not os.path.exists(os.path.join(tmpdir, "ordering.txt")), (
-        "ordering.txt file should not have been created"
+        "ordering.txt file should not exist"
     )
