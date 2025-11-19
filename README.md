@@ -275,4 +275,4 @@ Tip: The _Test Concurrency_ metadata is case-insensitive (_test concurrency_, _T
 
 Implementation: `nac-test` checks the rendered robot files for the `Metadata` setting and instruct pabot to run each test within the respective suite in parallel (using pabot's `--testlevelsplit --orderingfile ordering.txt` arguments). You can inspect the `ordering.txt` file in the output directory.
 
-This behaviour can be disabled when passing the `--no-testlevelsplit` to `nac-test`.
+This behaviour can be disabled when setting the environment variable `NAC_TEST_NO_TESTLEVELSPLIT`.

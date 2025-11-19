@@ -335,21 +335,25 @@ def test_nac_test_no_testlevelsplit(tmpdir: str) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list/"
     templates_path = "tests/integration/fixtures/templates_ordering_1/"
-    result = runner.invoke(
-        nac_test.cli.main.app,
-        [
-            "-d",
-            data_path,
-            "-t",
-            templates_path,
-            "-o",
-            tmpdir,
-            "--render-only",  # test execution would fail without testlevelsplit
-            "--no-testlevelsplit",
-        ],
-    )
-    assert result.exit_code == 0
+    os.environ["NAC_TEST_NO_TESTLEVELSPLIT"] = "1"
 
-    assert not os.path.exists(os.path.join(tmpdir, "ordering.txt")), (
-        "ordering.txt file should not exist when --no-testlevelsplit is used"
-    )
+    try:
+        result = runner.invoke(
+            nac_test.cli.main.app,
+            [
+                "-d",
+                data_path,
+                "-t",
+                templates_path,
+                "-o",
+                tmpdir,
+                "--render-only",  # test execution would fail without testlevelsplit
+            ],
+        )
+        assert result.exit_code == 0
+
+        assert not os.path.exists(os.path.join(tmpdir, "ordering.txt")), (
+            "ordering.txt file should not exist when NAC_TEST_NO_TESTLEVELSPLIT is set"
+        )
+    finally:
+        del os.environ["NAC_TEST_NO_TESTLEVELSPLIT"]
