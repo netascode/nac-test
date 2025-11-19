@@ -213,11 +213,12 @@ def main(
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
     configure_logging(verbosity)
 
+    if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
+        ordering_file = output / ORDERING_FILE
+    else:
+        ordering_file = None
+
     try:
-        if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
-            ordering_file = output / ORDERING_FILE
-        else:
-            ordering_file = None
         writer = nac_test.robot_writer.RobotWriter(
             data, filters, tests, include, exclude
         )
