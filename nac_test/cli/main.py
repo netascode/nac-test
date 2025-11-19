@@ -13,10 +13,7 @@ import typer
 import nac_test.pabot
 import nac_test.robot_writer
 
-# typer exceptions are BIG (albeit colorful), I feel for a program
-# with this complextiy logging everything is not required, hence disabling
-# them
-app = typer.Typer(add_completion=False, pretty_exceptions_enable=False)
+app = typer.Typer(add_completion=False)
 
 logger = logging.getLogger(__name__)
 
@@ -231,20 +228,22 @@ def main(
     else:
         ordering_file = None
 
-    writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
-    writer.write(templates, output, ordering_file=ordering_file)
-    if not render_only:
-        rc = nac_test.pabot.run_pabot(
-            output,
-            include,
-            exclude,
-            processes,
-            dry_run,
-            verbosity == VerbosityLevel.DEBUG,
-            ordering_file=ordering_file,
-            extra_args=ctx.args,
+    try:
+        writer = nac_test.robot_writer.RobotWriter(
+            data, filters, tests, include, exclude
         )
-        print(f"rc = {rc}")
-    else:
-        rc = 0
-    raise typer.Exit(code=rc)
+        writer.write(templates, output, ordering_file=ordering_file)
+        if not render_only:
+            nac_test.pabot.run_pabot(
+                output,
+                include,
+                exclude,
+                processes,
+                dry_run,
+                verbosity == VerbosityLevel.DEBUG,
+                ordering_file=ordering_file,
+                extra_args=ctx.args,
+            )
+    except Exception as e:
+        logger.error(f"Error during execution: {e}")
+        raise typer.Exit(code=1) from e

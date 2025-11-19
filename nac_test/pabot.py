@@ -83,7 +83,7 @@ def run_pabot(
     verbose: bool = False,
     ordering_file: Path | None = None,
     extra_args: list[str] | None = None,
-) -> int:
+) -> None:
     """Run pabot"""
     include = include or []
     exclude = exclude or []
@@ -116,16 +116,11 @@ def run_pabot(
         ]
     )
 
-    # Parse and validate extra arguments against valid robot arguments. Exceptions related to illegal
-    # args are caught here, and a rc is returned
+    # Parse and validate extra arguments against valid robot arguments
     if extra_args:
-        try:
-            validated_extra_args = parse_and_validate_extra_args(extra_args)
-        except (ValueError, DataError):
-            return 252
+        validated_extra_args = parse_and_validate_extra_args(extra_args)
         robot_args.extend(validated_extra_args)
 
     args = pabot_args + robot_args + [str(path)]
     logger.info("Running pabot with args: %s", " ".join(args))
-    exit_code: int = pabot.pabot.main_program(args)
-    return exit_code
+    pabot.pabot.main(args)
