@@ -273,4 +273,6 @@ Note: This approach benefits only long-running tests. For short tests, the sched
 
 Tip: The _Test Concurrency_ metadata is case-insensitive (_test concurrency_, _TEST CONCURRENCY_, etc.).
 
-Implementation: `nac-test` checks the rendered robot files for the `Metadata` setting and instruct pabot to run each test within the respective suite in parallel (using pabot's `--orderingfile ordering.txt` agument). You can inspect the `ordering.txt` file in the output directory.
+Implementation: `nac-test` checks the rendered robot files for the `Metadata` setting and instruct pabot to run each test within the respective suite in parallel (using pabot's `--testlevelsplit --orderingfile ordering.txt` arguments). You can inspect the `ordering.txt` file in the output directory.
+
+This behaviour can be disabled when passing the `--no-testlevelsplit` to `nac-test`.

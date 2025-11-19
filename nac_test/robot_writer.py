@@ -279,13 +279,15 @@ class RobotWriter:
                                     str(output_path), rel, foldername, new_filename
                                 )
                             self.render_template(t_path, Path(o_path), env, **extra)
-                            self._update_ordering_entries(output_path, o_path)
+                            if ordering_file:
+                                self._update_ordering_entries(output_path, o_path)
                 if next_template:
                     continue
 
                 o_path = Path(output_path, rel, filename)
                 self.render_template(t_path, o_path, env)
-                self._update_ordering_entries(output_path, o_path)
+                if ordering_file:
+                    self._update_ordering_entries(output_path, o_path)
 
         if ordering_file is None:
             return

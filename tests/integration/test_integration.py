@@ -329,3 +329,27 @@ def test_nac_test_ordering_no_concurrent_suites(tmpdir: str) -> None:
     assert not os.path.exists(os.path.join(tmpdir, "ordering.txt")), (
         "ordering.txt file should not exist"
     )
+
+
+def test_nac_test_no_testlevelsplit(tmpdir: str) -> None:
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data_list/"
+    templates_path = "tests/integration/fixtures/templates_ordering_1/"
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            tmpdir,
+            "--render-only",  # test execution would fail without testlevelsplit
+            "--no-testlevelsplit",
+        ],
+    )
+    assert result.exit_code == 0
+
+    assert not os.path.exists(os.path.join(tmpdir, "ordering.txt")), (
+        "ordering.txt file should not exist when --no-testlevelsplit is used"
+    )

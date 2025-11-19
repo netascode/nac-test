@@ -194,6 +194,16 @@ Version = Annotated[
 ]
 
 
+NoTestLevelSplit = Annotated[
+    bool,
+    typer.Option(
+        "--no-testlevelsplit",
+        help="Disable test level splitting (no ordering file).",
+        envvar="NAC_TEST_NO_TESTLEVELSPLIT",
+    ),
+]
+
+
 @app.command()
 def main(
     data: Data,
@@ -207,13 +217,14 @@ def main(
     dry_run: DryRun = False,
     processes: Processes = None,
     verbosity: Verbosity = VerbosityLevel.WARNING,
+    no_testlevelsplit: NoTestLevelSplit = False,
     version: Version = False,  # noqa: ARG001
 ) -> None:
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
     configure_logging(verbosity)
 
     try:
-        ordering_file = output / ORDERING_FILE
+        ordering_file = None if no_testlevelsplit else output / ORDERING_FILE
         writer = nac_test.robot_writer.RobotWriter(
             data, filters, tests, include, exclude
         )
