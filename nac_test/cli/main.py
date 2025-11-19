@@ -13,7 +13,10 @@ import typer
 import nac_test.pabot
 import nac_test.robot_writer
 
-app = typer.Typer(add_completion=False)
+# typer exceptions are BIG (albeit colorful), I feel for a program
+# with this complextiy logging everything is not required, hence disabling
+# them
+app = typer.Typer(add_completion=False, pretty_exceptions_enable=False)
 
 logger = logging.getLogger(__name__)
 
@@ -195,8 +198,11 @@ Version = Annotated[
 ]
 
 
-@app.command()
+@app.command(
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
+)
 def main(
+    ctx: typer.Context,
     data: Data,
     templates: Templates,
     output: Output,
@@ -210,7 +216,14 @@ def main(
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,  # noqa: ARG001
 ) -> None:
-    """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
+    """
+    A CLI tool to render and execute Robot Framework tests using Jinja templating.
+
+    Additional Robot Framework options can be passed at the end of the command to
+    further control test execution (e.g., --variable, --listener, --loglevel).
+    These are appended to the pabot invocation. Pabot-specific options and test
+    files/directories are not supported and will result in an error.
+    """
     configure_logging(verbosity)
 
     if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
@@ -218,21 +231,20 @@ def main(
     else:
         ordering_file = None
 
-    try:
-        writer = nac_test.robot_writer.RobotWriter(
-            data, filters, tests, include, exclude
+    writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
+    writer.write(templates, output, ordering_file=ordering_file)
+    if not render_only:
+        rc = nac_test.pabot.run_pabot(
+            output,
+            include,
+            exclude,
+            processes,
+            dry_run,
+            verbosity == VerbosityLevel.DEBUG,
+            ordering_file=ordering_file,
+            extra_args=ctx.args,
         )
-        writer.write(templates, output, ordering_file=ordering_file)
-        if not render_only:
-            nac_test.pabot.run_pabot(
-                output,
-                include,
-                exclude,
-                processes,
-                dry_run,
-                verbosity == VerbosityLevel.DEBUG,
-                ordering_file=ordering_file,
-            )
-    except Exception as e:
-        logger.error(f"Error during execution: {e}")
-        raise typer.Exit(code=1) from e
+        print(f"rc = {rc}")
+    else:
+        rc = 0
+    raise typer.Exit(code=rc)
