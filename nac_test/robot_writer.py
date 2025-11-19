@@ -133,7 +133,7 @@ class RobotWriter:
 
         Args:
             data: The data structure to chunk
-            object_path: Dot-separated path to objects to chunk (e.g., "application_profiles.endpoint_groups")
+            object_path: Dot-separated path to objects to chunk (e.g., "services.endpoints")
             chunk_size: Number of objects per chunk
 
         Returns:
@@ -296,27 +296,27 @@ class RobotWriter:
                                     # Create modified data structure for template
                                     modified_data = copy.deepcopy(self.data)
 
-                                    # Replace the original tenant with chunked version in the data
-                                    tenant_path = (
-                                        path  # This is the path to the tenants list
+                                    # Replace the original item with chunked version in the data
+                                    item_path = (
+                                        path  # This is the path to the items list
                                     )
                                     current_elem = modified_data
-                                    for p in tenant_path[
+                                    for p in item_path[
                                         :-1
-                                    ]:  # Navigate to parent of tenants
+                                    ]:  # Navigate to parent of items
                                         current_elem = current_elem.get(p, {})
 
-                                    if tenant_path[-1] in current_elem and isinstance(
-                                        current_elem[tenant_path[-1]], list
+                                    if item_path[-1] in current_elem and isinstance(
+                                        current_elem[item_path[-1]], list
                                     ):
-                                        # Find and replace the specific tenant
-                                        tenants_list = current_elem[tenant_path[-1]]
-                                        for i, tenant in enumerate(tenants_list):
-                                            if tenant.get(attr) == attr_value:
-                                                tenants_list[i] = chunked_item
+                                        # Find and replace the specific item
+                                        items_list = current_elem[item_path[-1]]
+                                        for i, item_obj in enumerate(items_list):
+                                            if item_obj.get(attr) == attr_value:
+                                                items_list[i] = chunked_item
                                                 break
 
-                                    # Pass the tenant name as item[2] (preserving template interface)
+                                    # Pass the item name as item[2] (preserving template interface)
                                     extra: dict[str, Any] = {}
                                     if "[" in params[4]:
                                         index = params[4].split("[")[1].split("]")[0]
@@ -324,31 +324,28 @@ class RobotWriter:
                                             int(index) + 1
                                         )
                                         extra_list[int(index)] = (
-                                            value  # Keep as tenant name string
+                                            value  # Keep as item name string
                                         )
                                         extra = {params[4].split("[")[0]: extra_list}
                                     else:
                                         extra = {
                                             params[4]: value
-                                        }  # Keep as tenant name string
+                                        }  # Keep as item name string
 
-                                    # Generate directory structure like iterate_list (tenant subdirectories)
+                                    # Generate directory structure like iterate_list (item subdirectories)
                                     o_dir = self._fix_duplicate_path(
                                         str(output_path), rel, value
                                     )
 
-                                    # Generate sequential filenames without tenant prefix
+                                    # Generate sequential filenames without item prefix
                                     base_name = os.path.splitext(filename)[0]
                                     extension = os.path.splitext(filename)[1][1:]
 
-                                    if chunk_index == 0:
-                                        # First chunk: endpoint_group.robot
-                                        new_filename = f"{base_name}.{extension}"
-                                    else:
-                                        # Subsequent chunks: endpoint_group2.robot, endpoint_group3.robot
-                                        new_filename = (
-                                            f"{base_name}_{chunk_index + 1}.{extension}"
-                                        )
+                                    # Generate zero-padded sequential filenames: endpoint_group_001.robot, endpoint_group_002.robot
+                                    chunk_number = chunk_index + 1
+                                    new_filename = (
+                                        f"{base_name}_{chunk_number:03d}.{extension}"
+                                    )
 
                                     o_path = Path(o_dir, new_filename)
 
