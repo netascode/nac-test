@@ -2,6 +2,7 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 import logging
+import os
 import sys
 from enum import Enum
 from pathlib import Path
@@ -12,9 +13,14 @@ import typer
 import nac_test.pabot
 import nac_test.robot_writer
 
-app = typer.Typer(add_completion=False)
+# typer exceptions are BIG (albeit colorful), I feel for a program
+# with this complextiy logging everything is not required, hence disabling
+# them
+app = typer.Typer(add_completion=False, pretty_exceptions_enable=False)
 
 logger = logging.getLogger(__name__)
+
+ORDERING_FILE = "ordering.txt"
 
 
 def configure_logging(level: str) -> None:
@@ -210,20 +216,23 @@ def main(
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
     configure_logging(verbosity)
 
-    try:
-        writer = nac_test.robot_writer.RobotWriter(
-            data, filters, tests, include, exclude
+    if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
+        ordering_file = output / ORDERING_FILE
+    else:
+        ordering_file = None
+
+    writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
+    writer.write(templates, output, ordering_file=ordering_file)
+    if not render_only:
+        rc = nac_test.pabot.run_pabot(
+            output,
+            include,
+            exclude,
+            processes,
+            dry_run,
+            verbosity == VerbosityLevel.DEBUG,
+            ordering_file=ordering_file,
         )
-        writer.write(templates, output)
-        if not render_only:
-            nac_test.pabot.run_pabot(
-                output,
-                include,
-                exclude,
-                processes,
-                dry_run,
-                verbosity == VerbosityLevel.DEBUG,
-            )
-    except Exception as e:
-        logger.error(f"Error during execution: {e}")
-        raise typer.Exit(code=1) from e
+    else:
+        rc = 0
+    raise typer.Exit(code=rc)

@@ -2,6 +2,10 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 import os
+import re
+import shutil
+import tempfile
+from collections.abc import Iterator
 
 import pytest
 from robot import run as robot_run
@@ -10,6 +14,17 @@ from typer.testing import CliRunner
 import nac_test.cli.main
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture
+def temp_cwd_dir() -> Iterator[str]:
+    """Create a unique temporary directory in the current working directory.
+    The directory is automatically cleaned up after the test completes.
+    """
+    temp_dir = tempfile.mkdtemp(dir=os.getcwd(), prefix="output_")
+    yield temp_dir
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
 
 
 def test_nac_test(tmpdir: str) -> None:
@@ -228,3 +243,138 @@ def test_load_robotlibs(tmpdir: str) -> None:
         outputdir=tmpdir,
     )
     assert result == 0
+
+
+@pytest.mark.parametrize("fixture_name", ["tmpdir", "temp_cwd_dir"])
+def test_nac_test_ordering(request: pytest.FixtureRequest, fixture_name: str) -> None:
+    # Get the fixture value dynamically based on the parameter
+    output_dir = request.getfixturevalue(fixture_name)
+
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data_list/"
+    templates_path = "tests/integration/fixtures/templates_ordering_1/"
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            output_dir,
+        ],
+    )
+    assert result.exit_code == 0
+
+    # Verify expected robot files were rendered
+    expected_files = [
+        "suite_1/concurrent.robot",
+        "suite_1/non-concurrent.robot",
+        "suite_1/lowercase-concurrent.robot",
+        "suite_1/mixedcase-concurrent.robot",
+        "suite_1/disabled-concurrent.robot",
+        "suite_1/empty_suite.robot",
+        "keywords.resource",
+    ]
+    for file_path in expected_files:
+        assert os.path.exists(os.path.join(output_dir, file_path)), (
+            f"Expected file missing: {file_path}"
+        )
+
+    with open(os.path.join(output_dir, "ordering.txt")) as fd:
+        content = fd.read()
+
+        # Test cases with Test Concurrency enabled (should use --test mode)
+        concurrent_tests = [
+            ("Suite 1.Concurrent.Concurrent Test 1", "Test Concurrency = True"),
+            ("Suite 1.Concurrent.Concurrent Test 2", "Test Concurrency = True"),
+            (
+                "Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 1",
+                "test concurrency = True",
+            ),
+            (
+                "Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 2",
+                "test concurrency = True",
+            ),
+            (
+                "Suite 1.Mixedcase-Concurrent.Mixed Case Concurrent Test 1",
+                "TeSt CoNcUrReNcY = True",
+            ),
+            (
+                "Suite 1.Mixedcase-Concurrent.Mixed Case Concurrent Test 2",
+                "TeSt CoNcUrReNcY = True",
+            ),
+        ]
+
+        for test_path, description in concurrent_tests:
+            pattern = rf"^--test.*{re.escape(test_path)}$"
+            assert re.search(pattern, content, re.M), (
+                f"Missing --test entry for '{test_path}' ({description})"
+            )
+
+        # Suites without concurrency (should use --suite mode)
+        non_concurrent_suites = [
+            ("Suite 1.Non-Concurrent", "no Test Concurrency metadata"),
+            ("Suite 1.Disabled-Concurrent", "Test Concurrency = False"),
+        ]
+
+        for suite_path, description in non_concurrent_suites:
+            pattern = rf"^--suite.*{re.escape(suite_path)}$"
+            assert re.search(pattern, content, re.M), (
+                f"Missing --suite entry for '{suite_path}' ({description})"
+            )
+
+
+def test_nac_test_ordering_no_concurrent_suites(tmpdir: str) -> None:
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data/"
+    templates_path = "tests/integration/fixtures/templates_ordering_2/"
+    # create a leftover ordering.txt to also make sure the file
+    # is removed by nac-test
+    with open(os.path.join(tmpdir, "ordering.txt"), "w"):
+        pass
+
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            tmpdir,
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert not os.path.exists(os.path.join(tmpdir, "ordering.txt")), (
+        "ordering.txt file should not exist"
+    )
+
+
+def test_nac_test_no_testlevelsplit(tmpdir: str) -> None:
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data_list/"
+    templates_path = "tests/integration/fixtures/templates_ordering_1/"
+    os.environ["NAC_TEST_NO_TESTLEVELSPLIT"] = "1"
+
+    try:
+        result = runner.invoke(
+            nac_test.cli.main.app,
+            [
+                "-d",
+                data_path,
+                "-t",
+                templates_path,
+                "-o",
+                tmpdir,
+                "--render-only",  # test execution would fail without testlevelsplit
+            ],
+        )
+        assert result.exit_code == 0
+
+        assert not os.path.exists(os.path.join(tmpdir, "ordering.txt")), (
+            "ordering.txt file should not exist when NAC_TEST_NO_TESTLEVELSPLIT is set"
+        )
+    finally:
+        del os.environ["NAC_TEST_NO_TESTLEVELSPLIT"]

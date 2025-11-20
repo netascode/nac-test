@@ -15,11 +15,17 @@ def run_pabot(
     processes: int | None = None,
     dry_run: bool = False,
     verbose: bool = False,
-) -> None:
+    ordering_file: Path | None = None,
+) -> int:
     """Run pabot"""
     include = include or []
     exclude = exclude or []
     args = ["--pabotlib", "--pabotlibport", "0"]
+
+    if ordering_file and ordering_file.exists():
+        args.extend(["--testlevelsplit", "--ordering", str(ordering_file)])
+        # remove possible leftover ".pabotsuitenames" as it can interfere with ordering
+        Path(".pabotsuitenames").unlink(missing_ok=True)
     if processes is not None:
         args.extend(["--processes", str(processes)])
     if verbose:
@@ -42,4 +48,5 @@ def run_pabot(
         ]
     )
     logger.info("Running pabot with args: %s", " ".join(args))
-    pabot.pabot.main(args)
+    exit_code: int = pabot.pabot.main_program(args)
+    return exit_code

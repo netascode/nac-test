@@ -323,3 +323,23 @@ tests
 ## Select Test Cases By Tag
 
 It is possible to include and exclude test cases by tag names with the `--include` and `--exclude` CLI options. These options are directly passed to the Pabot/Robot executor and are documented [here](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#by-tag-names).
+
+
+## Test Case Parallelization
+
+By default, `nac-test` (via pabot) executes test **suites** (i.e., each robot file) in parallel. The number of parallel processes can be controlled via the `--processes` option.
+
+However, suite-level parallelization may be inefficient for test suites containing multiple long-running test cases (e.g., >10 seconds each). If your test cases are independent and can run concurrently, you can enable **test-level parallelization** by adding the following metadata to the suite's settings:
+
+```robot
+*** Settings ***
+Metadata        Test Concurrency     True
+```
+
+Note: This approach benefits only long-running tests. For short tests, the scheduling overhead and log collection may offset any performance gains.
+
+Tip: The _Test Concurrency_ metadata is case-insensitive (_test concurrency_, _TEST CONCURRENCY_, etc.).
+
+Implementation: `nac-test` checks the rendered robot files for the `Metadata` setting and instruct pabot to run each test within the respective suite in parallel (using pabot's `--testlevelsplit --orderingfile ordering.txt` arguments). You can inspect the `ordering.txt` file in the output directory.
+
+This behaviour can be disabled when setting the environment variable `NAC_TEST_NO_TESTLEVELSPLIT`.
