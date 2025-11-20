@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 import yaml  # type: ignore
-from robot import run as robot_run
+from robot import run as robot_run  # type: ignore[attr-defined]
 from typer.testing import CliRunner
 
 import nac_test.cli.main
