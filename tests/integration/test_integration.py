@@ -212,7 +212,7 @@ def test_nac_test_list_chunked(tmpdir: str) -> None:
     )
     assert os.path.exists(os.path.join(tmpdir, "ABC", "test1_001.robot"))
     assert os.path.exists(os.path.join(tmpdir, "ABC", "test1_002.robot"))
-    assert os.path.exists(os.path.join(tmpdir, "DEF", "test1.robot"))
+    assert os.path.exists(os.path.join(tmpdir, "DEF", "test1_001.robot"))
     assert result.exit_code == 0
 
 
