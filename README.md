@@ -255,6 +255,8 @@ tests
 
 An additional directive exists to render a single test suite per (YAML) list item in chunks, which is useful for handling large datasets by splitting them across multiple template files. This is a variant of `iterate_list` that would still create separate folders.
 
+> **Note:** This directive is experimental and may change in future versions. It is not subject to semantic versioning guarantees.
+
 ```
 {# iterate_list_chunked <YAML_PATH_TO_LIST> <LIST_ITEM_ID> <JINJA_VARIABLE_NAME> <OBJECT_PATH> <CHUNK_SIZE> #}
 ```
