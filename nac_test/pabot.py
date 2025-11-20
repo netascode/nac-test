@@ -116,9 +116,13 @@ def run_pabot(
         ]
     )
 
-    # Parse and validate extra arguments against valid robot arguments
+    # Parse and validate extra arguments against valid robot arguments. Exceptions related to illegal
+    # args are caught here, and a rc is returned
     if extra_args:
-        validated_extra_args = parse_and_validate_extra_args(extra_args)
+        try:
+            validated_extra_args = parse_and_validate_extra_args(extra_args)
+        except (ValueError, DataError):
+            return 252
         robot_args.extend(validated_extra_args)
 
     args = pabot_args + robot_args + [str(path)]
