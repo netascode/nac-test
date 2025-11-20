@@ -198,8 +198,11 @@ Version = Annotated[
 ]
 
 
-@app.command()
+@app.command(
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
+)
 def main(
+    ctx: typer.Context,
     data: Data,
     templates: Templates,
     output: Output,
@@ -213,7 +216,14 @@ def main(
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,  # noqa: ARG001
 ) -> None:
-    """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
+    """
+    A CLI tool to render and execute Robot Framework tests using Jinja templating.
+
+    Additional Robot Framework options can be passed at the end of the command to
+    further control test execution (e.g., --variable, --listener, --loglevel).
+    These are appended to the pabot invocation. Pabot-specific options and test
+    files/directories are not supported and will result in an error.
+    """
     configure_logging(verbosity)
 
     if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
@@ -232,6 +242,7 @@ def main(
             dry_run,
             verbosity == VerbosityLevel.DEBUG,
             ordering_file=ordering_file,
+            extra_args=ctx.args,
         )
     else:
         rc = 0
