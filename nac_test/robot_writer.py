@@ -236,10 +236,9 @@ class RobotWriter:
 
         else:
             # More complex nesting not supported yet
-            logger.warning(
-                "Object path with more than 2 levels not supported: %s", object_path
+            raise ValueError(
+                f"Object path with more than 2 levels not supported: {object_path}"
             )
-            return [data]
 
     @staticmethod
     def _calculate_full_suite_name(output_path: Path, robot_file: Path) -> str:
@@ -437,7 +436,9 @@ class RobotWriter:
                                         **extra,
                                     )
                                     if ordering_file:
-                                        self._update_ordering_entries(output_path, o_path)
+                                        self._update_ordering_entries(
+                                            output_path, o_path
+                                        )
                         else:
                             # Handle regular iteration (existing logic)
                             for item in elem:
@@ -474,7 +475,9 @@ class RobotWriter:
                                     t_path, Path(o_path), env, **template_extra
                                 )
                                 if ordering_file:
-                                    self._update_ordering_entries(output_path, Path(o_path))
+                                    self._update_ordering_entries(
+                                        output_path, Path(o_path)
+                                    )
                 if next_template:
                     continue
 
