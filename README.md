@@ -307,7 +307,7 @@ Test {{ child.name }} Child {{ nested_child.name }}
 {% endfor %}
 ```
 
-Objects from the `nested_children` path will be counted and if their number is greater than the specified chunk size (`2`), the list will be split into multiple test suites with suffix `_2`, `_3`, etc. The following test suites will be rendered:
+Objects from the `nested_children` path will be counted and if their number is greater than the specified chunk size (`2`), the list will be split into multiple test suites with suffix `_002`, `_003`, etc. The following test suites will be rendered:
 
 ```shell
 $ tree -L 2 tests
