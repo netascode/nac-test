@@ -85,7 +85,7 @@ The following Robot libraries are included with `nac-test`:
 
 - [RESTinstance](https://github.com/asyrjasalo/RESTinstance) (≥1.5.2)
 - [robotframework-requests](https://github.com/MarketSquare/robotframework-requests) (≥0.9.7)
-- [robotframework-jmespath](hhttps://github.com/netascode/robotframework-jmespath)
+- [robotframework-jmespath](https://github.com/netascode/robotframework-jmespath)
 - [robotframework-jsonlibrary](https://github.com/robotframework-thailand/robotframework-jsonlibrary) (≥0.5)
 - [robotframework-pabot](https://pabot.org/) (≥4.3.2) for parallel test execution
 
