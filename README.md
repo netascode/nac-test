@@ -83,11 +83,11 @@ uv tools install nac-test
 
 The following Robot libraries are included with `nac-test`:
 
-- [RESTinstance](https://github.com/asyrjasalo/RESTinstance) (≥1.5.2)
-- [robotframework-requests](https://github.com/MarketSquare/robotframework-requests) (≥0.9.7)
+- [RESTinstance](https://github.com/asyrjasalo/RESTinstance)
+- [robotframework-requests](https://github.com/MarketSquare/robotframework-requests)
 - [robotframework-jmespath](https://github.com/netascode/robotframework-jmespath)
-- [robotframework-jsonlibrary](https://github.com/robotframework-thailand/robotframework-jsonlibrary) (≥0.5)
-- [robotframework-pabot](https://pabot.org/) (≥4.3.2) for parallel test execution
+- [robotframework-jsonlibrary](https://github.com/robotframework-thailand/robotframework-jsonlibrary)
+- [robotframework-pabot](https://pabot.org/) for parallel test execution
 
 Any other libraries can of course be added via `pip` or `uv`.
 
