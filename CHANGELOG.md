@@ -1,4 +1,4 @@
-# Unreleased
+# 1.2.0
 
 - Add `--processes` CLI argument to configure the number of parallel processes for test execution
 - Increase robot loglevel to `DEBUG` when verbosity of `nac-tool` is set to `DEBUG`
