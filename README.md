@@ -313,10 +313,10 @@ Objects from the `nested_children` path will be counted and if their number is g
 $ tree -L 2 tests
 tests
 ├── ABC
-│   ├── test1.robot
-│   └── test1_2.robot
+│   ├── test1_001.robot
+│   └── test1_002.robot
 └── DEF
-    └── test1.robot
+    └── test1_001.robot
 ```
 
 
