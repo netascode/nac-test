@@ -1,3 +1,5 @@
+# used to verify the actual content of the rendered file
+#
 ABC/test1_002.robot: |
   *** Settings ***
   Documentation   Test1
