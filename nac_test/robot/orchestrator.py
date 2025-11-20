@@ -7,14 +7,16 @@ Robot Framework test execution lifecycle, following the same architectural
 pattern as PyATSOrchestrator.
 """
 
+import asyncio
+import json
 import logging
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 import typer
 
 from nac_test.robot.robot_writer import RobotWriter
-from nac_test.robot.pabot import run_pabot
+from nac_test.robot.pabot import run_pabot, run_pabot_async
 from nac_test.utils.logging import VerbosityLevel
 from datetime import datetime
 
@@ -88,6 +90,11 @@ class RobotOrchestrator:
             exclude_tags=self.exclude_tags,
         )
 
+        # Progress tracking components (initialized when needed)
+        self.progress_reporter = None
+        self.output_processor = None
+        self.test_status: Dict[str, Any] = {}
+
     def run_tests(self) -> None:
         """Execute the complete Robot Framework test lifecycle.
 
@@ -99,6 +106,11 @@ class RobotOrchestrator:
 
         Follows the same pattern as PyATSOrchestrator.run_tests().
         """
+        # Run async version
+        asyncio.run(self._run_tests_async())
+
+    async def _run_tests_async(self) -> None:
+        """Async implementation of test execution with progress tracking."""
         # Create Robot Framework output directory (orchestrator owns its structure)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -136,16 +148,56 @@ class RobotOrchestrator:
         # Phase 3: Test execution (unless render-only mode)
         if not self.render_only:
             typer.echo("🤖 Executing Robot Framework tests...\n\n")
-            run_pabot(
+
+            # Initialize progress tracking components
+            # TODO: Get actual test count from rendered robot files
+            # For now, disable progress tracking as it requires test discovery
+            event_handler = self._create_event_handler() if False else None
+
+            # Run pabot with async support
+            return_code = await run_pabot_async(
                 path=self.output_dir,
                 include=self.include_tags,
                 exclude=self.exclude_tags,
                 dry_run=self.dry_run,
                 verbose=(self.verbosity == VerbosityLevel.DEBUG),
+                event_handler=event_handler,
             )
+
             typer.echo("✅ Robot Framework tests completed")
+
+            # Handle non-zero exit codes
+            if return_code != 0 and return_code != 1:
+                # Exit code 1 = test failures (expected)
+                # Exit code > 1 = execution error
+                raise SystemExit(return_code)
         else:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
+
+    def _create_event_handler(self):
+        """Create event handler for progress tracking.
+
+        Returns:
+            Callable that processes progress events
+        """
+        from nac_test.pyats_core.execution.output_processor import OutputProcessor
+        from nac_test.pyats_core.progress import ProgressReporter
+
+        # Initialize progress components if not already done
+        if not self.progress_reporter:
+            # TODO: Calculate actual test count from rendered files
+            self.progress_reporter = ProgressReporter(total_tests=0, max_workers=1)
+            self.progress_reporter.test_status = self.test_status
+            self.output_processor = OutputProcessor(
+                self.progress_reporter, self.test_status
+            )
+
+        def handle_event(event: Dict[str, Any]) -> None:
+            """Process progress event through OutputProcessor."""
+            event_line = f"NAC_PROGRESS:{json.dumps(event)}"
+            self.output_processor.process_line(event_line)
+
+        return handle_event
 
     def get_output_summary(self) -> dict[str, Any]:
         """Get summary information about Robot Framework outputs.

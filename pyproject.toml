@@ -46,6 +46,7 @@ markdown = "~=3.8.2"
 [tool.poetry.group.dev.dependencies]
 ansible-core = "~=2.17"
 pytest = "~=8.2"
+pytest-asyncio = "~=0.24"
 pytest-cov = "~=4.1" # Genie dependency which is used by d2d/ssh test cases does not support pytest-cov 6.x yet
 pytest-mock = "~=3.14"
 mypy = "^1.16.1"
@@ -79,6 +80,8 @@ warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 markers = ["unit", "integration"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"
