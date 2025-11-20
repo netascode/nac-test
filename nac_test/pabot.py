@@ -16,7 +16,7 @@ def run_pabot(
     dry_run: bool = False,
     verbose: bool = False,
     ordering_file: Path | None = None,
-) -> None:
+) -> int:
     """Run pabot"""
     include = include or []
     exclude = exclude or []
@@ -48,4 +48,5 @@ def run_pabot(
         ]
     )
     logger.info("Running pabot with args: %s", " ".join(args))
-    pabot.pabot.main(args)
+    exit_code: int = pabot.pabot.main_program(args)
+    return exit_code
