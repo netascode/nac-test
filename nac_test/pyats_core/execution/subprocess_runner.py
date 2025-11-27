@@ -89,6 +89,10 @@ class SubprocessRunner:
             "--no-xml-report",
         ]
 
+        # Add verbose flag if logging level is DEBUG
+        if logger.isEnabledFor(logging.DEBUG):
+            cmd.append("--verbose")
+
         logger.info(f"Executing command: {' '.join(cmd)}")
         print(f"Executing PyATS with command: {' '.join(cmd)}")
 
@@ -203,10 +207,15 @@ class SubprocessRunner:
             "--archive-name",
             archive_name,
             "--no-archive-subdir",
-            "--quiet",
             "--no-mail",
             "--no-xml-report",
         ]
+
+        # Add verbose flag if logging level is DEBUG, otherwise use quiet
+        if logger.isEnabledFor(logging.DEBUG):
+            cmd.append("--verbose")
+        else:
+            cmd.append("--quiet")
 
         logger.info(f"Executing command: {' '.join(cmd)}")
         print(f"Executing PyATS with command: {' '.join(cmd)}")
@@ -282,6 +291,9 @@ class SubprocessRunner:
                         break
 
                     line = line_bytes.decode("utf-8", errors="replace").rstrip()
+
+                    # Log raw output in DEBUG mode
+                    logger.debug(line)
 
                     # Process the line if we have a handler
                     if self.output_handler is not None:
