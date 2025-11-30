@@ -64,6 +64,10 @@ class SubprocessRunner:
             ) as f:
                 f.write(plugin_config)
                 plugin_config_file = f.name
+            logger.debug(
+                f"Created plugin_config {plugin_config_file} with content\n{plugin_config}"
+            )
+
         except Exception as e:
             logger.warning(f"Failed to create plugin config: {e}")
             # If we can't create plugin config, we should probably fail
@@ -292,8 +296,8 @@ class SubprocessRunner:
 
                     line = line_bytes.decode("utf-8", errors="replace").rstrip()
 
-                    # Log raw output in DEBUG mode
-                    logger.debug(line)
+                    # # Log raw output in DEBUG mode
+                    # logger.debug(line)
 
                     # Process the line if we have a handler
                     if self.output_handler is not None:

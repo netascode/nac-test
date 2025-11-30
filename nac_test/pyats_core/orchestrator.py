@@ -193,6 +193,9 @@ class PyATSOrchestrator:
                 f.write(job_content)
                 job_file_path = Path(f.name)
 
+            logger.debug(
+                f"Created job file {job_file_path} with content\n{job_content}"
+            )
             # Set up environment for the API test job
             env = os.environ.copy()
             env["PYTHONWARNINGS"] = "ignore::UserWarning"

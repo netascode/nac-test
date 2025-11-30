@@ -42,7 +42,9 @@ class JobGenerator:
         
         import os
         from pathlib import Path
-        
+
+        from pyats.easypy import run
+
         # Test files to execute
         TEST_FILES = [
             {test_files_str}
@@ -61,7 +63,7 @@ class JobGenerator:
                 # Create meaningful task ID from test file name
                 # e.g., "epg_attributes.py" -> "epg_attributes" 
                 test_name = Path(test_file).stem
-                runtime.tasks.run(
+                run(
                     testscript=test_file,
                     taskid=test_name,
                     max_runtime={DEFAULT_TEST_TIMEOUT}
