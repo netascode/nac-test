@@ -4,9 +4,9 @@ simple test
 
 import logging
 import asyncio
-import time
-from pyats import aetest
 from typing import Dict, List, Any
+
+from pyats import aetest
 
 from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
@@ -41,11 +41,11 @@ class VerifyTruth(SSHTestBase):
     def get_ssh_device_inventory(self) -> List[Dict[str, Any]]:
         return [
             {
-                "host": "127.0.0.1",
-                "hostname": "localhost",
+                "hostname": "mock_iosxe",
                 "os": "iosxe",
-                "username": "user",
-                "password": "password",
+                "username": "cisco",
+                "password": "cisco",
+                "command": "tests/integration/mocks/mock_unicon.py --hostname mock_iosxe iosxe",
             }
         ]
 

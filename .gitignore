@@ -80,6 +80,11 @@ tmp/
 # Pabot
 .pabotsuitenames
 
+# robot
+log.html
+report.html
+output.xml
+
 # Application execution logs (including Claude Code logs)
 logs/
 

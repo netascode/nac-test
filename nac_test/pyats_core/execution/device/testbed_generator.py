@@ -27,24 +27,31 @@ class TestbedGenerator:
         hostname = device["hostname"]  # Required field per nac-test contract
 
         # Build connection arguments
-        connection_args = {
-            "protocol": "ssh",
-            "ip": device["host"],
-            "port": device.get("port", 22),
-        }
+        # Special handling for mock devices: if 'command' key is present, use command-based connection
+        if "command" in device:
+            connection_args = {
+                "protocol": "ssh",
+                "command": device["command"],
+            }
+        else:
+            connection_args = {
+                "protocol": "ssh",
+                "ip": device["host"],
+                "port": device.get("port", 22),
+            }
 
-        # Override protocol/port if connection_options is present and pased
-        # This allows per-device SSH port/protocol customization from test_inventory.yaml
-        if device.get("connection_options"):
-            opts = device["connection_options"]
-            if "protocol" in opts:
-                connection_args["protocol"] = opts["protocol"]
-            if "port" in opts:
-                connection_args["port"] = opts["port"]
+            # Override protocol/port if connection_options is present and pased
+            # This allows per-device SSH port/protocol customization from test_inventory.yaml
+            if device.get("connection_options"):
+                opts = device["connection_options"]
+                if "protocol" in opts:
+                    connection_args["protocol"] = opts["protocol"]
+                if "port" in opts:
+                    connection_args["port"] = opts["port"]
 
-        # Add optional SSH arguments if provided
-        if device.get("ssh_options"):
-            connection_args["ssh_options"] = device["ssh_options"]
+            # Add optional SSH arguments if provided
+            if device.get("ssh_options"):
+                connection_args["ssh_options"] = device["ssh_options"]
 
         # Build the testbed structure
         testbed = {
@@ -117,23 +124,29 @@ class TestbedGenerator:
             hostname = device["hostname"]
 
             # Build connection arguments for this device
-            connection_args = {
-                "protocol": "ssh",
-                "ip": device["host"],
-                "port": device.get("port", 22),
-            }
+            if "command" in device:
+                # Special handling for mock or radkit devices
+                connection_args = {
+                    "command": device["command"],
+                }
+            else:
+                connection_args = {
+                    "protocol": "ssh",
+                    "ip": device["host"],
+                    "port": device.get("port", 22),
+                }
 
-            # Override protocol/port if connection_options is present
-            if device.get("connection_options"):
-                opts = device["connection_options"]
-                if "protocol" in opts:
-                    connection_args["protocol"] = opts["protocol"]
-                if "port" in opts:
-                    connection_args["port"] = opts["port"]
+                # Override protocol/port if connection_options is present
+                if device.get("connection_options"):
+                    opts = device["connection_options"]
+                    if "protocol" in opts:
+                        connection_args["protocol"] = opts["protocol"]
+                    if "port" in opts:
+                        connection_args["port"] = opts["port"]
 
-            # Add optional SSH arguments if provided
-            if device.get("ssh_options"):
-                connection_args["ssh_options"] = device["ssh_options"]
+                # Add optional SSH arguments if provided
+                if device.get("ssh_options"):
+                    connection_args["ssh_options"] = device["ssh_options"]
 
             # Add device to testbed
             testbed["devices"][hostname] = {

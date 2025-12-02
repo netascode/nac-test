@@ -214,3 +214,15 @@ def test_nac_test_render_output_model(
     assert result.exit_code == 0
     assert os.path.exists(output_model_path)
     assert filecmp.cmp(output_model_path, expected_model_path, shallow=False)
+
+
+def test_nac_test_pyats(tmpdir: str) -> None:
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data/"
+    templates_path = "tests/integration/fixtures/templates_pyats/"
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        ["-d", data_path, "-t", templates_path, "-o", tmpdir, "--verbosity", "DEBUG"],
+    )
+    assert result.exit_code == 0
+    assert False, "not yet finished"
