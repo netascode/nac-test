@@ -86,3 +86,5 @@ logs/
 # Claude configuration
 .claude/
 CLAUDE.md
+#
+.devcontainer/
