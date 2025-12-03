@@ -58,6 +58,7 @@ class VerifyTruth(SSHTestBase):
         verification = {
             "expected_state": "True",
         }
+        print("Verifying that True is indeed True...")
         try:
             # assert False, 'test error'
             return self._result_dict(

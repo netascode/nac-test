@@ -185,10 +185,15 @@ class NACTestBase(aetest.Testcase):
 
         # Get controller details from environment
         # Note: Environment validation happens in orchestrator pre-flight check
-        self.controller_type = os.environ.get("CONTROLLER_TYPE", "ACI")
-        self.controller_url = os.environ[f"{self.controller_type}_URL"]
-        self.username = os.environ[f"{self.controller_type}_USERNAME"]
-        self.password = os.environ[f"{self.controller_type}_PASSWORD"]
+        self.controller_type = os.environ.get("CONTROLLER_TYPE")
+        if self.controller_type:
+            self.controller_url = os.environ[f"{self.controller_type}_URL"]
+            self.username = os.environ[f"{self.controller_type}_USERNAME"]
+            self.password = os.environ[f"{self.controller_type}_PASSWORD"]
+        else:
+            self.controller_url = None
+            self.username = None
+            self.password = None
 
         # Connection pool is shared within process (for API tests)
         self.pool = ConnectionPool()
@@ -279,6 +284,7 @@ class NACTestBase(aetest.Testcase):
         cause test failures with high step counts.
         """
         try:
+            # raise NotImplementedError("Disable batching reporter for now")
             # Create batching reporter instance
             self.batching_reporter = BatchingReporter(
                 send_callback=self._send_batch_to_pyats,
@@ -2086,7 +2092,7 @@ class NACTestBase(aetest.Testcase):
             api_duration=context.get('api_duration', 0),
         )
 
-    def format_not_found(self, resource_type, identifier, context):
+    def format_not_found(self, resource_type, identifier, context, *args):
         """
         Generic not-found error formatting.
 
