@@ -415,9 +415,9 @@ class PyATSOrchestrator:
             SystemExit: If required environment variables are missing
         """
         # Get controller type (defaults to ACI in the MVP)
-        controller_type = os.environ.get("CONTROLLER_TYPE", "ACI")
-
-        EnvironmentValidator.validate_controller_env(controller_type)
+        controller_type = os.environ.get("CONTROLLER_TYPE")
+        if controller_type:
+            EnvironmentValidator.validate_controller_env(controller_type)
 
     def run_tests(self) -> None:
         """Main entry point - triggers the async execution flow."""
