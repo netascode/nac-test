@@ -41,6 +41,10 @@ class TestResultCollector:
         self.jsonl_path = output_dir / f"{test_id}.jsonl"
         self.jsonl_file = open(self.jsonl_path, "w", buffering=1)  # Line buffered
 
+        logger.debug(
+            f"XXX TestResultCollector.__init__: Created JSONL at {self.jsonl_path}"
+        )
+
         # Write metadata header as first line
         metadata_record = {
             "type": "metadata",
@@ -168,6 +172,11 @@ class TestResultCollector:
         end_time = datetime.now()
         duration = (end_time - self.start_time).total_seconds()
 
+        overall_status = self._determine_overall_status()
+        logger.debug(
+            f"XXX save_to_file: Saving results with overall_status={overall_status}, result_counts={self.result_counts}"
+        )
+
         # Write final summary record (replaces old JSON structure)
         summary_record = {
             "type": "summary",
@@ -175,7 +184,7 @@ class TestResultCollector:
             "start_time": self.start_time.isoformat(),
             "end_time": end_time.isoformat(),
             "duration": duration,
-            "overall_status": self._determine_overall_status(),
+            "overall_status": overall_status,
             "result_counts": self.result_counts,
             "command_count": self.command_count,
             "metadata": self.metadata if hasattr(self, "metadata") else {},
@@ -185,7 +194,7 @@ class TestResultCollector:
         # Close JSONL file handle properly
         self.jsonl_file.close()
 
-        logger.debug("Finalized JSONL results to %s", self.jsonl_path)
+        logger.debug(f"XXX save_to_file: Finalized JSONL results to {self.jsonl_path}")
 
         # Return JSONL path instead of JSON path
         return self.jsonl_path

@@ -557,8 +557,15 @@ class PyATSOrchestrator:
         combined summary generation.
         """
 
+        logger.debug(
+            f"XXX _generate_html_reports_async: Starting, base_output_dir={self.base_output_dir}"
+        )
+
         # Use ArchiveInspector to find all archives (stored at base level)
         archives = ArchiveInspector.find_archives(self.base_output_dir)
+        logger.debug(
+            f"XXX _generate_html_reports_async: Found archives - api={len(archives['api'])}, d2d={len(archives['d2d'])}, legacy={len(archives['legacy'])}"
+        )
 
         # Collect the latest archive of each type
         archive_paths = []
@@ -579,9 +586,15 @@ class PyATSOrchestrator:
             archive_info.append(f"Found legacy archive: {archives['legacy'][0].name}")
 
         if not archive_paths:
+            logger.debug(
+                "XXX _generate_html_reports_async: No archive paths found, exiting"
+            )
             print("No PyATS job archives found to generate reports from.")
             return
 
+        logger.debug(
+            f"XXX _generate_html_reports_async: Will process {len(archive_paths)} archive(s): {[p.name for p in archive_paths]}"
+        )
         print(f"\nGenerating reports from {len(archive_paths)} archive(s)...")
 
         # Use MultiArchiveReportGenerator for all cases (handles single archive too)
@@ -590,6 +603,9 @@ class PyATSOrchestrator:
             self.base_output_dir, minimal_reports=self.minimal_reports
         )
         result = await generator.generate_reports_from_archives(archive_paths)
+        logger.debug(
+            f"XXX _generate_html_reports_async: Report generation complete with status={result['status']}"
+        )
 
         if result["status"] in ["success", "partial"]:
             # Format duration (minutes and seconds)

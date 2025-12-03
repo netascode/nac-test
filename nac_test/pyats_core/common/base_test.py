@@ -45,7 +45,6 @@ import jmespath
 T = TypeVar("T")
 
 
-
 class NACTestBase(aetest.Testcase):
     """Generic base class with common functionality for all architectures.
 
@@ -233,9 +232,16 @@ class NACTestBase(aetest.Testcase):
         html_report_data_dir = base_output_dir / "html_report_data_temp"
         html_report_data_dir.mkdir(exist_ok=True)
 
+        self.logger.debug(
+            f"XXX _initialize_result_collector: base_output_dir={base_output_dir}, html_report_data_dir={html_report_data_dir}"
+        )
+
         # Generate unique test ID
         test_id = self._generate_test_id()
         self.result_collector = TestResultCollector(test_id, html_report_data_dir)
+        self.logger.debug(
+            f"XXX _initialize_result_collector: created collector with test_id={test_id}"
+        )
         # mypy: allow private attribute set for linking test instance
         self.result_collector._test_instance = self  # type: ignore[attr-defined]
 
@@ -1404,7 +1410,9 @@ class NACTestBase(aetest.Testcase):
 
     def categorize_results(
         self, results: List[VerificationResult]
-    ) -> tuple[List[VerificationResult], List[VerificationResult], List[VerificationResult]]:
+    ) -> tuple[
+        List[VerificationResult], List[VerificationResult], List[VerificationResult]
+    ]:
         """Categorize verification results into failed, skipped, and passed lists.
 
         This method provides the standard categorization logic used by all
@@ -1591,7 +1599,9 @@ class NACTestBase(aetest.Testcase):
         """
         raise NotImplementedError("Subclasses must implement format_step_description()")
 
-    def process_results_with_steps(self, results: List[VerificationResult], steps) -> None:
+    def process_results_with_steps(
+        self, results: List[VerificationResult], steps
+    ) -> None:
         """Generic result processor with customization through abstract methods.
 
         This method provides a standardized implementation of result processing
@@ -1689,7 +1699,9 @@ class NACTestBase(aetest.Testcase):
                 reason = result.get("reason", "Unknown reason")
                 self.logger.info(f"  - Skipped: {context} ({reason})")
             except Exception:
-                self.logger.info(f"  - Skipped result: {result.get('reason', 'Unknown')}")
+                self.logger.info(
+                    f"  - Skipped result: {result.get('reason', 'Unknown')}"
+                )
 
         if len(skipped_results) > 5:
             self.logger.info(f"  ... and {len(skipped_results) - 5} more")
@@ -1708,7 +1720,9 @@ class NACTestBase(aetest.Testcase):
         """
         return result.get("status") == "FAILED"
 
-    def log_additional_step_details(self, result: VerificationResult, context: Dict[str, Any]) -> None:
+    def log_additional_step_details(
+        self, result: VerificationResult, context: Dict[str, Any]
+    ) -> None:
         """Log additional step-specific details.
 
         Default implementation does nothing. Subclasses can override to add
@@ -1720,7 +1734,9 @@ class NACTestBase(aetest.Testcase):
         """
         pass  # Default: no additional logging
 
-    def add_step_to_html_collector(self, result: VerificationResult, context: Dict[str, Any]) -> None:
+    def add_step_to_html_collector(
+        self, result: VerificationResult, context: Dict[str, Any]
+    ) -> None:
         """Add step result to HTML report collector.
 
         Default implementation uses existing result collector methods.
@@ -1747,13 +1763,15 @@ class NACTestBase(aetest.Testcase):
                 test_type=test_type.lower(),  # Convert to lowercase for consistency
                 item_identifier=item_identifier,
                 details=reason if reason else None,
-                test_context=None  # Could be enhanced by subclasses
+                test_context=None,  # Could be enhanced by subclasses
             )
         except Exception as e:
             self.logger.debug(f"Failed to add result to HTML collector: {e}")
             # Don't fail the test due to reporting issues
 
-    def build_item_identifier_from_context(self, result: VerificationResult, context: Dict[str, Any]) -> str:
+    def build_item_identifier_from_context(
+        self, result: VerificationResult, context: Dict[str, Any]
+    ) -> str:
         """Build item identifier string from extracted context for HTML reporting.
 
         This method should create a concise, descriptive identifier that uniquely
@@ -1772,7 +1790,9 @@ class NACTestBase(aetest.Testcase):
             return f"BD '{context['tenant']}/{context['bd']}' -> Subnet '{context['subnet']}'"
             return f"RR {context['rr_node']} to Leaf {context['leaf_node']}"
         """
-        raise NotImplementedError("Subclasses must implement build_item_identifier_from_context()")
+        raise NotImplementedError(
+            "Subclasses must implement build_item_identifier_from_context()"
+        )
 
     def set_step_status(self, step, result: VerificationResult) -> None:
         """Set PyATS step status based on verification result.
@@ -1827,29 +1847,39 @@ class NACTestBase(aetest.Testcase):
 
         # Handle case where no items exist - use TEST_CONFIG for skip message
         if not items_to_verify:
-            self.logger.info("No items found in data model for verification - test will be skipped")
+            self.logger.info(
+                "No items found in data model for verification - test will be skipped"
+            )
 
             # Build skip result from TEST_CONFIG (required in new pattern)
             config = self.TEST_CONFIG
-            resource_type = config.get('resource_type', 'Resource')
-            paths = config.get('schema_paths_list', [])
-            managed_objects = config.get('managed_objects', [])
+            resource_type = config.get("resource_type", "Resource")
+            paths = config.get("schema_paths_list", [])
+            managed_objects = config.get("managed_objects", [])
 
             # Build comprehensive skip message from TEST_CONFIG
             reason = f"No {resource_type} configurations found in data model.\n\n"
             if managed_objects:
-                reason += "Managed Objects Checked:\n" + '\n'.join(f"• {mo}" for mo in managed_objects) + "\n\n"
+                reason += (
+                    "Managed Objects Checked:\n"
+                    + "\n".join(f"• {mo}" for mo in managed_objects)
+                    + "\n\n"
+                )
             if paths:
-                reason += "Schema Paths Checked:\n" + '\n'.join(f"• {path}" for path in paths[:20])
+                reason += "Schema Paths Checked:\n" + "\n".join(
+                    f"• {path}" for path in paths[:20]
+                )
                 if len(paths) > 20:
                     reason += f"\n• ... and {len(paths) - 20} more paths"
 
-            return [{
-                'status': ResultStatus.SKIPPED,
-                'context': {},
-                'reason': reason,
-                'api_duration': 0
-            }]
+            return [
+                {
+                    "status": ResultStatus.SKIPPED,
+                    "context": {},
+                    "reason": reason,
+                    "api_duration": 0,
+                }
+            ]
 
         # Detect verification pattern based on return type
         if isinstance(items_to_verify, dict):
@@ -1881,28 +1911,36 @@ class NACTestBase(aetest.Testcase):
         if not non_empty_groups:
             # Build skip result from TEST_CONFIG (required in new pattern)
             config = self.TEST_CONFIG
-            resource_type = config.get('resource_type', 'Resource')
-            paths = config.get('schema_paths_list', [])
-            managed_objects = config.get('managed_objects', [])
+            resource_type = config.get("resource_type", "Resource")
+            paths = config.get("schema_paths_list", [])
+            managed_objects = config.get("managed_objects", [])
 
             # Build comprehensive skip message from TEST_CONFIG
             reason = f"No {resource_type} configurations found in data model.\n\n"
             if managed_objects:
-                reason += "Managed Objects Checked:\n" + '\n'.join(f"• {mo}" for mo in managed_objects) + "\n\n"
+                reason += (
+                    "Managed Objects Checked:\n"
+                    + "\n".join(f"• {mo}" for mo in managed_objects)
+                    + "\n\n"
+                )
             if paths:
-                reason += "Schema Paths Checked:\n" + '\n'.join(f"• {path}" for path in paths[:20])
+                reason += "Schema Paths Checked:\n" + "\n".join(
+                    f"• {path}" for path in paths[:20]
+                )
                 if len(paths) > 20:
                     reason += f"\n• ... and {len(paths) - 20} more paths"
 
-            return [{
-                'status': ResultStatus.SKIPPED,
-                'context': {},
-                'reason': reason,
-                'api_duration': 0
-            }]
+            return [
+                {
+                    "status": ResultStatus.SKIPPED,
+                    "context": {},
+                    "reason": reason,
+                    "api_duration": 0,
+                }
+            ]
 
         # Validate that test implements verify_group()
-        if not hasattr(self, 'verify_group'):
+        if not hasattr(self, "verify_group"):
             error_msg = (
                 f"{self.__class__.__name__} returned dict from get_items_to_verify() "
                 f"but does not implement verify_group(). For grouped verification, "
@@ -1913,11 +1951,12 @@ class NACTestBase(aetest.Testcase):
 
         # Set up concurrency control
         from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
+
         semaphore = asyncio.Semaphore(DEFAULT_API_CONCURRENCY)
 
         # Create tasks for all groups
         tasks = []
-        client = getattr(self, 'client', None)
+        client = getattr(self, "client", None)
 
         for group_key, contexts in non_empty_groups.items():
             task = self.verify_group(semaphore, client, group_key, contexts)
@@ -1934,20 +1973,24 @@ class NACTestBase(aetest.Testcase):
                 flattened_results.extend(result)
             elif isinstance(result, Exception):
                 # Group verification raised exception
-                flattened_results.append({
-                    'status': ResultStatus.FAILED,
-                    'reason': f'Group verification exception: {str(result)}',
-                    'context': {},
-                    'api_duration': 0
-                })
+                flattened_results.append(
+                    {
+                        "status": ResultStatus.FAILED,
+                        "reason": f"Group verification exception: {str(result)}",
+                        "context": {},
+                        "api_duration": 0,
+                    }
+                )
             else:
                 # Unexpected return type
-                flattened_results.append({
-                    'status': ResultStatus.FAILED,
-                    'reason': f'Unexpected group result type: {type(result)}',
-                    'context': {},
-                    'api_duration': 0
-                })
+                flattened_results.append(
+                    {
+                        "status": ResultStatus.FAILED,
+                        "reason": f"Unexpected group result type: {type(result)}",
+                        "context": {},
+                        "api_duration": 0,
+                    }
+                )
 
         return flattened_results
 
@@ -1968,7 +2011,7 @@ class NACTestBase(aetest.Testcase):
             list: List of individual item verification results
         """
         # Validate that test implements verify_item()
-        if not hasattr(self, 'verify_item'):
+        if not hasattr(self, "verify_item"):
             error_msg = (
                 f"{self.__class__.__name__} returned list from get_items_to_verify() "
                 f"but does not implement verify_item(). For item verification, "
@@ -1979,11 +2022,12 @@ class NACTestBase(aetest.Testcase):
 
         # Set up concurrency control
         from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
+
         semaphore = asyncio.Semaphore(DEFAULT_API_CONCURRENCY)
 
         # Create tasks for all items
         tasks = []
-        client = getattr(self, 'client', None)
+        client = getattr(self, "client", None)
 
         for context in items:
             task = self.verify_item(semaphore, client, context)
@@ -1999,12 +2043,14 @@ class NACTestBase(aetest.Testcase):
                 processed_results.append(result)
             else:
                 # Handle exceptions
-                processed_results.append({
-                    'status': ResultStatus.FAILED,
-                    'reason': f'Unexpected error during verification: {str(result)}',
-                    'context': {},
-                    'api_duration': 0
-                })
+                processed_results.append(
+                    {
+                        "status": ResultStatus.FAILED,
+                        "reason": f"Unexpected error during verification: {str(result)}",
+                        "context": {},
+                        "api_duration": 0,
+                    }
+                )
 
         return processed_results
 
@@ -2025,14 +2071,16 @@ class NACTestBase(aetest.Testcase):
             Dict: Formatted verification result with detailed error message
         """
         # Get test-specific configuration
-        config = getattr(self, 'TEST_CONFIG', {})
-        attr_names = config.get('attribute_names', {})
-        schema_paths = config.get('schema_paths', {})
-        resource_type = config.get('resource_type', 'Resource')
+        config = getattr(self, "TEST_CONFIG", {})
+        attr_names = config.get("attribute_names", {})
+        schema_paths = config.get("schema_paths", {})
+        resource_type = config.get("resource_type", "Resource")
 
         # Use test-specific names or fall back to attribute key
-        display_name = attr_names.get(attribute, attribute.replace('_', ' ').title())
-        schema_path = schema_paths.get(attribute, f"data model configuration for '{attribute}'")
+        display_name = attr_names.get(attribute, attribute.replace("_", " ").title())
+        schema_path = schema_paths.get(
+            attribute, f"data model configuration for '{attribute}'"
+        )
 
         # Build identifier from context
         identifier = self.build_identifier(context)
@@ -2053,7 +2101,7 @@ class NACTestBase(aetest.Testcase):
                 f"• {resource_type} is properly configured in APIC\n"
                 f"• Naming suffixes are correctly applied"
             ),
-            api_duration=context.get('api_duration', 0),
+            api_duration=context.get("api_duration", 0),
         )
 
     def format_api_error(self, status_code, url, context):
@@ -2070,8 +2118,8 @@ class NACTestBase(aetest.Testcase):
         Returns:
             Dict: Formatted verification result with API error details
         """
-        config = getattr(self, 'TEST_CONFIG', {})
-        resource_type = config.get('resource_type', 'Resource')
+        config = getattr(self, "TEST_CONFIG", {})
+        resource_type = config.get("resource_type", "Resource")
         identifier = self.build_identifier(context)
 
         return self.format_verification_result(
@@ -2089,7 +2137,7 @@ class NACTestBase(aetest.Testcase):
                 f"• {resource_type} exists in APIC fabric\n"
                 f"• API endpoint is accessible"
             ),
-            api_duration=context.get('api_duration', 0),
+            api_duration=context.get("api_duration", 0),
         )
 
     def format_not_found(self, resource_type, identifier, context, *args):
@@ -2106,13 +2154,13 @@ class NACTestBase(aetest.Testcase):
         Returns:
             Dict: Formatted verification result with not-found details
         """
-        config = getattr(self, 'TEST_CONFIG', {})
+        config = getattr(self, "TEST_CONFIG", {})
 
         # Get schema paths for better guidance
-        schema_paths = config.get('schema_paths', {})
+        schema_paths = config.get("schema_paths", {})
         relevant_paths = []
         for key, path in schema_paths.items():
-            if 'name' in key.lower() or resource_type.lower() in path.lower():
+            if "name" in key.lower() or resource_type.lower() in path.lower():
                 relevant_paths.append(path)
 
         return self.format_verification_result(
@@ -2127,12 +2175,16 @@ class NACTestBase(aetest.Testcase):
                 f"• {resource_type}: Not found in APIC fabric\n"
                 f"• Status: Missing or not deployed\n\n"
                 f"Please verify:\n"
-                + ('\n'.join(f"• {path}" for path in relevant_paths[:3]) if relevant_paths else f"• {resource_type} is defined in data model\n")
+                + (
+                    "\n".join(f"• {path}" for path in relevant_paths[:3])
+                    if relevant_paths
+                    else f"• {resource_type} is defined in data model\n"
+                )
                 + f"\n• {resource_type} has been deployed to APIC fabric\n"
                 f"• Naming suffixes are correctly applied\n"
                 f"• Parent objects exist in APIC"
             ),
-            api_duration=context.get('api_duration', 0),
+            api_duration=context.get("api_duration", 0),
         )
 
     def build_identifier(self, context):
@@ -2145,24 +2197,26 @@ class NACTestBase(aetest.Testcase):
         Returns:
             str: Formatted identifier string
         """
-        config = getattr(self, 'TEST_CONFIG', {})
-        format_str = config.get('identifier_format', 'Resource Verification')
+        config = getattr(self, "TEST_CONFIG", {})
+        format_str = config.get("identifier_format", "Resource Verification")
 
         try:
             # Try to format using the provided format string
             return format_str.format(**context)
         except (KeyError, ValueError):
             # Fallback if format fails
-            resource_type = config.get('resource_type', 'Resource')
+            resource_type = config.get("resource_type", "Resource")
             # Try to build a basic identifier
-            if 'tenant_name' in context:
-                parts = [context.get('tenant_name')]
-                if 'ap_name' in context or 'application_profile_name' in context:
-                    parts.append(context.get('ap_name', context.get('application_profile_name')))
-                if 'epg_name' in context:
-                    parts.append(context.get('epg_name'))
-                elif 'bd_name' in context:
-                    parts.append(context.get('bd_name'))
+            if "tenant_name" in context:
+                parts = [context.get("tenant_name")]
+                if "ap_name" in context or "application_profile_name" in context:
+                    parts.append(
+                        context.get("ap_name", context.get("application_profile_name"))
+                    )
+                if "epg_name" in context:
+                    parts.append(context.get("epg_name"))
+                elif "bd_name" in context:
+                    parts.append(context.get("bd_name"))
                 return f"{resource_type} '{'/'.join(parts)}'"
             return f"{resource_type} Verification"
 
@@ -2177,7 +2231,7 @@ class NACTestBase(aetest.Testcase):
             results: List of verification results
             steps: PyATS steps object
         """
-        config = getattr(self, 'TEST_CONFIG', {})
+        config = getattr(self, "TEST_CONFIG", {})
 
         # If no TEST_CONFIG, fall back to existing process_results_with_steps
         if not config:
@@ -2188,8 +2242,8 @@ class NACTestBase(aetest.Testcase):
         failed, skipped, passed = self.categorize_results(results)
 
         # Log summary
-        resource_type = config.get('resource_type', 'Resource')
-        test_type_name = config.get('test_type_name', f"{resource_type} Verification")
+        resource_type = config.get("resource_type", "Resource")
+        test_type_name = config.get("test_type_name", f"{resource_type} Verification")
         self.log_result_summary(test_type_name, failed, skipped, passed)
 
         # Log skipped items
@@ -2210,10 +2264,12 @@ class NACTestBase(aetest.Testcase):
             results: List of verification results
             steps: PyATS steps object
         """
-        config = getattr(self, 'TEST_CONFIG', {})
-        step_name_format = config.get('step_name_format', '{resource_type} Verification')
-        resource_type = config.get('resource_type', 'Resource')
-        test_type_name = config.get('test_type_name', f"{resource_type} Verification")
+        config = getattr(self, "TEST_CONFIG", {})
+        step_name_format = config.get(
+            "step_name_format", "{resource_type} Verification"
+        )
+        resource_type = config.get("resource_type", "Resource")
+        test_type_name = config.get("test_type_name", f"{resource_type} Verification")
 
         for result in results:
             if not isinstance(result, dict):
@@ -2221,11 +2277,13 @@ class NACTestBase(aetest.Testcase):
                 continue
 
             try:
-                context = result.get('context', {})
+                context = result.get("context", {})
 
                 # Build step name using format string
                 try:
-                    step_name = step_name_format.format(**context, resource_type=resource_type)
+                    step_name = step_name_format.format(
+                        **context, resource_type=resource_type
+                    )
                 except (KeyError, ValueError):
                     # Fallback to basic name
                     step_name = self.build_identifier(context)
@@ -2235,7 +2293,7 @@ class NACTestBase(aetest.Testcase):
                     self._add_step_to_html_collector_smart(result, context)
 
                     # Log details for failures
-                    if result.get('status') in [ResultStatus.FAILED, 'FAILED']:
+                    if result.get("status") in [ResultStatus.FAILED, "FAILED"]:
                         self._log_step_details_smart(result, context)
 
                     # Set step status
@@ -2253,15 +2311,17 @@ class NACTestBase(aetest.Testcase):
         Args:
             skipped_results: List of skipped results
         """
-        config = getattr(self, 'TEST_CONFIG', {})
-        resource_type = config.get('resource_type', 'Resource')
+        config = getattr(self, "TEST_CONFIG", {})
+        resource_type = config.get("resource_type", "Resource")
 
-        self.logger.warning(f"{len(skipped_results)} {resource_type} verifications skipped")
+        self.logger.warning(
+            f"{len(skipped_results)} {resource_type} verifications skipped"
+        )
 
         for i, result in enumerate(skipped_results[:5]):
-            context = result.get('context', {})
+            context = result.get("context", {})
             identifier = self.build_identifier(context)
-            reason = result.get('reason', 'Unknown reason')
+            reason = result.get("reason", "Unknown reason")
             self.logger.info(f"  - Skipped: {identifier} ({reason})")
 
         if len(skipped_results) > 5:
@@ -2275,18 +2335,18 @@ class NACTestBase(aetest.Testcase):
             result: Verification result
             context: Context object
         """
-        config = getattr(self, 'TEST_CONFIG', {})
-        log_fields = config.get('log_fields', [])
+        config = getattr(self, "TEST_CONFIG", {})
+        log_fields = config.get("log_fields", [])
 
         # Log configured fields
         for field in log_fields:
             value = context.get(field)
             if value:
-                display_name = field.replace('_', ' ').title()
+                display_name = field.replace("_", " ").title()
                 self.logger.info(f"  - {display_name}: {value}")
 
         # Log API duration if available
-        api_duration = context.get('api_duration', 0)
+        api_duration = context.get("api_duration", 0)
         if api_duration:
             self.logger.info(f"  - API Duration: {api_duration:.3f}s")
 
@@ -2298,15 +2358,15 @@ class NACTestBase(aetest.Testcase):
             result: Verification result
             context: Context object
         """
-        config = getattr(self, 'TEST_CONFIG', {})
-        test_type_name = config.get('test_type_name', 'Verification')
+        config = getattr(self, "TEST_CONFIG", {})
+        test_type_name = config.get("test_type_name", "Verification")
 
         # Build identifier
         identifier = self.build_identifier(context)
 
         # Get status and reason
-        status = result.get('status', 'UNKNOWN')
-        reason = result.get('reason', '')
+        status = result.get("status", "UNKNOWN")
+        reason = result.get("reason", "")
 
         # Add to collector
         self.add_verification_result(
@@ -2314,7 +2374,7 @@ class NACTestBase(aetest.Testcase):
             test_type=test_type_name.lower(),
             item_identifier=identifier,
             details=reason if reason else None,
-            test_context=context.get('api_context')
+            test_context=context.get("api_context"),
         )
 
     @aetest.cleanup
@@ -2381,8 +2441,11 @@ class NACTestBase(aetest.Testcase):
         # Save test results for HTML report generation
         if hasattr(self, "result_collector"):
             try:
+                self.logger.debug(
+                    "XXX cleanup: About to save results from result_collector"
+                )
                 output_file = self.result_collector.save_to_file()
-                self.logger.debug(f"Saved test results to: {output_file}")
+                self.logger.debug(f"XXX cleanup: Saved test results to: {output_file}")
             except Exception as e:
                 self.logger.error(f"Failed to save test results: {e}")
                 # Don't fail the test due to reporting issues
