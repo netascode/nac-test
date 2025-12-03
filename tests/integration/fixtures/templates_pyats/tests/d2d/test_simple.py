@@ -25,7 +25,10 @@ PASS_FAIL_CRITERIA = "If this test ever failed, hell might has well freeze over"
 
 
 class VerifyTruth(SSHTestBase):
-    """Verifies BGP peer status on SD-WAN cEdge devices."""
+    """Verifies that True is indeed True (simple test for HTML report generation)."""
+
+    # Required class variable for base test reporting
+    TEST_TYPE_NAME = "Truth Verification"
 
     def __init__(self, *args, **kwargs):
         """Initialize the test case and its attributes."""
@@ -36,7 +39,7 @@ class VerifyTruth(SSHTestBase):
         """Main test using async pattern with steps for detailed reporting."""
         tasks = [self._verify_single_truth_async()]
         results = await asyncio.gather(*tasks, return_exceptions=False)
-        self._process_results_with_steps(results)
+        self._process_results_with_steps(results, steps)
 
     def get_ssh_device_inventory(self) -> List[Dict[str, Any]]:
         return [
@@ -95,8 +98,9 @@ class VerifyTruth(SSHTestBase):
         Groups results by template for hierarchical reporting, logs details, and sets step results.
         """
         if not results:
-            self.passed("No BGP neighbors were found to verify.")
+            self.passed("No verifications to process.")
             return
+
         # -----------------------------
         # Log summary statistics
         # -----------------------------
@@ -106,28 +110,41 @@ class VerifyTruth(SSHTestBase):
         logger.info(
             f"Truth verification: {len(passed)} passed, {len(failed)} failed, {len(skipped)} skipped"
         )
+
+        # Process each result with proper step creation
         for result in results:
             logger.debug(f"Verification result: {result}")
-        with steps.start("Verify Truth", continue_=True) as step:
-            step_name = "test step name"
-            if result["status"] == "PASSED":
-                step.passed(result["reason"])
-                self.result_collector.add_result(
-                    ResultStatus.PASSED,
-                    f"{step_name} - {result['reason']}",
-                )
-                self.passed()
-            elif result["status"] == "SKIPPED":
-                step.skipped(result["reason"])
-                self.result_collector.add_result(
-                    ResultStatus.SKIPPED,
-                    f"{step_name} - {result['reason']}",
-                )
-                self.skipped()
-            else:
-                step.failed(result["reason"])
-                self.result_collector.add_result(
-                    ResultStatus.FAILED,
-                    f"{step_name} - {result['reason']}",
-                )
-                self.failed()
+
+            # Extract verification details
+            verification = result.get("verification", {})
+            expected_state = verification.get("expected_state", "True")
+
+            with steps.start(f"Verify Truth: {expected_state}", continue_=True) as step:
+                step_name = "Truth Verification"
+
+                if result["status"] == "PASSED":
+                    step.passed(result["reason"])
+                    self.result_collector.add_result(
+                        ResultStatus.PASSED,
+                        f"{step_name} - {result['reason']}",
+                    )
+                elif result["status"] == "SKIPPED":
+                    step.skipped(result["reason"])
+                    self.result_collector.add_result(
+                        ResultStatus.SKIPPED,
+                        f"{step_name} - {result['reason']}",
+                    )
+                else:
+                    step.failed(result["reason"])
+                    self.result_collector.add_result(
+                        ResultStatus.FAILED,
+                        f"{step_name} - {result['reason']}",
+                    )
+
+        # Determine overall test result after processing all verifications
+        if failed:
+            self.failed(f"Truth verification failed: {len(failed)} failure(s)")
+        elif skipped and not passed:
+            self.skipped("All verifications were skipped")
+        else:
+            self.passed(f"Truth verification passed: {len(passed)} verification(s)")
