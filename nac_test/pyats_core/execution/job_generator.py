@@ -100,7 +100,7 @@ class JobGenerator:
         import json
         from pathlib import Path
         from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
-        
+        from pyats.easypy import run
         # Device being tested (using hostname)
         HOSTNAME = "{hostname}"
         DEVICE_INFO = {json.dumps(device)}
@@ -124,7 +124,7 @@ class JobGenerator:
                 # Create meaningful task ID from test file name and hostname
                 # e.g., "router1_epg_attributes"
                 test_name = Path(test_file).stem
-                runtime.tasks.run(
+                run(
                     testscript=test_file,
                     taskid=f"{{HOSTNAME}}_{{test_name}}",
                     max_runtime={DEFAULT_TEST_TIMEOUT}
