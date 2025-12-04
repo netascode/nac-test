@@ -67,7 +67,9 @@ def build_connection_start_command(
     elif protocol == "console":
         return _build_console_command(host)
     else:
-        raise ValueError(f"Unsupported protocol: {protocol}. Supported protocols: ssh, telnet, console")
+        raise ValueError(
+            f"Unsupported protocol: {protocol}. Supported protocols: ssh, telnet, console"
+        )
 
 
 def _build_ssh_command(
@@ -94,7 +96,9 @@ def _build_ssh_command(
 
     if port is not None:
         if not isinstance(port, int) or port <= 0 or port > 65535:
-            raise ValueError(f"Invalid port number: {port}. Must be integer between 1-65535")
+            raise ValueError(
+                f"Invalid port number: {port}. Must be integer between 1-65535"
+            )
         cmd = f"{cmd} -p {port}"
 
     if ssh_options:
@@ -121,7 +125,9 @@ def _build_telnet_command(host: str, port: Optional[int] = None) -> str:
 
     if port is not None:
         if not isinstance(port, int) or port <= 0 or port > 65535:
-            raise ValueError(f"Invalid port number: {port}. Must be integer between 1-65535")
+            raise ValueError(
+                f"Invalid port number: {port}. Must be integer between 1-65535"
+            )
         cmd = f"{cmd} {port}"
 
     return cmd

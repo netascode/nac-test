@@ -3,7 +3,6 @@ simple test
 """
 
 import logging
-import asyncio
 from typing import Dict, List, Any
 
 from pyats import aetest
@@ -27,19 +26,23 @@ PASS_FAIL_CRITERIA = "If this test ever failed, hell might has well freeze over"
 class VerifyTruth(SSHTestBase):
     """Verifies that True is indeed True (simple test for HTML report generation)."""
 
-    # Required class variable for base test reporting
-    TEST_TYPE_NAME = "Truth Verification"
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the test case and its attributes."""
-        super().__init__(*args, **kwargs)
+    # TEST_CONFIG follows the standard pattern used by APIC tests
+    TEST_CONFIG = {
+        "resource_type": "Truth Assertion",
+        "test_type_name": "Truth Verification",
+        "identifier_format": "Truth Test {test_id}",
+        "step_name_format": "Verify Truth: {expected_state}",
+    }
 
     @aetest.test
-    async def test_true(self, steps):
-        """Main test using async pattern with steps for detailed reporting."""
-        tasks = [self._verify_single_truth_async()]
-        results = await asyncio.gather(*tasks, return_exceptions=False)
-        self._process_results_with_steps(results, steps)
+    def test_true(self, steps):
+        """Main test using standard base class pattern with steps for detailed reporting."""
+        # Generate results using format_verification_result()
+        results = [self._verify_single_truth()]
+        logger.info(f"XXX results: {results}")
+
+        # Use base class smart result processing
+        self.process_results_smart(results, steps)
 
     def get_ssh_device_inventory(self) -> List[Dict[str, Any]]:
         return [
@@ -52,99 +55,38 @@ class VerifyTruth(SSHTestBase):
             }
         ]
 
-    async def _verify_single_truth_async(
-        self,
-    ) -> Dict[str, Any]:
+    def _verify_single_truth(self) -> Dict[str, Any]:
         """
-        Verifies a single neighbor+address-family combination. Returns a detailed result dict.
+        Verifies that True is indeed True. Returns a standardized result dict.
+
+        Uses the base class format_verification_result() method to ensure
+        proper integration with the reporter.
         """
-        verification = {
+        # Build context object with all verification metadata
+        context = {
+            "test_id": "truth_test_001",
             "expected_state": "True",
+            "test_description": "Verify that True is indeed True",
         }
+
         print("Verifying that True is indeed True...")
+
         try:
-            # assert False, 'test error'
-            return self._result_dict(
-                "PASSED",
-                "Truth has been verified",
-                verification,
+            assert False, "test error"
+
+            # Use base class formatter for standardized result structure
+            return self.format_verification_result(
+                status=ResultStatus.PASSED,
+                context=context,
+                reason="Truth has been verified successfully",
+                api_duration=0.0,
             )
 
         except Exception as e:
-            return self._result_dict(
-                "FAILED",
-                f"failure: {e}",
-                verification,
+            # Use base class formatter for failed results too
+            return self.format_verification_result(
+                status=ResultStatus.FAILED,
+                context=context,
+                reason=f"Truth verification failed: {e}",
+                api_duration=0.0,
             )
-
-    def _result_dict(
-        self,
-        status,
-        reason,
-        verification,
-    ):
-        """
-        Helper to build a structured result dictionary for each neighbor+AF verification.
-        """
-        return {
-            "status": status,
-            "reason": reason,
-            "verification": verification,
-        }
-
-    def _process_results_with_steps(self, results: List[Dict[str, Any]], steps):
-        """
-        Process results with detailed step reporting and HTML report collection.
-        Groups results by template for hierarchical reporting, logs details, and sets step results.
-        """
-        if not results:
-            self.passed("No verifications to process.")
-            return
-
-        # -----------------------------
-        # Log summary statistics
-        # -----------------------------
-        passed = [r for r in results if r["status"] == "PASSED"]
-        failed = [r for r in results if r["status"] == "FAILED"]
-        skipped = [r for r in results if r["status"] == "SKIPPED"]
-        logger.info(
-            f"Truth verification: {len(passed)} passed, {len(failed)} failed, {len(skipped)} skipped"
-        )
-
-        # Process each result with proper step creation
-        for result in results:
-            logger.debug(f"Verification result: {result}")
-
-            # Extract verification details
-            verification = result.get("verification", {})
-            expected_state = verification.get("expected_state", "True")
-
-            with steps.start(f"Verify Truth: {expected_state}", continue_=True) as step:
-                step_name = "Truth Verification"
-
-                if result["status"] == "PASSED":
-                    step.passed(result["reason"])
-                    self.result_collector.add_result(
-                        ResultStatus.PASSED,
-                        f"{step_name} - {result['reason']}",
-                    )
-                elif result["status"] == "SKIPPED":
-                    step.skipped(result["reason"])
-                    self.result_collector.add_result(
-                        ResultStatus.SKIPPED,
-                        f"{step_name} - {result['reason']}",
-                    )
-                else:
-                    step.failed(result["reason"])
-                    self.result_collector.add_result(
-                        ResultStatus.FAILED,
-                        f"{step_name} - {result['reason']}",
-                    )
-
-        # Determine overall test result after processing all verifications
-        if failed:
-            self.failed(f"Truth verification failed: {len(failed)} failure(s)")
-        elif skipped and not passed:
-            self.skipped("All verifications were skipped")
-        else:
-            self.passed(f"Truth verification passed: {len(passed)} verification(s)")
