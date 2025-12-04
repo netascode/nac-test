@@ -1701,7 +1701,18 @@ enable_isr:
       AP Name                           Primary Image          Backup Image            Predownload Status   Predownload Version  Next Retry Time   Retry Count
       -------------------------------------------------------------------------------------------------------------------------------------------------------
       AP084F.A9A2.86A4                  17.4.1.6               17.3.3.26                  None                  0.0.0.0             N/A                 0
+    "show install summary": |
+      [ Switch 1 ] Installed Package(s) Information:
+      State (St): I - Inactive, U - Activated & Uncommitted,
+                  C - Activated & Committed, D - Deactivated & Uncommitted
+      --------------------------------------------------------------------------------
+      Type  St   Filename/Version
+      --------------------------------------------------------------------------------
+      IMG   C    17.15.04.0.6839
 
+      --------------------------------------------------------------------------------
+      Auto abort timer: inactive
+      --------------------------------------------------------------------------------
 
 config:
   commands:

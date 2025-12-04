@@ -303,7 +303,8 @@ class ConnectionBroker:
                 # Connect using pyATS testbed with custom logfile location
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(
-                    None, lambda: device.connect(logfile=str(logfile_path))
+                    None,
+                    lambda: device.connect(log_stdout=False, logfile=str(logfile_path)),
                 )
 
                 # Store connection
