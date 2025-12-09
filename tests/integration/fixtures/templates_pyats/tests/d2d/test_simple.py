@@ -72,9 +72,10 @@ class VerifyTruth(SSHTestBase):
         print("Verifying that True is indeed True...")
 
         try:
-            assert False, "test error"
+            assert 1 == 1, "test error"
 
             # Use base class formatter for standardized result structure
+            self.passed()
             return self.format_verification_result(
                 status=ResultStatus.PASSED,
                 context=context,
@@ -84,6 +85,8 @@ class VerifyTruth(SSHTestBase):
 
         except Exception as e:
             # Use base class formatter for failed results too
+            self.failed()
+
             return self.format_verification_result(
                 status=ResultStatus.FAILED,
                 context=context,
