@@ -93,9 +93,10 @@ class JobGenerator:
 
         job_content = textwrap.dedent(f'''
         """Auto-generated PyATS job file for device {hostname}"""
-        
+
         import os
         import json
+        import logging
         from pathlib import Path
         from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
         
@@ -112,11 +113,11 @@ class JobGenerator:
             """Main job file entry point for device-centric execution"""
             # Set up environment variables that SSHTestBase expects
             os.environ['DEVICE_INFO'] = json.dumps(DEVICE_INFO)
-            
+
             # Create and attach connection manager to runtime
             # This will be shared across all tests for this device
             runtime.connection_manager = DeviceConnectionManager(max_concurrent=1)
-            
+
             # Run all test files for this device
             for idx, test_file in enumerate(TEST_FILES):
                 # Create meaningful task ID from test file name and hostname
@@ -125,7 +126,8 @@ class JobGenerator:
                 runtime.tasks.run(
                     testscript=test_file,
                     taskid=f"{{HOSTNAME}}_{{test_name}}",
-                    max_runtime={DEFAULT_TEST_TIMEOUT}
+                    max_runtime={DEFAULT_TEST_TIMEOUT},
+                    testbed=runtime.testbed
                 )
         ''')
 
