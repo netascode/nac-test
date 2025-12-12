@@ -316,6 +316,7 @@ class PyATSOrchestrator:
                 self.subprocess_runner,
                 self.d2d_test_status,  # Use d2d_test_status for device tests
                 self.test_dir,
+                self.base_output_dir,
             )
 
         # Use a local narrowed variable to satisfy mypy
@@ -395,7 +396,7 @@ class PyATSOrchestrator:
         # Aggregate all device archives into a single D2D archive
         if device_archives:
             aggregated_archive = await ArchiveAggregator.aggregate_device_archives(
-                device_archives, self.output_dir
+                device_archives, self.base_output_dir
             )
             return aggregated_archive
         else:

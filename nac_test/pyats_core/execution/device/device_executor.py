@@ -27,6 +27,7 @@ class DeviceExecutor:
         subprocess_runner: SubprocessRunner,
         test_status: dict[str, Any],
         test_dir: Path,
+        base_output_dir: Path,
     ):
         """Initialize device executor.
 
@@ -35,11 +36,13 @@ class DeviceExecutor:
             subprocess_runner: SubprocessRunner instance for executing jobs
             test_status: Dictionary for tracking test status
             test_dir: Directory containing PyATS test files (user-specified)
+            base_output_dir: Base output directory for test results
         """
         self.job_generator = job_generator
         self.subprocess_runner = subprocess_runner
         self.test_status = test_status
         self.test_dir = test_dir
+        self.base_output_dir = base_output_dir
 
     async def run_device_job_with_semaphore(
         self,
@@ -96,11 +99,13 @@ class DeviceExecutor:
                 env.update(
                     {
                         "HOSTNAME": hostname,
-                        "DEVICE_INFO": json.dumps(device),  # Will be loaded by the job file
+                        "DEVICE_INFO": json.dumps(
+                            device
+                        ),  # Will be loaded by the job file
                         # Environment variables are used because PyATS tests run as separate subprocess processes.
                         # The merged data file is created by main.py at the base output level.
                         "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
-                            self.subprocess_runner.output_dir
+                            self.base_output_dir
                             / "merged_data_model_test_variables.yaml"
                         ),
                         "PYTHONPATH": get_pythonpath_for_tests(
@@ -160,7 +165,9 @@ class DeviceExecutor:
                 return Path(archive_path) if archive_path else None
 
             except Exception as e:
-                logger.error(f"Error running tests for device {hostname}: {e}", exc_info=True)
+                logger.error(
+                    f"Error running tests for device {hostname}: {e}", exc_info=True
+                )
 
                 # Mark all tests as errored
                 for test_file in test_files:
