@@ -73,14 +73,8 @@ class MultiArchiveReportGenerator:
         """
         start_time = datetime.now()
 
-        logger.debug(
-            f"XXX generate_reports_from_archives: Starting with {len(archive_paths)} archives: {[p.name for p in archive_paths]}"
-        )
-
         if not archive_paths:
-            logger.warning(
-                "XXX generate_reports_from_archives: No archive paths provided"
-            )
+            logger.warning("No archive paths provided")
             return {
                 "status": "failed",
                 "results": {},
@@ -93,25 +87,16 @@ class MultiArchiveReportGenerator:
             shutil.rmtree(self.pyats_results_dir)
         self.pyats_results_dir.mkdir(parents=True)
 
-        logger.debug(
-            f"XXX generate_reports_from_archives: Cleaned/created pyats_results_dir={self.pyats_results_dir}"
-        )
-
         # Process each archive
         results: Dict[str, Dict[str, Any]] = {}
         tasks = []
 
         for archive_path in archive_paths:
             if not archive_path.exists():
-                logger.warning(
-                    f"XXX generate_reports_from_archives: Archive not found: {archive_path}"
-                )
+                logger.warning(f"Archive not found: {archive_path}")
                 continue
 
             archive_type = ArchiveInspector.get_archive_type(archive_path)
-            logger.debug(
-                f"XXX generate_reports_from_archives: Processing {archive_type} archive: {archive_path.name}"
-            )
             task = self._process_single_archive(archive_type, archive_path)
             tasks.append((archive_type, task))
 
@@ -174,17 +159,11 @@ class MultiArchiveReportGenerator:
         Returns:
             Result dictionary from ReportGenerator
         """
-        logger.info(
-            f"XXX _process_single_archive: Processing {archive_type} archive: {archive_path.name}"
-        )
+        logger.info(f"Processing {archive_type} archive: {archive_path.name}")
 
         # Create type-specific extraction directory
         extract_dir = self.pyats_results_dir / archive_type
         extract_dir.mkdir(parents=True, exist_ok=True)
-
-        logger.debug(
-            f"XXX _process_single_archive: Extract dir created at {extract_dir}"
-        )
 
         try:
             # Extract archive
@@ -195,16 +174,10 @@ class MultiArchiveReportGenerator:
             type_output_dir = self.output_dir / archive_type
 
             # Run ReportGenerator on extracted contents
-            logger.debug(
-                f"XXX _process_single_archive: Calling ReportGenerator with output_dir={self.output_dir}, extract_dir={extract_dir}"
-            )
             generator = ReportGenerator(
                 type_output_dir, extract_dir, minimal_reports=self.minimal_reports
             )
             result = await generator.generate_all_reports()
-            logger.debug(
-                f"XXX _process_single_archive: ReportGenerator returned status={result.get('status')}"
-            )
 
             # Add archive info to result
             result["archive_path"] = str(archive_path)

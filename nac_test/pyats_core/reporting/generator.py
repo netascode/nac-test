@@ -98,37 +98,27 @@ class ReportGenerator:
         """
         start_time = datetime.now()
 
-        logger.debug(
-            f"XXX generate_all_reports: Starting, temp_data_dir={self.temp_data_dir}, html_report_data_dir={self.html_report_data_dir}"
-        )
-
         # Move files from temp location to final location
         if self.temp_data_dir.exists():
-            jsonl_count = len(list(self.temp_data_dir.glob("*.jsonl")))
+            # Debug the number of jsonl files in the temp directory
             logger.debug(
-                f"XXX generate_all_reports: Found {jsonl_count} jsonl files in temp directory"
+                f"Found {len(list(self.temp_data_dir.glob('*.jsonl')))} jsonl files in the temp directory"
             )
             for jsonl_file in self.temp_data_dir.glob("*.jsonl"):
                 jsonl_file.rename(self.html_report_data_dir / jsonl_file.name)
             # Clean up temp directory
             self.temp_data_dir.rmdir()
         else:
-            logger.warning(
-                f"XXX generate_all_reports: No temp data directory found at {self.temp_data_dir}"
-            )
+            logger.warning("No temp data directory found at %s", self.temp_data_dir)
 
         # Find all test result files in html_report_data directory
         result_files = list(self.html_report_data_dir.glob("*.jsonl"))
 
         if not result_files:
-            logger.warning(
-                f"XXX generate_all_reports: No test results found in {self.html_report_data_dir}"
-            )
+            logger.warning("No test results found to generate reports")
             return {"status": "no_results", "duration": 0}
 
-        logger.info(
-            f"XXX generate_all_reports: Found {len(result_files)} test results to process"
-        )
+        logger.info(f"Found {len(result_files)} test results to process")
 
         # Generate reports concurrently with semaphore control
         semaphore = asyncio.Semaphore(self.max_concurrent)

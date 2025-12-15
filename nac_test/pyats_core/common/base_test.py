@@ -244,9 +244,6 @@ class NACTestBase(aetest.Testcase):
         # Generate unique test ID
         test_id = self._generate_test_id()
         self.result_collector = TestResultCollector(test_id, html_report_data_dir)
-        self.logger.debug(
-            f"XXX _initialize_result_collector: created collector with test_id={test_id}"
-        )
         # mypy: allow private attribute set for linking test instance
         self.result_collector._test_instance = self  # type: ignore[attr-defined]
 
@@ -2145,7 +2142,7 @@ class NACTestBase(aetest.Testcase):
             api_duration=context.get("api_duration", 0),
         )
 
-    def format_not_found(self, resource_type, identifier, context, *args):
+    def format_not_found(self, resource_type, identifier, context):
         """
         Generic not-found error formatting.
 
@@ -2454,11 +2451,8 @@ class NACTestBase(aetest.Testcase):
         # Save test results for HTML report generation
         if hasattr(self, "result_collector"):
             try:
-                self.logger.debug(
-                    "XXX cleanup: About to save results from result_collector"
-                )
                 output_file = self.result_collector.save_to_file()
-                self.logger.debug(f"XXX cleanup: Saved test results to: {output_file}")
+                self.logger.debug(f"Saved test results to: {output_file}")
             except Exception as e:
                 self.logger.error(f"Failed to save test results: {e}")
                 # Don't fail the test due to reporting issues

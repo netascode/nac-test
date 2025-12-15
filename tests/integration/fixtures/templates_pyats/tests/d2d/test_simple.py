@@ -39,7 +39,6 @@ class VerifyTruth(SSHTestBase):
         """Main test using standard base class pattern with steps for detailed reporting."""
         # Generate results using format_verification_result()
         results = [self._verify_single_truth()]
-        logger.info(f"XXX results: {results}")
 
         # Use base class smart result processing
         self.process_results_smart(results, steps)
