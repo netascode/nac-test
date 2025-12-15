@@ -208,6 +208,9 @@ class PyATSOrchestrator:
             env["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = str(
                 (self.base_output_dir / self.merged_data_filename).resolve()
             )
+            # Set NAC_TEST_TYPE to differentiate API vs D2D test types for separate temp directories
+            # This prevents race conditions where both test types write JSONL files to the same location
+            env["NAC_TEST_TYPE"] = "api"
             nac_test_dir = str(Path(__file__).parent.parent.parent)
             env["PYTHONPATH"] = get_pythonpath_for_tests(self.test_dir, [nac_test_dir])
 
@@ -377,22 +380,6 @@ class PyATSOrchestrator:
 
             logger.info(f"Completed batch {batch_idx + 1}/{len(device_batches)}")
 
-        # Print summary for D2D tests
-        start_time = (
-            self.overall_start_time
-            if hasattr(self, "overall_start_time") and self.overall_start_time
-            else getattr(self, "start_time", datetime.now())
-        )
-        self.summary_printer.print_summary(
-            self.d2d_test_status,
-            start_time,
-            output_dir=self.output_dir,
-            archive_path=None,  # Archive will be created after this
-            api_test_status=getattr(self, "api_test_status", None),
-            d2d_test_status=getattr(self, "d2d_test_status", None),
-            overall_start_time=self.overall_start_time,
-        )
-
         # Aggregate all device archives into a single D2D archive
         if device_archives:
             aggregated_archive = await ArchiveAggregator.aggregate_device_archives(
@@ -522,16 +509,49 @@ class PyATSOrchestrator:
             else:
                 print("No tests to execute after categorization")
 
-        # Print summary after all tests complete
+        # Split test_status into api_test_status and d2d_test_status based on test type.
+        # OutputProcessor correctly parses results for ALL tests into test_status.
+        # We split them here based on path patterns (.api. vs .d2d.) for accurate
+        # per-type summaries.
+        #
+        # IMPORTANT: We must clear d2d_test_status before populating it from test_status.
+        # DeviceExecutor also populates d2d_test_status with its own (buggy) entries that
+        # use archive-existence as pass/fail indicator. Without clearing, we'd have
+        # duplicate entries with different key formats:
+        #   - DeviceExecutor: "hostname::test_stem" (buggy status)
+        #   - OutputProcessor: "full.module.path" (correct status)
+        # This causes double-counting in summaries.
+        #
+        # NOTE: We do NOT remove DeviceExecutor's status tracking entirely because it
+        # handles an edge case: if the PyATS subprocess fails to start (e.g., job file
+        # generation error), OutputProcessor never sees the test. DeviceExecutor's error
+        # handling (lines 175-179) captures these failures. By clearing here, we discard
+        # DeviceExecutor's buggy success tracking while the error case is still logged.
         if hasattr(self, "test_status") and self.test_status:
+            self.api_test_status.clear()
+            self.d2d_test_status.clear()
+            for test_name, test_info in self.test_status.items():
+                if ".api." in test_name or "/api/" in test_name:
+                    self.api_test_status[test_name] = test_info
+                elif ".d2d." in test_name or "/d2d/" in test_name:
+                    self.d2d_test_status[test_name] = test_info
+                else:
+                    # Fallback: if pattern not found, check test file path
+                    test_file = test_info.get("test_file", "")
+                    if "/api/" in test_file or "\\api\\" in test_file:
+                        self.api_test_status[test_name] = test_info
+                    elif "/d2d/" in test_file or "\\d2d\\" in test_file:
+                        self.d2d_test_status[test_name] = test_info
+                    else:
+                        # Default to API if cannot determine type
+                        self.api_test_status[test_name] = test_info
+
+        # Print summary after all tests complete
+        if self.api_test_status or self.d2d_test_status:
             # Combine all test statuses for summary
             combined_status = {}
-            if hasattr(self, "api_test_status"):
-                combined_status.update(self.api_test_status)
-            if hasattr(self, "d2d_test_status"):
-                combined_status.update(self.d2d_test_status)
-            if not combined_status:
-                combined_status = self.test_status
+            combined_status.update(self.api_test_status)
+            combined_status.update(self.d2d_test_status)
 
             # Print the summary (archives are at base level)
             self.summary_printer.print_summary(
@@ -655,6 +675,21 @@ class PyATSOrchestrator:
                 logger.info(
                     "Keeping archive files (debug mode or KEEP_HTML_REPORT_DATA is set)"
                 )
+
+            # Clean up empty api/ and d2d/ temp parent directories
+            # These are created by base_test.py for type-specific temp directories
+            # but only the html_report_data_temp subdirectories get cleaned up
+            for test_type in ["api", "d2d"]:
+                type_dir = self.base_output_dir / test_type
+                if type_dir.exists() and type_dir.is_dir():
+                    try:
+                        # Only remove if empty (no files or subdirectories)
+                        if not any(type_dir.iterdir()):
+                            type_dir.rmdir()
+                            logger.debug(f"Cleaned up empty directory: {type_dir}")
+                    except Exception as e:
+                        logger.debug(f"Could not remove directory {type_dir}: {e}")
+
         else:
             print(f"\n{terminal.error('Failed to generate reports')}")
             if result.get("error"):

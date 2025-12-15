@@ -169,9 +169,13 @@ class MultiArchiveReportGenerator:
             # Extract archive
             await self._extract_archive(archive_path, extract_dir)
 
+            # Calculate type-specific output directory where temp files are located
+            # This ensures ReportGenerator can find the JSONL temp files in the correct subdirectory
+            type_output_dir = self.output_dir / archive_type
+
             # Run ReportGenerator on extracted contents
             generator = ReportGenerator(
-                self.output_dir, extract_dir, minimal_reports=self.minimal_reports
+                type_output_dir, extract_dir, minimal_reports=self.minimal_reports
             )
             result = await generator.generate_all_reports()
 
