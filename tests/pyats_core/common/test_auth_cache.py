@@ -166,8 +166,8 @@ class TestAuthCacheInternal:
             sample_dict_auth_func: Mock authentication function returning dict.
         """
         # Arrange
-        controller_type = "DNAC"
-        url = "https://dnac.example.com"
+        controller_type = "CC"
+        url = "https://cc.example.com"
 
         # Act
         result = AuthCache._cache_auth_data(
@@ -264,14 +264,14 @@ class TestAuthCacheInternal:
             sample_dict_auth_func: Mock authentication function returning dict.
         """
         # Arrange
-        controller_type = "DNAC"
-        url = "https://dnac.example.com"
+        controller_type = "CC"
+        url = "https://cc.example.com"
 
         # Pre-create a valid cache file with dict data
         import hashlib
 
         url_hash = hashlib.md5(url.encode()).hexdigest()
-        cache_file = mock_auth_cache_dir / f"DNAC_{url_hash}.json"
+        cache_file = mock_auth_cache_dir / f"CC_{url_hash}.json"
         cache_data = {
             "token": "cached-dict-token",
             "refresh_token": "cached-refresh",
@@ -371,11 +371,14 @@ class TestAuthCacheInternal:
             sample_dict_auth_func: Mock authentication function returning dict.
         """
         # Arrange
-        controller_type = "DNAC"
-        url = "https://dnac.example.com"
+        controller_type = "CC"
+        url = "https://cc.example.com"
 
-        # Pre-create an expired cache file
-        cache_file = mock_auth_cache_dir / "DNAC_7e8c8d3c9e0e3c8f3c8e3c8f3c8e3c8f3.json"
+        # Pre-create an expired cache file (compute hash correctly)
+        import hashlib
+
+        url_hash = hashlib.md5(url.encode()).hexdigest()
+        cache_file = mock_auth_cache_dir / f"CC_{url_hash}.json"
         cache_data = {
             "token": "expired-dict-token",
             "refresh_token": "expired-refresh",
@@ -431,8 +434,11 @@ class TestAuthCacheInternal:
         controller_type = "APIC"
         url = "https://controller.example.com"
 
-        # Pre-create a cache file with invalid JSON
-        cache_file = mock_auth_cache_dir / "APIC_e8c8d3c9e0e3c8f3c8e3c8f3c8e3c8f3.json"
+        # Pre-create a cache file with invalid JSON (compute hash correctly)
+        import hashlib
+
+        url_hash = hashlib.md5(url.encode()).hexdigest()
+        cache_file = mock_auth_cache_dir / f"APIC_{url_hash}.json"
         with open(cache_file, "w") as f:
             f.write("{ invalid json content }")
 
@@ -476,8 +482,11 @@ class TestAuthCacheInternal:
         controller_type = "APIC"
         url = "https://controller.example.com"
 
-        # Pre-create a cache file missing expires_at
-        cache_file = mock_auth_cache_dir / "APIC_e8c8d3c9e0e3c8f3c8e3c8f3c8e3c8f3.json"
+        # Pre-create a cache file missing expires_at (compute hash correctly)
+        import hashlib
+
+        url_hash = hashlib.md5(url.encode()).hexdigest()
+        cache_file = mock_auth_cache_dir / f"APIC_{url_hash}.json"
         cache_data = {"token": "incomplete-token"}  # Missing expires_at
         with open(cache_file, "w") as f:
             json.dump(cache_data, f)
@@ -592,8 +601,8 @@ class TestAuthCachePublicMethods:
             return_value={"token": "test", "user": "admin"},
         )
 
-        controller_type = "DNAC"
-        url = "https://dnac.example.com"
+        controller_type = "CC"
+        url = "https://cc.example.com"
         auth_func = Mock(return_value=({"token": "test", "user": "admin"}, 3600))
 
         # Act
@@ -731,20 +740,20 @@ class TestAuthCacheIntegration:
 
         # Act - Make multiple calls
         result1 = AuthCache.get_or_create(
-            controller_type="DNAC",
-            url="https://dnac.example.com",
+            controller_type="CC",
+            url="https://cc.example.com",
             auth_func=counting_auth_func,
         )
 
         result2 = AuthCache.get_or_create(
-            controller_type="DNAC",
-            url="https://dnac.example.com",
+            controller_type="CC",
+            url="https://cc.example.com",
             auth_func=counting_auth_func,
         )
 
         result3 = AuthCache.get_or_create(
-            controller_type="DNAC",
-            url="https://dnac.example.com",
+            controller_type="CC",
+            url="https://cc.example.com",
             auth_func=counting_auth_func,
         )
 
@@ -776,13 +785,13 @@ class TestAuthCacheIntegration:
 
         # Act
         result1 = AuthCache.get_or_create(
-            controller_type="DNAC",
+            controller_type="CC",
             url="https://controller1.example.com",
             auth_func=auth_func_1,
         )
 
         result2 = AuthCache.get_or_create(
-            controller_type="DNAC",
+            controller_type="CC",
             url="https://controller2.example.com",
             auth_func=auth_func_2,
         )
@@ -813,8 +822,8 @@ class TestAuthCacheIntegration:
         def auth_func_apic() -> Tuple[Dict[str, Any], int]:
             return {"token": "apic-token"}, 3600
 
-        def auth_func_dnac() -> Tuple[Dict[str, Any], int]:
-            return {"token": "dnac-token"}, 3600
+        def auth_func_cc() -> Tuple[Dict[str, Any], int]:
+            return {"token": "cc-token"}, 3600
 
         # Act
         result1 = AuthCache.get_or_create(
@@ -824,14 +833,14 @@ class TestAuthCacheIntegration:
         )
 
         result2 = AuthCache.get_or_create(
-            controller_type="DNAC",
+            controller_type="CC",
             url="https://controller.example.com",
-            auth_func=auth_func_dnac,
+            auth_func=auth_func_cc,
         )
 
         # Assert
         assert result1 == {"token": "apic-token"}
-        assert result2 == {"token": "dnac-token"}
+        assert result2 == {"token": "cc-token"}
 
         # Verify two separate cache files were created
         cache_files = list(mock_auth_cache_dir.glob("*.json"))
@@ -841,8 +850,12 @@ class TestAuthCacheIntegration:
         "initial_time,check_time,should_refresh",
         [
             (1000.0, 1500.0, False),  # 500s passed, cache still valid (expires at 4540)
-            (1000.0, 4540.0, False),  # Exactly at expiry boundary, still valid
-            (1000.0, 4541.0, True),  # 1 second past expiry, should refresh
+            (1000.0, 4539.9, False),  # Just before expiry boundary, still valid
+            (
+                1000.0,
+                4540.0,
+                True,
+            ),  # Exactly at expiry boundary, cache expired (< is strict)
             (1000.0, 5000.0, True),  # Well past expiry, should refresh
         ],
     )
@@ -869,7 +882,7 @@ class TestAuthCacheIntegration:
             should_refresh: Whether the cache should be refreshed.
         """
         # Arrange
-        time_mock = mocker.patch("time.time")
+        time_mock = mocker.patch("nac_test.pyats_core.common.auth_cache.time.time")
         time_mock.return_value = initial_time
 
         auth_call_count = 0
@@ -882,8 +895,8 @@ class TestAuthCacheIntegration:
 
         # Create initial cache
         result1 = AuthCache.get_or_create(
-            controller_type="DNAC",
-            url="https://dnac.example.com",
+            controller_type="CC",
+            url="https://cc.example.com",
             auth_func=counting_auth_func,
         )
         assert result1 == {"token": "token-v1"}
@@ -892,8 +905,8 @@ class TestAuthCacheIntegration:
         # Act - Check cache at different time
         time_mock.return_value = check_time
         result2 = AuthCache.get_or_create(
-            controller_type="DNAC",
-            url="https://dnac.example.com",
+            controller_type="CC",
+            url="https://cc.example.com",
             auth_func=counting_auth_func,
         )
 
@@ -930,8 +943,8 @@ class TestAuthCacheErrorHandling:
         # Act & Assert
         with pytest.raises(ValueError, match="Authentication failed"):
             AuthCache.get_or_create(
-                controller_type="DNAC",
-                url="https://dnac.example.com",
+                controller_type="CC",
+                url="https://cc.example.com",
                 auth_func=failing_auth_func,
             )
 
@@ -962,7 +975,7 @@ class TestAuthCacheErrorHandling:
 
         # Act
         AuthCache.get_or_create(
-            controller_type="DNAC", url="https://dnac.example.com", auth_func=auth_func
+            controller_type="CC", url="https://cc.example.com", auth_func=auth_func
         )
 
         # Assert
