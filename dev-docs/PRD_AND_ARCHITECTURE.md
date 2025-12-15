@@ -7527,7 +7527,7 @@ Environment variables solve this elegantly:
 
 | Variable Name | Set By | Used By | Purpose | Example Value |
 |--------------|--------|---------|---------|---------------|
-| `CONTROLLER_TYPE` | User (CLI/config) | API tests | Identifies controller type | `ACI`, `SDWAN`, `DNAC` |
+| `CONTROLLER_TYPE` | User (CLI/config) | API tests | Identifies controller type | `ACI`, `SDWAN`, `CC` |
 | `{CONTROLLER_TYPE}_URL` | User (CLI/config) | API tests | Controller base URL | `https://apic.example.com` |
 | `{CONTROLLER_TYPE}_USERNAME` | User (CLI/config) | API tests | Controller username | `admin` |
 | `{CONTROLLER_TYPE}_PASSWORD` | User (CLI/config) | API tests | Controller password | `C1sco123!` |
@@ -7548,7 +7548,7 @@ self.password = os.environ[f"{self.controller_type}_PASSWORD"]
 
 - If `CONTROLLER_TYPE=ACI`: Reads `ACI_URL`, `ACI_USERNAME`, `ACI_PASSWORD`
 - If `CONTROLLER_TYPE=SDWAN`: Reads `SDWAN_URL`, `SDWAN_USERNAME`, `SDWAN_PASSWORD`
-- If `CONTROLLER_TYPE=DNAC`: Reads `DNAC_URL`, `DNAC_USERNAME`, `DNAC_PASSWORD`
+- If `CONTROLLER_TYPE=CC`: Reads `CC_URL`, `CC_USERNAME`, `CC_PASSWORD`
 
 ---
 
