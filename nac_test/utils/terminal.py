@@ -110,52 +110,95 @@ class TerminalColors:
     def format_env_var_error(
         cls, missing_vars: list[str], controller_type: str = "ACI"
     ) -> str:
-        """Format a nice error message for missing environment variables.
+        """Format an informative error message for missing environment variables.
+
+        Generates a generic, architecture-agnostic error message that educates
+        users about the CONTROLLER_TYPE mechanism and provides examples for all
+        supported architectures.
 
         Args:
             missing_vars: List of missing environment variable names
-            controller_type: Type of controller (ACI, SSH, etc.)
+            controller_type: Current controller type being validated
 
         Returns:
             Formatted error message with ANSI color codes for terminal display
         """
-        lines = []
-        lines.append(
-            cls.header(f"ERROR: Missing {controller_type} environment variable(s)")
-        )
+        # Determine if this is the default value or explicitly set
+        is_default = os.environ.get("CONTROLLER_TYPE") is None
 
+        lines = []
+        lines.append(cls.header("ERROR: Missing required environment variable(s)"))
+
+        # Show the missing variables
         for var in missing_vars:
             lines.append(f"  {cls.warning('•')} {cls.warning(var)}")
 
         lines.append("")
-        lines.append(
-            cls.info(
-                f"Please set the required {controller_type} environment variables before running tests."
+
+        # Explain CONTROLLER_TYPE mechanism
+        if is_default:
+            lines.append(
+                cls.info(
+                    "The CONTROLLER_TYPE environment variable determines which credentials"
+                )
             )
+            lines.append(
+                cls.info(f'are required. Current value: "{controller_type}" (default)')
+            )
+        else:
+            lines.append(
+                cls.info(
+                    f'The CONTROLLER_TYPE environment variable is set to: "{controller_type}"'
+                )
+            )
+
+        lines.append("")
+        lines.append(
+            cls.info("To use a different architecture, set CONTROLLER_TYPE first:")
         )
-        lines.append(cls.info("Example:"))
+        lines.append(
+            f"  {cls.success('export CONTROLLER_TYPE=ACI')}     {cls.info('# for ACI (APIC)')}"
+        )
+        lines.append(
+            f"  {cls.success('export CONTROLLER_TYPE=SDWAN')}   {cls.info('# for SD-WAN (vManage)')}"
+        )
+        lines.append(
+            f"  {cls.success('export CONTROLLER_TYPE=DNAC')}    {cls.info('# for Catalyst Center (DNAC)')}"
+        )
+        lines.append(
+            f"  {cls.success('export CONTROLLER_TYPE=MERAKI')}  {cls.info('# for Meraki Dashboard')}"
+        )
+        lines.append(
+            f"  {cls.success('export CONTROLLER_TYPE=FMC')}     {cls.info('# for Firepower Management Center')}"
+        )
+        lines.append(
+            f"  {cls.success('export CONTROLLER_TYPE=ISE')}     {cls.info('# for Identity Services Engine')}"
+        )
 
-        # Provide helpful examples based on variable names and controller type
-        for var in missing_vars:
-            if var.endswith("_URL"):
-                if controller_type == "ACI":
-                    example = f"export {var}='https://your-apic-controller.example.com'"
-                # elif controller_type == "SSH":
-                #     example = f"export {var}='ssh://device.example.com:22'"
-                else:
-                    example = f"export {var}='https://your-controller-url'"
-            elif var.endswith("_USERNAME"):
-                example = f"export {var}='your-username'"
-            elif var.endswith("_PASSWORD"):
-                example = f"export {var}='your-password'"
-            # elif var.endswith("_KEY_FILE"):
-            #     example = f"export {var}='/path/to/ssh/key'"
-            # elif var.endswith("_PORT"):
-            #     example = f"export {var}='22'"
-            else:
-                example = f"export {var}='your-value'"
+        lines.append("")
+        lines.append(cls.info("Then set the corresponding credentials:"))
+        lines.append("")
 
-            lines.append(f"  {cls.success(example)}")
+        # Architecture-specific examples with helpful URLs
+        architecture_examples = [
+            ("ACI", "apic.example.com", "ACI (APIC)"),
+            ("SDWAN", "vmanage.example.com", "SD-WAN (vManage)"),
+            ("DNAC", "dnac.example.com", "Catalyst Center"),
+            ("MERAKI", "api.meraki.com/api/v1", "Meraki"),
+            ("FMC", "fmc.example.com", "Firepower MC"),
+            ("ISE", "ise.example.com", "ISE"),
+        ]
+
+        for arch, url, friendly_name in architecture_examples:
+            # Pre-compute strings to avoid nested f-string backslash limitation
+            url_cmd = f"export {arch}_URL='https://{url}'"
+            user_cmd = f"export {arch}_USERNAME='admin'"
+            pass_cmd = f"export {arch}_PASSWORD='your-password'"
+            lines.append(f"  {cls.highlight(friendly_name + ':')}")
+            lines.append(f"    {cls.success(url_cmd)}")
+            lines.append(f"    {cls.success(user_cmd)}")
+            lines.append(f"    {cls.success(pass_cmd)}")
+            lines.append("")
 
         lines.append(cls.error("=" * 70))
 

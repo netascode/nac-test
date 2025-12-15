@@ -27,6 +27,7 @@ class DeviceExecutor:
         subprocess_runner: SubprocessRunner,
         test_status: dict[str, Any],
         test_dir: Path,
+        base_output_dir: Path,
     ):
         """Initialize device executor.
 
@@ -35,11 +36,13 @@ class DeviceExecutor:
             subprocess_runner: SubprocessRunner instance for executing jobs
             test_status: Dictionary for tracking test status
             test_dir: Directory containing PyATS test files (user-specified)
+            base_output_dir: Base output directory for test results
         """
         self.job_generator = job_generator
         self.subprocess_runner = subprocess_runner
         self.test_status = test_status
         self.test_dir = test_dir
+        self.base_output_dir = base_output_dir
 
     async def run_device_job_with_semaphore(
         self,
@@ -102,16 +105,32 @@ class DeviceExecutor:
                         # Environment variables are used because PyATS tests run as separate subprocess processes.
                         # The merged data file is created by main.py at the base output level.
                         "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
-                            self.subprocess_runner.output_dir
+                            self.base_output_dir
                             / "merged_data_model_test_variables.yaml"
                         ),
                         "PYTHONPATH": get_pythonpath_for_tests(
                             self.test_dir, [nac_test_dir]
                         ),
+                        # D2D test type identification to prevent race conditions
+                        "NAC_TEST_TYPE": "d2d",
                     }
                 )
 
-                # Track test status for this device
+                # Track test status for this device.
+                #
+                # NOTE: This status tracking has known issues:
+                # 1. Uses "hostname::test_stem" key format vs OutputProcessor's "full.module.path"
+                # 2. Lines 147-151 mark status based on archive existence (buggy - archives are
+                #    created even for failed tests)
+                #
+                # The orchestrator clears d2d_test_status before populating it from
+                # OutputProcessor's correctly-parsed results. HOWEVER, we keep this code because:
+                # - Lines 175-179 handle the edge case where the subprocess fails to START
+                #   (e.g., job file generation error). In that case, OutputProcessor never
+                #   sees the test, so this error tracking provides visibility.
+                # - The error is still logged regardless, but this ensures it appears in status.
+                #
+                # TODO: Consider refactoring to only track errors, not success/failure.
                 for test_file in test_files:
                     test_name = f"{hostname}::{test_file.stem}"
                     self.test_status[test_name] = {
@@ -119,19 +138,6 @@ class DeviceExecutor:
                         "device": hostname,
                         "test_file": str(test_file),
                     }
-
-                # FIXME: TEMP DEBUG: Print environment and command for D2D/SSH subprocess -- REMOVE ME AFTER TESTING
-                # print("=== D2D/SSH SUBPROCESS ENV ===")
-                # print("sys.executable:", sys.executable)
-                # print("os.getcwd():", os.getcwd())
-                # print("env['PATH']:", env.get('PATH'))
-                # print("env['PYTHONPATH']:", env.get('PYTHONPATH'))
-                # print("env:", env)
-                # print("cmd: pyats run job ...", job_file_path, testbed_file_path)
-
-                # # TEMP DEBUG: Print test_dir and PYTHONPATH for D2D/SSH subprocess
-                # print(f"D2D/SSH DEBUG: self.test_dir = {self.test_dir}")
-                # print(f"D2D/SSH DEBUG: PYTHONPATH = {env['PYTHONPATH']}")
 
                 # Execute the job with testbed
                 archive_path = await self.subprocess_runner.execute_job_with_testbed(

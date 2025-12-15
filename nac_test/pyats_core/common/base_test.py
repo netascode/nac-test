@@ -40,7 +40,6 @@ import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
 import markdown  # type: ignore[import-untyped]
 import asyncio
 import httpx
-import jmespath
 
 T = TypeVar("T")
 
@@ -227,13 +226,19 @@ class NACTestBase(aetest.Testcase):
         # Store output directory for emergency dumps
         self.output_dir = output_dir
 
+        # Get test type from environment variable to create type-specific temp directories
+        # This prevents race conditions between API and D2D tests that might run concurrently
+        test_type = os.environ.get("NAC_TEST_TYPE", "default")
+
         # Create html_report_data_temp in base output directory to avoid deletion during report generation
         # This directory will NOT include pyats_results path to prevent cleanup conflicts
-        html_report_data_dir = base_output_dir / "html_report_data_temp"
-        html_report_data_dir.mkdir(exist_ok=True)
+        # Include test type in path to prevent race conditions between concurrent test runs
+        html_report_data_dir = base_output_dir / test_type / "html_report_data_temp"
+        html_report_data_dir.mkdir(exist_ok=True, parents=True)
 
+        # Log which directory is being used for troubleshooting
         self.logger.debug(
-            f"XXX _initialize_result_collector: base_output_dir={base_output_dir}, html_report_data_dir={html_report_data_dir}"
+            f"Using HTML report data directory for test type '{test_type}': {html_report_data_dir}"
         )
 
         # Generate unique test ID
@@ -2354,26 +2359,34 @@ class NACTestBase(aetest.Testcase):
         """
         Add step to HTML collector using TEST_CONFIG (internal helper).
 
+        This method adds results directly to the collector without template wrapping.
+        Tests using TEST_CONFIG provide complete, well-crafted `reason` messages that
+        should be displayed as-is in HTML reports. Using add_verification_result()
+        would wrap these messages in redundant templates like
+        "verification Resource Verification verified successfully - {reason}".
+
         Args:
-            result: Verification result
-            context: Context object
+            result: Verification result with 'status' and 'reason' keys
+            context: Context object with optional 'api_context' for command linking
         """
-        config = getattr(self, "TEST_CONFIG", {})
-        test_type_name = config.get("test_type_name", "Verification")
-
-        # Build identifier
-        identifier = self.build_identifier(context)
-
-        # Get status and reason
+        # Get status and reason directly from result
         status = result.get("status", "UNKNOWN")
         reason = result.get("reason", "")
 
-        # Add to collector
-        self.add_verification_result(
-            status=status,
-            test_type=test_type_name.lower(),
-            item_identifier=identifier,
-            details=reason if reason else None,
+        # Convert to enum if needed - handle both string and ResultStatus enum input
+        # Tests may return either format depending on implementation
+        if isinstance(status, ResultStatus):
+            status_enum = status
+        elif isinstance(status, str):
+            status_enum = self.map_string_status_to_enum(status)
+        else:
+            status_enum = ResultStatus.INFO  # Fallback for unexpected types
+
+        # Add directly to collector - use reason as the complete message
+        # This preserves test-provided messages without template wrapping
+        self.result_collector.add_result(
+            status_enum,
+            reason if reason else f"Test completed with status: {status}",
             test_context=context.get("api_context"),
         )
 

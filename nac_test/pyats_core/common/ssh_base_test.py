@@ -31,9 +31,17 @@ class SSHTestBase(NACTestBase):
         Returns:
             The PyATS testbed object if available, None otherwise.
         """
-        # In PyATS aetest, the testbed is available via self.parent (runtime)
-        if hasattr(self.parent, "testbed"):
-            return self.parent.testbed
+        # In PyATS aetest, testbed is passed as an internal parameter
+        if hasattr(self, "parameters"):
+            # Check internal parameters (where PyATS stores testbed)
+            if (
+                hasattr(self.parameters, "internal")
+                and "testbed" in self.parameters.internal
+            ):
+                return self.parameters.internal["testbed"]
+            # Fallback to regular parameters
+            if "testbed" in self.parameters:
+                return self.parameters["testbed"]
         return None
 
     @property
@@ -214,7 +222,6 @@ class SSHTestBase(NACTestBase):
                 self.logger.warning(f"Genie parser failed for '{command}': {e}")
                 return None
         else:
-            self.logger.debug("No testbed device available for Genie parsing")
             return None
 
     def _create_execute_command_method(
@@ -313,3 +320,55 @@ class SSHTestBase(NACTestBase):
         except Exception as e:
             # Don't let tracking errors break the test
             self.logger.warning(f"Failed to track SSH command: {e}")
+
+    def run_async_verification_test(self, steps) -> None:
+        """Run async verification test using existing event loop.
+
+        This method orchestrates the async verification process for SSH-based tests:
+        1. Uses the existing event loop (created in SSHTestBase.setup)
+        2. Calls NACTestBase.run_verification_async() to execute verifications
+        3. Calls NACTestBase.process_results_smart() to process results
+        4. Handles SSH-specific cleanup (broker client and connections)
+
+        The actual verification logic is handled by:
+        - get_items_to_verify() - implemented by the test class
+        - verify_item() - implemented by the test class
+
+        Args:
+            steps: PyATS steps object for test reporting
+
+        Note:
+            This method does NOT close the event loop as it's managed by the
+            PyATS framework. The loop was created in setup() and will be
+            properly cleaned up by the framework.
+        """
+        # Get the existing event loop that was created in setup
+        loop = asyncio.get_event_loop()
+
+        try:
+            # Call the base class generic orchestration
+            results = loop.run_until_complete(self.run_verification_async())
+
+            # Process results using smart configuration-driven processing
+            self.process_results_smart(results, steps)
+
+        finally:
+            # SSH-specific cleanup
+            try:
+                # Disconnect broker client if it exists
+                if hasattr(self, "broker_client") and self.broker_client:
+                    self.logger.debug("Disconnecting broker client")
+                    loop.run_until_complete(self.broker_client.disconnect())
+
+                # Disconnect the connection if using broker executor
+                if hasattr(self, "connection") and isinstance(
+                    self.connection, BrokerCommandExecutor
+                ):
+                    self.logger.debug("Disconnecting broker command executor")
+                    loop.run_until_complete(self.connection.disconnect())
+
+            except Exception as e:
+                # Log cleanup errors but don't fail the test
+                self.logger.warning(f"Error during SSH cleanup: {e}")
+
+            # Note: We do NOT close the event loop here as it's managed by PyATS

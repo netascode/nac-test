@@ -37,6 +37,81 @@ class SummaryPrinter:
             secs = seconds % 60
             return f"{minutes} minutes {secs:.2f} seconds"
 
+    def _format_test_line(
+        self,
+        total: int,
+        passed: int,
+        failed: int,
+        errored: int,
+        skipped: int,
+        prefix: Optional[str] = None,
+    ) -> str:
+        """Format a single test summary line with optional prefix.
+
+        Formats test statistics into a human-readable summary line. If errored
+        count is greater than 0, it's shown separately. Otherwise, errored tests
+        are combined with failed tests in the output.
+
+        Args:
+            total: Total number of tests
+            passed: Number of passed tests
+            failed: Number of failed tests
+            errored: Number of errored tests
+            skipped: Number of skipped tests
+            prefix: Optional prefix string to add before the summary line
+
+        Returns:
+            Formatted summary string containing test statistics
+        """
+        # Build the prefix if provided
+        prefix_str = f"{prefix} " if prefix else ""
+
+        # Include errored tests in the failed count for display
+        failed_total = failed + errored
+
+        if errored > 0:
+            # If we have errored tests, show them separately
+            return (
+                f"{prefix_str}{total} tests, {passed} passed, "
+                f"{failed} failed, {errored} errored, {skipped} skipped."
+            )
+        else:
+            # Otherwise show combined failed count
+            return (
+                f"{prefix_str}{total} tests, {passed} passed, "
+                f"{failed_total} failed, {skipped} skipped."
+            )
+
+    def _calculate_test_stats(
+        self, test_status: Dict[str, Any]
+    ) -> tuple[int, int, int, int, int]:
+        """Calculate test statistics from status dictionary.
+
+        Processes a test status dictionary to count tests by their status.
+        PyATS returns lowercase status values: 'passed', 'failed', 'skipped', 'errored'.
+
+        Args:
+            test_status: Dictionary mapping test names to test result dictionaries.
+                Each test result should contain a 'status' key with one of the
+                following values: 'passed', 'failed', 'skipped', 'errored'.
+
+        Returns:
+            A tuple containing:
+                - total: Total number of tests
+                - passed: Number of passed tests
+                - failed: Number of failed tests
+                - errored: Number of errored tests
+                - skipped: Number of skipped tests
+        """
+        # PyATS returns lowercase status values: 'passed', 'failed', 'skipped', 'errored'
+        passed = sum(1 for t in test_status.values() if t.get("status") == "passed")
+        failed = sum(1 for t in test_status.values() if t.get("status") == "failed")
+        skipped = sum(1 for t in test_status.values() if t.get("status") == "skipped")
+        errored = sum(1 for t in test_status.values() if t.get("status") == "errored")
+        total = len(test_status)
+
+        return total, passed, failed, errored, skipped
+
     def print_summary(
         self,
         test_status: Dict[str, Any],
@@ -58,6 +133,19 @@ class SummaryPrinter:
             d2d_test_status: Optional D2D test results
             overall_start_time: Overall start time for combined runs
         """
+        # Delegate to print_summary_with_breakdown if both API and D2D test statuses are provided
+        # This encapsulates the presentation decision within SummaryPrinter, maintaining clean
+        # separation of concerns so the orchestrator doesn't need to know which method to call
+        if api_test_status and d2d_test_status:
+            self.print_summary_with_breakdown(
+                api_test_status=api_test_status,
+                d2d_test_status=d2d_test_status,
+                start_time=start_time,
+                overall_start_time=overall_start_time,
+                output_dir=output_dir
+            )
+            return
+
         # Use overall_start_time if available (for combined runs), otherwise use start_time
         actual_start_time = overall_start_time if overall_start_time else start_time
         wall_time = (datetime.now() - actual_start_time).total_seconds()
@@ -73,7 +161,6 @@ class SummaryPrinter:
         if d2d_test_status:
             all_test_status.update(d2d_test_status)
 
-        # TODO: No longer need this - remove
         # Fall back to test_status if no separate tracking (backward compatibility)
         if not all_test_status:
             all_test_status = test_status
@@ -85,32 +172,12 @@ class SummaryPrinter:
             if "duration" in test
         )
 
-        # Calculate combined statistics (matching original format exactly)
-        # PyATS returns lowercase status values: 'passed', 'failed', 'skipped', 'errored'
-        passed = sum(1 for t in all_test_status.values() if t.get("status") == "passed")
-        failed = sum(1 for t in all_test_status.values() if t.get("status") == "failed")
-        skipped = sum(
-            1 for t in all_test_status.values() if t.get("status") == "skipped"
-        )
-        errored = sum(
-            1 for t in all_test_status.values() if t.get("status") == "errored"
-        )
-        total = len(all_test_status)
+        # Calculate statistics using helper method
+        total, passed, failed, errored, skipped = self._calculate_test_stats(all_test_status)
 
-        # Include errored tests in the failed count for the summary
-        failed_total = failed + errored
-
+        # Format and print summary line using helper method
         print("\n" + "=" * 80)
-        if errored > 0:
-            # If we have errored tests, show them separately
-            print(
-                f"{total} tests, {passed} passed, {failed} failed, {errored} errored, {skipped} skipped."
-            )
-        else:
-            # Otherwise show combined failed count
-            print(
-                f"{total} tests, {passed} passed, {failed_total} failed, {skipped} skipped."
-            )
+        print(self._format_test_line(total, passed, failed, errored, skipped))
         print("=" * 80)
 
         # Print archive paths if output_dir is provided
@@ -118,6 +185,125 @@ class SummaryPrinter:
             self.print_archive_info(output_dir)
 
         # Color the timing information
+        print(
+            f"\n{terminal.info('Total testing:')} {self.format_duration(total_test_time)}"
+        )
+        print(f"{terminal.info('Elapsed time:')}  {self.format_duration(wall_time)}")
+
+    def print_summary_with_breakdown(
+        self,
+        api_test_status: Dict[str, Any],
+        d2d_test_status: Dict[str, Any],
+        start_time: datetime,
+        overall_start_time: Optional[datetime] = None,
+        output_dir: Optional[Path] = None,
+    ) -> None:
+        """Print test execution summary with separate API and D2D breakdowns.
+
+        This method provides a detailed breakdown of test results, showing
+        API and D2D test statistics separately before presenting the combined
+        totals. It calculates wall time from the overall start time (if provided)
+        or from the start time, displays test statistics for each category,
+        and optionally shows archive information.
+
+        Args:
+            api_test_status: Dictionary containing API test results. Each key is
+                a test name and each value is a dictionary with 'status' and
+                optionally 'duration' keys.
+            d2d_test_status: Dictionary containing D2D test results. Each key is
+                a test name and each value is a dictionary with 'status' and
+                optionally 'duration' keys.
+            start_time: The datetime when the tests started execution.
+            overall_start_time: Optional overall start time for more accurate
+                elapsed time calculation. If not provided, start_time is used.
+            output_dir: Optional path to the output directory for displaying
+                archive information. If provided, archive paths will be printed.
+
+        Returns:
+            None
+
+        Example:
+            >>> printer = SummaryPrinter()
+            >>> api_results = {
+            ...     "test_api_1": {"status": "passed", "duration": 1.5},
+            ...     "test_api_2": {"status": "failed", "duration": 2.0}
+            ... }
+            >>> d2d_results = {
+            ...     "test_d2d_1": {"status": "passed", "duration": 3.0},
+            ...     "test_d2d_2": {"status": "skipped", "duration": 0.0}
+            ... }
+            >>> printer.print_summary_with_breakdown(
+            ...     api_results, d2d_results, datetime.now()
+            ... )
+        """
+        # Calculate wall time from overall_start_time or start_time
+        actual_start_time = overall_start_time if overall_start_time else start_time
+        wall_time = (datetime.now() - actual_start_time).total_seconds()
+
+        # Calculate statistics for API tests
+        api_total, api_passed, api_failed, api_errored, api_skipped = (
+            self._calculate_test_stats(api_test_status)
+        )
+
+        # Calculate statistics for D2D tests
+        d2d_total, d2d_passed, d2d_failed, d2d_errored, d2d_skipped = (
+            self._calculate_test_stats(d2d_test_status)
+        )
+
+        # Combine both dictionaries for combined statistics
+        combined_test_status = {}
+        combined_test_status.update(api_test_status)
+        combined_test_status.update(d2d_test_status)
+
+        # Calculate combined statistics
+        combined_total, combined_passed, combined_failed, combined_errored, combined_skipped = (
+            self._calculate_test_stats(combined_test_status)
+        )
+
+        # Calculate total test time (sum of all individual test durations)
+        total_test_time = sum(
+            test.get("duration", 0)
+            for test in combined_test_status.values()
+            if "duration" in test
+        )
+
+        # Print the breakdown with clear separation
+        print("\n" + "=" * 80)
+        print("Test Execution Summary")
+        print("=" * 80)
+
+        # Format and print API test line
+        api_line = self._format_test_line(
+            api_total, api_passed, api_failed, api_errored, api_skipped, prefix="API Tests:"
+        )
+        print(api_line)
+
+        # Format and print D2D test line
+        d2d_line = self._format_test_line(
+            d2d_total, d2d_passed, d2d_failed, d2d_errored, d2d_skipped, prefix="D2D Tests:"
+        )
+        print(d2d_line)
+
+        print("-" * 80)
+
+        # Format and print combined line
+        combined_line = self._format_test_line(
+            combined_total,
+            combined_passed,
+            combined_failed,
+            combined_errored,
+            combined_skipped,
+            prefix="Combined:",
+        )
+        print(combined_line)
+
+        print("=" * 80)
+
+        # Print archive info if output_dir provided
+        if output_dir:
+            self.print_archive_info(output_dir)
+
+        # Print timing information at the end
         print(
             f"\n{terminal.info('Total testing:')} {self.format_duration(total_test_time)}"
         )
