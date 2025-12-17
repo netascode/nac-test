@@ -29,7 +29,7 @@
 
 ## Executive Summary
 
-**nac-test** is a Network as Code (NAC) test orchestration framework that provides a unified CLI interface for executing PyATS and Robot Framework tests against network infrastructure. The system supports both API-based tests (against controllers like APIC) and Device-to-Device (D2D) SSH tests against network devices.
+**nac-test** is a Network as Code (NAC) test orchestration framework that provides a unified CLI interface for executing PyATS and Robot Framework tests against network infrastructure. The system supports both API-based tests (against controllers like APIC) and Direct-to-Device (D2D) SSH tests against network devices.
 
 **Key Capabilities:**
 
@@ -2813,7 +2813,7 @@ class TestDiscovery:
 @dataclass
 class TestDiscoveryResult:
     api_tests: List[Path]      # Standard API tests
-    d2d_tests: List[Path]      # Device-to-device SSH tests
+    d2d_tests: List[Path]      # Direct-to-device SSH tests
     total_count: int           # Total test count
 ```
 
@@ -3308,7 +3308,7 @@ class MyAPITest(BaseTest):
 
 ### D2D/SSH Tests
 
-Device-to-Device tests execute commands on network devices via SSH.
+Direct-to-Device tests execute commands on network devices via SSH.
 
 #### SSH Base Test Class (`pyats_core/common/ssh_base_test.py`)
 
@@ -6441,7 +6441,7 @@ def categorize_tests_by_type(self, test_files):
             f"{example_files}\n\n"
             "All tests must be organized under:\n"
             "  - 'api/' for API-based tests\n"
-            "  - 'd2d/' for device-to-device (SSH-based) tests"
+            "  - 'd2d/' for direct-to-device (SSH-based) tests"
         )
 ```
 

@@ -149,7 +149,7 @@ class TestDiscovery:
                 f"{example_files}\n\n"
                 "All tests must be organized under:\n"
                 "  - 'api/' for API-based tests\n"
-                "  - 'd2d/' for device-to-device (SSH-based) tests"
+                "  - 'd2d/' for direct-to-device (SSH-based) tests"
             )
 
         # Log the categorization results

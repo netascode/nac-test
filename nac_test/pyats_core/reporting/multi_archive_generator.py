@@ -334,7 +334,7 @@ class MultiArchiveReportGenerator:
                 stats = {
                     "title": "API"
                     if archive_type == "api"
-                    else "Device-to-Device (D2D)",
+                    else "Direct-to-Device (D2D)",
                     "total_tests": 0,
                     "passed_tests": 0,
                     "failed_tests": 0,
