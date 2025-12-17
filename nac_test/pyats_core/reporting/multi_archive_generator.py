@@ -9,11 +9,14 @@ supporting different test types (API, D2D) and creating combined summaries.
 import asyncio
 import json
 import logging
+import os
 import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from typing import cast
+
+import aiofiles  # type: ignore[import-untyped]
 
 from nac_test.pyats_core.reporting.generator import ReportGenerator
 from nac_test.pyats_core.reporting.templates import get_jinja_environment, TEMPLATES_DIR
@@ -87,6 +90,10 @@ class MultiArchiveReportGenerator:
             shutil.rmtree(self.pyats_results_dir)
         self.pyats_results_dir.mkdir(parents=True)
 
+        # If we have multiple archives, prevent JSONL deletion until combined summary is generated
+        if len(archive_paths) > 1:
+            os.environ["KEEP_HTML_REPORT_DATA"] = "1"
+
         # Process each archive
         results: Dict[str, Dict[str, Any]] = {}
         tasks = []
@@ -126,7 +133,17 @@ class MultiArchiveReportGenerator:
         ]
 
         if len(successful_archives) > 1:
-            combined_summary_path = await self._generate_combined_summary(results)
+            try:
+                combined_summary_path = await self._generate_combined_summary(results)
+            finally:
+                # Restore cleanup behavior and clean up JSONL files now that combined summary is done
+                os.environ.pop("KEEP_HTML_REPORT_DATA", None)
+                # Now clean up JSONL files from all archive directories
+                await self._cleanup_all_jsonl_files()
+        elif len(archive_paths) > 1:
+            # Multiple archives were requested but not all succeeded, still clean up
+            os.environ.pop("KEEP_HTML_REPORT_DATA", None)
+            await self._cleanup_all_jsonl_files()
 
         # Determine overall status
         if not results:
@@ -227,6 +244,58 @@ class MultiArchiveReportGenerator:
             f"Extracted {archive_path.name} to {target_dir} with HTML report preservation"
         )
 
+    async def _read_jsonl_summary(self, jsonl_path: Path) -> Dict[str, Any]:
+        """Read only the summary record from a JSONL file.
+
+        JSONL files contain multiple JSON objects, one per line. This method
+        reads line-by-line to find and return the summary record which contains
+        the overall_status and test metadata.
+
+        Args:
+            jsonl_path: Path to the JSONL result file.
+
+        Returns:
+            Dictionary containing summary information with overall_status.
+
+        Raises:
+            Exception: If file cannot be read or summary record not found.
+        """
+        summary = {}
+        metadata = {}
+
+        try:
+            async with aiofiles.open(jsonl_path, "r") as f:
+                async for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    try:
+                        record = json.loads(line)
+                        record_type = record.get("type")
+
+                        if record_type == "metadata":
+                            metadata = record
+                        elif record_type == "summary":
+                            summary = record
+                            # Found summary, can stop reading
+                            break
+
+                    except json.JSONDecodeError:
+                        # Skip malformed lines
+                        continue
+
+        except Exception as e:
+            logger.error(f"Failed to read JSONL file {jsonl_path}: {e}")
+            raise
+
+        # Return summary with overall_status
+        return {
+            "test_id": metadata.get("test_id") or summary.get("test_id"),
+            "overall_status": summary.get("overall_status", ResultStatus.SKIPPED.value),
+            "metadata": summary.get("metadata", {}),
+        }
+
     async def _generate_combined_summary(
         self, results: Dict[str, Dict[str, Any]]
     ) -> Optional[Path]:
@@ -258,7 +327,7 @@ class MultiArchiveReportGenerator:
                 if result.get("status") != "success":
                     continue
 
-                # Read JSON files from the archive's html_report_data directory
+                # Read JSONL files from the archive's html_report_data directory
                 archive_dir = self.pyats_results_dir / archive_type
                 json_dir = archive_dir / "html_reports" / "html_report_data"
 
@@ -274,11 +343,12 @@ class MultiArchiveReportGenerator:
                     "report_path": f"{archive_type}/html_reports/summary_report.html",
                 }
 
-                # Read all JSON files to calculate statistics
+                # Read all JSONL files to calculate statistics
                 if json_dir.exists():
-                    for json_file in json_dir.glob("*.json"):
+                    for jsonl_file in json_dir.glob("*.jsonl"):
                         try:
-                            test_data = json.loads(json_file.read_text())
+                            # Use helper method to read summary from JSONL
+                            test_data = await self._read_jsonl_summary(jsonl_file)
                             status = test_data.get(
                                 "overall_status", ResultStatus.SKIPPED.value
                             )
@@ -303,7 +373,7 @@ class MultiArchiveReportGenerator:
 
                         except Exception as e:
                             logger.warning(
-                                f"Failed to read test data from {json_file}: {e}"
+                                f"Failed to read test data from {jsonl_file}: {e}"
                             )
 
                 # Calculate success rate for this test type
@@ -360,3 +430,40 @@ class MultiArchiveReportGenerator:
         except Exception as e:
             logger.error(f"Failed to generate combined summary: {e}")
             return None
+
+    async def _cleanup_all_jsonl_files(self) -> None:
+        """Clean up JSONL files from all archive directories after combined summary generation.
+
+        This method is called after the combined summary has been generated to remove
+        the intermediate JSONL files that are no longer needed. It iterates through
+        all archive type directories (api, d2d) and removes JSONL files.
+
+        The cleanup is performed to save disk space while preserving the generated
+        HTML reports which are the final output.
+        """
+        try:
+            for archive_dir in self.pyats_results_dir.iterdir():
+                if not archive_dir.is_dir():
+                    continue
+
+                # Look for html_report_data directory
+                json_dir = archive_dir / "html_reports" / "html_report_data"
+                if not json_dir.exists():
+                    continue
+
+                # Remove all JSONL files
+                jsonl_files = list(json_dir.glob("*.jsonl"))
+                for jsonl_file in jsonl_files:
+                    try:
+                        jsonl_file.unlink()
+                        logger.debug(f"Cleaned up JSONL file: {jsonl_file}")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete {jsonl_file}: {e}")
+
+                if jsonl_files:
+                    logger.info(
+                        f"Cleaned up {len(jsonl_files)} JSONL files from {archive_dir.name}"
+                    )
+
+        except Exception as e:
+            logger.warning(f"Failed to cleanup JSONL files: {e}")
