@@ -106,6 +106,31 @@ def add_tests_parent_to_syspath(path: Union[str, Path]) -> None:
         raise
 
 
+def find_pyats_common_parent(test_dir: Union[str, Path]) -> Optional[Path]:
+    """
+    Search for a directory containing a pyats_common subdirectory within test_dir.
+
+    This enables test files to import shared utilities like:
+        from pyats_common.module import foo
+
+    Args:
+        test_dir: Root directory to search within
+
+    Returns:
+        Path to the directory containing pyats_common, or None if not found
+    """
+    test_dir_path = Path(test_dir).resolve()
+
+    # Use os.walk to traverse all subdirectories
+    for root, dirs, _ in os.walk(test_dir_path):
+        if "pyats_common" in dirs:
+            parent_dir = Path(root)
+            logger.debug(f"Found pyats_common at: {parent_dir / 'pyats_common'}")
+            return parent_dir
+
+    return None
+
+
 def get_pythonpath_for_tests(
     test_dir: Union[str, Path],
     extra_dirs: Optional[List[Union[str, Path]]] = None,
@@ -115,8 +140,9 @@ def get_pythonpath_for_tests(
 
     Creates a complete PYTHONPATH that includes:
     1. The appropriate import path for the test directory
-    2. Any additional directories (e.g., nac-test source)
-    3. The existing PYTHONPATH from the environment
+    2. The parent directory of pyats_common (if found in test_dir tree)
+    3. Any additional directories (e.g., nac-test source)
+    4. The existing PYTHONPATH from the environment
 
     Args:
         test_dir: Directory containing test files
@@ -137,6 +163,14 @@ def get_pythonpath_for_tests(
     except ValueError as e:
         logger.error(f"Invalid test directory structure: {e}")
         raise
+
+    # Search for pyats_common directory and add its parent to PYTHONPATH
+    pyats_common_parent = find_pyats_common_parent(test_dir)
+    if pyats_common_parent:
+        parent_str = str(pyats_common_parent)
+        if parent_str not in paths:
+            logger.debug(f"Adding pyats_common parent to PYTHONPATH: {parent_str}")
+            paths.append(parent_str)
 
     # Add any extra directories
     if extra_dirs:
