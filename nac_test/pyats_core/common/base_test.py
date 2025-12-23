@@ -821,7 +821,7 @@ class NACTestBase(aetest.Testcase):
 
         Args:
             client: The httpx.AsyncClient to wrap
-            device_name: Name to use for the device in reports (e.g., "APIC", "vManage", "ISE")
+            device_name: Name to use for the device in reports (e.g., "APIC", "SDWAN Manager", "ISE")
 
         Returns:
             The wrapped client with tracking capabilities

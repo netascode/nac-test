@@ -160,7 +160,7 @@ class TerminalColors:
             f"  {cls.success('export CONTROLLER_TYPE=ACI')}     {cls.info('# for ACI (APIC)')}"
         )
         lines.append(
-            f"  {cls.success('export CONTROLLER_TYPE=SDWAN')}   {cls.info('# for SD-WAN (vManage)')}"
+            f"  {cls.success('export CONTROLLER_TYPE=SDWAN')}   {cls.info('# for SD-WAN (SDWAN Manager)')}"
         )
         lines.append(
             f"  {cls.success('export CONTROLLER_TYPE=CC')}      {cls.info('# for Catalyst Center')}"
@@ -182,7 +182,7 @@ class TerminalColors:
         # Architecture-specific examples with helpful URLs
         architecture_examples = [
             ("ACI", "apic.example.com", "ACI (APIC)"),
-            ("SDWAN", "vmanage.example.com", "SD-WAN (vManage)"),
+            ("SDWAN", "sdwan-manager.example.com", "SD-WAN (SDWAN Manager)"),
             ("CC", "cc.example.com", "Catalyst Center"),
             ("MERAKI", "api.meraki.com/api/v1", "Meraki"),
             ("FMC", "fmc.example.com", "Firepower MC"),

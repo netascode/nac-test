@@ -2102,7 +2102,7 @@ Set by PyATSOrchestrator and read by PyATS test subprocesses:
 | `PYTHONPATH` | Python path for test discovery | `/path/to/nac-test:/path/to/templates` |
 | `PYATS_LOG_LEVEL` | PyATS logging level | `ERROR` |
 | `HTTPX_LOG_LEVEL` | HTTP client logging level | `ERROR` |
-| `CONTROLLER_TYPE` | Controller type for tests | `ACI`, `vManage`, `ISE` |
+| `CONTROLLER_TYPE` | Controller type for tests | `ACI`, `SDWAN`, `ISE` |
 | `ACI_URL`, `ACI_USERNAME`, `ACI_PASSWORD` | Controller connection info | `https://apic.example.com`, `admin`, `***` |
 
 ##### 3. Device-Specific Environment Variables
@@ -3880,7 +3880,7 @@ graph TB
     subgraph "Network Devices"
         cEdge1[cEdge Router 1]
         cEdge2[cEdge Router 2]
-        vEdge[vEdge Router]
+        cEdge3[SDWAN cEdge Router]
     end
 
     SystemTest --> SDWANTestBase
@@ -3899,7 +3899,7 @@ graph TB
 
     BrokerClient --> cEdge1
     BrokerClient --> cEdge2
-    BrokerClient --> vEdge
+    BrokerClient --> cEdge3
 ```
 
 #### SDWANTestBase Class Definition
@@ -4040,10 +4040,10 @@ class SDWANDeviceResolver:
             if router.get("name") == device_name:
                 return {"type": "cedge", "details": router}
 
-        # Check vedge_routers
-        for router in site.get("vedge_routers", []):
+        # Check other SDWAN edge routers (if applicable)
+        for router in site.get("other_edge_routers", []):
             if router.get("name") == device_name:
-                return {"type": "vedge", "details": router}
+                return {"type": "edge", "details": router}
 
         return None
 
@@ -4219,12 +4219,12 @@ class SystemStatusValidation(SDWANTestBase):
 
     @aetest.test
     def test_control_connections(self):
-        """Verify control connections to vSmart controllers."""
+        """Verify control connections to SDWAN Controller."""
         # Use inherited execute_command (with caching)
         output = self.execute_command("show sdwan control connections")
 
         # Parse and validate output
-        assert "vSmart" in output, "No vSmart connections found"
+        assert "SDWAN Controller" in output, "No SDWAN Controller connections found"
         assert "CONNECT" in output, "Control connections not established"
 
     @aetest.test
@@ -6338,7 +6338,7 @@ def categorize_tests_by_type(
 
 | Mode | Folder | Execution Strategy | Use Case |
 |------|---------|-------------------|----------|
-| **API Tests** | `test/api/` | **Controller-centric**: Single PyATS job, all tests run against controllers | APIC API tests, vManage API tests, DNAC API tests |
+| **API Tests** | `test/api/` | **Controller-centric**: Single PyATS job, all tests run against controllers | APIC API tests, SDWAN Manager API tests, DNAC API tests |
 | **D2D Tests** | `test/d2d/` | **Device-centric**: One PyATS job **per device**, tests run via SSH | SD-WAN router CLI tests, Nexus switch CLI tests |
 
 **Why They Execute Differently:**
@@ -6380,12 +6380,12 @@ ACI-as-Code-Demo/aac/tests/templates/apic/test/
 For SD-WAN (hypothetical):
 ```
 sdwan-tests/templates/sdwan/test/
-├── api/                                   # vManage API tests
+├── api/                                   # SDWAN Manager API tests
 │   └── verify_template_attached.py
 ├── d2d/                                   # Device SSH tests
 │   └── verify_control_connections.py     # Runs on EACH cEdge router
 └── pyats_common/
-    ├── vmanage_base_test.py              # For API tests
+    ├── sdwan_manager_base_test.py        # For API tests
     └── sdwan_ssh_base_test.py            # For D2D tests
 ```
 
@@ -6675,7 +6675,7 @@ for device in devices:
 
 | Aspect | API Tests (`api/`) | D2D Tests (`d2d/`) |
 |--------|-------------------|-------------------|
-| **Target** | Controllers (APIC, vManage, DNAC) | Network devices (routers, switches) |
+| **Target** | Controllers (APIC, SDWAN Manager, DNAC) | Network devices (routers, switches) |
 | **Protocol** | HTTPS (REST API) | SSH (CLI) |
 | **Execution** | Single job, all tests | One job per device |
 | **Parallelism** | Sequential (shared session) | Parallel (isolated connections) |
@@ -6772,7 +6772,7 @@ The broker system consists of three main components:
 │  │  Connection Pool (Max: 50 concurrent)                        │ │
 │  │  • cedge-1 → Device (connected, healthy)                     │ │
 │  │  • cedge-2 → Device (connected, healthy)                     │ │
-│  │  • vEdge-3 → Device (connected, healthy)                     │ │
+│  │  • cedge-3 → Device (connected, healthy)                     │ │
 │  │  ...                                                          │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 │                                                                     │
@@ -6796,7 +6796,7 @@ The broker system consists of three main components:
                         ▼
         ┌────────────────────────────────────────┐
         │    Network Devices (50 devices)        │
-        │    cedge-1, cedge-2, vedge-3, ...      │
+        │    cedge-1, cedge-2, cedge-3, ...      │
         └────────────────────────────────────────┘
 ```
 
@@ -11983,7 +11983,7 @@ devices:
 
 ### Overview: Why HTTP Client Matters
 
-API tests in nac-test interact with network controllers (APIC, vManage, ISE, etc.) via HTTP/HTTPS REST APIs. The HTTP client architecture is a **critical component** that determines:
+API tests in nac-test interact with network controllers (APIC, SDWAN Manager, ISE, etc.) via HTTP/HTTPS REST APIs. The HTTP client architecture is a **critical component** that determines:
 
 - **Reliability**: Can tests survive temporary controller failures or network issues?
 - **Performance**: How efficiently are connections managed and reused?
@@ -12155,7 +12155,7 @@ def get_client(
 
 4. **Headers Injection**: Architecture-specific authentication headers
    - APIC: Cookie-based authentication
-   - vManage: Bearer tokens
+   - SDWAN Manager: JSESSIONID cookies with optional XSRF tokens
    - ISE: Basic auth or token
 
 ---
@@ -18394,7 +18394,7 @@ def add_command_api_execution(
     Handles all execution types: API calls, SSH commands, D2D tests.
 
     Args:
-        device_name: Device name (router, switch, APIC, vManage, etc.).
+        device_name: Device name (router, switch, APIC, SDWAN Manager, etc.).
         command: Command or API endpoint.
         output: Raw output/response (will be truncated to 50KB).
         data: Parsed data (if applicable).
@@ -20882,7 +20882,7 @@ The contract system consists of five layers:
 
 **Why Contracts Exist**:
 
-- **Framework Extensibility**: New test architectures (e.g., vManage API tests) can be added by implementing contracts
+- **Framework Extensibility**: New test architectures (e.g., SDWAN Manager API tests) can be added by implementing contracts
 - **Type Safety**: TypedDict contracts provide IDE autocompletion and mypy validation
 - **Consistent Reporting**: Module-level constants ensure all tests have proper HTML report metadata
 - **Parallel Execution Safety**: Contracts define what state is shared vs isolated across processes
@@ -20902,7 +20902,7 @@ aetest.Testcase (PyATS)
 NACTestBase (nac-test framework)
     ├→ SSHTestBase (SSH/device tests)
     │   └→ Concrete SSH test classes
-    └→ (Future: APICTestBase, vManageTestBase, etc.)
+    └→ (Future: APICTestBase, SDWANManagerTestBase, etc.)
 ```
 
 **NACTestBase Contract** (`nac_test/pyats_core/common/base_test.py`):
@@ -21333,7 +21333,7 @@ Tests rely on environment variables set by orchestrator:
 
 **Common Variables** (all tests):
 - `MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH`: Path to merged data model JSON file
-- `CONTROLLER_TYPE`: Controller type (e.g., "ACI", "VMANAGE")
+- `CONTROLLER_TYPE`: Controller type (e.g., "ACI", "SDWAN")
 - `{CONTROLLER_TYPE}_URL`: Controller URL (e.g., "ACI_URL")
 - `{CONTROLLER_TYPE}_USERNAME`: Username (e.g., "ACI_USERNAME")
 - `{CONTROLLER_TYPE}_PASSWORD`: Password (e.g., "ACI_PASSWORD")
@@ -21387,72 +21387,72 @@ class GoodTest(NACTestBase):
 
 ### Implementing a New Test Architecture
 
-**Scenario**: Add support for vManage API tests (similar to existing APIC tests, but for SD-WAN).
+**Scenario**: Add support for SDWAN Manager API tests (similar to existing APIC tests, but for SD-WAN).
 
 **Step 1: Create Architecture-Specific Base Class**
 
 ```python
-# nac_test/pyats_core/common/vmanage_base_test.py
+# nac_test/pyats_core/common/sdwan_manager_base_test.py
 from nac_test.pyats_core.common.base_test import NACTestBase
 from pyats import aetest
 import httpx
 
-class VManageTestBase(NACTestBase):
-    """Base class for vManage API tests.
+class SDWANManagerTestBase(NACTestBase):
+    """Base class for SDWAN Manager API tests.
 
-    Provides vManage-specific functionality:
-    - vManage API client with authentication
+    Provides SDWAN Manager-specific functionality:
+    - SDWAN Manager API client with authentication
     - Common API patterns (template retrieval, device queries, etc.)
-    - vManage-specific error handling
+    - SDWAN Manager-specific error handling
     """
 
     @aetest.setup
     def setup(self) -> None:
-        """Initialize vManage API client."""
+        """Initialize SDWAN Manager API client."""
         super().setup()  # REQUIRED: Initialize framework components
 
-        # Create vManage API client
-        self.vmanage_client = httpx.AsyncClient(
+        # Create SDWAN Manager API client
+        self.sdwan_manager_client = httpx.AsyncClient(
             base_url=self.controller_url,
-            verify=False,  # SSL verification per vManage requirements
+            verify=False,  # SSL verification per SDWAN Manager requirements
             headers={"Content-Type": "application/json"}
         )
 
-        # Authenticate (vManage-specific auth flow)
+        # Authenticate (SDWAN Manager-specific auth flow)
         await self._authenticate()
 
     async def _authenticate(self) -> None:
-        """Authenticate with vManage and store session token."""
-        response = await self.vmanage_client.post(
+        """Authenticate with SDWAN Manager and store session token."""
+        response = await self.sdwan_manager_client.post(
             "/j_security_check",
             data={"j_username": self.username, "j_password": self.password}
         )
         # ... store token ...
 
     async def get_device_list(self) -> List[Dict[str, Any]]:
-        """Get list of devices from vManage.
+        """Get list of devices from SDWAN Manager.
 
-        Common helper method for vManage tests.
+        Common helper method for SDWAN Manager tests.
         """
-        response = await self.vmanage_client.get("/dataservice/device")
+        response = await self.sdwan_manager_client.get("/dataservice/device")
         return response.json()["data"]
 ```
 
 **Step 2: Implement Concrete Test Class**
 
 ```python
-# tests/vmanage/template_attached_test.py
-from nac_test.pyats_core.common.vmanage_base_test import VManageTestBase
+# tests/sdwan_manager/template_attached_test.py
+from nac_test.pyats_core.common.sdwan_manager_base_test import SDWANManagerTestBase
 from pyats import aetest
 
 # Module-level constants (CONTRACT REQUIREMENT)
-TITLE = "vManage Template Attachment Validation"
+TITLE = "SDWAN Manager Template Attachment Validation"
 DESCRIPTION = "Validates device templates are attached correctly"
-SETUP = "Connect to vManage and retrieve template configuration"
+SETUP = "Connect to SDWAN Manager and retrieve template configuration"
 PROCEDURE = "Query each device and verify template attachment"
 PASS_FAIL_CRITERIA = "All devices have expected templates attached"
 
-class TemplateAttachedTest(VManageTestBase):
+class TemplateAttachedTest(SDWANManagerTestBase):
     """Validates template attachment for all devices."""
 
     # Optional class variable
@@ -21461,7 +21461,7 @@ class TemplateAttachedTest(VManageTestBase):
     @aetest.setup
     def setup(self) -> None:
         """Load expected templates from data model."""
-        super().setup()  # Calls VManageTestBase.setup() → NACTestBase.setup()
+        super().setup()  # Calls SDWANManagerTestBase.setup() → NACTestBase.setup()
 
         # Access data model (provided by framework)
         self.expected_templates = self.data_model.get("device_templates", {})
@@ -21469,7 +21469,7 @@ class TemplateAttachedTest(VManageTestBase):
     @aetest.test
     async def test_template_attachments(self) -> None:
         """Verify each device has correct template attached."""
-        devices = await self.get_device_list()  # From VManageTestBase
+        devices = await self.get_device_list()  # From SDWANManagerTestBase
 
         for device in devices:
             device_name = device["host-name"]
@@ -21497,11 +21497,11 @@ class TemplateAttachedTest(VManageTestBase):
 
 **Step 3: Register with Orchestrator** (if needed)
 
-Update orchestrator to recognize vManage tests:
+Update orchestrator to recognize SDWAN Manager tests:
 
 ```python
 # In orchestrator.py
-SUPPORTED_CONTROLLER_TYPES = ["ACI", "VMANAGE"]  # Add VMANAGE
+SUPPORTED_CONTROLLER_TYPES = ["ACI", "SDWAN"]  # Add SDWAN
 
 # Environment variable validation
 required_vars = [
@@ -23200,7 +23200,7 @@ PyATS = Annotated[
 
 **When to Use `--pyats`**:
 
-1. **API Test Development**: Writing or debugging PyATS tests for API-based verifications (APIC, vManage, ISE)
+1. **API Test Development**: Writing or debugging PyATS tests for API-based verifications (APIC, SDWAN Manager, ISE)
    - Iterate on test logic without Robot Framework overhead
    - Faster feedback loop (5-10 seconds vs 5-10 minutes)
    - Focus on Python code, not Jinja2 templates
