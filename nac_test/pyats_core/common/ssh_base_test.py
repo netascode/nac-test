@@ -7,6 +7,7 @@ import logging
 import os
 import json
 from typing import Any, Optional, Callable, Coroutine
+from nac_test.utils.device_validation import validate_device_inventory
 
 
 class SSHTestBase(NACTestBase):
@@ -60,7 +61,7 @@ class SSHTestBase(NACTestBase):
                 return self.testbed.devices[self.hostname]
         return None
 
-    @aetest.setup
+    @aetest.setup  # type: ignore[misc]
     def setup(self) -> None:
         """
         Combined setup that calls parent setup then sets up SSH context.
@@ -95,6 +96,14 @@ class SSHTestBase(NACTestBase):
                 f"Framework Error: Could not parse device info JSON from environment variable DEVICE_INFO: {e}\n"
                 f"Raw content: {device_info_json}"
             )
+            return
+
+        # Validate device info has all required fields before proceeding
+        # This catches resolver bugs early with clear error messages
+        try:
+            validate_device_inventory([self.device_info])
+        except ValueError as e:
+            self.failed(f"Framework Error: Device validation failed.\n{e}")
             return
 
         # try:
@@ -321,7 +330,7 @@ class SSHTestBase(NACTestBase):
             # Don't let tracking errors break the test
             self.logger.warning(f"Failed to track SSH command: {e}")
 
-    def run_async_verification_test(self, steps) -> None:
+    def run_async_verification_test(self, steps: Any) -> None:
         """Run async verification test using existing event loop.
 
         This method orchestrates the async verification process for SSH-based tests:
@@ -347,10 +356,10 @@ class SSHTestBase(NACTestBase):
 
         try:
             # Call the base class generic orchestration
-            results = loop.run_until_complete(self.run_verification_async())
+            results = loop.run_until_complete(self.run_verification_async())  # type: ignore[no-untyped-call]
 
             # Process results using smart configuration-driven processing
-            self.process_results_smart(results, steps)
+            self.process_results_smart(results, steps)  # type: ignore[no-untyped-call]
 
         finally:
             # SSH-specific cleanup
