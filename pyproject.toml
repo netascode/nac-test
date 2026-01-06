@@ -42,6 +42,7 @@ httpx = "~=0.28"
 aiofiles = "~=24.1"
 colorama = "~=0.4.6"
 markdown = "~=3.8.2"
+nac-test-pyats-common = "~=1.0"
 
 [tool.poetry.group.dev.dependencies]
 ansible-core = "~=2.17"
