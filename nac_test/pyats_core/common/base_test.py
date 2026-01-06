@@ -5,7 +5,7 @@
 from pyats import aetest
 import os
 import sys
-import yaml
+import yaml  # type: ignore[import-untyped]
 import logging
 import json
 import time
@@ -38,7 +38,7 @@ from nac_test.pyats_core.reporting.batching_reporter import BatchingReporter
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
-import markdown
+import markdown  # type: ignore[import-untyped]
 import asyncio
 import httpx
 
