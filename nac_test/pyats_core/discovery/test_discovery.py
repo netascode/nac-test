@@ -2,12 +2,19 @@
 
 """PyATS test discovery functionality.
 
-This module handles discovering and categorizing PyATS test files
-based on directory structure (api/ vs d2d/).
+This module handles discovering and categorizing PyATS test files.
+Test type detection uses a three-tier strategy:
+
+    1. **Static Analysis** (Primary): AST-based detection of base class inheritance
+    2. **Directory Structure** (Fallback): Checks for /api/ or /d2d/ in path
+    3. **Default** (Last Resort): Falls back to 'api' with warning
+
+This allows flexible test organization - tests can be placed in any directory
+structure and will be automatically classified based on their base class
+inheritance (e.g., NACTestBase -> api, SSHTestBase -> d2d).
 """
 
 from pathlib import Path
-from typing import List, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,7 +31,7 @@ class TestDiscovery:
         """
         self.test_dir = Path(test_dir)
 
-    def discover_pyats_tests(self) -> Tuple[List[Path], List[Tuple[Path, str]]]:
+    def discover_pyats_tests(self) -> tuple[list[Path], list[tuple[Path, str]]]:
         """Find all .py test files when --pyats flag is set
 
         Searches for Python test files in the test directory structure.
@@ -106,12 +113,23 @@ class TestDiscovery:
         return sorted(test_files), skipped_files
 
     def categorize_tests_by_type(
-        self, test_files: List[Path]
-    ) -> Tuple[List[Path], List[Path]]:
-        """Categorize test files based on directory structure.
+        self, test_files: list[Path]
+    ) -> tuple[list[Path], list[Path]]:
+        """Categorize discovered test files into API and D2D tests.
 
-        Tests MUST be in either 'api/' or 'd2d/' directories.
-        Raises error if tests are found outside these directories.
+        Uses static analysis with directory fallback for maximum flexibility
+        with zero user configuration.
+
+        Detection Strategy (Priority Order):
+            1. **Static Analysis**: Examines base class inheritance via AST
+               - NACTestBase, APICTestBase, etc. -> 'api'
+               - SSHTestBase, IOSXETestBase, etc. -> 'd2d'
+            2. **Directory Fallback**: Checks for /api/ or /d2d/ in path
+            3. **Default**: Falls back to 'api' with warning
+
+        This approach allows tests to be organized by feature/domain rather
+        than requiring rigid /api/ and /d2d/ directory structure, while
+        maintaining 100% backward compatibility with existing projects.
 
         Args:
             test_files: List of discovered test file paths
@@ -119,40 +137,30 @@ class TestDiscovery:
         Returns:
             Tuple of (api_tests, d2d_tests)
 
-        Raises:
-            ValueError: If tests are found outside of api/ or d2d/ directories
+        Example:
+            ```python
+            discovery = TestDiscovery(Path("/tests"))
+            files, _ = discovery.discover_pyats_tests()
+            api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+            ```
         """
-        api_tests = []
-        d2d_tests = []
-        uncategorized = []
+        # Lazy import to avoid circular dependencies
+        from .test_type_resolver import TestTypeResolver
+
+        resolver = TestTypeResolver(self.test_dir)
+        api_tests: list[Path] = []
+        d2d_tests: list[Path] = []
 
         for test_file in test_files:
-            path_str = str(test_file)
+            test_type = resolver.resolve(test_file)
 
-            # Check for directory markers anywhere in path
-            if "/api/" in path_str:
+            if test_type == "api":
                 api_tests.append(test_file)
-            elif "/d2d/" in path_str:
+            else:  # "d2d"
                 d2d_tests.append(test_file)
-            else:
-                uncategorized.append(test_file)
 
-        # Raise error if any tests are not properly categorized
-        if uncategorized:
-            # Show first 5 files as examples
-            example_files = "\n".join(f"  - {f}" for f in uncategorized[:5])
-            if len(uncategorized) > 5:
-                example_files += f"\n  ... and {len(uncategorized) - 5} more"
-
-            raise ValueError(
-                f"Found {len(uncategorized)} test file(s) outside of 'api/' or 'd2d/' directories:\n"
-                f"{example_files}\n\n"
-                "All tests must be organized under:\n"
-                "  - 'api/' for API-based tests\n"
-                "  - 'd2d/' for direct-to-device (SSH-based) tests"
-            )
-
-        # Log the categorization results
-        logger.info(f"Categorized tests: {len(api_tests)} API, {len(d2d_tests)} D2D")
+        logger.info(
+            f"Categorized {len(api_tests)} API tests and {len(d2d_tests)} D2D tests"
+        )
 
         return api_tests, d2d_tests
