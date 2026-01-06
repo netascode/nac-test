@@ -9,7 +9,7 @@ in an architecture-agnostic way using the contract pattern.
 from pathlib import Path
 from typing import List, Dict, Any
 import logging
-import yaml
+import yaml  # type: ignore[import-untyped]
 import sys
 import importlib.util
 from nac_test.utils.path_setup import add_tests_parent_to_syspath
