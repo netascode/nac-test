@@ -27,6 +27,7 @@ from contextlib import contextmanager
 
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
+from nac_test.utils.controller import detect_controller_type
 from nac_test.pyats_core.common.types import (
     VerificationResult,
     BaseVerificationResultOptional,
@@ -37,14 +38,14 @@ from nac_test.pyats_core.reporting.batching_reporter import BatchingReporter
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
-import markdown  # type: ignore[import-untyped]
+import markdown
 import asyncio
 import httpx
 
 T = TypeVar("T")
 
 
-class NACTestBase(aetest.Testcase):
+class NACTestBase(aetest.Testcase):  # type: ignore[misc]
     """Generic base class with common functionality for all architectures.
 
     This enhanced base class provides:
@@ -159,7 +160,7 @@ class NACTestBase(aetest.Testcase):
             return ""
 
         # Configure markdown with useful extensions
-        md = markdown.Markdown(  # type: ignore[no-any-return]
+        md = markdown.Markdown(
             extensions=[
                 "extra",  # Includes tables, footnotes, abbreviations, etc.
                 "nl2br",  # Converts newlines to <br> tags
@@ -172,7 +173,7 @@ class NACTestBase(aetest.Testcase):
 
         return html
 
-    @aetest.setup
+    @aetest.setup  # type: ignore[untyped-decorator]
     def setup(self) -> None:
         """Common setup for all tests"""
         # Configure test-specific logger
@@ -183,7 +184,14 @@ class NACTestBase(aetest.Testcase):
 
         # Get controller details from environment
         # Note: Environment validation happens in orchestrator pre-flight check
-        self.controller_type = os.environ.get("CONTROLLER_TYPE", "ACI")
+        # Detect controller type based on environment variables
+        try:
+            self.controller_type = detect_controller_type()
+        except ValueError as e:
+            # Log error and re-raise to fail the test setup
+            self.logger.error(f"Controller detection failed: {e}")
+            raise
+
         self.controller_url = os.environ[f"{self.controller_type}_URL"]
         self.username = os.environ[f"{self.controller_type}_USERNAME"]
         self.password = os.environ[f"{self.controller_type}_PASSWORD"]
@@ -1231,14 +1239,14 @@ class NACTestBase(aetest.Testcase):
         if api_details:
             result["api_details"] = api_details
 
-        return result
+        return result  # type: ignore[return-value]
 
     # =========================
     # RESULT PROCESSING METHODS
     # =========================
 
     def build_api_context(
-        self, test_type: str, primary_item: str, **additional_context
+        self, test_type: str, primary_item: str, **additional_context: Any
     ) -> str:
         """Build standardized API context strings for result tracking.
 
@@ -1452,7 +1460,7 @@ class NACTestBase(aetest.Testcase):
             and (r.get("status") == "PASSED" or r.get("status") == ResultStatus.PASSED)
         ]
 
-        return failed, skipped, passed
+        return failed, skipped, passed  # type: ignore[return-value]
 
     def log_result_summary(
         self,
@@ -1596,7 +1604,7 @@ class NACTestBase(aetest.Testcase):
         raise NotImplementedError("Subclasses must implement format_step_description()")
 
     def process_results_with_steps(
-        self, results: List[VerificationResult], steps
+        self, results: List[VerificationResult], steps: Any
     ) -> None:
         """Generic result processor with customization through abstract methods.
 
@@ -1624,7 +1632,7 @@ class NACTestBase(aetest.Testcase):
         failed, skipped, passed = self.categorize_results(results)
 
         # Log standardized result summary using abstract method
-        test_type = self.__class__.TEST_TYPE_NAME
+        test_type = self.__class__.TEST_TYPE_NAME or "Test"
         self.log_result_summary(test_type, failed, skipped, passed)
 
         # Log skipped items with customizable formatting
@@ -1637,7 +1645,7 @@ class NACTestBase(aetest.Testcase):
         # Determine overall test result using existing helper
         self.determine_overall_test_result(failed, skipped, passed)
 
-    def create_pyats_steps(self, results: List[VerificationResult], steps) -> None:
+    def create_pyats_steps(self, results: List[VerificationResult], steps: Any) -> None:
         """Create PyATS steps from results using abstract formatting methods.
 
         This method handles the generic step creation logic while delegating
@@ -1748,7 +1756,7 @@ class NACTestBase(aetest.Testcase):
             # Extract basic info for the standardized method
             status = result.get("status", "UNKNOWN")
             reason = result.get("reason", "")
-            test_type = self.__class__.TEST_TYPE_NAME
+            test_type = self.__class__.TEST_TYPE_NAME or "Test"
 
             # Try to build item identifier from context
             item_identifier = self.build_item_identifier_from_context(result, context)
@@ -1790,7 +1798,7 @@ class NACTestBase(aetest.Testcase):
             "Subclasses must implement build_item_identifier_from_context()"
         )
 
-    def set_step_status(self, step, result: VerificationResult) -> None:
+    def set_step_status(self, step: Any, result: VerificationResult) -> None:
         """Set PyATS step status based on verification result.
 
         Args:
@@ -1813,7 +1821,7 @@ class NACTestBase(aetest.Testcase):
     # NEW PATTERN SUPPORT: Configuration-driven methods for 3-function pattern
     # ============================================================================
 
-    async def run_verification_async(self):
+    async def run_verification_async(self) -> List[VerificationResult]:
         """
         Generic async orchestration that works for ANY verification test.
 
@@ -1885,7 +1893,9 @@ class NACTestBase(aetest.Testcase):
             # Item verification: [contexts]
             return await self._run_item_verification(items_to_verify)
 
-    async def _run_grouped_verification(self, groups):
+    async def _run_grouped_verification(
+        self, groups: Dict[str, List[Dict[str, Any]]]
+    ) -> List[VerificationResult]:
         """
         Orchestrates grouped verification where multiple items share one API call.
 
@@ -1990,7 +2000,9 @@ class NACTestBase(aetest.Testcase):
 
         return flattened_results
 
-    async def _run_item_verification(self, items):
+    async def _run_item_verification(
+        self, items: List[Dict[str, Any]]
+    ) -> List[VerificationResult]:
         """
         Orchestrates item-by-item verification where each item gets its own API call.
 
@@ -2048,9 +2060,11 @@ class NACTestBase(aetest.Testcase):
                     }
                 )
 
-        return processed_results
+        return processed_results  # type: ignore[return-value]
 
-    def format_mismatch(self, attribute, expected, actual, context):
+    def format_mismatch(
+        self, attribute: str, expected: Any, actual: Any, context: Dict[str, Any]
+    ) -> BaseVerificationResultOptional:
         """
         Configuration-driven error formatting for attribute mismatches.
 
@@ -2078,9 +2092,6 @@ class NACTestBase(aetest.Testcase):
             attribute, f"data model configuration for '{attribute}'"
         )
 
-        # Build identifier from context
-        identifier = self.build_identifier(context)
-
         return self.format_verification_result(
             status=ResultStatus.FAILED,
             context=context,
@@ -2100,7 +2111,9 @@ class NACTestBase(aetest.Testcase):
             api_duration=context.get("api_duration", 0),
         )
 
-    def format_api_error(self, status_code, url, context):
+    def format_api_error(
+        self, status_code: int, url: str, context: Dict[str, Any]
+    ) -> BaseVerificationResultOptional:
         """
         Generic API error formatting.
 
@@ -2136,7 +2149,9 @@ class NACTestBase(aetest.Testcase):
             api_duration=context.get("api_duration", 0),
         )
 
-    def format_not_found(self, resource_type, identifier, context):
+    def format_not_found(
+        self, resource_type: str, identifier: str, context: Dict[str, Any]
+    ) -> BaseVerificationResultOptional:
         """
         Generic not-found error formatting.
 
@@ -2183,7 +2198,7 @@ class NACTestBase(aetest.Testcase):
             api_duration=context.get("api_duration", 0),
         )
 
-    def build_identifier(self, context):
+    def build_identifier(self, context: Dict[str, Any]) -> str:
         """
         Build identifier string using TEST_CONFIG format string.
 
@@ -2198,25 +2213,20 @@ class NACTestBase(aetest.Testcase):
 
         try:
             # Try to format using the provided format string
-            return format_str.format(**context)
-        except (KeyError, ValueError):
-            # Fallback if format fails
+            return format_str.format(**context)  # type: ignore[no-any-return]
+        except (KeyError, ValueError) as e:
+            # Log warning to help test authors fix their identifier_format
             resource_type = config.get("resource_type", "Resource")
-            # Try to build a basic identifier
-            if "tenant_name" in context:
-                parts = [context.get("tenant_name")]
-                if "ap_name" in context or "application_profile_name" in context:
-                    parts.append(
-                        context.get("ap_name", context.get("application_profile_name"))
-                    )
-                if "epg_name" in context:
-                    parts.append(context.get("epg_name"))
-                elif "bd_name" in context:
-                    parts.append(context.get("bd_name"))
-                return f"{resource_type} '{'/'.join(parts)}'"
+            self.logger.warning(
+                f"identifier_format failed: {e}. "
+                f"Format: '{format_str}', Context keys: {list(context.keys())}. "
+                f"Check TEST_CONFIG.identifier_format matches available context keys."
+            )
             return f"{resource_type} Verification"
 
-    def process_results_smart(self, results, steps):
+    def process_results_smart(
+        self, results: List[VerificationResult], steps: Any
+    ) -> None:
         """
         Smart result processing using TEST_CONFIG for customization.
 
@@ -2252,7 +2262,9 @@ class NACTestBase(aetest.Testcase):
         # Determine overall result
         self.determine_overall_test_result(failed, skipped, passed)
 
-    def _create_pyats_steps_smart(self, results, steps):
+    def _create_pyats_steps_smart(
+        self, results: List[VerificationResult], steps: Any
+    ) -> None:
         """
         Create PyATS steps using TEST_CONFIG for formatting (internal helper).
 
@@ -2265,7 +2277,6 @@ class NACTestBase(aetest.Testcase):
             "step_name_format", "{resource_type} Verification"
         )
         resource_type = config.get("resource_type", "Resource")
-        test_type_name = config.get("test_type_name", f"{resource_type} Verification")
 
         for result in results:
             if not isinstance(result, dict):
@@ -2300,7 +2311,9 @@ class NACTestBase(aetest.Testcase):
                 with steps.start("Failed to process result", continue_=True) as step:
                     step.failed(f"Step creation failed: {str(e)}")
 
-    def _log_skipped_items_smart(self, skipped_results):
+    def _log_skipped_items_smart(
+        self, skipped_results: List[VerificationResult]
+    ) -> None:
         """
         Log skipped items using TEST_CONFIG for formatting (internal helper).
 
@@ -2323,7 +2336,9 @@ class NACTestBase(aetest.Testcase):
         if len(skipped_results) > 5:
             self.logger.info(f"  ... and {len(skipped_results) - 5} more")
 
-    def _log_step_details_smart(self, result, context):
+    def _log_step_details_smart(
+        self, result: VerificationResult, context: Dict[str, Any]
+    ) -> None:
         """
         Log step details using TEST_CONFIG for field selection (internal helper).
 
@@ -2346,7 +2361,9 @@ class NACTestBase(aetest.Testcase):
         if api_duration:
             self.logger.info(f"  - API Duration: {api_duration:.3f}s")
 
-    def _add_step_to_html_collector_smart(self, result, context):
+    def _add_step_to_html_collector_smart(
+        self, result: VerificationResult, context: Dict[str, Any]
+    ) -> None:
         """
         Add step to HTML collector using TEST_CONFIG (internal helper).
 
@@ -2381,7 +2398,7 @@ class NACTestBase(aetest.Testcase):
             test_context=context.get("api_context"),
         )
 
-    @aetest.cleanup
+    @aetest.cleanup  # type: ignore[untyped-decorator]
     def cleanup(self) -> None:
         """Clean up test resources and save test results.
 

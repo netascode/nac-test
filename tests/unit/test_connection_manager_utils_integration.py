@@ -25,7 +25,7 @@ class TestConnectionManagerUtilsIntegration:
             "platform": "iosxe",
         }
 
-    @patch('unicon.Connection')
+    @patch("unicon.Connection")
     def test_unicon_connect_uses_start_parameter(self, mock_connection_class):
         """Test that _unicon_connect creates Connection with start parameter."""
         # Setup mock
@@ -40,10 +40,14 @@ class TestConnectionManagerUtilsIntegration:
         call_kwargs = mock_connection_class.call_args[1]
 
         # The key assertion - start parameter should be present
-        assert "start" in call_kwargs, "Connection should be created with start parameter"
+        assert "start" in call_kwargs, (
+            "Connection should be created with start parameter"
+        )
         assert isinstance(call_kwargs["start"], list), "start should be a list"
         assert len(call_kwargs["start"]) == 1, "start should have one command"
-        assert call_kwargs["start"][0] == "ssh admin@10.90.41.178", f"Expected 'ssh admin@10.90.41.178', got {call_kwargs['start'][0]}"
+        assert call_kwargs["start"][0] == "ssh admin@10.90.41.178", (
+            f"Expected 'ssh admin@10.90.41.178', got {call_kwargs['start'][0]}"
+        )
 
         # Verify other key parameters
         assert call_kwargs["hostname"] == "10.90.41.178"
@@ -56,13 +60,10 @@ class TestConnectionManagerUtilsIntegration:
         mock_conn.connect.assert_called_once()
         assert result == mock_conn
 
-    @patch('unicon.Connection')
+    @patch("unicon.Connection")
     def test_start_command_with_custom_port(self, mock_connection_class):
         """Test start command construction with custom port."""
-        device_info_with_port = {
-            **self.device_info,
-            "port": 2222
-        }
+        device_info_with_port = {**self.device_info, "port": 2222}
 
         mock_conn = Mock()
         mock_connection_class.return_value = mock_conn
@@ -72,12 +73,12 @@ class TestConnectionManagerUtilsIntegration:
         call_kwargs = mock_connection_class.call_args[1]
         assert call_kwargs["start"][0] == "ssh admin@10.90.41.178 -p 2222"
 
-    @patch('unicon.Connection')
+    @patch("unicon.Connection")
     def test_start_command_with_ssh_options(self, mock_connection_class):
         """Test start command construction with SSH options."""
         device_info_with_options = {
             **self.device_info,
-            "ssh_options": "-o StrictHostKeyChecking=no"
+            "ssh_options": "-o StrictHostKeyChecking=no",
         }
 
         mock_conn = Mock()
@@ -86,16 +87,15 @@ class TestConnectionManagerUtilsIntegration:
         self.manager._unicon_connect(device_info_with_options)
 
         call_kwargs = mock_connection_class.call_args[1]
-        assert call_kwargs["start"][0] == "ssh admin@10.90.41.178 -o StrictHostKeyChecking=no"
+        assert (
+            call_kwargs["start"][0]
+            == "ssh admin@10.90.41.178 -o StrictHostKeyChecking=no"
+        )
 
-    @patch('unicon.Connection')
+    @patch("unicon.Connection")
     def test_start_command_with_telnet_protocol(self, mock_connection_class):
         """Test start command construction with Telnet protocol."""
-        device_info_telnet = {
-            **self.device_info,
-            "protocol": "telnet",
-            "port": 23
-        }
+        device_info_telnet = {**self.device_info, "protocol": "telnet", "port": 23}
 
         mock_conn = Mock()
         mock_connection_class.return_value = mock_conn
@@ -105,7 +105,7 @@ class TestConnectionManagerUtilsIntegration:
         call_kwargs = mock_connection_class.call_args[1]
         assert call_kwargs["start"][0] == "telnet 10.90.41.178 23"
 
-    @patch('unicon.Connection')
+    @patch("unicon.Connection")
     def test_chassis_type_determination(self, mock_connection_class):
         """Test chassis type determination using connection_utils."""
         mock_conn = Mock()
@@ -117,10 +117,7 @@ class TestConnectionManagerUtilsIntegration:
         assert call_kwargs["chassis_type"] == "single_rp"
 
         # Test custom chassis type preservation
-        device_info_custom = {
-            **self.device_info,
-            "chassis_type": "dual_rp"
-        }
+        device_info_custom = {**self.device_info, "chassis_type": "dual_rp"}
         self.manager._unicon_connect(device_info_custom)
         call_kwargs = mock_connection_class.call_args[1]
         assert call_kwargs["chassis_type"] == "dual_rp"
@@ -128,19 +125,19 @@ class TestConnectionManagerUtilsIntegration:
     def test_connection_command_build_error_handling(self):
         """Test error handling when connection command building fails."""
         # Use invalid protocol to trigger connection_utils error
-        invalid_device_info = {
-            **self.device_info,
-            "protocol": "invalid_protocol"
-        }
+        invalid_device_info = {**self.device_info, "protocol": "invalid_protocol"}
 
         # Should raise ConnectionError with helpful message
         with pytest.raises(Exception) as exc_info:
             self.manager._unicon_connect(invalid_device_info)
 
         error_message = str(exc_info.value)
-        assert "Failed to build connection command" in error_message or "Unsupported protocol" in error_message
+        assert (
+            "Failed to build connection command" in error_message
+            or "Unsupported protocol" in error_message
+        )
 
-    @patch('unicon.Connection')
+    @patch("unicon.Connection")
     def test_before_and_after_fix_demonstration(self, mock_connection_class):
         """Test demonstrating the before/after fix for IndexError."""
         mock_conn = Mock()
@@ -158,14 +155,16 @@ class TestConnectionManagerUtilsIntegration:
 
         # AFTER: Connection is called with start parameter
         assert "start" in call_kwargs, "The key fix - start parameter must be present"
-        assert call_kwargs["start"] == ["ssh admin@10.90.41.178"], "start[0] now provides the missing command"
+        assert call_kwargs["start"] == ["ssh admin@10.90.41.178"], (
+            "start[0] now provides the missing command"
+        )
 
         # This resolves the IndexError because:
         # - self.start is now ["ssh admin@10.90.41.178"] instead of None/empty
         # - self.start[0] returns "ssh admin@10.90.41.178" instead of raising IndexError
         # - Unicon can properly parse and execute the SSH connection command
 
-    @patch('unicon.Connection')
+    @patch("unicon.Connection")
     def test_complex_real_world_scenario(self, mock_connection_class):
         """Test complex real-world scenario with all parameters."""
         complex_device_info = {
@@ -177,7 +176,7 @@ class TestConnectionManagerUtilsIntegration:
             "ssh_options": "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
             "platform": "iosxr",
             "chassis_type": "dual_rp",
-            "timeout": 300
+            "timeout": 300,
         }
 
         mock_conn = Mock()
@@ -199,9 +198,11 @@ class TestConnectionManagerUtilsIntegration:
         assert call_kwargs["chassis_type"] == "dual_rp"
         assert call_kwargs["timeout"] == 300
 
-    @patch('nac_test.pyats_core.ssh.connection_manager.build_connection_start_command')
-    @patch('unicon.Connection')
-    def test_connection_utils_functions_are_called(self, mock_connection_class, mock_build_command):
+    @patch("nac_test.pyats_core.ssh.connection_manager.build_connection_start_command")
+    @patch("unicon.Connection")
+    def test_connection_utils_functions_are_called(
+        self, mock_connection_class, mock_build_command
+    ):
         """Test that connection_utils functions are actually called."""
         # Setup mocks
         mock_build_command.return_value = "ssh admin@10.90.41.178"
@@ -217,7 +218,7 @@ class TestConnectionManagerUtilsIntegration:
             host="10.90.41.178",
             username="admin",
             port=None,
-            ssh_options=None
+            ssh_options=None,
         )
 
         # Verify the result was used in Connection creation
@@ -234,18 +235,17 @@ class TestConnectionManagerErrorFormatting:
 
     def test_format_connection_error_includes_connection_details(self):
         """Test that connection error formatting includes relevant details."""
-        device_info = {
-            "host": "10.90.41.178",
-            "username": "admin",
-            "platform": "iosxe"
-        }
+        device_info = {"host": "10.90.41.178", "username": "admin", "platform": "iosxe"}
 
         # Create a mock connection error
         from unicon.core.errors import ConnectionError as UniconConnectionError
+
         error = UniconConnectionError("failed to connect")
 
         # Format the error
-        formatted_error = self.manager._format_connection_error("test-device", device_info, error)
+        formatted_error = self.manager._format_connection_error(
+            "test-device", device_info, error
+        )
 
         # Verify error message contains relevant information
         assert "Connection failure for device 'test-device'" in formatted_error
@@ -255,17 +255,17 @@ class TestConnectionManagerErrorFormatting:
 
     def test_format_auth_error_includes_auth_details(self):
         """Test that authentication error formatting includes auth details."""
-        device_info = {
-            "host": "10.90.41.178",
-            "username": "admin"
-        }
+        device_info = {"host": "10.90.41.178", "username": "admin"}
 
         # Create a mock auth error
         from unicon.core.errors import CredentialsExhaustedError
+
         error = CredentialsExhaustedError("credentials exhausted")
 
         # Format the error
-        formatted_error = self.manager._format_auth_error("test-device", device_info, error)
+        formatted_error = self.manager._format_auth_error(
+            "test-device", device_info, error
+        )
 
         # Verify error message contains auth information
         assert "Authentication failure for device 'test-device'" in formatted_error

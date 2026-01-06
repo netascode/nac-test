@@ -396,7 +396,9 @@ class DeviceConnectionManager:
                 await loop.run_in_executor(None, self._disconnect_unicon, conn)
                 logger.info(f"Closed connection to {hostname}")
             except Exception as e:
-                logger.error(f"Error closing connection to {hostname}: {e}", exc_info=True)
+                logger.error(
+                    f"Error closing connection to {hostname}: {e}", exc_info=True
+                )
             finally:
                 # Always remove from connections dict
                 del self.connections[hostname]
