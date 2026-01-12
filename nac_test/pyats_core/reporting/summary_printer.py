@@ -142,7 +142,7 @@ class SummaryPrinter:
                 d2d_test_status=d2d_test_status,
                 start_time=start_time,
                 overall_start_time=overall_start_time,
-                output_dir=output_dir
+                output_dir=output_dir,
             )
             return
 
@@ -173,7 +173,9 @@ class SummaryPrinter:
         )
 
         # Calculate statistics using helper method
-        total, passed, failed, errored, skipped = self._calculate_test_stats(all_test_status)
+        total, passed, failed, errored, skipped = self._calculate_test_stats(
+            all_test_status
+        )
 
         # Format and print summary line using helper method
         print("\n" + "=" * 80)
@@ -256,9 +258,13 @@ class SummaryPrinter:
         combined_test_status.update(d2d_test_status)
 
         # Calculate combined statistics
-        combined_total, combined_passed, combined_failed, combined_errored, combined_skipped = (
-            self._calculate_test_stats(combined_test_status)
-        )
+        (
+            combined_total,
+            combined_passed,
+            combined_failed,
+            combined_errored,
+            combined_skipped,
+        ) = self._calculate_test_stats(combined_test_status)
 
         # Calculate total test time (sum of all individual test durations)
         total_test_time = sum(
@@ -274,13 +280,23 @@ class SummaryPrinter:
 
         # Format and print API test line
         api_line = self._format_test_line(
-            api_total, api_passed, api_failed, api_errored, api_skipped, prefix="API Tests:"
+            api_total,
+            api_passed,
+            api_failed,
+            api_errored,
+            api_skipped,
+            prefix="API Tests:",
         )
         print(api_line)
 
         # Format and print D2D test line
         d2d_line = self._format_test_line(
-            d2d_total, d2d_passed, d2d_failed, d2d_errored, d2d_skipped, prefix="D2D Tests:"
+            d2d_total,
+            d2d_passed,
+            d2d_failed,
+            d2d_errored,
+            d2d_skipped,
+            prefix="D2D Tests:",
         )
         print(d2d_line)
 

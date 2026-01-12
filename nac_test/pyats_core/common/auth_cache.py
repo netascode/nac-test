@@ -103,7 +103,7 @@ class AuthCache:
         Generic method for caching any JSON-serializable dict.
 
         Args:
-            controller_type: Type of controller (VMANAGE, DNAC, etc)
+            controller_type: Type of controller (SDWAN_MANAGER, CC, etc)
             url: Controller URL
             auth_func: Function that returns (auth_dict, expires_in_seconds)
 
@@ -132,7 +132,7 @@ class AuthCache:
         """Get existing token or create new one with file-based locking
 
         Args:
-            controller_type: Type of controller (APIC, DNAC, etc)
+            controller_type: Type of controller (APIC, CC, etc)
             url: Controller URL
             username: Username for authentication
             password: Password for authentication

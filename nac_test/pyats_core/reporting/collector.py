@@ -123,7 +123,7 @@ class TestResultCollector:
         Handles all execution types: API calls, SSH commands, D2D tests.
 
         Args:
-            device_name: Device name (router, switch, APIC, vManage, etc.).
+            device_name: Device name (router, switch, APIC, SDWAN Manager, etc.).
             command: Command or API endpoint.
             output: Raw output/response (will be truncated to 50KB).
             data: Parsed data (if applicable).

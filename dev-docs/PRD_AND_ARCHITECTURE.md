@@ -3,49 +3,359 @@
 ## Table of Contents
 
 1. [Executive Summary](#executive-summary)
-2. [System Overview](#system-overview)
-3. [Core Commands](#core-commands)
+2. [Package Ecosystem: Three-Tier Architecture](#package-ecosystem-three-tier-architecture)
+   - [Architecture Overview](#architecture-overview)
+   - [Separation of Concerns](#separation-of-concerns)
+   - [Dependency Flow](#dependency-flow)
+   - [Import Patterns](#import-patterns)
+   - [Versioning Strategy](#versioning-strategy)
+3. [System Overview](#system-overview)
+4. [Core Commands](#core-commands)
    - [pyats Command](#pyats-command)
    - [Robot Framework Integration](#robot-framework-integration)
-4. [Architecture Components](#architecture-components)
+5. [Architecture Components](#architecture-components)
    - [CLI Layer](#cli-layer)
    - [Combined Orchestrator](#combined-orchestrator)
    - [PyATS Core](#pyats-core)
    - [Robot Framework Orchestrator](#robot-framework-orchestrator)
    - [Reporting System](#reporting-system)
-5. [Test Execution Modes](#test-execution-modes)
+6. [Test Execution Modes](#test-execution-modes)
    - [API Tests](#api-tests)
    - [D2D/SSH Tests](#d2dssh-tests)
-6. [Architecture-Specific Test Implementations](#architecture-specific-test-implementations)
+7. [Architecture-Specific Test Implementations](#architecture-specific-test-implementations)
    - [APICTestBase (ACI-as-Code)](#apictestbase-aci-as-code)
    - [SDWANTestBase (SD-WAN)](#sdwantestbase-sd-wan)
    - [Creating New Architecture Implementations](#creating-new-architecture-implementations)
-7. [Data Models](#data-models)
-8. [Connection Management](#connection-management)
-9. [Configuration & Environment](#configuration--environment)
-10. [Utilities](#utilities)
+   - [BaseDeviceResolver: Template Method Pattern](#basedeviceresolver-template-method-pattern-for-d2d-nac-test-pyats-common)
+   - [Device Validation Utilities](#device-validation-utilities-nac-test)
+   - [File Discovery Utilities](#file-discovery-utilities-nac-test)
+8. [Data Models](#data-models)
+9. [Connection Management](#connection-management)
+10. [Configuration & Environment](#configuration--environment)
+    - [Environment Variable Support](#environment-variable-support)
+    - [Controller Type Auto-Detection](#controller-type-auto-detection)
+11. [Utilities](#utilities)
+12. [Contributor Guide](#contributor-guide)
+    - [Post-Migration: Where to Make Changes](#post-migration-where-to-make-changes)
+    - [Local Development Setup](#local-development-setup)
+    - [Testing Changes Across Packages](#testing-changes-across-packages)
+13. [Scalability Considerations](#scalability-considerations)
+    - [Adding New Architectures](#adding-new-architectures-ise-meraki-ios-xe)
+14. [Known Limitations & TODOs](#known-limitations--todos)
+    - [File-Based Locking Portability](#file-based-locking-portability)
+15. [Cross-Package Error Handling Strategy](#cross-package-error-handling-strategy)
+    - [Error Hierarchy](#error-hierarchy)
+    - [Custom Exception Classes](#custom-exception-classes)
+    - [Auth Class Error Handling Pattern](#auth-class-error-handling-pattern)
+    - [Logging Policy](#logging-policy)
+16. [Integration Tests for Cross-Package Compatibility](#integration-tests-for-cross-package-compatibility)
+    - [Version Compatibility Tests](#version-compatibility-tests)
+17. [SD-WAN Schema Navigation Details](#sd-wan-schema-navigation-details)
+    - [SDWANDeviceResolver Schema Structure](#sdwandeviceresolver-schema-structure)
+    - [Key Methods](#key-methods)
+    - [Management IP Extraction Logic](#management-ip-extraction-logic)
+    - [Test Inventory Loading](#test-inventory-loading)
 
 ---
 
 ## Executive Summary
 
-**nac-test** is a Network as Code (NAC) test orchestration framework that provides a unified CLI interface for executing PyATS and Robot Framework tests against network infrastructure. The system supports both API-based tests (against controllers like APIC) and Device-to-Device (D2D) SSH tests against network devices.
+**nac-test** is a Network as Code (NAC) test orchestration framework that provides a unified CLI interface for executing PyATS and Robot Framework tests against network infrastructure. The system supports both API-based tests (against controllers like APIC) and Direct-to-Device (D2D) SSH tests against network devices.
 
 **Key Capabilities:**
 
 - Unified CLI for PyATS and Robot Framework test execution
 - Parallel test execution with configurable worker pools
+- **Flexible test type detection** via AST-based base class detection with directory fallback
 - Architecture-agnostic device inventory discovery via contract pattern
+- **Controller type auto-detection** from environment variable patterns
 - Multi-archive support for separate API and D2D test results
 - HTML report generation with test-case-level detail
 - Real-time progress reporting via custom PyATS plugin
 - YAML data merging with Jinja2 templating and environment variable substitution
 - SSH connection management with resource-aware pooling
+- **Device validation utilities** for fail-fast error detection
 - Command output caching for D2D tests
 
 **Version:** 1.1.0 (beta)
 **Python Requirement:** 3.11+
 **Primary Dependencies:** PyATS, Robot Framework, Pabot, Click, Jinja2, Rich
+
+---
+
+## Package Ecosystem: Three-Tier Architecture
+
+The NAC testing infrastructure follows a three-tier package architecture that separates concerns and eliminates code duplication across architecture repositories.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│               Layer 3: Architecture Repositories                     │
+│     (nac-aci-terraform, nac-sdwan-terraform, nac-catc-terraform)    │
+│                                                                      │
+│  ┌─────────────────┐  ┌─────────────────┐                          │
+│  │ Test Files      │  │ NAC Schema      │                          │
+│  │ (verify_*.py)   │  │ Definitions     │                          │
+│  └────────┬────────┘  └─────────────────┘                          │
+│           │                                                          │
+│           │ imports                                                  │
+│           ▼                                                          │
+└───────────┼──────────────────────────────────────────────────────────┘
+            │
+┌───────────▼──────────────────────────────────────────────────────────┐
+│       Layer 2: nac-test-pyats-common (Architecture Adapters)        │
+│                    DEPENDS ON nac-test                               │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  nac_test_pyats_common/                                      │   │
+│  │  ├── __init__.py          # Version + public exports         │   │
+│  │  ├── py.typed             # PEP 561 marker                   │   │
+│  │  ├── base.py              # AuthBaseProtocol (abstract)      │   │
+│  │  │                                                           │   │
+│  │  ├── aci/                 # ACI/APIC adapter                 │   │
+│  │  │   ├── __init__.py      # Exports APICAuth, APICTestBase   │   │
+│  │  │   ├── auth.py          # APICAuth implementation          │   │
+│  │  │   └── test_base.py     # APICTestBase (extends NACTestBase)│   │
+│  │  │                                                           │   │
+│  │  ├── sdwan/               # SD-WAN adapter                   │   │
+│  │  │   ├── __init__.py      # Exports SDWANManagerAuth, etc.   │   │
+│  │  │   ├── auth.py          # SDWANManagerAuth implementation  │   │
+│  │  │   ├── api_test_base.py # SDWANManagerTestBase             │   │
+│  │  │   ├── ssh_test_base.py # SDWANTestBase                    │   │
+│  │  │   └── device_resolver.py # SDWANDeviceResolver            │   │
+│  │  │                                                           │   │
+│  │  └── catc/                # Catalyst Center adapter          │   │
+│  │      ├── __init__.py      # Exports CatalystCenterAuth, etc. │   │
+│  │      ├── auth.py          # CatalystCenterAuth impl          │   │
+│  │      └── test_base.py     # CatalystCenterTestBase           │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                       │                                              │
+│                       │ imports NACTestBase, SSHTestBase, AuthCache │
+│                       ▼                                              │
+└───────────────────────┼──────────────────────────────────────────────┘
+                        │
+┌───────────────────────▼──────────────────────────────────────────────┐
+│                Layer 1: nac-test (Core Framework)                    │
+│                    Orchestration + Generic Infrastructure            │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  nac_test/pyats_core/                                        │   │
+│  │  │                                                           │   │
+│  │  ├── common/                 # Generic base infrastructure   │   │
+│  │  │   ├── base_test.py        # NACTestBase                   │   │
+│  │  │   ├── ssh_base_test.py    # SSHTestBase                   │   │
+│  │  │   ├── auth_cache.py       # AuthCache (generic caching)   │   │
+│  │  │   └── connection_pool.py  # Connection pooling            │   │
+│  │  │                                                           │   │
+│  │  ├── orchestrator/           # Test orchestration            │   │
+│  │  │   ├── protocols.py        # DeviceResolverProtocol        │   │
+│  │  │   └── orchestrator.py     # Main orchestration            │   │
+│  │  │                                                           │   │
+│  │  ├── execution/device/       # Test execution                │   │
+│  │  │   └── testbed_generator.py # Generic testbed generation   │   │
+│  │  │                                                           │   │
+│  │  ├── broker/                 # Connection management         │   │
+│  │  │   └── connection_broker.py # SSH connection pooling       │   │
+│  │  │                                                           │   │
+│  │  ├── reporting/              # HTML report generation        │   │
+│  │  │   ├── generator.py                                        │   │
+│  │  │   └── multi_archive_generator.py                          │   │
+│  │  │                                                           │   │
+│  │  └── discovery/              # Test & device discovery       │   │
+│  │      ├── test_discovery.py   # Test file discovery           │   │
+│  │      ├── test_type_resolver.py # AST-based type detection    │   │
+│  │      └── device_inventory.py # Contract-based discovery      │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  Dependencies: pyats, httpx, pyyaml, jinja2, rich, etc.             │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Separation of Concerns
+
+| Layer | Package | Responsibilities |
+|-------|---------|------------------|
+| **Layer 1** | `nac-test` | Test orchestration, testbed generation, connection brokering, HTML report generation, progress tracking, generic base classes (`NACTestBase`, `SSHTestBase`), `AuthCache` |
+| **Layer 2** | `nac-test-pyats-common` | Architecture-specific authentication (APICAuth, SDWANManagerAuth, CatalystCenterAuth), architecture-specific test base classes, client configuration, device resolvers |
+| **Layer 3** | Architecture repos | Test files (`verify_*.py`), NAC schema definitions |
+
+### Dependency Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    DEPENDENCY FLOW                               │
+│                                                                  │
+│   Architecture Repos                                            │
+│   ├── nac-aci-terraform                                         │
+│   ├── nac-sdwan-terraform                                       │
+│   └── nac-catc-terraform                                        │
+│           │                                                      │
+│           │ pip install nac-test-pyats-common                   │
+│           ▼                                                      │
+│   ┌───────────────────────────────────────────────────────────┐ │
+│   │            nac-test-pyats-common                           │ │
+│   │   • Auth classes (APICAuth, SDWANManagerAuth, etc.)       │ │
+│   │   • Test base classes (APICTestBase, SDWANTestBase)       │ │
+│   │   • Architecture-specific client configuration            │ │
+│   │   • Device resolvers (SDWANDeviceResolver, etc.)         │ │
+│   └───────────────────────────────────────────────────────────┘ │
+│           │                                                      │
+│           │ pip install nac-test (dependency)                   │
+│           ▼                                                      │
+│   ┌───────────────────────────────────────────────────────────┐ │
+│   │                      nac-test                              │ │
+│   │   • Test orchestration                                     │ │
+│   │   • Generic base classes (NACTestBase, SSHTestBase)       │ │
+│   │   • AuthCache, connection pooling                         │ │
+│   │   • Testbed generation                                     │ │
+│   │   • Connection broker                                      │ │
+│   │   • HTML report generation                                 │ │
+│   │   • DeviceResolverProtocol                                │ │
+│   └───────────────────────────────────────────────────────────┘ │
+│           │                                                      │
+│           │ pip install pyats, httpx, etc.                      │
+│           ▼                                                      │
+│       [pyats, httpx, pyyaml, jinja2, rich, etc.]               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Points:**
+1. **Architecture repos only need `pip install nac-test-pyats-common`** - it brings `nac-test` as a transitive dependency
+2. **No circular dependencies** - clean unidirectional flow
+3. **nac-test stays focused** - orchestration, reporting, generic infrastructure only
+
+### Import Patterns
+
+**In architecture repository test files:**
+```python
+# Clean imports from nac-test-pyats-common
+from nac_test_pyats_common.aci import APICTestBase
+from nac_test_pyats_common.sdwan import SDWANTestBase, SDWANDeviceResolver
+from nac_test_pyats_common.catc import CatalystCenterTestBase
+
+# Direct nac-test imports (for types, utilities)
+from nac_test.pyats_core.reporting.types import ResultStatus
+```
+
+**In nac-test-pyats-common adapter classes:**
+```python
+# nac_test_pyats_common/catc/test_base.py
+from nac_test.pyats_core.common.base_test import NACTestBase
+from nac_test.pyats_core.common.auth_cache import AuthCache
+
+class CatalystCenterTestBase(NACTestBase):
+    """Catalyst Center API test base class."""
+    # Inherits from generic NACTestBase, adds CC-specific auth
+```
+
+### Why Device Resolvers Live in nac-test-pyats-common
+
+Device resolvers are tightly coupled with test base classes—they parse NAC schemas to provide device inventory for tests. Consolidating them in nac-test-pyats-common:
+
+1. **Complete Adapter Layer**: Auth + test bases + device resolvers form a complete architecture adapter
+2. **Single Package Import**: Architecture repos import everything from one package
+3. **Consistent Maintenance**: All architecture-specific code in one place
+4. **Protocol Compliance**: Device resolvers implement `DeviceResolverProtocol` from nac-test
+
+### Versioning Strategy
+
+Both packages follow [Semantic Versioning 2.0.0](https://semver.org/):
+
+| nac-test-pyats-common | nac-test Required | Notes |
+|-----------------------|-------------------|-------|
+| 1.0.x | ~=1.1.0 | Initial release |
+| 1.1.x | ~=1.1.0 | New architecture added |
+| 2.0.x | ~=2.0.0 | Breaking changes require nac-test 2.0 |
+
+**Breaking Change Policy:**
+
+| Change Type | Version Bump | Examples |
+|-------------|--------------|----------|
+| Bug fix (no API change) | PATCH (1.0.x) | Fix auth token parsing, fix SSL handling |
+| New architecture added | MINOR (1.x.0) | Add ISEAuth, MerakiTestBase |
+| New optional parameter | MINOR (1.x.0) | Add `timeout` param with default |
+| **Method signature change** | **MAJOR (x.0.0)** | Change `get_auth()` return type |
+| **Remove public API** | **MAJOR (x.0.0)** | Remove deprecated auth class |
+| **Rename public class** | **MAJOR (x.0.0)** | APICAuth → ACIAuth |
+
+**Version Compatibility Check (Runtime):**
+
+```python
+# In nac_test_pyats_common/__init__.py
+from importlib.metadata import version
+from packaging.version import Version
+
+__version__ = "1.0.0"
+
+# Critical method signatures that MUST exist in nac-test
+_REQUIRED_NAC_TEST_METHODS = [
+    ("nac_test.pyats_core.common.base_test", "NACTestBase", "setup"),
+    ("nac_test.pyats_core.common.base_test", "NACTestBase", "cleanup"),
+    ("nac_test.pyats_core.common.auth_cache", "AuthCache", "get_or_create"),
+]
+
+def _check_nac_test_compatibility():
+    """Runtime check for compatible nac-test version and method signatures."""
+    import importlib
+
+    # Version check
+    try:
+        nac_test_version = Version(version("nac-test"))
+        if nac_test_version.major != 1 or nac_test_version.minor < 1:
+            raise ImportError(
+                f"nac-test {nac_test_version} is incompatible. "
+                f"nac-test-pyats-common {__version__} requires nac-test>=1.1.0,<2.0.0"
+            )
+    except Exception as e:
+        if "nac-test" in str(e).lower():
+            raise  # Re-raise version mismatch errors
+
+    # Method signature check (critical APIs)
+    for module_path, class_name, method_name in _REQUIRED_NAC_TEST_METHODS:
+        try:
+            module = importlib.import_module(module_path)
+            cls = getattr(module, class_name)
+            if not hasattr(cls, method_name):
+                raise ImportError(
+                    f"nac-test is missing required method: {class_name}.{method_name}. "
+                    f"Please upgrade nac-test to a compatible version."
+                )
+        except ModuleNotFoundError:
+            raise ImportError(
+                f"nac-test module not found: {module_path}. "
+                f"Please install nac-test>=1.1.0"
+            )
+
+_check_nac_test_compatibility()
+```
+
+### Error Handling Across Packages
+
+Custom exceptions provide clear error messages:
+
+```python
+# In nac_test_pyats_common/exceptions.py
+class AuthenticationError(NACPyATSCommonError):
+    """Raised when controller authentication fails."""
+    def __init__(self, controller_type: str, url: str, cause: Exception | None = None):
+        self.controller_type = controller_type
+        self.url = url
+        self.cause = cause
+        message = f"{controller_type} authentication failed for {url}"
+        if cause:
+            message += f": {cause}"
+        super().__init__(message)
+
+class EnvironmentConfigError(NACPyATSCommonError):
+    """Raised when required environment variables are missing."""
+    def __init__(self, missing_vars: list[str], controller_type: str):
+        self.missing_vars = missing_vars
+        self.controller_type = controller_type
+        message = f"Missing required environment variables for {controller_type}: {', '.join(missing_vars)}"
+        super().__init__(message)
+```
 
 ---
 
@@ -2102,7 +2412,7 @@ Set by PyATSOrchestrator and read by PyATS test subprocesses:
 | `PYTHONPATH` | Python path for test discovery | `/path/to/nac-test:/path/to/templates` |
 | `PYATS_LOG_LEVEL` | PyATS logging level | `ERROR` |
 | `HTTPX_LOG_LEVEL` | HTTP client logging level | `ERROR` |
-| `CONTROLLER_TYPE` | Controller type for tests | `ACI`, `vManage`, `ISE` |
+| `CONTROLLER_TYPE` | Controller type for tests | `ACI`, `SDWAN`, `ISE` |
 | `ACI_URL`, `ACI_USERNAME`, `ACI_PASSWORD` | Controller connection info | `https://apic.example.com`, `admin`, `***` |
 
 ##### 3. Device-Specific Environment Variables
@@ -2813,7 +3123,7 @@ class TestDiscovery:
 @dataclass
 class TestDiscoveryResult:
     api_tests: List[Path]      # Standard API tests
-    d2d_tests: List[Path]      # Device-to-device SSH tests
+    d2d_tests: List[Path]      # Direct-to-device SSH tests
     total_count: int           # Total test count
 ```
 
@@ -3308,7 +3618,7 @@ class MyAPITest(BaseTest):
 
 ### D2D/SSH Tests
 
-Device-to-Device tests execute commands on network devices via SSH.
+Direct-to-Device tests execute commands on network devices via SSH.
 
 #### SSH Base Test Class (`pyats_core/common/ssh_base_test.py`)
 
@@ -3806,7 +4116,7 @@ sequenceDiagram
 
 ```python
 # Example: tenant_test.py in ACI-as-Code repository
-from pyats_common.apic_base_test import APICTestBase
+from nac_test_pyats_common.aci import APICTestBase
 
 class TenantValidation(APICTestBase):
     """Validate ACI tenant configuration against data model."""
@@ -3880,7 +4190,7 @@ graph TB
     subgraph "Network Devices"
         cEdge1[cEdge Router 1]
         cEdge2[cEdge Router 2]
-        vEdge[vEdge Router]
+        cEdge3[SDWAN cEdge Router]
     end
 
     SystemTest --> SDWANTestBase
@@ -3899,7 +4209,7 @@ graph TB
 
     BrokerClient --> cEdge1
     BrokerClient --> cEdge2
-    BrokerClient --> vEdge
+    BrokerClient --> cEdge3
 ```
 
 #### SDWANTestBase Class Definition
@@ -4040,10 +4350,10 @@ class SDWANDeviceResolver:
             if router.get("name") == device_name:
                 return {"type": "cedge", "details": router}
 
-        # Check vedge_routers
-        for router in site.get("vedge_routers", []):
+        # Check other SDWAN edge routers (if applicable)
+        for router in site.get("other_edge_routers", []):
             if router.get("name") == device_name:
-                return {"type": "vedge", "details": router}
+                return {"type": "edge", "details": router}
 
         return None
 
@@ -4205,7 +4515,7 @@ sequenceDiagram
 
 ```python
 # Example: system_test.py in nac-sdwan repository
-from pyats_common.sdwan_base_test import SDWANTestBase
+from nac_test_pyats_common.sdwan import SDWANTestBase
 
 class SystemStatusValidation(SDWANTestBase):
     """Validate SD-WAN device system status."""
@@ -4219,12 +4529,12 @@ class SystemStatusValidation(SDWANTestBase):
 
     @aetest.test
     def test_control_connections(self):
-        """Verify control connections to vSmart controllers."""
+        """Verify control connections to SDWAN Controller."""
         # Use inherited execute_command (with caching)
         output = self.execute_command("show sdwan control connections")
 
         # Parse and validate output
-        assert "vSmart" in output, "No vSmart connections found"
+        assert "SDWAN Controller" in output, "No SDWAN Controller connections found"
         assert "CONNECT" in output, "Control connections not established"
 
     @aetest.test
@@ -4240,120 +4550,215 @@ class SystemStatusValidation(SDWANTestBase):
 
 ### Creating New Architecture Implementations
 
-To add support for a new network architecture (e.g., Nexus, DNAC, Meraki), follow these steps:
+To add support for a new network architecture (e.g., ISE, Meraki, IOS-XE), add the architecture adapter to **nac-test-pyats-common** following these patterns:
 
-#### For API-Based Architectures (like APIC)
+#### Where New Architectures Live
+
+All architecture-specific code goes in **nac-test-pyats-common**, NOT in nac-test or architecture repos:
+
+```
+nac-test-pyats-common/
+├── src/nac_test_pyats_common/
+│   ├── aci/           # Existing: ACI/APIC
+│   ├── sdwan/         # Existing: SD-WAN
+│   ├── catc/          # Existing: Catalyst Center
+│   ├── ise/           # NEW: ISE adapter
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   └── test_base.py
+│   └── meraki/        # NEW: Meraki adapter
+│       ├── __init__.py
+│       ├── auth.py
+│       └── test_base.py
+```
+
+#### For Controller-Based Architectures (ISE, Meraki)
 
 ```mermaid
 flowchart TB
-    subgraph "Step 1: Create Auth Module"
-        Auth[Create auth module<br/>e.g., dnac_auth.py]
-        AuthFunc[Implement authentication<br/>function returning<br/>(token, expires_in)]
+    subgraph "nac-test-pyats-common/ise/"
+        Auth[auth.py<br/>ISEAuth class]
+        Base[test_base.py<br/>ISETestBase class]
+        Init[__init__.py<br/>Export public API]
     end
 
-    subgraph "Step 2: Create Base Test"
-        Base[Create base test class<br/>extending NACTestBase]
-        Setup[Override setup() to<br/>load auth token]
+    subgraph "nac-test (inherited)"
+        NACBase[NACTestBase]
+        AuthCache[AuthCache]
     end
 
-    subgraph "Step 3: Use AuthCache"
-        Cache[Use nac-test's AuthCache<br/>for token caching]
-    end
+    Base -->|extends| NACBase
+    Auth -->|uses| AuthCache
+    Base -->|uses| Auth
 
-    Auth --> AuthFunc
-    AuthFunc --> Cache
-    Base --> Setup
-    Setup --> Cache
+    style Auth fill:#e1f5fe
+    style Base fill:#e1f5fe
+    style Init fill:#e1f5fe
 ```
 
 **Implementation Template:**
 
 ```python
-# 1. Create auth module (e.g., dnac_auth.py)
+# In nac-test-pyats-common: ise/auth.py
+import os
+from typing import Any
+import httpx
+
 from nac_test.pyats_core.common.auth_cache import AuthCache
 
-class DNACAuth:
+class ISEAuth:
+    """ISE authentication adapter."""
+
     @classmethod
-    def get_dnac_token(cls, url: str, username: str, password: str) -> str:
-        return AuthCache.get_or_create_token(
-            controller_type="dnac",
+    def _authenticate(cls, url: str, username: str, password: str) -> tuple[dict[str, Any], int]:
+        """Perform ISE authentication."""
+        with httpx.Client(verify=False, timeout=30.0) as client:
+            # ISE uses ERS API with Basic Auth
+            response = client.get(
+                f"{url}/ers/config/adminuser",
+                auth=(username, password),
+                headers={"Accept": "application/json"},
+            )
+            response.raise_for_status()
+            return {"username": username, "password": password}, 3600
+
+    @classmethod
+    def get_auth(cls) -> dict[str, Any]:
+        """Get auth data with caching."""
+        url = os.environ.get("ISE_URL", "").rstrip("/")
+        username = os.environ.get("ISE_USERNAME", "")
+        password = os.environ.get("ISE_PASSWORD", "")
+
+        if not all([url, username, password]):
+            raise ValueError("Missing ISE_URL, ISE_USERNAME, or ISE_PASSWORD")
+
+        return AuthCache.get_or_create(
+            controller_type="ISE",
             url=url,
-            username=username,
-            password=password,
-            auth_func=cls._authenticate_to_dnac
+            auth_func=lambda: cls._authenticate(url, username, password),
         )
 
-    @staticmethod
-    def _authenticate_to_dnac(url: str, username: str, password: str) -> tuple[str, int]:
-        # Implement DNAC-specific authentication
-        # Return (token, expires_in_seconds)
-        pass
 
-# 2. Create base test class (e.g., dnac_base_test.py)
+# In nac-test-pyats-common: ise/test_base.py
 from nac_test.pyats_core.common.base_test import NACTestBase
+from pyats import aetest
 
-class DNACTestBase(NACTestBase):
+from .auth import ISEAuth
+
+class ISETestBase(NACTestBase):
+    """ISE API test base class."""
+
     @aetest.setup
-    def setup(self):
+    def setup(self) -> None:
         super().setup()
-        self.dnac = self.data_model.get("dnac", {})
-        self.dnac_token = DNACAuth.get_dnac_token(
-            url=self.dnac.get("url"),
-            username=self.dnac.get("username"),
-            password=self.dnac.get("password")
+        self.auth_data = ISEAuth.get_auth()
+        self.client = self._create_client()
+
+    def _create_client(self):
+        """Create httpx client with ISE auth."""
+        import os
+        url = os.environ.get("ISE_URL", "").rstrip("/")
+        base_client = self.pool.get_client(
+            base_url=url,
+            auth=(self.auth_data["username"], self.auth_data["password"]),
+            headers={"Accept": "application/json"},
+            verify=False,
         )
+        return self.wrap_client_for_tracking(base_client, device_name="ISE")
 ```
 
-#### For SSH-Based Architectures (like SD-WAN)
+**Architecture repo usage:**
+```python
+# In nac-ise-terraform test files
+from nac_test_pyats_common.ise import ISETestBase
+
+class VerifyNetworkDevices(ISETestBase):
+    @aetest.test
+    def test_devices_exist(self):
+        # self.client is ready with ISE authentication
+        response = await self.client.get("/ers/config/networkdevice")
+```
+
+#### For SSH-Based Architectures (like SD-WAN, IOS-XE)
+
+SSH/D2D adapters require both a device resolver and a test base class:
 
 ```mermaid
 flowchart TB
-    subgraph "Step 1: Create Resolver"
-        Resolver[Create device resolver<br/>e.g., nexus_device_resolver.py]
-        Parse[Implement data model<br/>parsing logic]
+    subgraph "nac-test-pyats-common/nxos/"
+        Resolver[device_resolver.py<br/>NXOSDeviceResolver class]
+        Base[ssh_test_base.py<br/>NXOSTestBase class]
+        Init[__init__.py<br/>Export public API]
     end
 
-    subgraph "Step 2: Create Base Test"
-        Base[Create base test class<br/>extending SSHTestBase]
-        Contract[Implement<br/>get_ssh_device_inventory()]
+    subgraph "nac-test (inherited)"
+        SSHBase[SSHTestBase]
+        BaseResolver[BaseDeviceResolver]
     end
 
-    subgraph "Step 3: Return Required Fields"
-        Fields[Return devices with:<br/>hostname, host, os,<br/>username, password]
-    end
+    Base -->|extends| SSHBase
+    Resolver -->|extends| BaseResolver
+    Base -->|uses| Resolver
 
-    Resolver --> Parse
-    Base --> Contract
-    Contract --> Resolver
-    Parse --> Fields
+    style Resolver fill:#e1f5fe
+    style Base fill:#e1f5fe
+    style Init fill:#e1f5fe
 ```
 
 **Implementation Template:**
 
 ```python
-# 1. Create device resolver (e.g., nexus_device_resolver.py)
-class NexusDeviceResolver:
-    @classmethod
-    def resolve_device_inventory(cls, data_model: dict) -> list[dict]:
-        devices = []
-        for switch in data_model.get("nexus", {}).get("switches", []):
-            devices.append({
-                "hostname": switch.get("name"),
-                "host": switch.get("management_ip"),
-                "os": "nxos",
-                "username": switch.get("username"),
-                "password": switch.get("password"),
-            })
-        return devices
+# In nac-test-pyats-common: nxos/device_resolver.py
+import os
+from typing import Any
 
-# 2. Create base test class (e.g., nexus_base_test.py)
+from nac_test_pyats_common.common.base_device_resolver import BaseDeviceResolver
+
+class NXOSDeviceResolver(BaseDeviceResolver):
+    """NX-OS device resolver - parses NAC schema for device inventory."""
+
+    # Template Method Pattern: implement abstract methods
+    @classmethod
+    def get_schema_path(cls) -> str:
+        return "nxos.switches"
+
+    @classmethod
+    def extract_device_fields(cls, device_data: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "hostname": device_data.get("name"),
+            "host": device_data.get("management_ip"),
+            "os": "nxos",
+        }
+
+    @classmethod
+    def get_credential_env_vars(cls) -> tuple[str, str]:
+        return ("NXOS_USERNAME", "NXOS_PASSWORD")
+
+
+# In nac-test-pyats-common: nxos/ssh_test_base.py
 from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
 
-class NexusTestBase(SSHTestBase):
+from .device_resolver import NXOSDeviceResolver
+
+class NXOSTestBase(SSHTestBase):
+    """NX-OS SSH test base class."""
+
     @classmethod
     def get_ssh_device_inventory(cls, data_model: dict) -> list[dict]:
         """CONTRACT METHOD - Required by nac-test."""
-        return NexusDeviceResolver.resolve_device_inventory(data_model)
+        return NXOSDeviceResolver.resolve_device_inventory(data_model)
+```
+
+**Architecture repo usage:**
+```python
+# In nac-nxos-terraform test files
+from nac_test_pyats_common.nxos import NXOSTestBase
+
+class VerifyVLANs(NXOSTestBase):
+    @aetest.test
+    def test_vlans_configured(self):
+        # self.device is ready with SSH connection
+        output = self.execute_command("show vlan brief")
 ```
 
 #### Contract Method Requirements
@@ -4373,6 +4778,281 @@ The `get_ssh_device_inventory()` method MUST:
 | `password` | str | SSH password |
 
 Optional fields can be included for architecture-specific needs (e.g., `site_id`, `device_type`, `platform`).
+
+---
+
+### BaseDeviceResolver: Template Method Pattern for D2D (nac-test-pyats-common)
+
+**Location:** `nac_test_pyats_common/common/base_device_resolver.py`
+
+To reduce code duplication across architecture-specific resolvers, nac-test-pyats-common provides `BaseDeviceResolver` - an abstract base class implementing the Template Method pattern.
+
+#### Design Rationale
+
+**Problem:** With 15+ architectures requiring D2D support, each implementing its own device resolver would result in massive code duplication:
+
+- Inventory loading logic
+- Device filtering logic
+- Credential injection from environment variables
+- Device dictionary building
+
+**Solution:** Extract common patterns into `BaseDeviceResolver`, letting architecture-specific resolvers only implement schema navigation methods.
+
+#### BaseDeviceResolver Architecture
+
+```mermaid
+classDiagram
+    class BaseDeviceResolver {
+        <<abstract>>
+        -Path data_model_path
+        -dict data_model
+        -dict test_inventory
+        +get_resolved_inventory() list~dict~
+        -_load_inventory() None
+        -_get_devices_to_test() list~dict~
+        -_inject_credentials(device: dict) dict
+        -_build_device_dict(device: dict, credentials: dict) dict
+        +get_architecture_name()* str
+        +get_schema_root_key()* str
+        +navigate_to_devices(data: dict)* Iterator~dict~
+        +extract_device_id(device: dict)* str
+        +extract_hostname(device: dict)* str
+        +extract_host_ip(device: dict)* str
+        +extract_os_type(device: dict)* str
+        +get_credential_env_vars()* tuple~str,str~
+    }
+
+    class SDWANDeviceResolver {
+        +get_architecture_name() str
+        +get_schema_root_key() str
+        +navigate_to_devices(data: dict) Iterator~dict~
+        +extract_device_id(device: dict) str
+        +extract_hostname(device: dict) str
+        +extract_host_ip(device: dict) str
+        +extract_os_type(device: dict) str
+        +get_credential_env_vars() tuple~str,str~
+    }
+
+    class ACIDeviceResolver {
+        +get_architecture_name() str
+        +get_schema_root_key() str
+        +navigate_to_devices(data: dict) Iterator~dict~
+        +extract_device_id(device: dict) str
+        +extract_hostname(device: dict) str
+        +extract_host_ip(device: dict) str
+        +extract_os_type(device: dict) str
+        +get_credential_env_vars() tuple~str,str~
+    }
+
+    BaseDeviceResolver <|-- SDWANDeviceResolver
+    BaseDeviceResolver <|-- ACIDeviceResolver
+```
+
+#### Abstract Methods to Implement
+
+New architecture resolvers only need to implement 8 abstract methods:
+
+| Method | Purpose | Example Return |
+|--------|---------|----------------|
+| `get_architecture_name()` | Human-readable name for logging | `"SD-WAN"` |
+| `get_schema_root_key()` | Root key in data model | `"sdwan"` |
+| `navigate_to_devices(data)` | Iterator over device entries in schema | `yield from data["sites"][*]["cedge_routers"]` |
+| `extract_device_id(device)` | Unique device identifier | `device["chassis_id"]` |
+| `extract_hostname(device)` | Device hostname | `device["system_hostname"]` |
+| `extract_host_ip(device)` | Management IP (handle CIDR if needed) | `device["system_ip"].split("/")[0]` |
+| `extract_os_type(device)` | Operating system type | `"iosxe"` |
+| `get_credential_env_vars()` | Environment variable names for credentials | `("IOSXE_USERNAME", "IOSXE_PASSWORD")` |
+
+#### Implementation Example
+
+```python
+# In nac-test-pyats-common: sdwan/device_resolver.py
+from nac_test_pyats_common.common.base_device_resolver import BaseDeviceResolver
+
+class SDWANDeviceResolver(BaseDeviceResolver):
+    """SD-WAN specific device resolver."""
+
+    def get_architecture_name(self) -> str:
+        return "SD-WAN"
+
+    def get_schema_root_key(self) -> str:
+        return "sdwan"
+
+    def navigate_to_devices(self, data: dict) -> Iterator[dict]:
+        """Navigate sites[].cedge_routers[] structure."""
+        sites = data.get("sites", [])
+        for site in sites:
+            for router in site.get("cedge_routers", []):
+                yield router
+
+    def extract_device_id(self, device: dict) -> str:
+        return device.get("chassis_id", "")
+
+    def extract_hostname(self, device: dict) -> str:
+        return device.get("system_hostname", "")
+
+    def extract_host_ip(self, device: dict) -> str:
+        # Handle CIDR notation: "10.1.1.1/24" → "10.1.1.1"
+        ip = device.get("system_ip", "")
+        return ip.split("/")[0] if "/" in ip else ip
+
+    def extract_os_type(self, device: dict) -> str:
+        return "iosxe"  # SD-WAN cEdge routers run IOS-XE
+
+    def get_credential_env_vars(self) -> tuple[str, str]:
+        # D2D tests use device credentials, not controller credentials
+        return ("IOSXE_USERNAME", "IOSXE_PASSWORD")
+```
+
+#### Benefits of Template Method Pattern
+
+| Benefit | Description |
+|---------|-------------|
+| **Zero Code Duplication** | Common logic lives in base class only |
+| **< 100 Lines per Resolver** | New architectures implement minimal code |
+| **Consistent Behavior** | All resolvers use same validation, logging, error handling |
+| **Easy Testing** | Mock abstract methods, test base class logic once |
+| **Type Safety** | Abstract methods enforce contract |
+
+---
+
+### Device Validation Utilities (nac-test)
+
+**Location:** `nac_test/utils/device_validation.py`
+
+nac-test provides validation utilities to catch configuration errors before SSH connection attempts.
+
+#### validate_device_inventory()
+
+```python
+from nac_test.utils import validate_device_inventory, DeviceValidationError
+
+# Required fields for all devices
+REQUIRED_DEVICE_FIELDS = frozenset({"hostname", "host", "os", "username", "password"})
+
+def validate_device_inventory(devices: list[dict]) -> None:
+    """Validate device inventory has all required fields.
+
+    Args:
+        devices: List of device dictionaries to validate
+
+    Raises:
+        DeviceValidationError: If any device is missing required fields
+    """
+    for i, device in enumerate(devices):
+        missing = REQUIRED_DEVICE_FIELDS - set(device.keys())
+        if missing:
+            raise DeviceValidationError(
+                f"Device at index {i} (hostname: {device.get('hostname', 'unknown')}) "
+                f"missing required fields: {', '.join(sorted(missing))}"
+            )
+```
+
+#### DeviceValidationError Exception
+
+```python
+class DeviceValidationError(ValueError):
+    """Raised when device dictionary validation fails.
+
+    Attributes:
+        device_index: Index of the invalid device in the list.
+        device_hostname: Hostname of the device (if available).
+        missing_fields: Set of missing required fields.
+        invalid_fields: Dict of field name to validation error message.
+
+    Provides actionable error messages with:
+    - Which device failed validation (by index and hostname)
+    - Which fields are missing
+    - Which fields have invalid values
+    """
+
+    def __init__(
+        self,
+        device_index: int,
+        device_hostname: str | None,
+        missing_fields: set[str] | None = None,
+        invalid_fields: dict[str, str] | None = None,
+    ) -> None:
+        self.device_index = device_index
+        self.device_hostname = device_hostname
+        self.missing_fields = missing_fields or set()
+        self.invalid_fields = invalid_fields or {}
+
+        parts = [f"Device {device_index}"]
+        if device_hostname:
+            parts[0] = f"Device {device_index} ({device_hostname})"
+
+        if self.missing_fields:
+            parts.append(f"missing required fields: {self.missing_fields}")
+        if self.invalid_fields:
+            for field, error in self.invalid_fields.items():
+                parts.append(f"{field}: {error}")
+
+        super().__init__(" - ".join(parts))
+```
+
+**Example error messages:**
+```
+# Missing fields
+DeviceValidationError: Device 0 (router1) - missing required fields: {'username', 'password'}
+
+# Invalid field values
+DeviceValidationError: Device 2 (switch3) - host: must be a non-empty string (IP address) - username: must not be None (check environment variables)
+```
+
+#### Integration with SSHTestBase
+
+`SSHTestBase.setup()` automatically validates device info:
+
+```python
+class SSHTestBase(NACTestBase):
+    @aetest.setup
+    def setup(self) -> None:
+        super().setup()
+
+        # Parse device info from environment
+        device_info_json = os.environ.get("DEVICE_INFO", "{}")
+        self.device_info = json.loads(device_info_json)
+
+        # Validate before attempting SSH connection
+        try:
+            validate_device_inventory([self.device_info])
+        except DeviceValidationError as e:
+            self.logger.error(f"Device validation failed: {e}")
+            raise
+```
+
+---
+
+### File Discovery Utilities (nac-test)
+
+**Location:** `nac_test/utils/file_discovery.py`
+
+Generic file discovery utility for finding data files in configurable search directories.
+
+```python
+def find_data_file(
+    filename: str,
+    search_dirs: list[Path] | None = None,
+    base_dir: Path | None = None
+) -> Path | None:
+    """Find a data file by searching multiple directories.
+
+    Args:
+        filename: Name of file to find (e.g., "test_inventory.yaml")
+        search_dirs: List of directories to search (default: common locations)
+        base_dir: Base directory for relative search paths
+
+    Returns:
+        Path to found file, or None if not found
+
+    Search Order (default):
+        1. Current working directory
+        2. base_dir (if provided)
+        3. base_dir/data (if provided)
+        4. Common data directories
+    """
+```
 
 ---
 
@@ -4562,6 +5242,259 @@ apic:
 3. Export variables to environment
 4. Process Jinja2 templates
 5. Substitute variables in final output
+
+### Controller Type Auto-Detection
+
+**Location:** `nac_test/utils/controller.py`
+
+nac-test automatically detects the network architecture based on which credential environment variables are set, eliminating the need for users to explicitly set `CONTROLLER_TYPE`.
+
+#### CREDENTIAL_PATTERNS Configuration
+
+```python
+# Environment variable patterns for architecture detection
+CREDENTIAL_PATTERNS: dict[str, tuple[str, str, str]] = {
+    # Architecture: (URL_VAR, USERNAME_VAR, PASSWORD_VAR)
+    "aci": ("APIC_URL", "APIC_USERNAME", "APIC_PASSWORD"),
+    "sdwan": ("SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"),
+    "catalyst_center": ("CC_URL", "CC_USERNAME", "CC_PASSWORD"),
+    "meraki": ("MERAKI_URL", "MERAKI_API_KEY", None),  # API key auth
+    "fmc": ("FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"),
+    "ise": ("ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"),
+}
+```
+
+#### Detection Algorithm
+
+```python
+def detect_controller_type() -> str | None:
+    """Auto-detect controller type from environment variables.
+
+    Iterates through CREDENTIAL_PATTERNS and returns the first
+    architecture where ALL required credentials are set.
+
+    Returns:
+        Architecture name (e.g., "aci", "sdwan") or None if no match
+
+    Example:
+        # If APIC_URL, APIC_USERNAME, APIC_PASSWORD are all set:
+        detect_controller_type() → "aci"
+    """
+    for arch, (url_var, user_var, pass_var) in CREDENTIAL_PATTERNS.items():
+        required_vars = [url_var, user_var]
+        if pass_var:  # Some architectures use API keys
+            required_vars.append(pass_var)
+
+        if all(os.environ.get(var) for var in required_vars):
+            return arch
+
+    return None
+```
+
+#### Detection Flow Diagram
+
+```mermaid
+flowchart TB
+    subgraph "Controller Type Detection"
+        Start[Start Detection] --> CheckACI{APIC_URL +<br/>APIC_USERNAME +<br/>APIC_PASSWORD set?}
+        CheckACI -->|Yes| ReturnACI[Return 'aci']
+        CheckACI -->|No| CheckSDWAN{SDWAN_URL +<br/>SDWAN_USERNAME +<br/>SDWAN_PASSWORD set?}
+        CheckSDWAN -->|Yes| ReturnSDWAN[Return 'sdwan']
+        CheckSDWAN -->|No| CheckCC{CC_URL +<br/>CC_USERNAME +<br/>CC_PASSWORD set?}
+        CheckCC -->|Yes| ReturnCC[Return 'catalyst_center']
+        CheckCC -->|No| CheckMeraki{MERAKI_URL +<br/>MERAKI_API_KEY set?}
+        CheckMeraki -->|Yes| ReturnMeraki[Return 'meraki']
+        CheckMeraki -->|No| CheckFMC{FMC_URL +<br/>FMC_USERNAME +<br/>FMC_PASSWORD set?}
+        CheckFMC -->|Yes| ReturnFMC[Return 'fmc']
+        CheckFMC -->|No| CheckISE{ISE_URL +<br/>ISE_USERNAME +<br/>ISE_PASSWORD set?}
+        CheckISE -->|Yes| ReturnISE[Return 'ise']
+        CheckISE -->|No| ReturnNone[Return None]
+    end
+
+    style ReturnACI fill:#90EE90
+    style ReturnSDWAN fill:#90EE90
+    style ReturnCC fill:#90EE90
+    style ReturnMeraki fill:#90EE90
+    style ReturnFMC fill:#90EE90
+    style ReturnISE fill:#90EE90
+    style ReturnNone fill:#FFD700
+```
+
+#### D2D Tests and Controller Credentials
+
+**Important:** D2D (SSH-based) tests still require controller credentials for architecture detection, even though they don't directly connect to the controller.
+
+##### Dual Purpose of Controller Credentials
+
+Controller credentials (URL, USERNAME, PASSWORD) serve **two distinct purposes**:
+
+1. **Architecture Detection** (always required) - Determines which DeviceResolver to use
+2. **Controller Connection** (API tests only) - Establishes session with controller
+
+##### Why Controller Credentials Are Required for D2D
+
+**Problem**: Device credentials alone are ambiguous.
+
+Example: `IOSXE_USERNAME` and `IOSXE_PASSWORD` could be used for:
+- SD-WAN edge devices (cEdge routers)
+- Catalyst Center-managed devices (switches, routers)
+
+**Without controller credentials**, the framework cannot determine which DeviceResolver to use:
+- `SDWANDeviceResolver`? (parses SD-WAN data model for device inventory)
+- `CatalystCenterDeviceResolver`? (parses Catalyst Center data model)
+
+**Solution**: Controller credentials provide architecture context, even when controller is not contacted during D2D test execution.
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                        D2D Test Execution                          │
+├────────────────────────────────────────────────────────────────────┤
+│  Required Environment Variables:                                   │
+│                                                                    │
+│  Controller Credentials (for detection):                          │
+│    SDWAN_URL=https://sdwan-manager.example.com                    │
+│    SDWAN_USERNAME=admin                                            │
+│    SDWAN_PASSWORD=password123                                      │
+│                                                                    │
+│  Device Credentials (for SSH):                                     │
+│    IOSXE_USERNAME=device-admin                                     │
+│    IOSXE_PASSWORD=device-pass                                      │
+│                                                                    │
+│  Detection Result:                                                 │
+│    detect_controller_type() → "sdwan"                              │
+│    → TestTypeResolver uses BASE_CLASS_MAPPING["SDWANTestBase"]    │
+│    → Device SSH uses IOSXE_USERNAME/IOSXE_PASSWORD                │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+**What happens during D2D test execution:**
+1. Framework detects `CONTROLLER_TYPE=SDWAN` from controller credentials
+2. Framework loads `SDWANDeviceResolver` for device inventory resolution
+3. Tests connect to devices via SSH using `IOSXE_*` credentials
+4. Controller credentials are NOT used for connection (D2D tests bypass controller)
+
+#### Integration with Test Discovery
+
+The detected controller type informs test categorization:
+
+```python
+# In orchestrator.py
+controller_type = detect_controller_type()
+if controller_type:
+    logger.info(f"Detected controller type: {controller_type}")
+else:
+    logger.warning("Could not auto-detect controller type from environment")
+```
+
+#### Usage Examples
+
+**Example 1: ACI Environment**
+```bash
+export APIC_URL="https://apic.example.com"
+export APIC_USERNAME="admin"
+export APIC_PASSWORD="cisco123"
+
+nac-test -d data/ -t templates/ -o output/
+# → Auto-detects "aci" architecture
+```
+
+**Example 2: SD-WAN Environment with D2D**
+```bash
+# Controller credentials (required for detection)
+export SDWAN_URL="https://sdwan-manager.example.com"
+export SDWAN_USERNAME="admin"
+export SDWAN_PASSWORD="admin123"
+
+# Device credentials (required for SSH)
+export IOSXE_USERNAME="device-admin"
+export IOSXE_PASSWORD="device-pass"
+
+nac-test -d data/ -t templates/ -o output/
+# → Auto-detects "sdwan" architecture
+# → D2D tests SSH with IOSXE_* credentials
+```
+
+**Example 3: Users Without Controller Access**
+
+For development/testing without controller access, users can set dummy credentials:
+
+```bash
+# Dummy credentials (architecture detection only)
+export APIC_URL="https://dummy"
+export APIC_USERNAME="dummy"
+export APIC_PASSWORD="dummy"
+
+nac-test -d data/ -t templates/ -o output/
+# → Detects "aci" for test categorization
+# → Actual API calls will fail (expected in dev mode)
+```
+
+#### Detection Error Messages
+
+**Multiple credential sets detected:**
+```
+ERROR: Multiple controller credential sets detected.
+Cannot determine which architecture to use.
+
+Detected credential sets:
+  • ACI (ACI_URL, ACI_USERNAME, ACI_PASSWORD)
+  • SDWAN (SDWAN_URL, SDWAN_USERNAME, SDWAN_PASSWORD)
+
+Please provide credentials for only ONE architecture at a time.
+```
+
+**Partial credentials (missing some variables):**
+```
+ERROR: No complete controller credential sets detected.
+
+Partial credentials found:
+  • SDWAN: found SDWAN_URL
+    Missing: SDWAN_USERNAME, SDWAN_PASSWORD
+
+To use SD-WAN, set all required credentials:
+  export SDWAN_URL='https://sdwan.example.com'
+  export SDWAN_USERNAME='admin'
+  export SDWAN_PASSWORD='password'
+```
+
+**No credentials found:**
+```
+ERROR: No complete controller credential sets detected.
+
+To use a specific architecture, set all required credentials:
+
+For ACI:
+  export ACI_URL='...'
+  export ACI_USERNAME='...'
+  export ACI_PASSWORD='...'
+
+For SDWAN:
+  export SDWAN_URL='...'
+  export SDWAN_USERNAME='...'
+  export SDWAN_PASSWORD='...'
+
+[...continues for all supported architectures...]
+```
+
+#### D2D Credential Environment Variables by Architecture
+
+Each architecture uses different credential environment variables for D2D (SSH) testing. Controller credentials determine architecture; device credentials are used for SSH connections.
+
+| Architecture | D2D Device Type | Username Env Var | Password Env Var |
+|--------------|-----------------|------------------|------------------|
+| SD-WAN | IOS-XE edges (cEdge) | `IOSXE_USERNAME` | `IOSXE_PASSWORD` |
+| ACI | NX-OS switches (leaf/spine) | `NXOS_SSH_USERNAME` | `NXOS_SSH_PASSWORD` |
+| Catalyst Center | IOS-XE devices | `IOSXE_USERNAME` | `IOSXE_PASSWORD` |
+| NDFC | NX-OS switches | `NXOS_SSH_USERNAME` | `NXOS_SSH_PASSWORD` |
+| IOS-XE Direct | IOS-XE devices | `IOSXE_USERNAME` | `IOSXE_PASSWORD` |
+| IOS-XR | IOS-XR devices | `IOSXR_USERNAME` | `IOSXR_PASSWORD` |
+| NX-OS Direct | NX-OS switches | `NXOS_SSH_USERNAME` | `NXOS_SSH_PASSWORD` |
+
+**Note:** Device credentials are separate from controller credentials. For example:
+- `SDWAN_USERNAME`/`SDWAN_PASSWORD` → vManage API access
+- `IOSXE_USERNAME`/`IOSXE_PASSWORD` → SSH access to edge devices
+
+---
 
 ### Path Setup (`utils/path_setup.py`)
 
@@ -4980,11 +5913,15 @@ ResultStatus.PASSX    # Passed with expected failure
 #### 3. Required Test Class Inheritance
 
 ```python
+# For generic tests (nac-test):
 from nac_test.pyats_core.common.base_test import NACTestBase
-# Or for APIC tests:
-from pyats_common.apic_base_test import APICTestBase
 
-class MyTest(NACTestBase):  # or APICTestBase
+# For architecture-specific tests (nac-test-pyats-common):
+from nac_test_pyats_common.aci import APICTestBase
+from nac_test_pyats_common.sdwan import SDWANTestBase, SDWANManagerTestBase
+from nac_test_pyats_common.catc import CatalystCenterTestBase
+
+class MyTest(APICTestBase):  # or SDWANTestBase, CatalystCenterTestBase
     """Your test class."""
 
     TEST_TYPE_NAME = "Tenant"  # Human-readable name for reports
@@ -6315,43 +7252,30 @@ self.jsonl_file = open(self.jsonl_path, "w", buffering=1)  # Line buffered
 
 ---
 
-### PyATS Test Discovery: api/ vs d2d/ Folders and Class Inheritance
+### PyATS Test Discovery: Flexible Test Type Detection
 
-This section explains **why** api/ and d2d/ folders exist, **how** PyATS discovers tests, and **how** class inheritance enables architecture-agnostic device inventory discovery.
+This section explains **how** nac-test discovers and categorizes tests, the **three-tier detection strategy** for test type classification, and **how** class inheritance enables architecture-agnostic device inventory discovery.
 
-#### Why api/ and d2d/ Folders Are Mandatory
+#### The Two Test Execution Modes
 
-**Source:** `nac_test/pyats_core/discovery/test_discovery.py:111-153`
+nac-test supports two fundamentally different test execution modes, each optimized for its target:
 
-```python
-def categorize_tests_by_type(
-    self, test_files: List[Path]
-) -> Tuple[List[Path], List[Path]]:
-    """Categorize test files based on directory structure.
-
-    Tests MUST be in either 'api/' or 'd2d/' directories.
-    Raises error if tests are found outside these directories.
-    """
-```
-
-**The Two Test Execution Modes:**
-
-| Mode | Folder | Execution Strategy | Use Case |
-|------|---------|-------------------|----------|
-| **API Tests** | `test/api/` | **Controller-centric**: Single PyATS job, all tests run against controllers | APIC API tests, vManage API tests, DNAC API tests |
-| **D2D Tests** | `test/d2d/` | **Device-centric**: One PyATS job **per device**, tests run via SSH | SD-WAN router CLI tests, Nexus switch CLI tests |
+| Mode | Detection Method | Execution Strategy | Use Case |
+|------|------------------|-------------------|----------|
+| **API Tests** | Base class inheritance OR `/api/` folder | **Controller-centric**: Single PyATS job, all tests run against controllers | APIC API tests, SDWAN Manager API tests, Catalyst Center API tests |
+| **D2D Tests** | Base class inheritance OR `/d2d/` folder | **Device-centric**: One PyATS job **per device**, tests run via SSH | SD-WAN router CLI tests, Nexus switch CLI tests |
 
 **Why They Execute Differently:**
 
 ```python
-# API Tests (Source: orchestrator.py:167-227)
+# API Tests (Source: orchestrator.py)
 # - Single job file for ALL tests
 # - All tests share same HTTP client session
 # - One API authentication per controller
 # - Tests run sequentially in one process
 archive = await self._execute_api_tests_standard(api_tests)
 
-# D2D Tests (Source: orchestrator.py:234-304)
+# D2D Tests (Source: orchestrator.py)
 # - One job file PER DEVICE
 # - Each device gets dedicated PyATS job subprocess
 # - Connection broker shares SSH connections across devices
@@ -6359,42 +7283,403 @@ archive = await self._execute_api_tests_standard(api_tests)
 archive = await self._execute_ssh_tests_device_centric(d2d_tests, devices)
 ```
 
-**Real-World Example Directory Structure:**
+---
 
-```
-ACI-as-Code-Demo/aac/tests/templates/apic/test/
-├── api/                                    # API-based tests (APIC REST API)
-│   ├── config/                            # Configuration verification
-│   │   └── tenants/
-│   │       └── verify_tenant_config.py
-│   ├── nrfu/                              # Network Ready For Use
-│   │   └── verify_aci_apic_cluster_health.py
-│   └── operational/                       # Operational state verification
-│       └── tenants/
-│           └── verify_tenant_operational.py
-├── pyats_common/                          # Shared base classes (NOT tests)
-│   └── apic_base_test.py                 # APICTestBase - inheritance root
-└── (Note: No d2d/ folder for APIC - controller-only architecture)
+#### Three-Tier Test Type Detection Strategy
+
+**Source:** `nac_test/pyats_core/discovery/test_type_resolver.py`
+
+nac-test uses a sophisticated three-tier detection strategy to determine whether a test file is API or D2D:
+
+```mermaid
+flowchart TB
+    subgraph "Tier 1: AST-Based Detection (Primary)"
+        A[Parse Python file with AST] --> B{Find class definitions}
+        B --> C[Extract base class names]
+        C --> D{Match against BASE_CLASS_MAPPING?}
+        D -->|Yes| E[Return test type from mapping]
+    end
+
+    subgraph "Tier 2: Directory Fallback"
+        D -->|No match| F{Path contains /d2d/?}
+        F -->|Yes| G[Return 'd2d']
+        F -->|No| H{Path contains /api/?}
+        H -->|Yes| I[Return 'api']
+    end
+
+    subgraph "Tier 3: Default with Warning"
+        H -->|No| J[Log warning: Could not detect test type]
+        J --> K[Return 'api' as default]
+    end
+
+    style E fill:#90EE90
+    style G fill:#90EE90
+    style I fill:#90EE90
+    style K fill:#FFD700
 ```
 
-For SD-WAN (hypothetical):
+**Design Rationale:**
+
+1. **Tier 1 (AST)**: Most reliable - inspects actual code structure without execution
+2. **Tier 2 (Directory)**: Backward compatible - supports existing folder-based organization
+3. **Tier 3 (Default)**: Graceful degradation - assumes API test (most common) with warning
+
+---
+
+#### Tier 1: AST-Based Detection (Primary Method)
+
+**Source:** `test_type_resolver.py:_detect_from_base_class()`
+
+The TestTypeResolver uses Python's `ast` module to statically analyze test files and detect base class inheritance without importing or executing the code.
+
+**BASE_CLASS_MAPPING Configuration:**
+
+```python
+# From test_type_resolver.py
+BASE_CLASS_MAPPING: dict[str, str] = {
+    # API-based test bases (controller/REST)
+    "NACTestBase": "api",
+    "APICTestBase": "api",
+    "SDWANManagerTestBase": "api",
+    "CatalystCenterTestBase": "api",
+    "MerakiTestBase": "api",
+    "FMCTestBase": "api",
+    "ISETestBase": "api",
+
+    # D2D-based test bases (device/SSH)
+    "SSHTestBase": "d2d",
+    "SDWANTestBase": "d2d",
+    "IOSXETestBase": "d2d",
+    "NXOSTestBase": "d2d",
+    "IOSTestBase": "d2d",
+}
+
+# Module-level constants
+VALID_TEST_TYPES: frozenset[str] = frozenset({"api", "d2d"})
+DEFAULT_TEST_TYPE: str = "api"  # Used when detection fails
 ```
-sdwan-tests/templates/sdwan/test/
-├── api/                                   # vManage API tests
-│   └── verify_template_attached.py
-├── d2d/                                   # Device SSH tests
-│   └── verify_control_connections.py     # Runs on EACH cEdge router
-└── pyats_common/
-    ├── vmanage_base_test.py              # For API tests
-    └── sdwan_ssh_base_test.py            # For D2D tests
+
+**NoRecognizedBaseError Exception:**
+
+```python
+class NoRecognizedBaseError(Exception):
+    """Raised when static analysis cannot determine test type.
+
+    This exception is raised internally when AST analysis completes but
+    no recognized base class from BASE_CLASS_MAPPING is found. The resolver
+    catches this and proceeds to directory fallback.
+
+    Attributes:
+        filename: Path to the file that couldn't be analyzed.
+        found_bases: List of base class names that were found but not recognized.
+    """
+
+    def __init__(self, filename: str, found_bases: list[str] | None = None) -> None:
+        self.filename = filename
+        self.found_bases = found_bases or []
+        if self.found_bases:
+            message = f"{filename}: No recognized base class found. Found: {', '.join(self.found_bases)}"
+        else:
+            message = f"{filename}: No base classes found"
+        super().__init__(message)
 ```
+
+**AST Detection Implementation:**
+
+```python
+def _detect_from_base_class(self, file_path: Path) -> str | None:
+    """Detect test type from base class inheritance using AST.
+
+    Parses the Python file without executing it to find class
+    definitions and their base classes. Returns the test type
+    if a recognized base class is found in BASE_CLASS_MAPPING.
+    """
+    content = file_path.read_text()
+    tree = ast.parse(content)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            for base in node.bases:
+                # Handle simple name: class Test(NACTestBase)
+                if isinstance(base, ast.Name):
+                    base_name = base.id
+                # Handle attribute: class Test(module.NACTestBase)
+                elif isinstance(base, ast.Attribute):
+                    base_name = base.attr
+                else:
+                    continue
+
+                if base_name in BASE_CLASS_MAPPING:
+                    return BASE_CLASS_MAPPING[base_name]
+
+    return None  # No recognized base class found
+```
+
+**Why AST Instead of Import?**
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **AST (chosen)** | No side effects, fast, no dependencies needed | Cannot follow dynamic inheritance |
+| **Import** | Sees full inheritance chain | Executes module code, requires dependencies |
+| **Regex** | Simple | Fragile, doesn't understand Python syntax |
+
+**Edge Case: Mixed API and D2D Classes**
+
+If a single file contains classes inheriting from both API and D2D base classes, the resolver raises a `ValueError`:
+
+```python
+# test_mixed_invalid.py - THIS WILL FAIL
+class TestAPI(APICTestBase):
+    pass
+
+class TestDevice(SSHTestBase):
+    pass
+
+# Error raised:
+# ValueError: test_mixed_invalid.py: Contains both API and D2D test classes.
+# Split into separate files or use directory structure.
+```
+
+**Resolution Options:**
+1. Split into separate files: `test_api.py` and `test_device.py`
+2. Place in explicit `/api/` or `/d2d/` directory (directory detection handles this)
+
+**Handling Other Edge Cases:**
+
+| Edge Case | How It's Handled |
+|-----------|------------------|
+| **Multiple inheritance** | `class Test(Mixin, APICTestBase)` - All bases checked via `ClassDef.bases`, mapping wins |
+| **Comments/strings** | AST only parses actual code structure, ignores comments and string literals |
+| **Multi-line class def** | AST handles Python syntax correctly regardless of formatting |
+| **Attribute access** | `class Test(module.APICTestBase)` - Handled via `ast.Attribute` nodes |
+| **Import aliasing** | `import X as Y` - Falls back to directory detection (use canonical names) |
+| **Custom intermediate base** | `class MyBase(APICTestBase)` then `class Test(MyBase)` - Falls back to directory |
+| **Syntax errors** | Gracefully falls back to directory detection |
+| **No base class found** | Falls back to directory, then defaults to 'api' with warning |
+
+---
+
+#### Tier 2: Directory-Based Fallback
+
+**Source:** `test_type_resolver.py:_detect_from_directory()`
+
+When AST detection fails (no recognized base class), the resolver falls back to checking the file path for `/api/` or `/d2d/` directory patterns:
+
+```python
+def _detect_from_directory(self, file_path: Path) -> str | None:
+    """Detect test type from directory structure.
+
+    Returns 'd2d' if path contains '/d2d/', 'api' if path contains '/api/',
+    or None if neither pattern matches.
+    """
+    path_str = file_path.resolve().as_posix()
+
+    if "/d2d/" in path_str:
+        return "d2d"
+    elif "/api/" in path_str:
+        return "api"
+
+    return None
+```
+
+**This ensures backward compatibility** with existing projects using the traditional folder structure.
+
+---
+
+#### Tier 3: Default Behavior with Warning
+
+When both AST and directory detection fail, the resolver defaults to `"api"` and logs a warning:
+
+```python
+def resolve(self, file_path: Path) -> str:
+    """Resolve the test type for a given file.
+
+    Detection priority:
+    1. AST-based base class detection (most reliable)
+    2. Directory path fallback (/api/ or /d2d/)
+    3. Default to 'api' with warning
+    """
+    # Check cache first
+    abs_path = file_path.resolve()
+    if abs_path in self._cache:
+        return self._cache[abs_path]
+
+    # Tier 1: AST detection
+    test_type = self._detect_from_base_class(abs_path)
+    if test_type:
+        self._cache[abs_path] = test_type
+        return test_type
+
+    # Tier 2: Directory fallback
+    test_type = self._detect_from_directory(abs_path)
+    if test_type:
+        self._cache[abs_path] = test_type
+        return test_type
+
+    # Tier 3: Default with warning
+    self.logger.warning(
+        f"Could not detect test type for {file_path.name}. "
+        f"No recognized base class found and file is not in /api/ or /d2d/ directory. "
+        f"Assuming 'api' test type."
+    )
+    self._cache[abs_path] = DEFAULT_TEST_TYPE  # "api"
+    return DEFAULT_TEST_TYPE
+```
+
+---
+
+#### Migration Guide for Flexible Test Structure
+
+##### For Existing Projects
+
+**No changes required.** Projects using the traditional `/api/` and `/d2d/` directory structure continue to work:
+
+- Static analysis detects base classes first
+- If that fails, directory fallback kicks in
+- Behavior is 100% backward compatible
+
+##### For New Projects
+
+Organize tests however you want:
+
+```bash
+# Option 1: Feature-based (recommended for new projects)
+tests/
+├── tenant/
+│   └── verify_tenant.py      # Auto-detected as API (inherits APICTestBase)
+├── bridge_domain/
+│   └── verify_bd.py          # Auto-detected as API (inherits APICTestBase)
+└── device_health/
+    └── check_interfaces.py   # Auto-detected as D2D (inherits SSHTestBase)
+
+# Option 2: Traditional structure (still works)
+tests/
+├── api/
+│   └── verify_tenant.py
+└── d2d/
+    └── check_interfaces.py
+
+# Option 3: Mixed (use what makes sense)
+tests/
+├── tenant/
+│   └── verify_tenant.py      # Auto-detected
+└── d2d/                      # Explicit directory for edge cases
+    └── custom_check.py       # Uses directory fallback
+```
+
+##### Adding New Base Classes to BASE_CLASS_MAPPING
+
+When adding new architectures:
+
+1. Add new test base class to `nac-test-pyats-common`
+2. Add mapping to `BASE_CLASS_MAPPING` in `test_type_resolver.py`:
+
+```python
+# When adding ISE support:
+BASE_CLASS_MAPPING = {
+    # ... existing entries ...
+
+    # NEW: ISE architecture
+    "ISETestBase": "api",
+}
+```
+
+3. Update validation test with new required bases
+
+---
+
+#### TestTypeResolver Class Architecture
+
+```mermaid
+classDiagram
+    class TestTypeResolver {
+        -Path test_root
+        -dict _cache
+        -Logger logger
+        +resolve(file_path: Path) str
+        +clear_cache() None
+        -_resolve_uncached(file_path: Path) str
+        -_detect_from_base_class(file_path: Path) str|None
+        -_detect_from_directory(file_path: Path) str|None
+    }
+
+    class TestDiscovery {
+        -Path test_dir
+        -TestTypeResolver type_resolver
+        +discover_pyats_tests() tuple
+        +categorize_tests_by_type(files: list) tuple
+    }
+
+    class BASE_CLASS_MAPPING {
+        <<constant>>
+        NACTestBase: api
+        APICTestBase: api
+        SSHTestBase: d2d
+        SDWANTestBase: d2d
+        ...
+    }
+
+    TestDiscovery --> TestTypeResolver : uses
+    TestTypeResolver --> BASE_CLASS_MAPPING : reads
+```
+
+**Key Features:**
+
+- **Caching**: Results cached by absolute path for performance
+- **Logging**: Debug logging for cache hits/misses and detection results
+- **Error Handling**: Graceful fallback on syntax errors or file read failures
+
+---
+
+#### Flexible Directory Structure Examples
+
+With the three-tier detection, tests can be organized by **feature/domain** instead of being forced into `/api/` or `/d2d/` directories:
+
+**Traditional Structure (Still Supported):**
+```
+tests/
+├── api/                           # API tests (detected by directory)
+│   └── tenants/
+│       └── verify_tenant.py
+└── d2d/                           # D2D tests (detected by directory)
+    └── routing/
+        └── verify_ospf.py
+```
+
+**Feature-Based Structure (New Flexibility):**
+```
+tests/
+├── tenants/                       # Organized by feature
+│   ├── verify_tenant_api.py       # Detected as API via NACTestBase inheritance
+│   └── verify_tenant_ssh.py       # Detected as D2D via SSHTestBase inheritance
+├── routing/
+│   ├── verify_bgp_api.py          # Detected as API via base class
+│   └── verify_ospf_ssh.py         # Detected as D2D via base class
+└── nrfu/
+    └── verify_cluster_health.py   # Detected as API via APICTestBase
+```
+
+**Mixed Structure (Both Approaches):**
+```
+tests/
+├── api/                           # Traditional API folder
+│   └── legacy_test.py             # Detected via directory (fallback)
+├── d2d/                           # Traditional D2D folder
+│   └── legacy_ssh_test.py         # Detected via directory (fallback)
+└── features/                      # New feature-based organization
+    └── vrf/
+        ├── verify_vrf_config.py   # Detected via NACTestBase (AST)
+        └── verify_vrf_device.py   # Detected via SSHTestBase (AST)
+```
+
+---
 
 #### Complete Test Discovery Flow
 
-**Step 1: File Discovery** (Source: `test_discovery.py:27-106`)
+**Step 1: File Discovery** (Source: `test_discovery.py`)
 
 ```python
-def discover_pyats_tests(self) -> Tuple[List[Path], List[Tuple[Path, str]]]:
+def discover_pyats_tests(self) -> tuple[list[Path], list[tuple[Path, str]]]:
     """Find all .py test files when --pyats flag is set"""
 
     for test_path in self.test_dir.rglob("*.py"):
@@ -6415,45 +7700,29 @@ def discover_pyats_tests(self) -> Tuple[List[Path], List[Tuple[Path, str]]]:
                     test_files.append(test_path)
 ```
 
-**Step 2: Categorization** (Source: `test_discovery.py:108-158`)
+**Step 2: Categorization via TestTypeResolver** (Source: `test_discovery.py`)
 
 ```python
-def categorize_tests_by_type(self, test_files):
+def categorize_tests_by_type(
+    self, test_files: list[Path]
+) -> tuple[list[Path], list[Path]]:
+    """Categorize test files using three-tier detection strategy."""
     api_tests = []
     d2d_tests = []
-    uncategorized = []
 
     for test_file in test_files:
-        path_str = str(test_file)
+        # Use TestTypeResolver for intelligent detection
+        test_type = self.type_resolver.resolve(test_file)
 
-        # Simple string matching - fast and reliable
-        if "/api/" in path_str:
+        if test_type == "api":
             api_tests.append(test_file)
-        elif "/d2d/" in path_str:
+        else:  # test_type == "d2d"
             d2d_tests.append(test_file)
-        else:
-            uncategorized.append(test_file)
 
-    # STRICT ENFORCEMENT: Fail if any tests are uncategorized
-    if uncategorized:
-        raise ValueError(
-            f"Found {len(uncategorized)} test file(s) outside of 'api/' or 'd2d/' directories:\n"
-            f"{example_files}\n\n"
-            "All tests must be organized under:\n"
-            "  - 'api/' for API-based tests\n"
-            "  - 'd2d/' for device-to-device (SSH-based) tests"
-        )
+    return api_tests, d2d_tests
 ```
 
-**Why This Validation Exists:**
-
-Mixed execution modes in the same test suite would cause:
-- API tests trying to SSH to controllers
-- D2D tests expecting per-device job files but getting shared job
-- Resource contention (shared connections vs isolated connections)
-- Incorrect parallelism strategy
-
-**Step 3: Execution Routing** (Source: `orchestrator.py:430-486`)
+**Step 3: Execution Routing** (Source: `orchestrator.py`)
 
 ```python
 async def run(self) -> None:
@@ -6480,6 +7749,25 @@ async def run(self) -> None:
 
 ---
 
+#### AST Detection Priority Over Directory
+
+**Important Design Decision:** AST-based detection takes priority over directory structure. This means:
+
+```python
+# File: tests/api/verify_device_ssh.py
+from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
+
+class TestDeviceSSH(SSHTestBase):  # Inherits D2D base class
+    """Even though in /api/ directory, detected as D2D due to base class."""
+    pass
+
+# Detection result: D2D (AST wins over directory)
+```
+
+This priority ensures that **code intent** (what base class you inherit from) overrides **file location**, preventing accidental misclassification.
+
+---
+
 #### Class Inheritance for Device Inventory Discovery
 
 **The Problem:**
@@ -6490,7 +7778,7 @@ For D2D tests, nac-test needs to know which devices to SSH into, but different a
 
 **The Solution: Architecture Contract Pattern**
 
-**Source:** `nac_test/pyats_core/discovery/device_inventory.py:32-60`
+**Source:** `nac_test/pyats_core/discovery/device_inventory.py`
 
 ```python
 """
@@ -6524,10 +7812,10 @@ VerifyControlConnections       # Actual test class
 
 **Dynamic Discovery Using Inheritance Inspection:**
 
-**Source:** `device_inventory.py:83-159`
+**Source:** `device_inventory.py`
 
 ```python
-def get_device_inventory(test_files: List[Path], merged_data_path: Path):
+def get_device_inventory(test_files: list[Path], merged_data_path: Path):
     """Get device inventory from test architecture using contract pattern."""
 
     # Load data model
@@ -6552,107 +7840,57 @@ def get_device_inventory(test_files: List[Path], merged_data_path: Path):
                     return list(devices)
 ```
 
-**Why Inheritance Inspection Works:**
-
-```python
-# In test file: verify_control_connections.py
-from templates.sdwan.test.pyats_common.sdwan_base_test import SDWANTestBase
-
-class VerifyControlConnections(SDWANTestBase):  # Inherits from SDWANTestBase
-    """Test control connections on SD-WAN routers."""
-    pass
-
-# When nac-test inspects VerifyControlConnections.__mro__:
-# → [VerifyControlConnections, SDWANTestBase, SSHTestBase, NACTestBase, aetest.Testcase, ...]
-#                                    ↑
-#                     This class has get_ssh_device_inventory!
-```
-
-**Real Implementation Example (SD-WAN):**
-
-```python
-# In sdwan_base_test.py
-class SDWANTestBase(SSHTestBase):
-    """SD-WAN specific base class."""
-
-    @classmethod
-    def get_ssh_device_inventory(cls, data_model: dict) -> List[Dict]:
-        """Extract SD-WAN device inventory from data model.
-
-        Returns list of dicts with REQUIRED fields:
-        - hostname: Device hostname
-        - host: IP address or DNS name
-        - os: Operating system (e.g., "iosxe")
-        - username: SSH username
-        - password: SSH password
-        """
-        devices = []
-
-        # Parse test_inventory.yaml for credentials
-        # Parse sdwan.sites[*].cedge_routers[*] for devices
-        # Merge and return device list
-
-        return devices
-```
-
-**Why This Pattern is Powerful:**
-
-1. **Architecture-Agnostic**: nac-test doesn't need to know about SD-WAN, NXOS, etc.
-2. **Zero Configuration**: Just inherit from SSHTestBase and implement the method
-3. **Flexible**: Each architecture decides how to parse its own data model
-4. **Type-Safe**: Contract enforced by required return fields
-5. **Reusable**: All D2D tests in an architecture use same base class
-
 ---
 
-#### Complete Discovery Example: SD-WAN D2D Tests
+#### Complete Discovery Example: Feature-Based Organization
 
 **1. User runs:**
 ```bash
-nac-test --data data.yaml --templates tests/ --output results/ --dev-pyats
+nac-test --data data.yaml --templates tests/ --output results/ --pyats
 ```
 
-**2. Test discovery finds:**
+**2. Test directory structure:**
 ```
-tests/sdwan/test/d2d/verify_control_connections.py
-tests/sdwan/test/d2d/verify_bfd_sessions.py
+tests/vrf/
+├── verify_vrf_api.py      # Inherits from NACTestBase
+└── verify_vrf_ssh.py      # Inherits from SSHTestBase
 ```
 
-**3. Categorization:**
+**3. Test file contents:**
 ```python
-# Both files contain "/d2d/" in path
-d2d_tests = [
-    Path("tests/sdwan/test/d2d/verify_control_connections.py"),
-    Path("tests/sdwan/test/d2d/verify_bfd_sessions.py"),
-]
+# verify_vrf_api.py
+from nac_test_pyats_common.aci import APICTestBase
+
+class VerifyVRFAPI(APICTestBase):
+    """VRF verification via APIC API."""
+    pass
+
+# verify_vrf_ssh.py
+from nac_test_pyats_common.sdwan import SDWANTestBase
+
+class VerifyVRFSSH(SDWANTestBase):
+    """VRF verification via device SSH."""
+    pass
 ```
 
-**4. Device inventory discovery:**
+**4. Detection results:**
 ```python
-# Import first test file
-module = import_test_module(d2d_tests[0])
+# TestTypeResolver detects:
+# - verify_vrf_api.py → "api" (APICTestBase in BASE_CLASS_MAPPING)
+# - verify_vrf_ssh.py → "d2d" (SDWANTestBase in BASE_CLASS_MAPPING)
 
-# Find class with get_ssh_device_inventory
-# → VerifyControlConnections inherits from SDWANTestBase
-# → SDWANTestBase has get_ssh_device_inventory
-
-devices = SDWANTestBase.get_ssh_device_inventory(data_model)
-# Returns: [
-#   {"hostname": "cedge-1", "host": "10.1.1.1", "os": "iosxe", "username": "admin", "password": "secret"},
-#   {"hostname": "cedge-2", "host": "10.1.2.1", "os": "iosxe", "username": "admin", "password": "secret"},
-# ]
+api_tests = [Path("tests/vrf/verify_vrf_api.py")]
+d2d_tests = [Path("tests/vrf/verify_vrf_ssh.py")]
 ```
 
-**5. Device-centric execution:**
+**5. Execution:**
 ```python
-# For EACH device, create dedicated job:
-for device in devices:
-    job_content = generate_device_centric_job(device, d2d_tests)
-    # Job sets env var: DEVICE_INFO={"hostname": "cedge-1", ...}
-    # Job runs both tests against this device
-    run_job(job_content)
+# API test runs in single job
+api_archive = await self._execute_api_tests_standard(api_tests)
 
-# Result: 2 devices × 2 tests = 4 test executions total
+# D2D test runs per-device
+devices = DeviceInventoryDiscovery.get_device_inventory(d2d_tests, ...)
+d2d_archive = await self._execute_ssh_tests_device_centric(d2d_tests, devices)
 ```
 
 ---
@@ -6661,31 +7899,36 @@ for device in devices:
 
 **PyATS has built-in test discovery, but nac-test doesn't use it because:**
 
-1. **Execution Mode Awareness**: PyATS doesn't distinguish api/ vs d2d/
+1. **Execution Mode Awareness**: PyATS doesn't distinguish API vs D2D test types
 2. **Device-Centric Needs**: PyATS expects testbed upfront; we generate it dynamically
 3. **Architecture Contracts**: We need custom device inventory discovery per architecture
 4. **Parallel Control**: We need fine-grained control over API vs D2D parallelism
 5. **Pre-Validation**: We validate file structure before PyATS subprocess starts
+6. **Flexible Detection**: Our three-tier strategy supports multiple organization patterns
 
-**Source Evidence:** `test_discovery.py:44-106` implements custom discovery logic instead of using PyATS `easypy -testbed_file`.
+**Source Evidence:** `test_discovery.py` and `test_type_resolver.py` implement custom discovery logic instead of using PyATS `easypy -testbed_file`.
 
 ---
 
-#### Summary: api/ vs d2d/ Design Rationale
+#### Summary: Test Type Detection Design
 
-| Aspect | API Tests (`api/`) | D2D Tests (`d2d/`) |
-|--------|-------------------|-------------------|
-| **Target** | Controllers (APIC, vManage, DNAC) | Network devices (routers, switches) |
+| Aspect | API Tests | D2D Tests |
+|--------|-----------|-----------|
+| **Target** | Controllers (APIC, SDWAN Manager, Catalyst Center) | Network devices (routers, switches) |
 | **Protocol** | HTTPS (REST API) | SSH (CLI) |
+| **Detection** | BASE_CLASS_MAPPING → `/api/` fallback → default | BASE_CLASS_MAPPING → `/d2d/` fallback |
 | **Execution** | Single job, all tests | One job per device |
 | **Parallelism** | Sequential (shared session) | Parallel (isolated connections) |
 | **Connection** | Persistent HTTP client | Connection broker + Unicon |
-| **Discovery** | File path only | File path + class inheritance |
 | **Inventory** | From data model (controllers known) | Dynamic via `get_ssh_device_inventory()` |
-| **Job File** | One for all tests | One per device |
 
-**Key Design Principle:**
-> Folder structure (`api/` vs `d2d/`) determines **execution strategy**, not just test organization. This separation is enforced at discovery time and drives fundamentally different test orchestration paths.
+**Key Design Principles:**
+
+1. **Code Intent Over Location**: Base class inheritance takes priority over directory structure
+2. **Backward Compatibility**: Traditional `/api/` and `/d2d/` folders still work
+3. **Graceful Degradation**: Unknown tests default to API with warning
+4. **Performance**: AST parsing is fast and results are cached
+5. **Flexibility**: Organize tests by feature/domain without restrictions
 
 ---
 
@@ -6772,7 +8015,7 @@ The broker system consists of three main components:
 │  │  Connection Pool (Max: 50 concurrent)                        │ │
 │  │  • cedge-1 → Device (connected, healthy)                     │ │
 │  │  • cedge-2 → Device (connected, healthy)                     │ │
-│  │  • vEdge-3 → Device (connected, healthy)                     │ │
+│  │  • cedge-3 → Device (connected, healthy)                     │ │
 │  │  ...                                                          │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 │                                                                     │
@@ -6796,7 +8039,7 @@ The broker system consists of three main components:
                         ▼
         ┌────────────────────────────────────────┐
         │    Network Devices (50 devices)        │
-        │    cedge-1, cedge-2, vedge-3, ...      │
+        │    cedge-1, cedge-2, cedge-3, ...      │
         └────────────────────────────────────────┘
 ```
 
@@ -7527,7 +8770,7 @@ Environment variables solve this elegantly:
 
 | Variable Name | Set By | Used By | Purpose | Example Value |
 |--------------|--------|---------|---------|---------------|
-| `CONTROLLER_TYPE` | User (CLI/config) | API tests | Identifies controller type | `ACI`, `SDWAN`, `DNAC` |
+| `CONTROLLER_TYPE` | User (CLI/config) | API tests | Identifies controller type | `ACI`, `SDWAN`, `CC` |
 | `{CONTROLLER_TYPE}_URL` | User (CLI/config) | API tests | Controller base URL | `https://apic.example.com` |
 | `{CONTROLLER_TYPE}_USERNAME` | User (CLI/config) | API tests | Controller username | `admin` |
 | `{CONTROLLER_TYPE}_PASSWORD` | User (CLI/config) | API tests | Controller password | `C1sco123!` |
@@ -7548,7 +8791,7 @@ self.password = os.environ[f"{self.controller_type}_PASSWORD"]
 
 - If `CONTROLLER_TYPE=ACI`: Reads `ACI_URL`, `ACI_USERNAME`, `ACI_PASSWORD`
 - If `CONTROLLER_TYPE=SDWAN`: Reads `SDWAN_URL`, `SDWAN_USERNAME`, `SDWAN_PASSWORD`
-- If `CONTROLLER_TYPE=DNAC`: Reads `DNAC_URL`, `DNAC_USERNAME`, `DNAC_PASSWORD`
+- If `CONTROLLER_TYPE=CC`: Reads `CC_URL`, `CC_USERNAME`, `CC_PASSWORD`
 
 ---
 
@@ -11983,7 +13226,7 @@ devices:
 
 ### Overview: Why HTTP Client Matters
 
-API tests in nac-test interact with network controllers (APIC, vManage, ISE, etc.) via HTTP/HTTPS REST APIs. The HTTP client architecture is a **critical component** that determines:
+API tests in nac-test interact with network controllers (APIC, SDWAN Manager, ISE, etc.) via HTTP/HTTPS REST APIs. The HTTP client architecture is a **critical component** that determines:
 
 - **Reliability**: Can tests survive temporary controller failures or network issues?
 - **Performance**: How efficiently are connections managed and reused?
@@ -12155,7 +13398,7 @@ def get_client(
 
 4. **Headers Injection**: Architecture-specific authentication headers
    - APIC: Cookie-based authentication
-   - vManage: Bearer tokens
+   - SDWAN Manager: JSESSIONID cookies with optional XSRF tokens
    - ISE: Basic auth or token
 
 ---
@@ -18394,7 +19637,7 @@ def add_command_api_execution(
     Handles all execution types: API calls, SSH commands, D2D tests.
 
     Args:
-        device_name: Device name (router, switch, APIC, vManage, etc.).
+        device_name: Device name (router, switch, APIC, SDWAN Manager, etc.).
         command: Command or API endpoint.
         output: Raw output/response (will be truncated to 50KB).
         data: Parsed data (if applicable).
@@ -20882,7 +22125,7 @@ The contract system consists of five layers:
 
 **Why Contracts Exist**:
 
-- **Framework Extensibility**: New test architectures (e.g., vManage API tests) can be added by implementing contracts
+- **Framework Extensibility**: New test architectures (e.g., SDWAN Manager API tests) can be added by implementing contracts
 - **Type Safety**: TypedDict contracts provide IDE autocompletion and mypy validation
 - **Consistent Reporting**: Module-level constants ensure all tests have proper HTML report metadata
 - **Parallel Execution Safety**: Contracts define what state is shared vs isolated across processes
@@ -20902,7 +22145,7 @@ aetest.Testcase (PyATS)
 NACTestBase (nac-test framework)
     ├→ SSHTestBase (SSH/device tests)
     │   └→ Concrete SSH test classes
-    └→ (Future: APICTestBase, vManageTestBase, etc.)
+    └→ (Future: APICTestBase, SDWANManagerTestBase, etc.)
 ```
 
 **NACTestBase Contract** (`nac_test/pyats_core/common/base_test.py`):
@@ -21333,7 +22576,7 @@ Tests rely on environment variables set by orchestrator:
 
 **Common Variables** (all tests):
 - `MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH`: Path to merged data model JSON file
-- `CONTROLLER_TYPE`: Controller type (e.g., "ACI", "VMANAGE")
+- `CONTROLLER_TYPE`: Controller type (e.g., "ACI", "SDWAN")
 - `{CONTROLLER_TYPE}_URL`: Controller URL (e.g., "ACI_URL")
 - `{CONTROLLER_TYPE}_USERNAME`: Username (e.g., "ACI_USERNAME")
 - `{CONTROLLER_TYPE}_PASSWORD`: Password (e.g., "ACI_PASSWORD")
@@ -21387,72 +22630,72 @@ class GoodTest(NACTestBase):
 
 ### Implementing a New Test Architecture
 
-**Scenario**: Add support for vManage API tests (similar to existing APIC tests, but for SD-WAN).
+**Scenario**: Add support for SDWAN Manager API tests (similar to existing APIC tests, but for SD-WAN).
 
 **Step 1: Create Architecture-Specific Base Class**
 
 ```python
-# nac_test/pyats_core/common/vmanage_base_test.py
+# nac_test/pyats_core/common/sdwan_manager_base_test.py
 from nac_test.pyats_core.common.base_test import NACTestBase
 from pyats import aetest
 import httpx
 
-class VManageTestBase(NACTestBase):
-    """Base class for vManage API tests.
+class SDWANManagerTestBase(NACTestBase):
+    """Base class for SDWAN Manager API tests.
 
-    Provides vManage-specific functionality:
-    - vManage API client with authentication
+    Provides SDWAN Manager-specific functionality:
+    - SDWAN Manager API client with authentication
     - Common API patterns (template retrieval, device queries, etc.)
-    - vManage-specific error handling
+    - SDWAN Manager-specific error handling
     """
 
     @aetest.setup
     def setup(self) -> None:
-        """Initialize vManage API client."""
+        """Initialize SDWAN Manager API client."""
         super().setup()  # REQUIRED: Initialize framework components
 
-        # Create vManage API client
-        self.vmanage_client = httpx.AsyncClient(
+        # Create SDWAN Manager API client
+        self.sdwan_manager_client = httpx.AsyncClient(
             base_url=self.controller_url,
-            verify=False,  # SSL verification per vManage requirements
+            verify=False,  # SSL verification per SDWAN Manager requirements
             headers={"Content-Type": "application/json"}
         )
 
-        # Authenticate (vManage-specific auth flow)
+        # Authenticate (SDWAN Manager-specific auth flow)
         await self._authenticate()
 
     async def _authenticate(self) -> None:
-        """Authenticate with vManage and store session token."""
-        response = await self.vmanage_client.post(
+        """Authenticate with SDWAN Manager and store session token."""
+        response = await self.sdwan_manager_client.post(
             "/j_security_check",
             data={"j_username": self.username, "j_password": self.password}
         )
         # ... store token ...
 
     async def get_device_list(self) -> List[Dict[str, Any]]:
-        """Get list of devices from vManage.
+        """Get list of devices from SDWAN Manager.
 
-        Common helper method for vManage tests.
+        Common helper method for SDWAN Manager tests.
         """
-        response = await self.vmanage_client.get("/dataservice/device")
+        response = await self.sdwan_manager_client.get("/dataservice/device")
         return response.json()["data"]
 ```
 
 **Step 2: Implement Concrete Test Class**
 
 ```python
-# tests/vmanage/template_attached_test.py
-from nac_test.pyats_core.common.vmanage_base_test import VManageTestBase
+# tests/sdwan_manager/template_attached_test.py
+from nac_test.pyats_core.common.sdwan_manager_base_test import SDWANManagerTestBase
 from pyats import aetest
 
 # Module-level constants (CONTRACT REQUIREMENT)
-TITLE = "vManage Template Attachment Validation"
+TITLE = "SDWAN Manager Template Attachment Validation"
 DESCRIPTION = "Validates device templates are attached correctly"
-SETUP = "Connect to vManage and retrieve template configuration"
+SETUP = "Connect to SDWAN Manager and retrieve template configuration"
 PROCEDURE = "Query each device and verify template attachment"
 PASS_FAIL_CRITERIA = "All devices have expected templates attached"
 
-class TemplateAttachedTest(VManageTestBase):
+class TemplateAttachedTest(SDWANManagerTestBase):
     """Validates template attachment for all devices."""
 
     # Optional class variable
@@ -21461,7 +22704,7 @@ class TemplateAttachedTest(VManageTestBase):
     @aetest.setup
     def setup(self) -> None:
         """Load expected templates from data model."""
-        super().setup()  # Calls VManageTestBase.setup() → NACTestBase.setup()
+        super().setup()  # Calls SDWANManagerTestBase.setup() → NACTestBase.setup()
 
         # Access data model (provided by framework)
         self.expected_templates = self.data_model.get("device_templates", {})
@@ -21469,7 +22712,7 @@ class TemplateAttachedTest(VManageTestBase):
     @aetest.test
     async def test_template_attachments(self) -> None:
         """Verify each device has correct template attached."""
-        devices = await self.get_device_list()  # From VManageTestBase
+        devices = await self.get_device_list()  # From SDWANManagerTestBase
 
         for device in devices:
             device_name = device["host-name"]
@@ -21497,11 +22740,11 @@ class TemplateAttachedTest(VManageTestBase):
 
 **Step 3: Register with Orchestrator** (if needed)
 
-Update orchestrator to recognize vManage tests:
+Update orchestrator to recognize SDWAN Manager tests:
 
 ```python
 # In orchestrator.py
-SUPPORTED_CONTROLLER_TYPES = ["ACI", "VMANAGE"]  # Add VMANAGE
+SUPPORTED_CONTROLLER_TYPES = ["ACI", "SDWAN"]  # Add SDWAN
 
 # Environment variable validation
 required_vars = [
@@ -23200,7 +24443,7 @@ PyATS = Annotated[
 
 **When to Use `--pyats`**:
 
-1. **API Test Development**: Writing or debugging PyATS tests for API-based verifications (APIC, vManage, ISE)
+1. **API Test Development**: Writing or debugging PyATS tests for API-based verifications (APIC, SDWAN Manager, ISE)
    - Iterate on test logic without Robot Framework overhead
    - Faster feedback loop (5-10 seconds vs 5-10 minutes)
    - Focus on Python code, not Jinja2 templates
@@ -24093,6 +25336,376 @@ These are documented improvement areas found in the code:
 | `base_test.py:2359` | Statistics | Add controller recovery statistics to HTML reports |
 | `device_inventory.py:56` | PyATS types | Need to handle "type" and "platform" for PyATS/Unicon compatibility |
 | `orchestrator.py:573` | Remove legacy | Legacy archive fallback no longer needed |
+
+---
+
+## Contributor Guide
+
+### Post-Migration: Where to Make Changes
+
+After the nac-test-pyats-common consolidation, contributors need to understand which repository to modify:
+
+| Change Type | Repository | Example |
+|-------------|------------|---------|
+| **Auth endpoint change** | nac-test-pyats-common | Catalyst Center adds new auth API |
+| **Auth header format** | nac-test-pyats-common | APIC changes cookie format |
+| **Test base setup logic** | nac-test-pyats-common | Add new setup step for all CC tests |
+| **Generic orchestration** | nac-test | Change how tests are discovered/run |
+| **HTML report format** | nac-test | Modify report template |
+| **AuthCache behavior** | nac-test | Change TTL logic, cache directory |
+| **Device resolver logic** | nac-test-pyats-common | Parse new schema field |
+| **Test file (verify_*.py)** | Architecture repo | Add new verification test |
+| **NAC schema changes** | Architecture repo | Add new data model field |
+
+### Local Development Setup
+
+For contributors working across packages:
+
+```bash
+# Clone all three repos
+git clone https://github.com/netascode/nac-test.git
+git clone https://github.com/netascode/nac-test-pyats-common.git
+git clone https://github.com/netascode/nac-catalystcenter-terraform.git  # or other arch repo
+
+# Install nac-test in editable mode
+cd nac-test
+uv pip install -e ".[dev]"
+
+# Install nac-test-pyats-common in editable mode (uses local nac-test)
+cd ../nac-test-pyats-common
+uv pip install -e ".[dev]"
+
+# Now architecture repo uses local versions
+cd ../nac-catalystcenter-terraform
+uv pip install -e ".[dev]"  # Will use local nac-test-pyats-common
+```
+
+### Testing Changes Across Packages
+
+When modifying nac-test-pyats-common:
+
+```bash
+# 1. Run unit tests in nac-test-pyats-common
+cd nac-test-pyats-common
+uv run pytest tests/unit/ -v
+
+# 2. Run integration tests (requires nac-test)
+uv run pytest tests/integration/ -v
+
+# 3. Run architecture repo tests to verify no regressions
+cd ../nac-catalystcenter-terraform
+uv run pytest tests/ -v --tb=short
+```
+
+---
+
+## Scalability Considerations
+
+### Adding New Architectures (ISE, Meraki, IOS-XE)
+
+**For Controller-Based Architectures** (ISE, Meraki):
+1. Add to nac-test-pyats-common:
+   - `ise/auth.py` → ISEAuth
+   - `ise/test_base.py` → ISETestBase
+   - `ise/device_resolver.py` → ISEDeviceResolver (if D2D tests needed)
+2. Architecture repo uses: `from nac_test_pyats_common.ise import ISETestBase, ISEDeviceResolver`
+
+**For Device-Only Architectures** (IOS-XE direct SSH):
+1. May not need auth class (uses SSH credentials)
+2. Add to nac-test-pyats-common:
+   - `iosxe/ssh_test_base.py` → IOSXESSHTestBase (extends SSHTestBase)
+   - `iosxe/device_resolver.py` → IOSXEDeviceResolver
+
+**For Cloud-Based Architectures** (Meraki):
+1. Add to nac-test-pyats-common:
+   - `meraki/auth.py` → MerakiAuth (API key based)
+   - `meraki/test_base.py` → MerakiTestBase
+2. No device resolver needed (no SSH to devices)
+
+---
+
+## Known Limitations & TODOs
+
+### File-Based Locking Portability
+
+**Current State**: `AuthCache` in nac-test uses `fcntl.flock()` for process-safe token caching:
+
+```python
+# nac_test/pyats_core/common/auth_cache.py line 49
+with open(lock_file, "w") as lock:
+    fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+```
+
+**Limitation**: `fcntl` is Unix-only and may behave unexpectedly on:
+- Windows (not supported)
+- NFS/network filesystems (locking semantics vary)
+- Some containerized CI/CD environments with shared `/tmp`
+
+**Impact**: This is an existing limitation in nac-test. The forklift migration preserves current behavior.
+
+**Future Work** (out of scope for current version):
+- [ ] Evaluate cross-platform locking alternatives (`filelock` library)
+- [ ] Consider Redis/memcached for distributed environments
+- [ ] Add CI environment detection to warn about potential issues
+
+**Current Mitigation**: Document that nac-test requires Unix-like environment (Linux, macOS).
+
+---
+
+## Cross-Package Error Handling Strategy
+
+### Error Hierarchy
+
+When errors occur in nac-test-pyats-common (e.g., auth failures), they must surface clearly to users:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    ERROR FLOW                                    │
+│                                                                  │
+│  User sees:                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ nac_test_pyats_common.catc.auth.CatalystCenterAuth:         ││
+│  │ Authentication failed - Invalid credentials for CC_URL      ││
+│  │                                                              ││
+│  │ Caused by: httpx.HTTPStatusError: 401 Unauthorized          ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  NOT this (bad):                                                 │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ RuntimeError: Authentication failed on all endpoints        ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Custom Exception Classes
+
+```python
+# In nac_test_pyats_common/exceptions.py
+
+class NACPyATSCommonError(Exception):
+    """Base exception for nac-test-pyats-common package."""
+    pass
+
+class AuthenticationError(NACPyATSCommonError):
+    """Raised when controller authentication fails.
+
+    Attributes:
+        controller_type: Type of controller (ACI, CC, VMANAGE)
+        url: Controller URL (sanitized - no credentials)
+        cause: Original exception that caused the failure
+    """
+    def __init__(self, controller_type: str, url: str, cause: Exception | None = None):
+        self.controller_type = controller_type
+        self.url = url
+        self.cause = cause
+        message = f"{controller_type} authentication failed for {url}"
+        if cause:
+            message += f": {cause}"
+        super().__init__(message)
+
+class EnvironmentConfigError(NACPyATSCommonError):
+    """Raised when required environment variables are missing."""
+    def __init__(self, missing_vars: list[str], controller_type: str):
+        self.missing_vars = missing_vars
+        self.controller_type = controller_type
+        message = f"Missing required environment variables for {controller_type}: {', '.join(missing_vars)}"
+        super().__init__(message)
+```
+
+### Auth Class Error Handling Pattern
+
+```python
+# In nac_test_pyats_common/catc/auth.py
+
+from nac_test_pyats_common.exceptions import AuthenticationError, EnvironmentConfigError
+
+class CatalystCenterAuth:
+    @classmethod
+    def get_auth(cls) -> dict[str, Any]:
+        url = os.environ.get("CC_URL", "").rstrip("/")
+        username = os.environ.get("CC_USERNAME", "")
+        password = os.environ.get("CC_PASSWORD", "")
+
+        # Clear error for missing env vars
+        missing = []
+        if not url: missing.append("CC_URL")
+        if not username: missing.append("CC_USERNAME")
+        if not password: missing.append("CC_PASSWORD")
+        if missing:
+            raise EnvironmentConfigError(missing, "CatalystCenter")
+
+        try:
+            return AuthCache.get_or_create(
+                controller_type="CC",
+                url=url,
+                auth_func=lambda: cls._authenticate(url, username, password, ...),
+            )
+        except httpx.HTTPStatusError as e:
+            raise AuthenticationError("CatalystCenter", url, cause=e) from e
+        except httpx.ConnectError as e:
+            raise AuthenticationError("CatalystCenter", url, cause=e) from e
+```
+
+### Logging Policy
+
+| Package | Log Level | What to Log |
+|---------|-----------|-------------|
+| nac-test-pyats-common | DEBUG | Auth attempts, token refresh, cache hits/misses |
+| nac-test-pyats-common | INFO | Auth success, controller type detected |
+| nac-test-pyats-common | WARNING | Deprecated endpoints used, SSL verification disabled |
+| nac-test-pyats-common | ERROR | Auth failures (with sanitized details) |
+| nac-test | INFO | Test execution progress |
+| nac-test | ERROR | Test failures, orchestration errors |
+
+**NEVER LOG**: Passwords, tokens, API keys, or full credentials.
+
+---
+
+## Integration Tests for Cross-Package Compatibility
+
+### Version Compatibility Tests
+
+```python
+# In nac-test-pyats-common/tests/integration/test_nac_test_compatibility.py
+
+import pytest
+from importlib.metadata import version
+
+def test_nac_test_version_compatible():
+    """Verify nac-test version is within compatible range."""
+    from packaging.version import Version
+    nac_test_ver = Version(version("nac-test"))
+    assert nac_test_ver >= Version("1.1.0")
+    assert nac_test_ver < Version("2.0.0")
+
+def test_required_base_classes_importable():
+    """Verify critical nac-test classes can be imported."""
+    from nac_test.pyats_core.common.base_test import NACTestBase
+    from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
+    from nac_test.pyats_core.common.auth_cache import AuthCache
+
+    assert hasattr(NACTestBase, "setup")
+    assert hasattr(NACTestBase, "cleanup")
+    assert hasattr(AuthCache, "get_or_create")
+
+def test_auth_cache_signature_compatible():
+    """Verify AuthCache.get_or_create has expected signature."""
+    from nac_test.pyats_core.common.auth_cache import AuthCache
+    import inspect
+
+    sig = inspect.signature(AuthCache.get_or_create)
+    params = list(sig.parameters.keys())
+
+    # Required parameters
+    assert "controller_type" in params
+    assert "url" in params
+    assert "auth_func" in params
+```
+
+These integration tests ensure that nac-test-pyats-common remains compatible with nac-test across version updates.
+
+---
+
+## SD-WAN Schema Navigation Details
+
+### SDWANDeviceResolver Schema Structure
+
+The SD-WAN device resolver navigates the following schema structure:
+
+```yaml
+sdwan:
+  sites:
+    - name: "site1"
+      routers:
+        - chassis_id: "abc123"
+          device_variables:
+            system_hostname: "router1"
+            vpn10_mgmt_ip: "10.1.1.100/32"
+```
+
+### Key Methods
+
+| Method | Purpose | Example Return |
+|--------|---------|----------------|
+| `get_architecture_name()` | Returns architecture identifier | `"sdwan"` |
+| `get_schema_root_key()` | Returns root key in data model | `"sdwan"` |
+| `navigate_to_devices()` | Navigates `sites[].routers[]` | List of router dicts |
+| `extract_device_id()` | Extracts `chassis_id` | `"abc123"` |
+| `extract_hostname()` | Extracts `device_variables.system_hostname` | `"router1"` |
+| `extract_host_ip()` | Extracts management IP (strips CIDR) | `"10.1.1.100"` |
+| `extract_os_type()` | Returns OS type | `"iosxe"` |
+| `get_credential_env_vars()` | Returns credential env var names | `("IOSXE_USERNAME", "IOSXE_PASSWORD")` |
+| `get_inventory_filename()` | Returns inventory filename | `"test_inventory.yaml"` (default) |
+
+### Management IP Extraction Logic
+
+The `extract_host_ip()` method handles CIDR notation:
+
+```python
+def extract_host_ip(self, device_data: dict[str, Any]) -> str:
+    """Extract management IP from device_variables.
+
+    Handles CIDR notation (e.g., "10.1.1.100/32" -> "10.1.1.100").
+    Uses management_ip_variable field to determine which variable
+    contains the management IP.
+    """
+    device_vars = device_data.get("device_variables", {})
+
+    # Get the variable name that contains the management IP
+    ip_var = device_data.get("management_ip_variable")
+
+    if ip_var and ip_var in device_vars:
+        ip_value = str(device_vars[ip_var])
+    else:
+        # Fallback: try common variable names
+        for fallback_var in ["mgmt_ip", "management_ip", "vpn0_ip"]:
+            if fallback_var in device_vars:
+                ip_value = str(device_vars[fallback_var])
+                break
+        else:
+            raise ValueError(
+                f"Could not find management IP for device. "
+                f"Set 'management_ip_variable' in test_inventory or use "
+                f"standard variable names (mgmt_ip, management_ip, vpn0_ip)."
+            )
+
+    # Strip CIDR notation if present
+    if "/" in ip_value:
+        ip_value = ip_value.split("/")[0]
+
+    return ip_value
+```
+
+### Test Inventory Loading
+
+The `get_inventory_filename()` method returns the inventory filename (default: `"test_inventory.yaml"`). Subclasses can override this:
+
+```python
+def get_inventory_filename(self) -> str:
+    """Return the test inventory filename.
+
+    Override to use a different filename.
+
+    Returns:
+        Filename (default: "test_inventory.yaml").
+    """
+    return "test_inventory.yaml"
+```
+
+The resolver supports both nested and flat inventory formats:
+
+```yaml
+# Nested format
+sdwan:
+  test_inventory:
+    devices:
+      - chassis_id: "abc123"
+
+# Flat format
+test_inventory:
+  devices:
+    - chassis_id: "abc123"
+```
 
 ---
 

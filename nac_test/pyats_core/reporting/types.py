@@ -29,7 +29,7 @@ class Result(TypedDict):
 class CommandExecution(TypedDict):
     """Represents a command/API execution record."""
 
-    device_name: str  # Device name (router, switch, APIC, vManage, etc.)
+    device_name: str  # Device name (router, switch, APIC, SDWAN Manager, etc.)
     command: str  # Command or API endpoint
     output: str  # Raw output/response
     data: dict[str, Any]  # Parsed data (if applicable)

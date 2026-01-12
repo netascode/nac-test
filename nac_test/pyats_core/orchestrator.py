@@ -38,6 +38,7 @@ from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
 from nac_test.utils.environment import EnvironmentValidator
 from nac_test.utils.cleanup import cleanup_pyats_runtime, cleanup_old_test_outputs
+from nac_test.utils.controller import detect_controller_type
 
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,7 @@ class PyATSOrchestrator:
         output_dir: Path,
         merged_data_filename: str,
         minimal_reports: bool = False,
+        controller_type: Optional[str] = None,
     ):
         """Initialize the PyATS orchestrator.
 
@@ -62,6 +64,8 @@ class PyATSOrchestrator:
             output_dir: Base output directory (orchestrator creates pyats_results subdirectory)
             merged_data_filename: Name of the merged data model file
             minimal_reports: Only include command outputs for failed/errored tests in reports
+            controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
+                If not provided, will be detected automatically.
         """
         self.data_paths = data_paths
         self.test_dir = Path(test_dir).resolve()
@@ -78,6 +82,22 @@ class PyATSOrchestrator:
         self.api_test_status: Dict[str, Dict[str, Any]] = {}
         self.d2d_test_status: Dict[str, Dict[str, Any]] = {}
         self.overall_start_time: Optional[datetime] = None
+
+        # Use provided controller type or detect it
+        if controller_type:
+            # Controller type provided by caller (e.g., CombinedOrchestrator)
+            self.controller_type = controller_type
+            logger.info(f"Using provided controller type: {self.controller_type}")
+        else:
+            # Fallback to auto-detection for standalone usage
+            try:
+                self.controller_type = detect_controller_type()
+                logger.info(f"Controller type detected: {self.controller_type}")
+            except ValueError as e:
+                # Exit gracefully if controller detection fails
+                logger.error(f"Controller detection failed: {e}")
+                print(terminal.error(f"Controller detection failed:\n{e}"))
+                sys.exit(1)
 
         # Calculate max workers based on system resources
         self.max_workers = self._calculate_workers()
@@ -402,10 +422,8 @@ class PyATSOrchestrator:
         Raises:
             SystemExit: If required environment variables are missing
         """
-        # Get controller type (defaults to ACI in the MVP)
-        controller_type = os.environ.get("CONTROLLER_TYPE")
-        if controller_type:
-            EnvironmentValidator.validate_controller_env(controller_type)
+        # Use the detected controller type
+        EnvironmentValidator.validate_controller_env(self.controller_type)
 
     def run_tests(self) -> None:
         """Main entry point - triggers the async execution flow."""

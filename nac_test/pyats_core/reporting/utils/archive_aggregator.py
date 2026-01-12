@@ -3,7 +3,7 @@
 """Archive aggregation utilities for PyATS device-centric testing.
 
 This module handles aggregation of multiple device-specific archives into
-a single consolidated archive for D2D (device-to-device) test results.
+a single consolidated archive for D2D (direct-to-device) test results.
 """
 
 import logging

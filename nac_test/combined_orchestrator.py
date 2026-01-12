@@ -12,6 +12,7 @@ import typer
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.robot.orchestrator import RobotOrchestrator
+from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.logging import VerbosityLevel
 
 logger = logging.getLogger(__name__)
@@ -86,6 +87,17 @@ class CombinedOrchestrator:
         self.dev_pyats_only = dev_pyats_only
         self.dev_robot_only = dev_robot_only
 
+        # Detect controller type early (required for all test types)
+        try:
+            self.controller_type = detect_controller_type()
+            logger.info(f"Controller type detected: {self.controller_type}")
+        except ValueError as e:
+            # Exit gracefully if controller detection fails
+            typer.secho(
+                f"\n❌ Controller detection failed:\n{e}", fg=typer.colors.RED, err=True
+            )
+            raise typer.Exit(1)
+
     def run_tests(self) -> None:
         """Main entry point for combined test execution.
 
@@ -109,6 +121,7 @@ class CombinedOrchestrator:
                 output_dir=self.output_dir,
                 merged_data_filename=self.merged_data_filename,
                 minimal_reports=self.minimal_reports,
+                controller_type=self.controller_type,
             )
             if self.max_parallel_devices is not None:
                 orchestrator.max_parallel_devices = self.max_parallel_devices
@@ -161,6 +174,7 @@ class CombinedOrchestrator:
                 output_dir=self.output_dir,
                 merged_data_filename=self.merged_data_filename,
                 minimal_reports=self.minimal_reports,
+                controller_type=self.controller_type,
             )
             if self.max_parallel_devices is not None:
                 orchestrator.max_parallel_devices = self.max_parallel_devices

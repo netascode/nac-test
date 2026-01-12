@@ -16,9 +16,12 @@ repos:
         name: Ruff Linter
         args: [--fix, --diff]
         # --fix: Apply fixes automatically
+        exclude: 'tests/fixtures/edge_cases/test_syntax_error\.py'
       - id: ruff-format
         name: Ruff Formatter
+        exclude: 'tests/fixtures/edge_cases/test_syntax_error\.py'
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.15.0
     hooks:
       - id: mypy
+        exclude: 'tests/fixtures/edge_cases/test_syntax_error\.py'

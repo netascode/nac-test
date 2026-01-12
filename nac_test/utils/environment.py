@@ -122,7 +122,7 @@ class EnvironmentValidator:
         This is a convenience method for validating controller credentials.
 
         Args:
-            controller_type: Type of controller (ACI, DNAC, etc.)
+            controller_type: Type of controller (ACI, CC, etc.)
 
         Raises:
             SystemExit: If required variables are missing

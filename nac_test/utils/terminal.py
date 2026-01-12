@@ -112,20 +112,17 @@ class TerminalColors:
     ) -> str:
         """Format an informative error message for missing environment variables.
 
-        Generates a generic, architecture-agnostic error message that educates
-        users about the CONTROLLER_TYPE mechanism and provides examples for all
-        supported architectures.
+        Generates an architecture-agnostic error message that educates users about
+        the auto-detection mechanism and provides examples for all supported
+        architectures.
 
         Args:
             missing_vars: List of missing environment variable names
-            controller_type: Current controller type being validated
+            controller_type: Auto-detected controller type from available credentials
 
         Returns:
             Formatted error message with ANSI color codes for terminal display
         """
-        # Determine if this is the default value or explicitly set
-        is_default = os.environ.get("CONTROLLER_TYPE") is None
-
         lines = []
         lines.append(cls.header("ERROR: Missing required environment variable(s)"))
 
@@ -135,57 +132,49 @@ class TerminalColors:
 
         lines.append("")
 
-        # Explain CONTROLLER_TYPE mechanism
-        if is_default:
-            lines.append(
-                cls.info(
-                    "The CONTROLLER_TYPE environment variable determines which credentials"
-                )
+        # Explain auto-detection mechanism
+        lines.append(
+            cls.info(
+                "The framework automatically detects which controller type to use based"
             )
-            lines.append(
-                cls.info(f'are required. Current value: "{controller_type}" (default)')
-            )
-        else:
-            lines.append(
-                cls.info(
-                    f'The CONTROLLER_TYPE environment variable is set to: "{controller_type}"'
-                )
-            )
-
+        )
+        lines.append(cls.info("on the environment variables you provide."))
         lines.append("")
         lines.append(
-            cls.info("To use a different architecture, set CONTROLLER_TYPE first:")
+            cls.info(f"Controller type detected: {cls.highlight(controller_type)}")
         )
+        lines.append("")
         lines.append(
-            f"  {cls.success('export CONTROLLER_TYPE=ACI')}     {cls.info('# for ACI (APIC)')}"
-        )
-        lines.append(
-            f"  {cls.success('export CONTROLLER_TYPE=SDWAN')}   {cls.info('# for SD-WAN (vManage)')}"
-        )
-        lines.append(
-            f"  {cls.success('export CONTROLLER_TYPE=DNAC')}    {cls.info('# for Catalyst Center (DNAC)')}"
-        )
-        lines.append(
-            f"  {cls.success('export CONTROLLER_TYPE=MERAKI')}  {cls.info('# for Meraki Dashboard')}"
-        )
-        lines.append(
-            f"  {cls.success('export CONTROLLER_TYPE=FMC')}     {cls.info('# for Firepower Management Center')}"
-        )
-        lines.append(
-            f"  {cls.success('export CONTROLLER_TYPE=ISE')}     {cls.info('# for Identity Services Engine')}"
+            cls.info("This detection found some credentials but not all required ones.")
         )
 
         lines.append("")
-        lines.append(cls.info("Then set the corresponding credentials:"))
+        lines.append(cls.info("To switch to a different controller:"))
+        lines.append(cls.info("1. Unset current controller's environment variables"))
+        lines.append(
+            cls.info(
+                "2. Set the new controller's credentials (URL, USERNAME, PASSWORD)"
+            )
+        )
+        lines.append("")
+
+        # Show how to unset current controller's variables
+        lines.append(cls.info(f"To unset {controller_type} variables:"))
+        lines.append(
+            f"  {cls.success(f'unset {controller_type}_URL {controller_type}_USERNAME {controller_type}_PASSWORD')}"
+        )
+        lines.append("")
+
+        lines.append(cls.info("Then set credentials for your desired controller:"))
         lines.append("")
 
         # Architecture-specific examples with helpful URLs
         architecture_examples = [
             ("ACI", "apic.example.com", "ACI (APIC)"),
-            ("SDWAN", "vmanage.example.com", "SD-WAN (vManage)"),
-            ("DNAC", "dnac.example.com", "Catalyst Center"),
+            ("SDWAN", "sdwan-manager.example.com", "SD-WAN (SDWAN Manager)"),
+            ("CC", "cc.example.com", "Catalyst Center"),
             ("MERAKI", "api.meraki.com/api/v1", "Meraki"),
-            ("FMC", "fmc.example.com", "Firepower MC"),
+            ("FMC", "fmc.example.com", "Firepower Management Center"),
             ("ISE", "ise.example.com", "ISE"),
         ]
 
@@ -199,6 +188,12 @@ class TerminalColors:
             lines.append(f"    {cls.success(user_cmd)}")
             lines.append(f"    {cls.success(pass_cmd)}")
             lines.append("")
+
+        lines.append(cls.info("The framework will automatically detect and use the"))
+        lines.append(
+            cls.info("controller type based on which credentials are present.")
+        )
+        lines.append("")
 
         lines.append(cls.error("=" * 70))
 

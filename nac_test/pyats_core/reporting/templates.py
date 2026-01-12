@@ -287,7 +287,7 @@ def render_template(template_path: str, **context: Any) -> str:
     """
     env = get_jinja_environment(TEMPLATES_DIR)
     template = env.get_template(template_path)
-    return template.render(**context)
+    return template.render(**context)  # type: ignore[no-any-return]
 
 
 def render_string_template(template_string: str, **context: Any) -> str:
@@ -312,4 +312,4 @@ def render_string_template(template_string: str, **context: Any) -> str:
     """
     env = get_jinja_environment()
     template = env.from_string(template_string)
-    return template.render(**context)
+    return template.render(**context)  # type: ignore[no-any-return]

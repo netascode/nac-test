@@ -97,6 +97,9 @@ class BrokerClient:
             request_length = len(request_data).to_bytes(4, byteorder="big")
 
             # Send request
+            assert self.writer is not None, "Writer must be connected"
+            assert self.reader is not None, "Reader must be connected"
+
             self.writer.write(request_length + request_data)
             await self.writer.drain()
 
@@ -113,7 +116,7 @@ class BrokerClient:
                 error_msg = response.get("error", "Unknown broker error")
                 raise ConnectionError(f"Broker error: {error_msg}")
 
-            return response
+            return response  # type: ignore[no-any-return]
 
         except Exception as e:
             logger.error(f"Error communicating with broker: {e}")
@@ -143,7 +146,7 @@ class BrokerClient:
         result = response.get("result", "")
         logger.debug(f"Command output length: {len(result)} characters")
 
-        return result
+        return result  # type: ignore[no-any-return]
 
     async def ensure_connection(self, hostname: str) -> bool:
         """Ensure device is connected through broker.
@@ -158,7 +161,7 @@ class BrokerClient:
             response = await self._send_request(
                 {"command": "connect", "hostname": hostname}
             )
-            return response.get("result", False)
+            return response.get("result", False)  # type: ignore[no-any-return]
 
         except Exception as e:
             logger.error(f"Failed to ensure connection to {hostname}: {e}")
@@ -184,7 +187,7 @@ class BrokerClient:
             Status dictionary
         """
         response = await self._send_request({"command": "status"})
-        return response.get("result", {})
+        return response.get("result", {})  # type: ignore[no-any-return]
 
     async def ping(self) -> bool:
         """Ping the broker to test connectivity.
@@ -200,12 +203,12 @@ class BrokerClient:
             logger.debug(f"Broker ping failed: {e}")
             return False
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "BrokerClient":
         """Async context manager entry."""
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.disconnect()
 
