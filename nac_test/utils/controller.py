@@ -21,6 +21,7 @@ CREDENTIAL_PATTERNS: dict[str, list[str]] = {
     "MERAKI": ["MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"],
     "FMC": ["FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"],
     "ISE": ["ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"],
+    "IOSXE": ["IOSXE_URL"],  # Direct device access, no controller credentials needed
 }
 
 
