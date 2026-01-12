@@ -330,3 +330,319 @@ endpoints:
     response_data:
       error: "Unauthorized"
       message: "Authentication required"
+
+  # SD-WAN Manager endpoints
+  - name: "SD-WAN Manager Device Health"
+    path_pattern: "/dataservice/health/devices"
+    match_type: "exact"
+    method: "GET"
+    status_code: 200
+    response_data:
+      header:
+        columns:
+        - title: Hostname
+          property: host_name
+          hideable: false
+          dataType: string
+        - title: Device Model
+          property: deviceModel
+          hideable: false
+          dataType: string
+        - title: Health
+          property: health
+          hideable: false
+          dataType: string
+        - title: Reachability
+          property: reachability
+          hideable: true
+          dataType: string
+        - title: CPU Load
+          property: cpuLoad
+          hideable: true
+          dataType: double
+        - title: Memory Utilization
+          property: memoryUtilization
+          hideable: true
+          dataType: double
+        - title: Control
+          property: controlConns
+          hideable: true
+          dataType: string
+        - title: vSmart Control
+          property: vsmartControlConns
+          hideable: true
+          dataType: string
+        - title: BFD
+          property: bfds
+          hideable: true
+          dataType: string
+        - title: TLOC
+          property: tlocs
+          hideable: true
+          dataType: string
+        - title: Site ID
+          property: siteId
+          hideable: true
+          dataType: string
+        - title: Site Name
+          property: site_name
+          hideable: true
+          dataType: string
+        - title: Serial Number
+          property: boardSerialNo
+          hideable: true
+          dataType: string
+        - title: System IP
+          property: localSystemIp
+          hideable: false
+          dataType: ipv4
+        - title: Location
+          property: location
+          hideable: true
+          dataType: string
+        - title: Version
+          property: softwareVersion
+          hideable: true
+          dataType: string
+        - title: Up Since
+          property: upSince
+          hideable: true
+          dataType: date
+        - title: Device Groups
+          property: deviceGroups
+          hideable: true
+          dataType: array
+        - title: Chassis Number/ID
+          property: chassisNo
+          hideable: false
+          dataType: string
+        - title: Connected Manager
+          property: connectedVManages
+          hideable: true
+          dataType: array
+        viewKeys:
+          uniqueKey: []
+          preferenceKey: grid-DeviceHealth
+        fields:
+        - property: host_name
+          dataType: string
+        - property: deviceModel
+          dataType: string
+        - property: health
+          dataType: string
+        - property: reachability
+          dataType: string
+        - property: cpuLoad
+          dataType: double
+        - property: memoryUtilization
+          dataType: double
+        - property: controlConns
+          dataType: string
+        - property: vsmartControlConns
+          dataType: string
+        - property: bfds
+          dataType: string
+        - property: tlocs
+          dataType: string
+        - property: siteId
+          dataType: string
+        - property: site_name
+          dataType: string
+        - property: boardSerialNo
+          dataType: string
+        - property: localSystemIp
+          dataType: ipv4
+        - property: location
+          dataType: string
+        - property: softwareVersion
+          dataType: string
+        - property: upSince
+          dataType: date
+        - property: deviceGroups
+          dataType: array
+        - property: chassisNo
+          dataType: string
+        - property: connectedVManages
+          dataType: array
+        modelNameMapping:
+          vAnalytics: Analytics
+          vSmart: Controller
+          vManage: Manager
+          Cloud OnRamp: Cloud onRamp
+          vBond: Validator
+      total_devices: 3
+      devices:
+      - name: sd-dc-c8kv-01
+        personality: vedge
+        uuid: C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B
+        reachability: reachable
+        longitude: '2.337255'
+        latitude: '48.847767'
+        health: yellow
+        qoe: 8
+        location: 'lat: 48.847767, long: 2.337255'
+        tags:
+        - tagId: ''
+          name: dc_primary
+          tagType: ''
+        configGroupId: f384f87b-15fd-4261-829c-69a8dc3890ad
+        configGroupName: dc_hub
+        policyGroupId: ''
+        policyGroupName: ''
+        cellularBit: '0'
+        cellularHealth: null
+        cellularRsrp: null
+        cellularRsrq: null
+        cloudOnRampSaaSDeviceRole: null
+        cloudOnRampSaaSApps: null
+        site_id: '100'
+        system_ip: 10.0.0.1
+        device_type: vedge
+        local_system_ip: 10.0.0.1
+        device_model: C8000v
+        software_version: 17.15.03a.0.176
+        cpu_load: 41.61
+        memory_utilization: 74.0
+        control_connections: 5
+        control_connections_up: 5
+        vsmart_control_connections: 4
+        expected_vsmart_connections: 4
+        has_geo_data: true
+        uptime_date: 1764686460000
+        device_groups:
+        - No groups
+        connected_vmanages:
+        - 100.0.0.1
+        bfd_sessions_up: 6
+        bfd_sessions: 8
+        total_tloc_num: 2
+        up_tloc_num: 2
+        omp_peers: 2
+        omp_peers_up: 2
+        board_serial_number: 2F5F03F9
+        chassis_number: C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B
+        vpn_ids: null
+        configuration_device: false
+        sdra_ipsec_enabled: false
+        sdra_ipsec_anyconnect: 0
+        sdra_ipsec_soho: 0
+        sdra_ipsec_unknown: 0
+        sdra_sslvpn_enabled: false
+        sdra_sslvpn_anyconnect: 0
+        site_name: SITE_100
+        region_list: null
+      - name: sd-dc-c8kv-02
+        personality: vedge
+        uuid: C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B
+        reachability: reachable
+        longitude: '2.337255'
+        latitude: '48.847767'
+        health: yellow
+        qoe: 8
+        location: 'lat: 48.847767, long: 2.337255'
+        tags:
+        - tagId: ''
+          name: dc_secondary
+          tagType: ''
+        configGroupId: f384f87b-15fd-4261-829c-69a8dc3890ad
+        configGroupName: dc_hub
+        policyGroupId: ''
+        policyGroupName: ''
+        cellularBit: '0'
+        cellularHealth: null
+        cellularRsrp: null
+        cellularRsrq: null
+        cloudOnRampSaaSDeviceRole: null
+        cloudOnRampSaaSApps: null
+        site_id: '100'
+        system_ip: 10.0.0.2
+        device_type: vedge
+        local_system_ip: 10.0.0.2
+        device_model: C8000v
+        software_version: 17.15.03a.0.176
+        cpu_load: 42.45
+        memory_utilization: 73.0
+        control_connections: 5
+        control_connections_up: 5
+        vsmart_control_connections: 4
+        expected_vsmart_connections: 4
+        has_geo_data: true
+        uptime_date: 1764686460000
+        device_groups:
+        - No groups
+        connected_vmanages:
+        - 100.0.0.1
+        bfd_sessions_up: 6
+        bfd_sessions: 8
+        total_tloc_num: 2
+        up_tloc_num: 2
+        omp_peers: 2
+        omp_peers_up: 2
+        board_serial_number: B430E0DE
+        chassis_number: C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B
+        vpn_ids: null
+        configuration_device: false
+        sdra_ipsec_enabled: false
+        sdra_ipsec_anyconnect: 0
+        sdra_ipsec_soho: 0
+        sdra_ipsec_unknown: 0
+        sdra_sslvpn_enabled: false
+        sdra_sslvpn_anyconnect: 0
+        site_name: SITE_100
+        region_list: null
+      - name: sd-br01-c8kv-r1
+        personality: vedge
+        uuid: C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A
+        reachability: reachable
+        longitude: '19.912529'
+        latitude: '50.034502'
+        health: green
+        qoe: 9
+        location: 'lat: 50.034502, long: 19.912529'
+        tags: []
+        configGroupId: ed1f9dcc-70b8-4107-a272-e78e3b3e093a
+        configGroupName: branch_type1_primary
+        policyGroupId: ''
+        policyGroupName: ''
+        cellularBit: '0'
+        cellularHealth: null
+        cellularRsrp: null
+        cellularRsrq: null
+        cloudOnRampSaaSDeviceRole: null
+        cloudOnRampSaaSApps: null
+        site_id: '200'
+        system_ip: 10.0.0.3
+        device_type: vedge
+        local_system_ip: 10.0.0.3
+        device_model: C8000v
+        software_version: 17.15.03a.0.176
+        cpu_load: 41.16
+        memory_utilization: 73.0
+        control_connections: 3
+        control_connections_up: 3
+        vsmart_control_connections: 2
+        expected_vsmart_connections: 4
+        has_geo_data: true
+        uptime_date: 1764686460000
+        device_groups:
+        - No groups
+        connected_vmanages:
+        - 100.0.0.1
+        bfd_sessions_up: 4
+        bfd_sessions: 4
+        total_tloc_num: 2
+        up_tloc_num: 2
+        omp_peers: 2
+        omp_peers_up: 2
+        board_serial_number: 639BA65E
+        chassis_number: C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A
+        vpn_ids: null
+        configuration_device: false
+        sdra_ipsec_enabled: false
+        sdra_ipsec_anyconnect: 0
+        sdra_ipsec_soho: 0
+        sdra_ipsec_unknown: 0
+        sdra_sslvpn_enabled: false
+        sdra_sslvpn_anyconnect: 0
+        site_name: SITE_200
+        region_list: null
