@@ -77,6 +77,13 @@ tmp/
 .mypy_cache/
 .ruff_cache/
 
+logs/
+
+# Robot artifacts
+output.xml
+log.html
+report.html
+
 # Pabot
 .pabotsuitenames
 

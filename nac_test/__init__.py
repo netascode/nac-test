@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 from importlib.metadata import PackageNotFoundError, version  # type: ignore
 

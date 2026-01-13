@@ -1,29 +1,28 @@
-# -*- coding: utf-8 -*-
-
-# Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 import logging
-from typing import Optional
+from datetime import datetime
+from pathlib import Path
+from typing import Annotated
 
 import errorhandler
-
 import typer
-from typing_extensions import Annotated
-
-from pathlib import Path
 
 import nac_test
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.utils.logging import configure_logging, VerbosityLevel
 from nac_test.data_merger import DataMerger
-from datetime import datetime
+from nac_test.utils.logging import VerbosityLevel, configure_logging
 
-
-app = typer.Typer(add_completion=False)
+# typer exceptions are BIG (albeit colorful), I feel for a program
+# with this complextiy logging everything is not required, hence disabling
+# them
+app = typer.Typer(add_completion=False, pretty_exceptions_enable=False)
 
 logger = logging.getLogger(__name__)
 
 error_handler = errorhandler.ErrorHandler()
+
+ORDERING_FILE = "ordering.txt"
 
 
 def version_callback(value: bool) -> None:
@@ -114,7 +113,7 @@ Output = Annotated[
 
 
 Include = Annotated[
-    list[str],
+    list[str] | None,
     typer.Option(
         "-i",
         "--include",
@@ -125,7 +124,7 @@ Include = Annotated[
 
 
 Exclude = Annotated[
-    list[str],
+    list[str] | None,
     typer.Option(
         "-e",
         "--exclude",
@@ -161,6 +160,16 @@ DryRun = Annotated[
         "--dry-run",
         help="Dry run flag. See robot dry run mode.",
         envvar="NAC_TEST_DRY_RUN",
+    ),
+]
+
+
+Processes = Annotated[
+    int | None,
+    typer.Option(
+        "--processes",
+        help="Number of parallel processes for test execution (pabot --processes option), default is max(2, cpu count).",
+        envvar="NAC_TEST_PROCESSES",
     ),
 ]
 
@@ -218,23 +227,27 @@ Version = Annotated[
 ]
 
 
-@app.command()
+@app.command(
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
+)
 def main(
+    ctx: typer.Context,
     data: Data,
     templates: Templates,
     output: Output,
     filters: Filters = None,
     tests: Tests = None,
-    include: Include = [],
-    exclude: Exclude = [],
+    include: Include = None,
+    exclude: Exclude = None,
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
+    processes: Processes = None,
     pyats: PyATS = False,
     robot: Robot = False,
-    max_parallel_devices: Optional[MaxParallelDevices] = None,
+    max_parallel_devices: MaxParallelDevices | None = None,
     minimal_reports: MinimalReports = False,
     verbosity: Verbosity = VerbosityLevel.WARNING,
-    version: Version = False,
+    version: Version = False,  # noqa: ARG001
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
@@ -323,4 +336,5 @@ def exit() -> None:
     if error_handler.fired:
         raise typer.Exit(1)
     else:
-        raise typer.Exit(0)
+        rc = 0
+    raise typer.Exit(code=rc)
