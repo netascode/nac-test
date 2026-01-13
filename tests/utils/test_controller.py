@@ -1,7 +1,7 @@
 """Tests for controller type detection utilities."""
 
 import os
-from typing import Generator
+from collections.abc import Generator
 from unittest.mock import patch
 
 import pytest

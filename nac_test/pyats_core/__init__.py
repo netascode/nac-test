@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """PyATS integration module for nac-test."""
 

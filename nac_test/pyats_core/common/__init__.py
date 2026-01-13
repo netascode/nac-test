@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Common PyATS utilities that can be used by all architecture repos."""
 

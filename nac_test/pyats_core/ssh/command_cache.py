@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Command cache implementation for SSH device testing.
 
@@ -6,9 +5,9 @@ This module provides per-device command output caching to eliminate redundant
 command execution when multiple tests need the same show command outputs.
 """
 
-import time
 import logging
-from typing import Optional, Any
+import time
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ class CommandCache:
 
         logger.debug(f"Initialized command cache for device {hostname} with TTL {ttl}s")
 
-    def get(self, command: str) -> Optional[str]:
+    def get(self, command: str) -> str | None:
         """Get cached command output if valid.
 
         Args:

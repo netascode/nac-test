@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Path setup utilities for nac-test test execution.
 
@@ -6,16 +5,15 @@ This module provides functions to configure Python paths for test imports,
 supporting potential different styles within a /tests directory structure.
 """
 
+import logging
+import os
 import sys
 from pathlib import Path
-from typing import Optional, List, Union
-import os
-import logging
 
 logger = logging.getLogger(__name__)
 
 
-def find_tests_directory(path: Union[str, Path]) -> Path:
+def find_tests_directory(path: str | Path) -> Path:
     """
     Find the /tests directory in the path hierarchy.
 
@@ -41,7 +39,7 @@ def find_tests_directory(path: Union[str, Path]) -> Path:
     )
 
 
-def determine_import_path(test_path: Union[str, Path]) -> Path:
+def determine_import_path(test_path: str | Path) -> Path:
     """
     Determine the correct path to add to sys.path based on import style detection.
 
@@ -78,7 +76,7 @@ def determine_import_path(test_path: Union[str, Path]) -> Path:
     return tests_dir.parent
 
 
-def add_tests_parent_to_syspath(path: Union[str, Path]) -> None:
+def add_tests_parent_to_syspath(path: str | Path) -> None:
     """
     Add the appropriate parent directory to sys.path for test imports.
 
@@ -107,8 +105,8 @@ def add_tests_parent_to_syspath(path: Union[str, Path]) -> None:
 
 
 def get_pythonpath_for_tests(
-    test_dir: Union[str, Path],
-    extra_dirs: Optional[List[Union[str, Path]]] = None,
+    test_dir: str | Path,
+    extra_dirs: list[str | Path] | None = None,
 ) -> str:
     """
     Build PYTHONPATH string for subprocess execution.
@@ -128,7 +126,7 @@ def get_pythonpath_for_tests(
     Raises:
         ValueError: If the test directory structure is invalid
     """
-    paths: List[str] = []
+    paths: list[str] = []
 
     # Add the appropriate import path for tests
     try:

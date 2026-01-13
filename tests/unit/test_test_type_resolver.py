@@ -29,7 +29,6 @@ from nac_test.pyats_core.discovery.test_type_resolver import (
     TestTypeResolver,
 )
 
-
 # Get the fixtures directory path
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 

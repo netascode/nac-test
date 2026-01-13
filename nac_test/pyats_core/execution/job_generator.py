@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """PyATS job file generation functionality."""
 
-from pathlib import Path
-from typing import List, Dict, Any
-import textwrap
 import json
+import textwrap
+from pathlib import Path
+from typing import Any
 
 from nac_test.pyats_core.constants import DEFAULT_TEST_TIMEOUT
 
@@ -23,7 +21,7 @@ class JobGenerator:
         self.max_workers = max_workers
         self.output_dir = Path(output_dir)
 
-    def generate_job_file_content(self, test_files: List[Path]) -> str:
+    def generate_job_file_content(self, test_files: list[Path]) -> str:
         """Generate the content for a PyATS job file.
 
         Args:
@@ -39,27 +37,27 @@ class JobGenerator:
 
         job_content = textwrap.dedent(f'''
         """Auto-generated PyATS job file by nac-test"""
-        
+
         import os
         from pathlib import Path
-        
+
         # Test files to execute
         TEST_FILES = [
             {test_files_str}
         ]
-        
+
         def main(runtime):
             """Main job file entry point"""
             # Set max workers
             runtime.max_workers = {self.max_workers}
-            
+
             # Note: runtime.directory is read-only and set by --archive-dir
             # The output directory is: {str(self.output_dir)}
-            
+
             # Run all test files
             for idx, test_file in enumerate(TEST_FILES):
                 # Create meaningful task ID from test file name
-                # e.g., "epg_attributes.py" -> "epg_attributes" 
+                # e.g., "epg_attributes.py" -> "epg_attributes"
                 test_name = Path(test_file).stem
                 runtime.tasks.run(
                     testscript=test_file,
@@ -71,7 +69,7 @@ class JobGenerator:
         return job_content
 
     def generate_device_centric_job(
-        self, device: Dict[str, Any], test_files: List[Path]
+        self, device: dict[str, Any], test_files: list[Path]
     ) -> str:
         """Generate PyATS job file content for a specific device.
 
@@ -99,16 +97,16 @@ class JobGenerator:
         import logging
         from pathlib import Path
         from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
-        
+
         # Device being tested (using hostname)
         HOSTNAME = "{hostname}"
         DEVICE_INFO = {json.dumps(device)}
-        
+
         # Test files to execute
         TEST_FILES = [
             {test_files_str}
         ]
-        
+
         def main(runtime):
             """Main job file entry point for device-centric execution"""
             # Set up environment variables that SSHTestBase expects

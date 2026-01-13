@@ -1,8 +1,9 @@
 """Integration test for controller detection across the framework."""
 
 from pathlib import Path
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.utils.controller import detect_controller_type

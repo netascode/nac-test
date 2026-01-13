@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Unit tests for nac_test.pyats_core.ssh.connection_utils module."""
 

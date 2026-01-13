@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """PyATS progress reporting components."""
 

@@ -4,13 +4,14 @@ This plugin integrates with PyATS's official plugin system to provide
 real-time progress updates in a format `nac-test` can control.
 """
 
+import ast
 import json
+import logging
 import os
 import time
-import logging
-import ast
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
+
 from pyats.easypy.plugins.bases import BasePlugin
 
 # Event schema version for future compatibility
@@ -36,9 +37,9 @@ class ProgressReporterPlugin(BasePlugin):
         # Get worker ID from environment or runtime
         self.worker_id = self._get_worker_id()
         # Track task start times for duration calculation
-        self.task_start_times: Dict[str, float] = {}
+        self.task_start_times: dict[str, float] = {}
 
-    def _emit_event(self, event: Dict[str, Any]) -> None:
+    def _emit_event(self, event: dict[str, Any]) -> None:
         """Emit a progress event in the standard format."""
         print(f"NAC_PROGRESS:{json.dumps(event)}", flush=True)
 
@@ -97,7 +98,7 @@ class ProgressReporterPlugin(BasePlugin):
             # Extract TITLE from the test file using AST parsing
             title = None
             try:
-                with open(task.testscript, "r") as f:
+                with open(task.testscript) as f:
                     tree = ast.parse(f.read())
 
                 for node in ast.walk(tree):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Multi-archive report generator for PyATS test results.
 
@@ -13,16 +12,15 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from typing import cast
+from typing import Any, cast
 
 import aiofiles  # type: ignore[import-untyped]
 
 from nac_test.pyats_core.reporting.generator import ReportGenerator
-from nac_test.pyats_core.reporting.templates import get_jinja_environment, TEMPLATES_DIR
+from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
 from nac_test.pyats_core.reporting.types import ResultStatus
-from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
 from nac_test.pyats_core.reporting.utils.archive_extractor import ArchiveExtractor
+from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +53,8 @@ class MultiArchiveReportGenerator:
         self.env = get_jinja_environment(TEMPLATES_DIR)
 
     async def generate_reports_from_archives(
-        self, archive_paths: List[Path]
-    ) -> Dict[str, Any]:
+        self, archive_paths: list[Path]
+    ) -> dict[str, Any]:
         """Generate reports from multiple PyATS archives.
 
         This is the main entry point that coordinates the entire process:
@@ -95,7 +93,7 @@ class MultiArchiveReportGenerator:
             os.environ["KEEP_HTML_REPORT_DATA"] = "1"
 
         # Process each archive
-        results: Dict[str, Dict[str, Any]] = {}
+        results: dict[str, dict[str, Any]] = {}
         tasks = []
 
         for archive_path in archive_paths:
@@ -124,7 +122,7 @@ class MultiArchiveReportGenerator:
                         "error": str(task_results[idx]),
                     }
                 else:
-                    results[archive_type] = cast(Dict[str, Any], task_results[idx])
+                    results[archive_type] = cast(dict[str, Any], task_results[idx])
 
         # Generate combined summary if we have multiple successful archives
         combined_summary_path = None
@@ -166,7 +164,7 @@ class MultiArchiveReportGenerator:
 
     async def _process_single_archive(
         self, archive_type: str, archive_path: Path
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Process a single archive by extracting and generating reports.
 
         Args:
@@ -244,7 +242,7 @@ class MultiArchiveReportGenerator:
             f"Extracted {archive_path.name} to {target_dir} with HTML report preservation"
         )
 
-    async def _read_jsonl_summary(self, jsonl_path: Path) -> Dict[str, Any]:
+    async def _read_jsonl_summary(self, jsonl_path: Path) -> dict[str, Any]:
         """Read only the summary record from a JSONL file.
 
         JSONL files contain multiple JSON objects, one per line. This method
@@ -264,7 +262,7 @@ class MultiArchiveReportGenerator:
         metadata = {}
 
         try:
-            async with aiofiles.open(jsonl_path, "r") as f:
+            async with aiofiles.open(jsonl_path) as f:
                 async for line in f:
                     line = line.strip()
                     if not line:
@@ -297,8 +295,8 @@ class MultiArchiveReportGenerator:
         }
 
     async def _generate_combined_summary(
-        self, results: Dict[str, Dict[str, Any]]
-    ) -> Optional[Path]:
+        self, results: dict[str, dict[str, Any]]
+    ) -> Path | None:
         """Generate a combined summary report for multiple archive types.
 
         Creates an aggregated view of all test types (API, D2D) showing overall

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Core constants shared across the nac-test framework."""
 

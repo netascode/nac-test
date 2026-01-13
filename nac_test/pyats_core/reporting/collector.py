@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Test result collector for PyATS HTML reporting.
 
@@ -11,7 +10,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Any
 
 from nac_test.pyats_core.reporting.types import ResultStatus
 
@@ -60,10 +59,10 @@ class TestResultCollector:
         self.command_count = 0
         self._overall_status_determined = False
         self._current_overall_status = "passed"  # Start optimistic, update as we stream
-        self.metadata: Dict[str, str] = {}  # Will be set by base test class
+        self.metadata: dict[str, str] = {}  # Will be set by base test class
 
     def add_result(
-        self, status: ResultStatus, message: str, test_context: Optional[str] = None
+        self, status: ResultStatus, message: str, test_context: str | None = None
     ) -> None:
         """Add a test result - writes immediately to disk.
 
@@ -114,8 +113,8 @@ class TestResultCollector:
         device_name: str,
         command: str,
         output: str,
-        data: Optional[Dict[str, Any]] = None,
-        test_context: Optional[str] = None,
+        data: dict[str, Any] | None = None,
+        test_context: str | None = None,
     ) -> None:
         """Add a command/API execution record - writes immediately to disk.
 

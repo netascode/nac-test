@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
 
 """PyATS testbed generation functionality."""
 
+from typing import Any
+
 import yaml
-from typing import Dict, Any, List
 
 
 class TestbedGenerator:
     """Generates PyATS testbed YAML files for device connections."""
 
     @staticmethod
-    def generate_testbed_yaml(device: Dict[str, Any]) -> str:
+    def generate_testbed_yaml(device: dict[str, Any]) -> str:
         """Generate a PyATS testbed YAML for a single device.
 
         Creates a minimal testbed with just the device information needed for connection.
@@ -78,7 +78,7 @@ class TestbedGenerator:
         return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
 
     @staticmethod
-    def generate_consolidated_testbed_yaml(devices: List[Dict[str, Any]]) -> str:
+    def generate_consolidated_testbed_yaml(devices: list[dict[str, Any]]) -> str:
         """Generate a PyATS testbed YAML for multiple devices.
 
         Creates a consolidated testbed containing all devices for use by the

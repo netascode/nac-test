@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Robot Framework integration module for nac-test."""
 

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """PyATS discovery components."""
 
-from .test_discovery import TestDiscovery
 from .device_inventory import DeviceInventoryDiscovery
+from .test_discovery import TestDiscovery
 
 __all__ = [
     "TestDiscovery",

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Type definitions for NAC test framework verification results.
 
 This module contains TypedDict definitions and type utilities that provide
@@ -9,13 +7,10 @@ throughout the NAC test automation framework.
 
 from typing import (
     Any,
-    Dict,
     Generic,
-    Optional,
     Protocol,
     TypedDict,
     TypeVar,
-    Union,
 )
 
 from nac_test.pyats_core.reporting.types import ResultStatus
@@ -35,14 +30,14 @@ class VerificationDetails(TypedDict, total=False):
 
     expected_state: str
     actual_state: str
-    vrf: Optional[str]  # For network-specific verifications
+    vrf: str | None  # For network-specific verifications
 
 
 class BaseVerificationResult(TypedDict):
     """Base result structure used by format_verification_result() method."""
 
     status: ResultStatus
-    context: Dict[str, Any]
+    context: dict[str, Any]
     reason: str
     api_duration: float
     timestamp: float
@@ -55,8 +50,8 @@ class BaseVerificationResultOptional(BaseVerificationResult, total=False):
 
 
 # Type variables for generic support
-TContext = TypeVar("TContext", bound=Dict[str, Any])
-TDomainData = TypeVar("TDomainData", bound=Dict[str, Any])
+TContext = TypeVar("TContext", bound=dict[str, Any])
+TDomainData = TypeVar("TDomainData", bound=dict[str, Any])
 
 
 class VerificationResultProtocol(Protocol):
@@ -66,7 +61,7 @@ class VerificationResultProtocol(Protocol):
     maintaining compatibility with the base framework methods.
     """
 
-    status: Union[ResultStatus, str]
+    status: ResultStatus | str
     reason: str
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -113,14 +108,14 @@ class ExtensibleVerificationResult(BaseVerificationResultOptional):
 
 
 # Comprehensive Union type for all verification results
-VerificationResult = Union[
+VerificationResult = (
     # Base structured results
-    BaseVerificationResultOptional,
+    BaseVerificationResultOptional
     # Generic extensible results
-    GenericVerificationResult[Any, Any],
-    ExtensibleVerificationResult,
+    | GenericVerificationResult[Any, Any]
+    | ExtensibleVerificationResult
     # Protocol-compatible results
-    VerificationResultProtocol,
+    | VerificationResultProtocol
     # Fallback for maximum flexibility
-    Dict[str, Any],
-]
+    | dict[str, Any]
+)

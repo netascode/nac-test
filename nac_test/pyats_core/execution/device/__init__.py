@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 
 """PyATS device execution components."""
 
-from .testbed_generator import TestbedGenerator
 from .device_executor import DeviceExecutor
+from .testbed_generator import TestbedGenerator
 
 __all__ = [
     "TestbedGenerator",

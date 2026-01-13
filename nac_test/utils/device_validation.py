@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Device validation utilities for SSH/D2D test architectures.
 

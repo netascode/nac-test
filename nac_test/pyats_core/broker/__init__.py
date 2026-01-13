@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Connection broker for shared device connections across pyATS subprocesses."""
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Unicon connection utilities for manual Connection object construction.
 
@@ -8,7 +7,6 @@ when the 'start' parameter is missing or improperly formatted.
 """
 
 import logging
-from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +14,9 @@ logger = logging.getLogger(__name__)
 def build_connection_start_command(
     protocol: str,
     host: str,
-    port: Optional[int] = None,
-    username: Optional[str] = None,
-    ssh_options: Optional[str] = None,
+    port: int | None = None,
+    username: str | None = None,
+    ssh_options: str | None = None,
 ) -> str:
     """Build Unicon start command similar to get_start_command() from topology.py.
 
@@ -74,9 +72,9 @@ def build_connection_start_command(
 
 def _build_ssh_command(
     host: str,
-    port: Optional[int] = None,
-    username: Optional[str] = None,
-    ssh_options: Optional[str] = None,
+    port: int | None = None,
+    username: str | None = None,
+    ssh_options: str | None = None,
 ) -> str:
     """Build SSH connection command.
 
@@ -111,7 +109,7 @@ def _build_ssh_command(
     return cmd
 
 
-def _build_telnet_command(host: str, port: Optional[int] = None) -> str:
+def _build_telnet_command(host: str, port: int | None = None) -> str:
     """Build Telnet connection command.
 
     Args:
@@ -147,8 +145,8 @@ def _build_console_command(device_path: str) -> str:
 
 
 def build_connection_start_list(
-    connections: List[dict],
-) -> List[str]:
+    connections: list[dict],
+) -> list[str]:
     """Build a list of start commands for multi-connection scenarios.
 
     Useful for dual RP/HA connections where multiple connection commands are needed.

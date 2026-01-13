@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Integration tests for TestDiscovery with TestTypeResolver.
 
@@ -13,7 +12,6 @@ Test Categories:
 """
 
 from pathlib import Path
-
 
 from nac_test.pyats_core.discovery.test_discovery import TestDiscovery
 

@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 
 """PyATS execution components."""
 
 from .job_generator import JobGenerator
-from .subprocess_runner import SubprocessRunner
 from .output_processor import OutputProcessor
+from .subprocess_runner import SubprocessRunner
 
 __all__ = [
     "JobGenerator",

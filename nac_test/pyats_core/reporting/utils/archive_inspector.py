@@ -4,10 +4,9 @@ This module provides lightweight inspection of PyATS archives to display
 their contents without the overhead of full extraction.
 """
 
+import logging
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class ArchiveInspector:
     }
 
     @staticmethod
-    def inspect_archive(archive_path: Path) -> Dict[str, Optional[str]]:
+    def inspect_archive(archive_path: Path) -> dict[str, str | None]:
         """Inspect a PyATS archive and return paths of key files.
 
         Args:
@@ -34,9 +33,7 @@ class ArchiveInspector:
             Dictionary mapping file types to their paths within the archive.
             Returns None for files that don't exist.
         """
-        results: Dict[str, Optional[str]] = {
-            key: None for key in ArchiveInspector.PYATS_FILES
-        }
+        results: dict[str, str | None] = dict.fromkeys(ArchiveInspector.PYATS_FILES)
 
         try:
             with zipfile.ZipFile(archive_path, "r") as zip_ref:
@@ -83,7 +80,7 @@ class ArchiveInspector:
             return "legacy"
 
     @staticmethod
-    def find_archives(output_dir: Path) -> Dict[str, List[Path]]:
+    def find_archives(output_dir: Path) -> dict[str, list[Path]]:
         """Find all PyATS archives in the output directory.
 
         Args:

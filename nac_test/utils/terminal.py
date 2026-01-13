@@ -1,8 +1,9 @@
 """Centralized terminal formatting utilities for nac-test."""
 
-from colorama import Fore, Style, init
 import os
 import re
+
+from colorama import Fore, Style, init
 
 # autoreset=True means colors reset after each print
 init(autoreset=True)

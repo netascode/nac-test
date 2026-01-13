@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """Type definitions for PyATS HTML reporting."""
 

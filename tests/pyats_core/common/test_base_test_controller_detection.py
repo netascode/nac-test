@@ -1,6 +1,7 @@
 """Test base_test.py controller detection integration."""
 
 from unittest.mock import patch
+
 import pytest
 from pyats import aetest
 
