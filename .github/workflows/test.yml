@@ -7,21 +7,69 @@ on:
       - main
 
 jobs:
-  lint:
-    name: Lint
+  security:
+    name: Security Scan
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Python Setup
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install bandit
+        run: uv tool install bandit[toml]
+
+      - name: Run bandit security scan
+        run: bandit -r nac_test/ -ll -f json -o bandit-security-report.json
+        
+      - name: Upload security report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: bandit-security-report
+          path: bandit-security-report.json
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write  # Required for dependabot to push lock file updates
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # For fork PRs, use merge commit; for same-repo PRs, use head ref
+          ref: ${{ github.event.pull_request.head.sha || github.head_ref }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
 
       - name: Install mypy
-        run: pip install mypy
+        run: uv tool install mypy
+
+      - name: Update lock file
+        # Only run for dependabot on same-repo PRs (not forks)
+        if: github.actor == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          uv lock
+          if [[ -n $(git status --porcelain uv.lock) ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add uv.lock
+            git commit -m "chore: update uv.lock [dependabot skip]"
+            git push
+          fi
+
+      - name: Check License Headers
+        run: bash scripts/license-headers.sh
 
       - name: Pre-commit Checks
         uses: pre-commit/action@v3.0.1
@@ -39,29 +87,31 @@ jobs:
           - "3.13"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Python Setup
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: ${{ matrix.python }}
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
 
       - name: Test
         run: |
-          pip install poetry
-          poetry install
-          poetry run pytest
+          uv sync --extra dev
+          uv run pytest
 
   notification:
     name: Notification
     if: always() && github.event_name != 'pull_request'
-    needs: [lint, test]
+    needs: [security, lint, test]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check Job Success
         run: |
-          if [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test.result }} == 'success' ]; then
+          if [ ${{ needs.security.result }} == 'success' ] && [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test.result }} == 'success' ]; then
             echo "All jobs succeeded"
             echo "jobSuccess=success" >> $GITHUB_ENV
           else
