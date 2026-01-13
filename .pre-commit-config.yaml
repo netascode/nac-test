@@ -26,5 +26,5 @@ repos:
     rev: 1.8.6
     hooks:
       - id: bandit
-        args: ['-r', 'nac_test/']
+        args: ['-c', 'pyproject.toml', '-r', 'nac_test/']
         exclude: ^tests/
