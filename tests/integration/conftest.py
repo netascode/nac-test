@@ -4,10 +4,9 @@
 
 import pytest
 import os
-import logging
 from pathlib import Path
-from typing import Dict, Any, Generator
-from tests.integration.mock_server import MockAPIServer
+from typing import Generator
+from tests.integration.mocks.mock_server import MockAPIServer
 
 
 # Path to the default YAML configuration file
@@ -33,7 +32,7 @@ DEFAULT_CONFIG_PATH = Path(__file__).parent / "fixtures" / "mock_api_config.yaml
 #   logging.getLogger('tests.integration.mock_server').setLevel(logging.DEBUG)
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def mock_api_server() -> Generator[MockAPIServer, None, None]:
     """Provide a mock API server that auto-starts for all integration tests.
 
@@ -72,30 +71,6 @@ def mock_api_server() -> Generator[MockAPIServer, None, None]:
         # If no config file exists, just start the server without pre-configured endpoints
         pass
 
-    server.start()
-    yield server
-    server.stop()
-
-
-@pytest.fixture(scope="function")
-def mock_api_server_function() -> Generator[MockAPIServer, None, None]:
-    """Provide a function-scoped mock API server.
-
-    Use this when you need a fresh server instance for each test
-    without the default YAML configuration.
-
-    Example usage:
-        def test_custom_api(mock_api_server_function):
-            # Configure endpoints per test
-            mock_api_server_function.add_endpoint(
-                name='Test endpoint',
-                path_pattern='/api/data',
-                status_code=200,
-                response_data={'key': 'value'},
-                match_type='exact'
-            )
-    """
-    server = MockAPIServer(port=5556)  # Use different port to avoid conflicts
     server.start()
     yield server
     server.stop()

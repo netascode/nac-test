@@ -273,7 +273,7 @@ class MockAPIServer:
         logger.warning(
             f"<<< No matching endpoint found for: {request_method} {full_path}"
         )
-        logger.warning(f"    Returning 404 Not Found")
+        logger.warning("    Returning 404 Not Found")
         logger.debug(f"    Response data:\n{json.dumps(error_response, indent=2)}")
         return jsonify(error_response), 404
 
