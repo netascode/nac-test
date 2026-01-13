@@ -77,6 +77,7 @@ tmp/
 .mypy_cache/
 .ruff_cache/
 
+# Application execution logs (including Claude Code logs)
 logs/
 
 # Robot artifacts
@@ -86,9 +87,6 @@ report.html
 
 # Pabot
 .pabotsuitenames
-
-# Application execution logs (including Claude Code logs)
-logs/
 
 # Claude configuration
 .claude/

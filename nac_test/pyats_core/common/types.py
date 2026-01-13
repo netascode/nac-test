@@ -5,13 +5,27 @@ better type safety and IDE support for verification result structures used
 throughout the NAC test automation framework.
 """
 
+import sys
 from typing import (
     Any,
     Generic,
     Protocol,
-    TypedDict,
     TypeVar,
 )
+
+# Python 3.10 doesn't allow inheriting from both TypedDict and Generic.
+# Use typing_extensions for 3.10 compatibility, standard typing for 3.11+.
+if sys.version_info >= (3, 11):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
+
+# Python 3.10 doesn't allow inheriting from both TypedDict and Generic.
+# Use typing_extensions for 3.10 compatibility, standard typing for 3.11+.
+if sys.version_info >= (3, 11):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 from nac_test.pyats_core.reporting.types import ResultStatus
 

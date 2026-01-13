@@ -820,6 +820,15 @@ wheels = [
 ]
 
 [[package]]
+name = "errorhandler"
+version = "2.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/f4/6efa866dfb5b72d468666eb69adc19142e3956af8e6a95f3109d29685038/errorhandler-2.0.1.tar.gz", hash = "sha256:7e578ad67af40845bfd044f71627a29f1fc436d53ccb058bbf1792ef31ab6163", size = 8534, upload-time = "2016-06-06T13:30:55.287Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/04/71d196b9ed5a561e10150c32892eaac9a85dfffdd09c5f850ea7e4e3344f/errorhandler-2.0.1-py2.py3-none-any.whl", hash = "sha256:dc6c54f5d9a4599e744b57aac2f925cce873188e9b02cae7c0eb120ee08a893f", size = 5530, upload-time = "2016-06-06T13:30:49.044Z" },
+]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1887,17 +1896,17 @@ wheels = [
 
 [[package]]
 name = "nac-test"
-version = "1.2.1b0"
+version = "1.1.0b2"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
     { name = "colorama" },
+    { name = "errorhandler" },
     { name = "genie" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "jmespath" },
     { name = "markdown" },
-    { name = "nac-test-pyats-common" },
     { name = "nac-yaml" },
     { name = "psutil" },
     { name = "pyats" },
@@ -1910,9 +1919,16 @@ dependencies = [
     { name = "ruamel-yaml" },
     { name = "setuptools" },
     { name = "typer" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 
 [package.optional-dependencies]
+adapters = [
+    { name = "nac-test-pyats-common" },
+]
+all = [
+    { name = "nac-test-pyats-common" },
+]
 dev = [
     { name = "ansible-core", version = "2.17.14", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ansible-core", version = "2.19.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
@@ -1924,6 +1940,9 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "ruff" },
+    { name = "types-aiofiles" },
+    { name = "types-markdown" },
+    { name = "types-pyyaml" },
 ]
 
 [package.metadata]
@@ -1932,19 +1951,21 @@ requires-dist = [
     { name = "ansible-core", marker = "extra == 'dev'", specifier = ">=2.17.6" },
     { name = "bandit", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=1.8.6" },
     { name = "colorama", specifier = ">=0.4.6" },
+    { name = "errorhandler", specifier = ">=2.0" },
     { name = "genie", specifier = ">=25.5" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "jmespath", specifier = ">=1.0.1" },
     { name = "markdown", specifier = ">=3.8.2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
-    { name = "nac-test-pyats-common", specifier = ">=0.1.0" },
+    { name = "nac-test-pyats-common", marker = "extra == 'adapters'", specifier = ">=0.1.0" },
+    { name = "nac-test-pyats-common", marker = "extra == 'all'", specifier = ">=0.1.0" },
     { name = "nac-yaml", specifier = ">=1.1.1" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.3.0" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pyats", specifier = ">=25.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.2" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = "~=4.1" },
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.15.0" },
     { name = "restinstance", specifier = ">=1.5.2" },
     { name = "robotframework", specifier = ">=7.3.2" },
@@ -1956,8 +1977,12 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.12" },
     { name = "setuptools", specifier = "<81" },
     { name = "typer", specifier = ">=0.17.4" },
+    { name = "types-aiofiles", marker = "extra == 'dev'", specifier = ">=24.1.0.20250822" },
+    { name = "types-markdown", marker = "extra == 'dev'", specifier = ">=3.8.0.20250809" },
+    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.12.20250822" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'", specifier = ">=4.0" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["adapters", "all", "dev"]
 
 [[package]]
 name = "nac-test-pyats-common"
@@ -3561,6 +3586,33 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8f/28/7c85c8032b91dbe79725b6f17d2fffc595dff06a35c7a30a37bef73a1ab4/typer-0.20.0.tar.gz", hash = "sha256:1aaf6494031793e4876fb0bacfa6a912b551cf43c1e63c800df8b1a866720c37", size = 106492, upload-time = "2025-10-20T17:03:49.445Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/78/64/7713ffe4b5983314e9d436a90d5bd4f63b6054e2aca783a3cfc44cb95bbf/typer-0.20.0-py3-none-any.whl", hash = "sha256:5b463df6793ec1dca6213a3cf4c0f03bc6e322ac5e16e13ddd622a889489784a", size = 47028, upload-time = "2025-10-20T17:03:47.617Z" },
+]
+
+[[package]]
+name = "types-aiofiles"
+version = "25.1.0.20251011"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/84/6c/6d23908a8217e36704aa9c79d99a620f2fdd388b66a4b7f72fbc6b6ff6c6/types_aiofiles-25.1.0.20251011.tar.gz", hash = "sha256:1c2b8ab260cb3cd40c15f9d10efdc05a6e1e6b02899304d80dfa0410e028d3ff", size = 14535, upload-time = "2025-10-11T02:44:51.237Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/71/0f/76917bab27e270bb6c32addd5968d69e558e5b6f7fb4ac4cbfa282996a96/types_aiofiles-25.1.0.20251011-py3-none-any.whl", hash = "sha256:8ff8de7f9d42739d8f0dadcceeb781ce27cd8d8c4152d4a7c52f6b20edb8149c", size = 14338, upload-time = "2025-10-11T02:44:50.054Z" },
+]
+
+[[package]]
+name = "types-markdown"
+version = "3.10.0.20251106"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/e4/060f0dadd9b551cae77d6407f2bc84b168f918d90650454aff219c1b3ed2/types_markdown-3.10.0.20251106.tar.gz", hash = "sha256:12836f7fcbd7221db8baeb0d3a2f820b95050d0824bfa9665c67b4d144a1afa1", size = 19486, upload-time = "2025-11-06T03:06:44.317Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/58/f666ca9391f2a8bd33bb0b0797cde6ac3e764866708d5f8aec6fab215320/types_markdown-3.10.0.20251106-py3-none-any.whl", hash = "sha256:2c39512a573899b59efae07e247ba088a75b70e3415e81277692718f430afd7e", size = 25862, upload-time = "2025-11-06T03:06:43.082Z" },
+]
+
+[[package]]
+name = "types-pyyaml"
+version = "6.0.12.20250915"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/69/3c51b36d04da19b92f9e815be12753125bd8bc247ba0470a982e6979e71c/types_pyyaml-6.0.12.20250915.tar.gz", hash = "sha256:0f8b54a528c303f0e6f7165687dd33fafa81c807fcac23f632b63aa624ced1d3", size = 17522, upload-time = "2025-09-15T03:01:00.728Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/e0/1eed384f02555dde685fff1a1ac805c1c7dcb6dd019c916fe659b1c1f9ec/types_pyyaml-6.0.12.20250915-py3-none-any.whl", hash = "sha256:e7d4d9e064e89a3b3cae120b4990cd370874d2bf12fa5f46c97018dd5d3c9ab6", size = 20338, upload-time = "2025-09-15T03:00:59.218Z" },
 ]
 
 [[package]]
