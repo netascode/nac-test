@@ -42,7 +42,11 @@ httpx = "~=0.28"
 aiofiles = "~=24.1"
 colorama = "~=0.4.6"
 markdown = "~=3.8.2"
-nac-test-pyats-common = "~=1.0"
+nac-test-pyats-common = {version = ">=0.1.0", optional = true}
+
+[tool.poetry.extras]
+adapters = ["nac-test-pyats-common"]
+all = ["nac-test-pyats-common"]
 
 [tool.poetry.group.dev.dependencies]
 ansible-core = "~=2.17"
