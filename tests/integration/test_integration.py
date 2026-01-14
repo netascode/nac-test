@@ -6,7 +6,7 @@ import os
 import re
 import shutil
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -20,7 +20,7 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def temp_cwd_dir() -> Iterator[str]:
+def temp_cwd_dir() -> Generator[str, None, None]:
     """Create a unique temporary directory in the current working directory.
     The directory is automatically cleaned up after the test completes.
     """
@@ -28,6 +28,21 @@ def temp_cwd_dir() -> Iterator[str]:
     yield temp_dir
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def setup_bogus_controller_env() -> Generator[None, None, None]:
+    """Set up environment variables for a bogus ACI controller
+    to prevent nac-test from exiting early"""
+
+    vars = ["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"]
+    for var in vars:
+        os.environ[var] = "foo"
+
+    yield
+
+    for var in vars:
+        del os.environ[var]
 
 
 def verify_file_content(expected_yaml_path: Path, output_dir: Path) -> None:
