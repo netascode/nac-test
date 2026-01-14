@@ -93,6 +93,44 @@ source = ["nac_test"]
 exclude_lines = ["pragma: no cover", "@abstract", "except ImportError:"]
 omit = ["*/__main__.py"]
 
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+extend-exclude = ["tests/fixtures/"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"nac_test/pyats_core/common/types.py" = ["UP007"]  # Keep Union for readability in complex type alias
+
+[tool.ruff.lint.isort]
+known-first-party = ["nac_test"]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+# B101: assert used for type narrowing
+# B108: hardcoded tmp directory (expected for temp files)
+# B110: try/except/pass (expected for best-effort cleanup)
+# B311: random used for jitter, not security
+# B324: MD5 used for cache keys, not security
+# B403: pickle needed for serialization
+# B404: subprocess needed for test execution
+# B701: jinja2 without autoescape (not generating HTML)
+skips = ["B101", "B108", "B110", "B311", "B324", "B403", "B404", "B701"]
+
 [tool.mypy]
 check_untyped_defs = true
 disallow_any_generics = true
@@ -110,6 +148,7 @@ warn_unused_configs = true
 warn_unused_ignores = false
 warn_unreachable = true
 show_error_context = true
+exclude = ["^tests/fixtures/"]
 
 [tool.pytest.ini_options]
 markers = ["unit", "integration"]
