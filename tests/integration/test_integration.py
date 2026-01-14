@@ -1,15 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
+import filecmp
 import os
 import re
 import shutil
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 import yaml  # type: ignore
+from _pytest.monkeypatch import MonkeyPatch
 from robot import run as robot_run  # type: ignore[attr-defined]
 from typer.testing import CliRunner
 
@@ -19,7 +21,7 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def temp_cwd_dir() -> Iterator[str]:
+def temp_cwd_dir() -> Generator[str, None, None]:
     """Create a unique temporary directory in the current working directory.
     The directory is automatically cleaned up after the test completes.
     """
@@ -27,6 +29,19 @@ def temp_cwd_dir() -> Iterator[str]:
     yield temp_dir
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def setup_bogus_controller_env(monkeypatch: MonkeyPatch) -> None:
+    """Set up environment variables for a bogus ACI controller
+    to prevent nac-test from exiting early.
+
+    Uses monkeypatch for safe, automatic cleanup that preserves
+    original environment state even if tests fail.
+    """
+    monkeypatch.setenv("ACI_URL", "foo")
+    monkeypatch.setenv("ACI_USERNAME", "foo")
+    monkeypatch.setenv("ACI_PASSWORD", "foo")
 
 
 def verify_file_content(expected_yaml_path: Path, output_dir: Path) -> None:
@@ -406,3 +421,72 @@ def test_nac_test_no_testlevelsplit(tmpdir: str) -> None:
         )
     finally:
         del os.environ["NAC_TEST_NO_TESTLEVELSPLIT"]
+
+
+@pytest.mark.parametrize(
+    "extra_args,expected_exit_code",
+    [
+        (["--", "--variable", "MY_TEST_VAR:expected_value"], 0),
+        (["--variable", "MY_TEST_VAR:expected_value"], 0),
+        (["--", "--illegal_argument", "MY_VAR:value"], 252),
+        (["--illegal_argument", "MY_VAR:value"], 252),
+        # --testlevelsplit is not a valid robot arg
+        (["--testlevelsplit"], 252),
+    ],
+)
+def test_nac_test_extra_args(
+    tmpdir: str, extra_args: list[str], expected_exit_code: int
+) -> None:
+    """Test extra Robot Framework arguments with/without -- separator."""
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data/"
+    templates_path = "tests/integration/fixtures/templates_extra_args/"
+
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            tmpdir,
+        ]
+        + extra_args,
+    )
+    assert result.exit_code == expected_exit_code
+
+
+@pytest.mark.parametrize(
+    "cli_args, expected_filename",
+    [
+        ([], "merged_data_model_test_variables.yaml"),
+        (["--merged-data-filename", "custom.yaml"], "custom.yaml"),
+    ],
+)
+def test_nac_test_render_output_model(
+    tmpdir: str, cli_args: list[str], expected_filename: str
+) -> None:
+    """Tests the creation of the merged data model YAML file."""
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data_merge/"
+    templates_path = "tests/integration/fixtures/templates/"
+    output_model_path = os.path.join(tmpdir, expected_filename)
+    expected_model_path = "tests/integration/fixtures/data_merge/result.yaml"
+
+    base_args = [
+        "-d",
+        os.path.join(data_path, "file1.yaml"),
+        "-d",
+        os.path.join(data_path, "file2.yaml"),
+        "-t",
+        templates_path,
+        "-o",
+        tmpdir,
+        "--render-only",
+    ]
+
+    result = runner.invoke(nac_test.cli.main.app, base_args + cli_args)
+    assert result.exit_code == 0
+    assert os.path.exists(output_model_path)
+    assert filecmp.cmp(output_model_path, expected_model_path, shallow=False)
