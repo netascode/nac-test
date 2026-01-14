@@ -41,12 +41,14 @@ class ConnectionBroker:
             testbed_path: Path to consolidated testbed YAML file
             socket_path: Path for Unix domain socket (auto-generated if None)
             max_connections: Maximum concurrent connections to maintain
-            output_dir: Directory for Unicon CLI logs (defaults to /tmp if None)
+            output_dir: Directory for Unicon CLI logs (defaults to system temp dir if None)
         """
         self.testbed_path = testbed_path
         self.socket_path = socket_path or self._generate_socket_path()
         self.max_connections = max_connections
-        self.output_dir = Path(output_dir) if output_dir else Path("/tmp")
+        self.output_dir = (
+            Path(output_dir) if output_dir else Path(tempfile.gettempdir())
+        )
 
         # Connection management
         self.testbed: Any | None = None
