@@ -1,6 +1,6 @@
 [project]
 name = "nac-test"
-version = "1.2.1"
+version = "1.2.2"
 description = "A CLI tool to render and execute Robot Framework tests using Jinja templating."
 license = { text = "MPL-2.0" }
 readme = "README.md"
