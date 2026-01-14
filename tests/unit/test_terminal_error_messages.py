@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test terminal error message formatting for controller auto-detection."""
 
 from nac_test.utils.terminal import terminal

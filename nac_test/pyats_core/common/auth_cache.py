@@ -1,13 +1,15 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Generic file-based authentication token caching for parallel processes."""
 
 import fcntl
+import hashlib
 import json
 import time
-import hashlib
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, Tuple
+from typing import Any
 
 from nac_test.pyats_core.constants import AUTH_CACHE_DIR
 
@@ -23,7 +25,7 @@ class AuthCache:
         cls,
         controller_type: str,
         url: str,
-        auth_func: Callable[[], Tuple[Any, int]],
+        auth_func: Callable[[], tuple[Any, int]],
         extract_token: bool = False,
     ) -> Any:
         """Internal method for caching auth data with file-based locking.
@@ -41,7 +43,7 @@ class AuthCache:
         cache_dir = Path(AUTH_CACHE_DIR)
         cache_dir.mkdir(exist_ok=True)
 
-        url_hash = hashlib.md5(url.encode()).hexdigest()
+        url_hash = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
         cache_file = cache_dir / f"{controller_type}_{url_hash}.json"
         lock_file = cache_dir / f"{controller_type}_{url_hash}.lock"
 
@@ -51,7 +53,7 @@ class AuthCache:
             # Check if valid cached data exists
             if cache_file.exists():
                 try:
-                    with open(cache_file, "r") as f:
+                    with open(cache_file) as f:
                         data = json.load(f)
                         if time.time() < data["expires_at"]:
                             # Return based on what type of data we're working with
@@ -70,7 +72,7 @@ class AuthCache:
             auth_data, expires_in = auth_func()
 
             # Prepare cache data
-            cache_data: Dict[str, Any] = {"expires_at": time.time() + expires_in - 60}
+            cache_data: dict[str, Any] = {"expires_at": time.time() + expires_in - 60}
 
             if extract_token:
                 # Legacy token mode - auth_data is a string
@@ -96,8 +98,8 @@ class AuthCache:
         cls,
         controller_type: str,
         url: str,
-        auth_func: Callable[[], Tuple[Dict[str, Any], int]],
-    ) -> Dict[str, Any]:
+        auth_func: Callable[[], tuple[dict[str, Any], int]],
+    ) -> dict[str, Any]:
         """Get existing auth data dict or create new one with file-based locking.
 
         Generic method for caching any JSON-serializable dict.
@@ -127,7 +129,7 @@ class AuthCache:
         url: str,
         username: str,
         password: str,
-        auth_func: Callable[[str, str, str], Tuple[str, int]],
+        auth_func: Callable[[str, str, str], tuple[str, int]],
     ) -> str:
         """Get existing token or create new one with file-based locking
 
@@ -140,7 +142,7 @@ class AuthCache:
         """
 
         # Create a wrapper function that captures the username/password
-        def wrapped_auth_func() -> Tuple[str, int]:
+        def wrapped_auth_func() -> tuple[str, int]:
             return auth_func(url, username, password)
 
         result = cls._cache_auth_data(

@@ -1,11 +1,13 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Shared data merging utilities for both Robot and PyATS test execution."""
 
-from pathlib import Path
-from typing import List, Dict, Any
-from nac_yaml import yaml
 import logging
+from pathlib import Path
+from typing import Any
+
+from nac_yaml import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +16,7 @@ class DataMerger:
     """Handles merging of YAML data files for both Robot and PyATS test execution."""
 
     @staticmethod
-    def merge_data_files(data_paths: List[Path]) -> Dict[str, Any]:
+    def merge_data_files(data_paths: list[Path]) -> dict[str, Any]:
         """Load and merge YAML files from provided paths.
 
         Args:
@@ -32,7 +34,7 @@ class DataMerger:
 
     @staticmethod
     def write_merged_data_model(
-        data: Dict[str, Any],
+        data: dict[str, Any],
         output_directory: Path,
         filename: str = "merged_data_model_test_variables.yaml",
     ) -> None:
@@ -48,7 +50,7 @@ class DataMerger:
         yaml.write_yaml_file(data, full_output_path)
 
     @staticmethod
-    def load_yaml_file(file_path: Path) -> Dict[str, Any]:
+    def load_yaml_file(file_path: Path) -> dict[str, Any]:
         """Load a single YAML file from the provided path.
 
         Args:

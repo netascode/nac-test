@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Combined orchestrator for sequential PyATS and Robot Framework test execution."""
 
@@ -6,11 +7,11 @@ import logging
 import platform
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+
 import typer
 
-from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.pyats_core.discovery import TestDiscovery
+from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.logging import VerbosityLevel
@@ -30,21 +31,23 @@ class CombinedOrchestrator:
 
     def __init__(
         self,
-        data_paths: List[Path],
+        data_paths: list[Path],
         templates_dir: Path,
         output_dir: Path,
         merged_data_filename: str,
-        filters_path: Optional[Path] = None,
-        tests_path: Optional[Path] = None,
-        include_tags: Optional[List[str]] = None,
-        exclude_tags: Optional[List[str]] = None,
+        filters_path: Path | None = None,
+        tests_path: Path | None = None,
+        include_tags: list[str] | None = None,
+        exclude_tags: list[str] | None = None,
         render_only: bool = False,
         dry_run: bool = False,
-        max_parallel_devices: Optional[int] = None,
+        max_parallel_devices: int | None = None,
         minimal_reports: bool = False,
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
+        processes: int | None = None,
+        extra_args: list[str] | None = None,
     ):
         """Initialize the combined orchestrator.
 
@@ -59,6 +62,8 @@ class CombinedOrchestrator:
             exclude_tags: Tags to exclude (Robot only)
             render_only: Only render tests without executing (Robot only)
             dry_run: Dry run mode (Robot only)
+            processes: Number of parallel processes for Robot test execution (Robot only)
+            extra_args: Additional Robot Framework arguments to pass to pabot (Robot only)
             max_parallel_devices: Max parallel devices for PyATS D2D tests
             minimal_reports: Only include command outputs for failed/errored tests (PyATS only)
             verbosity: Logging verbosity level
@@ -77,6 +82,8 @@ class CombinedOrchestrator:
         self.exclude_tags = exclude_tags or []
         self.render_only = render_only
         self.dry_run = dry_run
+        self.processes = processes
+        self.extra_args = extra_args or []
 
         # PyATS-specific parameters
         self.max_parallel_devices = max_parallel_devices
@@ -96,7 +103,7 @@ class CombinedOrchestrator:
             typer.secho(
                 f"\n❌ Controller detection failed:\n{e}", fg=typer.colors.RED, err=True
             )
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
 
     def run_tests(self) -> None:
         """Main entry point for combined test execution.
@@ -148,6 +155,8 @@ class CombinedOrchestrator:
                 exclude_tags=self.exclude_tags,
                 render_only=self.render_only,
                 dry_run=self.dry_run,
+                processes=self.processes,
+                extra_args=self.extra_args,
                 verbosity=self.verbosity,
             )
             robot_orchestrator.run_tests()
@@ -195,6 +204,8 @@ class CombinedOrchestrator:
                 exclude_tags=self.exclude_tags,
                 render_only=self.render_only,
                 dry_run=self.dry_run,
+                processes=self.processes,
+                extra_args=self.extra_args,
                 verbosity=self.verbosity,
             )
             robot_orchestrator2.run_tests()
@@ -214,7 +225,7 @@ class CombinedOrchestrator:
             )
             typer.echo()
 
-    def _discover_test_types(self) -> Tuple[bool, bool]:
+    def _discover_test_types(self) -> tuple[bool, bool]:
         """Discover which test types are present in the templates directory.
 
         Returns:

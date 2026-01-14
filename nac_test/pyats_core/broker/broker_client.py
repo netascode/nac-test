@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Broker client for communicating with the connection broker service.
 
@@ -11,7 +12,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 class BrokerClient:
     """Client for communicating with the connection broker service."""
 
-    def __init__(self, socket_path: Optional[Path] = None):
+    def __init__(self, socket_path: Path | None = None):
         """Initialize broker client.
 
         Args:
@@ -27,8 +28,8 @@ class BrokerClient:
                         If None, will look for NAC_TEST_BROKER_SOCKET env var.
         """
         self.socket_path = socket_path or self._get_socket_path()
-        self.reader: Optional[asyncio.StreamReader] = None
-        self.writer: Optional[asyncio.StreamWriter] = None
+        self.reader: asyncio.StreamReader | None = None
+        self.writer: asyncio.StreamWriter | None = None
         self._connection_lock = asyncio.Lock()
         self._connected = False
 
@@ -73,7 +74,7 @@ class BrokerClient:
             except Exception as e:
                 logger.error(f"Failed to connect to broker: {e}")
                 await self.disconnect()
-                raise ConnectionError(f"Cannot connect to broker: {e}")
+                raise ConnectionError(f"Cannot connect to broker: {e}") from e
 
     async def disconnect(self) -> None:
         """Disconnect from the broker service."""
@@ -86,7 +87,7 @@ class BrokerClient:
             self.writer = None
             self._connected = False
 
-    async def _send_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_request(self, request: dict[str, Any]) -> dict[str, Any]:
         """Send request to broker and return response."""
         if not self._connected:
             await self.connect()
@@ -180,7 +181,7 @@ class BrokerClient:
         except Exception as e:
             logger.warning(f"Failed to disconnect {hostname}: {e}")
 
-    async def get_broker_status(self) -> Dict[str, Any]:
+    async def get_broker_status(self) -> dict[str, Any]:
         """Get broker status information.
 
         Returns:

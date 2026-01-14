@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Batching reporter for PyATS to prevent reporter server crashes.
 
@@ -19,17 +20,19 @@ Key Features:
     - Graceful degradation under extreme load
 """
 
-import os
-import sys
-import time
-import pickle
-import logging
-import threading
-import queue
 import json
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+import logging
+import os
+import pickle
+import queue
+import sys
+import tempfile
+import threading
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +77,7 @@ class OverflowDetector:
         self.ema_rate = 0.0  # Exponential moving average of message rate
         self.last_update_time = time.time()
         self.burst_detected = False
-        self.burst_start_time: Optional[float] = None
+        self.burst_start_time: float | None = None
         self.messages_since_update = 0
 
     def update(self, message_count: int = 1) -> bool:
@@ -135,7 +138,7 @@ class OverflowDetector:
 
         return self.burst_detected
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get current detector statistics.
 
         Returns:
@@ -167,9 +170,9 @@ class OverflowQueue:
 
     def __init__(
         self,
-        max_size: Optional[int] = None,
-        memory_limit_mb: Optional[int] = None,
-        overflow_dir: Optional[Path] = None,
+        max_size: int | None = None,
+        memory_limit_mb: int | None = None,
+        overflow_dir: Path | None = None,
     ):
         """Initialize the overflow queue.
 
@@ -190,7 +193,7 @@ class OverflowQueue:
         self.memory_limit_bytes = self.memory_limit_mb * 1024 * 1024
 
         # Queue and memory tracking
-        self.queue: queue.Queue[Tuple[Any, MessageMetadata]] = queue.Queue(
+        self.queue: queue.Queue[tuple[Any, MessageMetadata]] = queue.Queue(
             maxsize=self.max_size
         )
         self.estimated_memory = 0
@@ -198,8 +201,9 @@ class OverflowQueue:
         self.lock = threading.Lock()  # For memory tracking
 
         # Overflow to disk
+        default_overflow = os.path.join(tempfile.gettempdir(), "nac_test_overflow")
         self.overflow_dir = overflow_dir or Path(
-            os.environ.get("NAC_TEST_OVERFLOW_DIR", "/tmp/nac_test_overflow")
+            os.environ.get("NAC_TEST_OVERFLOW_DIR", default_overflow)
         )
         self.overflow_dir.mkdir(parents=True, exist_ok=True)
         self.overflow_file_count = 0
@@ -275,7 +279,7 @@ class OverflowQueue:
                 self._overflow_to_disk(message, metadata)
                 return False
 
-    def dequeue(self, timeout: float = 0.1) -> Optional[Tuple[Any, MessageMetadata]]:
+    def dequeue(self, timeout: float = 0.1) -> tuple[Any, MessageMetadata] | None:
         """Remove and return a message from the queue.
 
         Args:
@@ -299,7 +303,7 @@ class OverflowQueue:
 
     def dequeue_batch(
         self, max_count: int = 100, timeout: float = 0.1
-    ) -> List[Tuple[Any, MessageMetadata]]:
+    ) -> list[tuple[Any, MessageMetadata]]:
         """Remove and return multiple messages from the queue.
 
         Args:
@@ -394,7 +398,7 @@ class OverflowQueue:
 
         return count
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get queue statistics.
 
         Returns:
@@ -429,9 +433,8 @@ class WorkerThread:
     def __init__(
         self,
         overflow_queue: OverflowQueue,
-        drain_callback: Optional[
-            Callable[[List[Tuple[Any, MessageMetadata]]], None]
-        ] = None,
+        drain_callback: Callable[[list[tuple[Any, MessageMetadata]]], None]
+        | None = None,
         batch_size: int = 100,
     ):
         """Initialize the worker thread manager.
@@ -446,7 +449,7 @@ class WorkerThread:
         self.batch_size = batch_size
 
         # Thread management
-        self.thread: Optional[threading.Thread] = None
+        self.thread: threading.Thread | None = None
         self.stop_event = threading.Event()
         self.is_running = False
 
@@ -550,7 +553,7 @@ class WorkerThread:
 
         logger.debug("Worker thread drain loop ended")
 
-    def _process_batch(self, batch: List[Tuple[Any, MessageMetadata]]) -> None:
+    def _process_batch(self, batch: list[tuple[Any, MessageMetadata]]) -> None:
         """Process a batch of drained messages.
 
         Args:
@@ -574,7 +577,7 @@ class WorkerThread:
                 batch[-1][1].sequence_num if batch else 0,
             )
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get worker thread statistics.
 
         Returns:
@@ -638,7 +641,7 @@ class BatchAccumulator:
         self.lock = threading.Lock()
 
         # Batch storage
-        self.messages: List[Tuple[Any, MessageMetadata]] = []
+        self.messages: list[tuple[Any, MessageMetadata]] = []
         self.last_flush_time = time.time()
 
         # Message tracking
@@ -659,8 +662,8 @@ class BatchAccumulator:
         self.last_sampled_size = 4096  # Default estimate: 4KB per message
 
         # Callbacks (will be set by BatchingReporter)
-        self.flush_callback: Optional[Callable[[Dict[str, Any]], None]] = None
-        self.overflow_callback: Optional[Callable[[], None]] = (
+        self.flush_callback: Callable[[dict[str, Any]], None] | None = None
+        self.overflow_callback: Callable[[], None] | None = (
             None  # Called when burst detected
         )
 
@@ -884,7 +887,7 @@ class BatchAccumulator:
                 self._flush_internal()
             return count
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get current accumulator statistics.
 
         Returns:
@@ -915,11 +918,11 @@ class BatchingReporter:
 
     def __init__(
         self,
-        send_callback: Optional[Callable[[List[Any]], bool]] = None,
-        error_callback: Optional[Callable[[Exception, List[Any]], None]] = None,
-        batch_size: Optional[int] = None,
-        flush_timeout: Optional[float] = None,
-        debug_mode: Optional[bool] = None,
+        send_callback: Callable[[list[Any]], bool] | None = None,
+        error_callback: Callable[[Exception, list[Any]], None] | None = None,
+        batch_size: int | None = None,
+        flush_timeout: float | None = None,
+        debug_mode: bool | None = None,
     ):
         """Initialize the batching reporter.
 
@@ -959,8 +962,8 @@ class BatchingReporter:
         self.accumulator.overflow_callback = self._handle_overflow_detected
 
         # Overflow queue and worker (created lazily when needed)
-        self.overflow_queue: Optional[OverflowQueue] = None
-        self.worker_thread: Optional[WorkerThread] = None
+        self.overflow_queue: OverflowQueue | None = None
+        self.worker_thread: WorkerThread | None = None
         self.overflow_mode_active = False
 
         logger.info(
@@ -970,7 +973,7 @@ class BatchingReporter:
             self.debug_mode,
         )
 
-    def _handle_batch_flush(self, batch_info: Dict[str, Any]) -> None:
+    def _handle_batch_flush(self, batch_info: dict[str, Any]) -> None:
         """Handle a batch flush from the accumulator.
 
         Routes messages based on current mode:
@@ -1061,7 +1064,7 @@ class BatchingReporter:
             "Messages will be queued and processed asynchronously."
         )
 
-    def _process_drained_batch(self, batch: List[Tuple[Any, MessageMetadata]]) -> None:
+    def _process_drained_batch(self, batch: list[tuple[Any, MessageMetadata]]) -> None:
         """Process messages drained from overflow queue by worker thread.
 
         Args:
@@ -1131,7 +1134,7 @@ class BatchingReporter:
 
         return count
 
-    def shutdown(self, timeout: float = 10.0) -> Dict[str, Any]:
+    def shutdown(self, timeout: float = 10.0) -> dict[str, Any]:
         """Graceful shutdown - ensure all messages are processed.
 
         Args:
@@ -1198,7 +1201,7 @@ class BatchingReporter:
                     self.overflow_queue.overflow_dir,
                 )
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get current reporter statistics.
 
         Returns:

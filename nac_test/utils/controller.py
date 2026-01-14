@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Controller type detection utilities for NAC test framework.
 
 This module provides utilities for detecting which network controller type (architecture)

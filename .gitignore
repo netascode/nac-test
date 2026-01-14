@@ -77,19 +77,20 @@ tmp/
 .mypy_cache/
 .ruff_cache/
 
-# Pabot
-.pabotsuitenames
-
-# robot
-log.html
-report.html
-output.xml
-
 # Application execution logs (including Claude Code logs)
 logs/
+
+# Robot artifacts
+output.xml
+log.html
+report.html
+
+# Pabot
+.pabotsuitenames
 
 # Claude configuration
 .claude/
 CLAUDE.md
-#
-.devcontainer/
+
+# bandit security report, if generated
+bandit-security-report.json

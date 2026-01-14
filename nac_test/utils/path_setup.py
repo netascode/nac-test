@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """
 Path setup utilities for nac-test test execution.
 
@@ -6,16 +8,15 @@ This module provides functions to configure Python paths for test imports,
 supporting potential different styles within a /tests directory structure.
 """
 
+import logging
+import os
 import sys
 from pathlib import Path
-from typing import Optional, List, Union
-import os
-import logging
 
 logger = logging.getLogger(__name__)
 
 
-def find_tests_directory(path: Union[str, Path]) -> Path:
+def find_tests_directory(path: str | Path) -> Path:
     """
     Find the /tests directory in the path hierarchy.
 
@@ -41,7 +42,7 @@ def find_tests_directory(path: Union[str, Path]) -> Path:
     )
 
 
-def determine_import_path(test_path: Union[str, Path]) -> Path:
+def determine_import_path(test_path: str | Path) -> Path:
     """
     Determine the correct path to add to sys.path based on import style detection.
 
@@ -78,7 +79,7 @@ def determine_import_path(test_path: Union[str, Path]) -> Path:
     return tests_dir.parent
 
 
-def add_tests_parent_to_syspath(path: Union[str, Path]) -> None:
+def add_tests_parent_to_syspath(path: str | Path) -> None:
     """
     Add the appropriate parent directory to sys.path for test imports.
 
@@ -106,34 +107,9 @@ def add_tests_parent_to_syspath(path: Union[str, Path]) -> None:
         raise
 
 
-def find_pyats_common_parent(test_dir: Union[str, Path]) -> Optional[Path]:
-    """
-    Search for a directory containing a pyats_common subdirectory within test_dir.
-
-    This enables test files to import shared utilities like:
-        from pyats_common.module import foo
-
-    Args:
-        test_dir: Root directory to search within
-
-    Returns:
-        Path to the directory containing pyats_common, or None if not found
-    """
-    test_dir_path = Path(test_dir).resolve()
-
-    # Use os.walk to traverse all subdirectories
-    for root, dirs, _ in os.walk(test_dir_path):
-        if "pyats_common" in dirs:
-            parent_dir = Path(root)
-            logger.debug(f"Found pyats_common at: {parent_dir / 'pyats_common'}")
-            return parent_dir
-
-    return None
-
-
 def get_pythonpath_for_tests(
-    test_dir: Union[str, Path],
-    extra_dirs: Optional[List[Union[str, Path]]] = None,
+    test_dir: str | Path,
+    extra_dirs: list[str | Path] | None = None,
 ) -> str:
     """
     Build PYTHONPATH string for subprocess execution.
@@ -154,7 +130,7 @@ def get_pythonpath_for_tests(
     Raises:
         ValueError: If the test directory structure is invalid
     """
-    paths: List[str] = []
+    paths: list[str] = []
 
     # Add the appropriate import path for tests
     try:
@@ -163,14 +139,6 @@ def get_pythonpath_for_tests(
     except ValueError as e:
         logger.error(f"Invalid test directory structure: {e}")
         raise
-
-    # Search for pyats_common directory and add its parent to PYTHONPATH
-    pyats_common_parent = find_pyats_common_parent(test_dir)
-    if pyats_common_parent:
-        parent_str = str(pyats_common_parent)
-        if parent_str not in paths:
-            logger.debug(f"Adding pyats_common parent to PYTHONPATH: {parent_str}")
-            paths.append(parent_str)
 
     # Add any extra directories
     if extra_dirs:

@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """PyATS subprocess execution functionality."""
 
@@ -7,9 +8,10 @@ import logging
 import os
 import tempfile
 import textwrap
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional, Callable
+from typing import Any
 
 from nac_test.pyats_core.constants import DEFAULT_BUFFER_LIMIT
 
@@ -23,7 +25,7 @@ class SubprocessRunner:
         self,
         output_dir: Path,
         output_handler: Callable[[str], None],
-        plugin_config_path: Optional[Path] = None,
+        plugin_config_path: Path | None = None,
     ):
         """Initialize the subprocess runner.
 
@@ -37,8 +39,8 @@ class SubprocessRunner:
         self.plugin_config_path = plugin_config_path
 
     async def execute_job(
-        self, job_file_path: Path, env: Dict[str, str]
-    ) -> Optional[Path]:
+        self, job_file_path: Path, env: dict[str, str]
+    ) -> Path | None:
         """Execute a PyATS job file using subprocess.
 
         Args:
@@ -121,7 +123,7 @@ class SubprocessRunner:
             )
 
             # Process output in real-time if we have a handler
-            return_code: Optional[int]
+            return_code: int | None
             if self.output_handler is not None and process.stdout is not None:
                 return_code = await self._process_output_realtime(process)
             else:
@@ -158,8 +160,8 @@ class SubprocessRunner:
         #             pass
 
     async def execute_job_with_testbed(
-        self, job_file_path: Path, testbed_file_path: Path, env: Dict[str, Any]
-    ) -> Optional[Path]:
+        self, job_file_path: Path, testbed_file_path: Path, env: dict[str, Any]
+    ) -> Path | None:
         """Execute a PyATS job file with a testbed using subprocess.
 
         This is used for device-centric execution where we need to pass a testbed file.
@@ -296,15 +298,8 @@ class SubprocessRunner:
 
                     line = line_bytes.decode("utf-8", errors="replace").rstrip()
 
-                    # # Log raw output in DEBUG mode
-                    # logger.debug(line)
-
-                    # Process the line if we have a handler
-                    if self.output_handler is not None:
-                        self.output_handler(line)
-                    else:
-                        # Default: just print it
-                        print(line)
+                    # Process the line with the output handler
+                    self.output_handler(line)
 
                     # Reset error counter on successful read
                     consecutive_errors = 0

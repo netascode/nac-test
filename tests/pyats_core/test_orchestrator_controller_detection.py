@@ -1,7 +1,11 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test PyATS orchestrator controller detection integration."""
 
 from pathlib import Path
 from unittest.mock import patch
+
 import pytest
 
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator

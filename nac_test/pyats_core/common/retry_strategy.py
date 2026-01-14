@@ -1,18 +1,21 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Generic smart retry strategy with exponential backoff."""
 
 import asyncio
-import random
-import httpx
 import logging
-from typing import Callable, TypeVar, Optional, Awaitable, Any
+import random
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
+
+import httpx
 
 from nac_test.pyats_core.constants import (
-    RETRY_MAX_ATTEMPTS,
-    RETRY_INITIAL_DELAY,
-    RETRY_MAX_DELAY,
     RETRY_EXPONENTIAL_BASE,
+    RETRY_INITIAL_DELAY,
+    RETRY_MAX_ATTEMPTS,
+    RETRY_MAX_DELAY,
 )
 
 logger = logging.getLogger(__name__)
@@ -60,7 +63,7 @@ class SmartRetry:
         Raises:
             Last exception encountered after all retries exhausted
         """
-        last_exception: Optional[Exception] = None
+        last_exception: Exception | None = None
 
         for attempt in range(max_attempts):
             try:

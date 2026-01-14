@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Logging configuration utilities for nac-test framework."""
 
 import logging
 import sys
 from enum import Enum
-from typing import Union
 
 import errorhandler
 
@@ -21,7 +21,7 @@ class VerbosityLevel(str, Enum):
 
 
 def configure_logging(
-    level: Union[str, VerbosityLevel], error_handler: errorhandler.ErrorHandler
+    level: str | VerbosityLevel, error_handler: errorhandler.ErrorHandler
 ) -> None:
     """Configure logging for nac-test framework.
 

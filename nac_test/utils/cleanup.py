@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Cleanup utilities for nac-test framework."""
 
+import logging
 import shutil
 import time
-import logging
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
-def cleanup_pyats_runtime(workspace_path: Optional[Path] = None) -> None:
+def cleanup_pyats_runtime(workspace_path: Path | None = None) -> None:
     """Clean up PyATS runtime directories before test execution.
 
     Essential for CI/CD environments to prevent disk exhaustion.

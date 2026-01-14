@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Device inventory discovery for SSH-based tests.
 
@@ -6,12 +7,14 @@ This module handles discovering device inventory from test architectures
 in an architecture-agnostic way using the contract pattern.
 """
 
-from pathlib import Path
-from typing import List, Dict, Any
-import logging
-import yaml  # type: ignore[import-untyped]
-import sys
 import importlib.util
+import logging
+import sys
+from pathlib import Path
+from typing import Any
+
+import yaml  # type: ignore[import-untyped]
+
 from nac_test.utils.path_setup import add_tests_parent_to_syspath
 
 logger = logging.getLogger(__name__)
@@ -28,7 +31,7 @@ class DeviceInventoryDiscovery:
         """
         self.merged_data_filepath = merged_data_filepath
 
-    def get_device_inventory(self, test_files: List[Path]) -> List[Dict[str, Any]]:
+    def get_device_inventory(self, test_files: list[Path]) -> list[dict[str, Any]]:
         """Get device inventory from test architecture in an architecture-agnostic way.
 
         This method implements the contract pattern for SSH-based test architectures.
@@ -77,7 +80,7 @@ class DeviceInventoryDiscovery:
             logger.error(f"Merged data model not found at {self.merged_data_filepath}")
             return []
 
-        with open(self.merged_data_filepath, "r") as f:
+        with open(self.merged_data_filepath) as f:
             data_model = yaml.safe_load(f)
 
         # Import the first D2D test file - all D2D tests in an architecture share the same SSH base class
@@ -142,7 +145,7 @@ class DeviceInventoryDiscovery:
 
             # Look for a class with get_ssh_device_inventory method
             # We check all classes in the module and their inheritance chain (MRO)
-            for name, obj in vars(module).items():
+            for _name, obj in vars(module).items():
                 if hasattr(obj, "__mro__"):  # It's a class
                     # Check if this class or its parents have the method
                     # This handles inheritance: TestClass -> SDWANTestBase -> SSHTestBase

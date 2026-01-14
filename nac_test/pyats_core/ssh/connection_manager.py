@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Device connection manager for SSH testing.
 
@@ -8,8 +9,9 @@ including connection pooling, resource limits, and per-device locking.
 
 import asyncio
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Optional
+from typing import TYPE_CHECKING, Any
 
 # Only import for type checking to avoid early PyATS initialization
 if TYPE_CHECKING:
@@ -34,7 +36,7 @@ class DeviceConnectionManager:
     - Respecting system resource limits
     """
 
-    def __init__(self, max_concurrent: Optional[int] = None):
+    def __init__(self, max_concurrent: int | None = None):
         """Initialize the device connection manager.
 
         Args:
@@ -42,8 +44,8 @@ class DeviceConnectionManager:
                            will be calculated based on system resources.
         """
         self.max_concurrent = max_concurrent or self._calculate_ssh_capacity()
-        self.device_locks: Dict[str, asyncio.Lock] = {}
-        self.connections: Dict[str, Any] = {}  # Changed from Connection to avoid import
+        self.device_locks: dict[str, asyncio.Lock] = {}
+        self.connections: dict[str, Any] = {}  # Changed from Connection to avoid import
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
 
         logger.info(
@@ -64,7 +66,7 @@ class DeviceConnectionManager:
         )
 
     async def get_connection(
-        self, hostname: str, device_info: Dict[str, Any]
+        self, hostname: str, device_info: dict[str, Any]
     ) -> Any:  # Changed from Connection to avoid import
         """Get or create SSH connection for a device.
 
@@ -106,7 +108,7 @@ class DeviceConnectionManager:
             return await self._create_connection(hostname, device_info)
 
     async def _create_connection(
-        self, hostname: str, device_info: Dict[str, Any]
+        self, hostname: str, device_info: dict[str, Any]
     ) -> Any:  # Changed from Connection to avoid import
         """Create new SSH connection for a device.
 
@@ -125,6 +127,8 @@ class DeviceConnectionManager:
             ConnectionError,
             CredentialsExhaustedError,
             StateMachineError,
+        )
+        from unicon.core.errors import (
             TimeoutError as UniconTimeoutError,
         )
 
@@ -165,7 +169,7 @@ class DeviceConnectionManager:
                 raise ConnectionError(error_msg) from e
 
     def _unicon_connect(
-        self, device_info: Dict[str, Any]
+        self, device_info: dict[str, Any]
     ) -> Any:  # Changed from Connection to avoid import
         """Create Unicon connection (runs in thread pool).
 
@@ -256,7 +260,7 @@ class DeviceConnectionManager:
             return False
 
     def _format_connection_error(
-        self, hostname: str, device_info: Dict[str, Any], error: Exception
+        self, hostname: str, device_info: dict[str, Any], error: Exception
     ) -> str:
         """Format connection error with detailed information.
 
@@ -317,7 +321,7 @@ class DeviceConnectionManager:
     def _format_auth_error(
         self,
         hostname: str,
-        device_info: Dict[str, Any],
+        device_info: dict[str, Any],
         error: Exception,  # Changed from CredentialsExhaustedError to avoid import
     ) -> str:
         """Format authentication error with detailed information.
@@ -346,7 +350,7 @@ class DeviceConnectionManager:
         )
 
     def _format_unexpected_error(
-        self, hostname: str, device_info: Dict[str, Any], error: Exception
+        self, hostname: str, device_info: dict[str, Any], error: Exception
     ) -> str:
         """Format unexpected error with detailed information.
 
@@ -426,7 +430,7 @@ class DeviceConnectionManager:
 
     @asynccontextmanager
     async def device_connection(
-        self, hostname: str, device_info: Dict[str, Any]
+        self, hostname: str, device_info: dict[str, Any]
     ) -> AsyncIterator["Connection"]:
         """Context manager for device connections with automatic cleanup.
 
@@ -445,7 +449,7 @@ class DeviceConnectionManager:
             if conn:
                 await self.close_connection(hostname)
 
-    def get_connection_stats(self) -> Dict[str, Any]:
+    def get_connection_stats(self) -> dict[str, Any]:
         """Get connection manager statistics.
 
         Returns:

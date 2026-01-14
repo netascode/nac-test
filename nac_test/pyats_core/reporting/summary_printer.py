@@ -1,14 +1,15 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Summary and archive information printing for PyATS test execution."""
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any
 
-from nac_test.utils.terminal import terminal
 from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
+from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class SummaryPrinter:
         failed: int,
         errored: int,
         skipped: int,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
     ) -> str:
         """Format a single test summary line with optional prefix.
 
@@ -83,7 +84,7 @@ class SummaryPrinter:
             )
 
     def _calculate_test_stats(
-        self, test_status: Dict[str, Any]
+        self, test_status: dict[str, Any]
     ) -> tuple[int, int, int, int, int]:
         """Calculate test statistics from status dictionary.
 
@@ -114,13 +115,13 @@ class SummaryPrinter:
 
     def print_summary(
         self,
-        test_status: Dict[str, Any],
+        test_status: dict[str, Any],
         start_time: datetime,
-        output_dir: Optional[Path] = None,
-        archive_path: Optional[Path] = None,
-        api_test_status: Optional[Dict[str, Any]] = None,
-        d2d_test_status: Optional[Dict[str, Any]] = None,
-        overall_start_time: Optional[datetime] = None,
+        output_dir: Path | None = None,
+        archive_path: Path | None = None,
+        api_test_status: dict[str, Any] | None = None,
+        d2d_test_status: dict[str, Any] | None = None,
+        overall_start_time: datetime | None = None,
     ) -> None:
         """Print execution summary matching Robot format.
 
@@ -194,11 +195,11 @@ class SummaryPrinter:
 
     def print_summary_with_breakdown(
         self,
-        api_test_status: Dict[str, Any],
-        d2d_test_status: Dict[str, Any],
+        api_test_status: dict[str, Any],
+        d2d_test_status: dict[str, Any],
         start_time: datetime,
-        overall_start_time: Optional[datetime] = None,
-        output_dir: Optional[Path] = None,
+        overall_start_time: datetime | None = None,
+        output_dir: Path | None = None,
     ) -> None:
         """Print test execution summary with separate API and D2D breakdowns.
 

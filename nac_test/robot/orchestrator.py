@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Robot Framework orchestration logic for nac-test.
 
@@ -8,15 +9,16 @@ pattern as PyATSOrchestrator.
 """
 
 import logging
+import os
+from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 import typer
 
-from nac_test.robot.robot_writer import RobotWriter
 from nac_test.robot.pabot import run_pabot
+from nac_test.robot.robot_writer import RobotWriter
 from nac_test.utils.logging import VerbosityLevel
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +35,18 @@ class RobotOrchestrator:
 
     def __init__(
         self,
-        data_paths: List[Path],
+        data_paths: list[Path],
         templates_dir: Path,
         output_dir: Path,
         merged_data_filename: str,
-        filters_path: Optional[Path] = None,
-        tests_path: Optional[Path] = None,
-        include_tags: Optional[List[str]] = None,
-        exclude_tags: Optional[List[str]] = None,
+        filters_path: Path | None = None,
+        tests_path: Path | None = None,
+        include_tags: list[str] | None = None,
+        exclude_tags: list[str] | None = None,
         render_only: bool = False,
         dry_run: bool = False,
+        processes: int | None = None,
+        extra_args: list[str] | None = None,
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
     ):
         """Initialize the Robot Framework orchestrator.
@@ -58,6 +62,8 @@ class RobotOrchestrator:
             exclude_tags: Optional list of tags to exclude
             render_only: If True, only render templates without executing tests
             dry_run: If True, run tests in dry-run mode
+            processes: Number of parallel processes for test execution
+            extra_args: Additional Robot Framework arguments to pass to pabot
             verbosity: Logging verbosity level
         """
         self.data_paths = data_paths
@@ -77,7 +83,15 @@ class RobotOrchestrator:
         self.exclude_tags = exclude_tags or []
         self.render_only = render_only
         self.dry_run = dry_run
+        self.processes = processes
+        self.extra_args = extra_args or []
         self.verbosity = verbosity
+
+        # Determine if ordering file should be used for test-level parallelization
+        if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
+            self.ordering_file: Path | None = self.output_dir / "ordering.txt"
+        else:
+            self.ordering_file = None
 
         # Initialize Robot Framework components (reuse existing implementations)
         self.robot_writer = RobotWriter(
@@ -112,7 +126,9 @@ class RobotOrchestrator:
         start_timestamp = start_time.strftime("%H:%M:%S")
         typer.echo(f"[{start_timestamp}] 📝 Rendering Robot Framework templates...")
 
-        self.robot_writer.write(self.templates_dir, self.output_dir)
+        self.robot_writer.write(
+            self.templates_dir, self.output_dir, ordering_file=self.ordering_file
+        )
 
         end_time = datetime.now()
         end_timestamp = end_time.strftime("%H:%M:%S")
@@ -136,13 +152,25 @@ class RobotOrchestrator:
         # Phase 3: Test execution (unless render-only mode)
         if not self.render_only:
             typer.echo("🤖 Executing Robot Framework tests...\n\n")
-            run_pabot(
+            exit_code = run_pabot(
                 path=self.output_dir,
                 include=self.include_tags,
                 exclude=self.exclude_tags,
+                processes=self.processes,
                 dry_run=self.dry_run,
                 verbose=(self.verbosity == VerbosityLevel.DEBUG),
+                ordering_file=self.ordering_file,
+                extra_args=self.extra_args,
             )
+            # Handle exit code 252 (invalid extra arguments)
+            if exit_code == 252:
+                typer.echo(
+                    typer.style(
+                        "Error: Invalid Robot Framework arguments provided",
+                        fg=typer.colors.RED,
+                    )
+                )
+                raise typer.Exit(252)
             typer.echo("✅ Robot Framework tests completed")
         else:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
