@@ -425,6 +425,40 @@ def test_nac_test_no_testlevelsplit(tmpdir: str) -> None:
 
 
 @pytest.mark.parametrize(
+    "extra_args,expected_exit_code",
+    [
+        (["--", "--variable", "MY_TEST_VAR:expected_value"], 0),
+        (["--variable", "MY_TEST_VAR:expected_value"], 0),
+        (["--", "--illegal_argument", "MY_VAR:value"], 252),
+        (["--illegal_argument", "MY_VAR:value"], 252),
+        # --testlevelsplit is not a valid robot arg
+        (["--testlevelsplit"], 252),
+    ],
+)
+def test_nac_test_extra_args(
+    tmpdir: str, extra_args: list[str], expected_exit_code: int
+) -> None:
+    """Test extra Robot Framework arguments with/without -- separator."""
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data/"
+    templates_path = "tests/integration/fixtures/templates_extra_args/"
+
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            tmpdir,
+        ]
+        + extra_args,
+    )
+    assert result.exit_code == expected_exit_code
+
+
+@pytest.mark.parametrize(
     "cli_args, expected_filename",
     [
         ([], "merged_data_model_test_variables.yaml"),
