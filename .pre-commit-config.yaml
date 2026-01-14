@@ -24,6 +24,10 @@ repos:
     hooks:
       - id: mypy
         exclude: 'tests/fixtures/edge_cases/test_syntax_error\.py'
+        additional_dependencies:
+          - types-PyYAML>=6.0.12.20250822
+          - types-aiofiles>=24.1.0.20250822
+          - types-markdown>=3.8.0.20250809
   - repo: https://github.com/PyCQA/bandit
     rev: 1.8.6
     hooks:
