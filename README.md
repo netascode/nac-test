@@ -327,21 +327,64 @@ tests
 It is possible to include and exclude test cases by tag names with the `--include` and `--exclude` CLI options. These options are directly passed to the Pabot/Robot executor and are documented [here](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#by-tag-names).
 
 
+## Parallel Execution Control
+
+The number of parallel processes used by pabot can be controlled via the `--processes` option:
+
+```bash
+nac-test -d data/ -t templates/ -o output/ --processes 4
+```
+
+If not specified, pabot uses `max(2, cpu_count)` as the default number of processes. You can also set this via the `NAC_TEST_PROCESSES` environment variable.
+
+This option applies to both suite-level and test-level parallelization (see next section).
+
+
 ## Test Case Parallelization
 
-By default, `nac-test` (via pabot) executes test **suites** (i.e., each robot file) in parallel. The number of parallel processes can be controlled via the `--processes` option.
+### Suite-Level Parallelization (Default)
 
-However, suite-level parallelization may be inefficient for test suites containing multiple long-running test cases (e.g., >10 seconds each). If your test cases are independent and can run concurrently, you can enable **test-level parallelization** by adding the following metadata to the suite's settings:
+By default, `nac-test` (via pabot) executes test **suites** (i.e., each robot file) in parallel. Each suite runs in its own process, and the `--processes` option controls how many suites can run simultaneously.
+
+### Test-Level Parallelization
+
+Suite-level parallelization may be inefficient for test suites containing multiple long-running test cases (e.g., >10 seconds each). If your test cases are independent and can run concurrently, you can enable **test-level parallelization** by adding the following metadata to the suite's settings:
 
 ```robot
 *** Settings ***
 Metadata        Test Concurrency     True
 ```
 
-Note: This approach benefits only long-running tests. For short tests, the scheduling overhead and log collection may offset any performance gains.
+**Note:** This approach benefits only long-running tests. For short tests, the scheduling overhead and log collection may offset any performance gains.
 
-Tip: The _Test Concurrency_ metadata is case-insensitive (_test concurrency_, _TEST CONCURRENCY_, etc.).
+**Tip:** The _Test Concurrency_ metadata is case-insensitive (_test concurrency_, _TEST CONCURRENCY_, etc.).
 
-Implementation: `nac-test` checks the rendered robot files for the `Metadata` setting and instruct pabot to run each test within the respective suite in parallel (using pabot's `--testlevelsplit --orderingfile ordering.txt` arguments). You can inspect the `ordering.txt` file in the output directory.
+**Implementation:** `nac-test` checks the rendered robot files for the `Metadata` setting and instructs pabot to run each test within the respective suite in parallel (using pabot's `--testlevelsplit --ordering ordering.txt` arguments). You can inspect the `ordering.txt` file in the output directory.
 
-This behaviour can be disabled when setting the environment variable `NAC_TEST_NO_TESTLEVELSPLIT`.
+**Disabling test-level parallelization:** Set the environment variable `NAC_TEST_NO_TESTLEVELSPLIT=1` to disable this feature.
+
+
+## Advanced Robot Framework Options
+
+You can pass additional Robot Framework options directly to `nac-test`, which are forwarded to the pabot/Robot Framework execution. This enables advanced use cases like custom variables, listeners, and logging configuration:
+
+```bash
+# Pass custom variables
+nac-test -d data/ -t templates/ -o output/ --variable MY_VAR:value
+
+# Multiple variables
+nac-test -d data/ -t templates/ -o output/ --variable VAR1:value1 --variable VAR2:value2
+
+# Custom log level
+nac-test -d data/ -t templates/ -o output/ --loglevel DEBUG
+
+# Add a listener
+nac-test -d data/ -t templates/ -o output/ --listener MyListener.py
+
+# Combine multiple options
+nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --loglevel INFO --listener MyListener
+```
+
+**Note:** Only Robot Framework options are supported. Pabot-specific options (like `--testlevelsplit`, `--pabotlib`, etc.) and test file paths are not allowed and will result in an error with exit code 252.
+
+See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#command-line-options) for all available options.
