@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 import yaml  # type: ignore
+from _pytest.monkeypatch import MonkeyPatch
 from robot import run as robot_run  # type: ignore[attr-defined]
 from typer.testing import CliRunner
 
@@ -31,18 +32,16 @@ def temp_cwd_dir() -> Generator[str, None, None]:
 
 
 @pytest.fixture(scope="function", autouse=True)
-def setup_bogus_controller_env() -> Generator[None, None, None]:
+def setup_bogus_controller_env(monkeypatch: MonkeyPatch) -> None:
     """Set up environment variables for a bogus ACI controller
-    to prevent nac-test from exiting early"""
+    to prevent nac-test from exiting early.
 
-    vars = ["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"]
-    for var in vars:
-        os.environ[var] = "foo"
-
-    yield
-
-    for var in vars:
-        del os.environ[var]
+    Uses monkeypatch for safe, automatic cleanup that preserves
+    original environment state even if tests fail.
+    """
+    monkeypatch.setenv("ACI_URL", "foo")
+    monkeypatch.setenv("ACI_USERNAME", "foo")
+    monkeypatch.setenv("ACI_PASSWORD", "foo")
 
 
 def verify_file_content(expected_yaml_path: Path, output_dir: Path) -> None:
