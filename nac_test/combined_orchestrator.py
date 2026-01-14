@@ -42,6 +42,7 @@ class CombinedOrchestrator:
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
         processes: int | None = None,
+        extra_args: list[str] | None = None,
     ):
         """Initialize the combined orchestrator.
 
@@ -57,6 +58,7 @@ class CombinedOrchestrator:
             render_only: Only render tests without executing (Robot only)
             dry_run: Dry run mode (Robot only)
             processes: Number of parallel processes for Robot test execution (Robot only)
+            extra_args: Additional Robot Framework arguments to pass to pabot (Robot only)
             max_parallel_devices: Max parallel devices for PyATS D2D tests
             minimal_reports: Only include command outputs for failed/errored tests (PyATS only)
             verbosity: Logging verbosity level
@@ -76,6 +78,7 @@ class CombinedOrchestrator:
         self.render_only = render_only
         self.dry_run = dry_run
         self.processes = processes
+        self.extra_args = extra_args or []
 
         # PyATS-specific parameters
         self.max_parallel_devices = max_parallel_devices
@@ -147,6 +150,7 @@ class CombinedOrchestrator:
                 render_only=self.render_only,
                 dry_run=self.dry_run,
                 processes=self.processes,
+                extra_args=self.extra_args,
                 verbosity=self.verbosity,
             )
             robot_orchestrator.run_tests()
@@ -194,6 +198,7 @@ class CombinedOrchestrator:
                 render_only=self.render_only,
                 dry_run=self.dry_run,
                 processes=self.processes,
+                extra_args=self.extra_args,
                 verbosity=self.verbosity,
             )
             robot_orchestrator2.run_tests()

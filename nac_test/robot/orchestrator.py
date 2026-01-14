@@ -43,6 +43,7 @@ class RobotOrchestrator:
         render_only: bool = False,
         dry_run: bool = False,
         processes: int | None = None,
+        extra_args: list[str] | None = None,
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
     ):
         """Initialize the Robot Framework orchestrator.
@@ -59,6 +60,7 @@ class RobotOrchestrator:
             render_only: If True, only render templates without executing tests
             dry_run: If True, run tests in dry-run mode
             processes: Number of parallel processes for test execution
+            extra_args: Additional Robot Framework arguments to pass to pabot
             verbosity: Logging verbosity level
         """
         self.data_paths = data_paths
@@ -79,6 +81,7 @@ class RobotOrchestrator:
         self.render_only = render_only
         self.dry_run = dry_run
         self.processes = processes
+        self.extra_args = extra_args or []
         self.verbosity = verbosity
 
         # Determine if ordering file should be used for test-level parallelization
@@ -146,7 +149,7 @@ class RobotOrchestrator:
         # Phase 3: Test execution (unless render-only mode)
         if not self.render_only:
             typer.echo("🤖 Executing Robot Framework tests...\n\n")
-            run_pabot(
+            exit_code = run_pabot(
                 path=self.output_dir,
                 include=self.include_tags,
                 exclude=self.exclude_tags,
@@ -154,7 +157,17 @@ class RobotOrchestrator:
                 dry_run=self.dry_run,
                 verbose=(self.verbosity == VerbosityLevel.DEBUG),
                 ordering_file=self.ordering_file,
+                extra_args=self.extra_args,
             )
+            # Handle exit code 252 (invalid extra arguments)
+            if exit_code == 252:
+                typer.echo(
+                    typer.style(
+                        "Error: Invalid Robot Framework arguments provided",
+                        fg=typer.colors.RED,
+                    )
+                )
+                raise typer.Exit(252)
             typer.echo("✅ Robot Framework tests completed")
         else:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")

@@ -250,7 +250,13 @@ def main(
     version: Version = False,  # noqa: ARG001
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
-    """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
+    """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
+
+    Additional Robot Framework options can be passed at the end of the command to
+    further control test execution (e.g., --variable, --listener, --loglevel).
+    These are appended to the pabot invocation. Pabot-specific options and test
+    files/directories are not supported and will result in an error.
+    """
     configure_logging(verbosity, error_handler)
 
     # Validate development flag combinations
@@ -300,6 +306,7 @@ def main(
         render_only=render_only,
         dry_run=dry_run,
         processes=processes,
+        extra_args=ctx.args,
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
         verbosity=verbosity,
