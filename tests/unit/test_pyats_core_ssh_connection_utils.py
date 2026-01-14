@@ -1,5 +1,6 @@
 """Unit tests for nac_test.pyats_core.ssh.connection_utils module."""
 
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -17,29 +18,29 @@ from nac_test.pyats_core.ssh.connection_utils import (
 class TestBuildConnectionStartCommand:
     """Test cases for build_connection_start_command function."""
 
-    def test_ssh_basic(self):
+    def test_ssh_basic(self) -> None:
         """Test basic SSH command construction."""
         result = build_connection_start_command("ssh", "10.90.41.178")
         assert result == "ssh 10.90.41.178"
 
-    def test_ssh_with_username(self):
+    def test_ssh_with_username(self) -> None:
         """Test SSH command with username."""
         result = build_connection_start_command("ssh", "10.90.41.178", username="admin")
         assert result == "ssh admin@10.90.41.178"
 
-    def test_ssh_with_port(self):
+    def test_ssh_with_port(self) -> None:
         """Test SSH command with custom port."""
         result = build_connection_start_command("ssh", "10.90.41.178", port=2222)
         assert result == "ssh 10.90.41.178 -p 2222"
 
-    def test_ssh_with_username_and_port(self):
+    def test_ssh_with_username_and_port(self) -> None:
         """Test SSH command with username and port."""
         result = build_connection_start_command(
             "ssh", "10.90.41.178", username="admin", port=2222
         )
         assert result == "ssh admin@10.90.41.178 -p 2222"
 
-    def test_ssh_with_options(self):
+    def test_ssh_with_options(self) -> None:
         """Test SSH command with additional options."""
         result = build_connection_start_command(
             "ssh",
@@ -49,7 +50,7 @@ class TestBuildConnectionStartCommand:
         )
         assert result == "ssh admin@10.90.41.178 -o StrictHostKeyChecking=no"
 
-    def test_ssh_with_all_parameters(self):
+    def test_ssh_with_all_parameters(self) -> None:
         """Test SSH command with all parameters."""
         result = build_connection_start_command(
             "ssh",
@@ -63,54 +64,54 @@ class TestBuildConnectionStartCommand:
             == "ssh admin@10.90.41.178 -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
         )
 
-    def test_telnet_basic(self):
+    def test_telnet_basic(self) -> None:
         """Test basic Telnet command construction."""
         result = build_connection_start_command("telnet", "192.168.1.1")
         assert result == "telnet 192.168.1.1"
 
-    def test_telnet_with_port(self):
+    def test_telnet_with_port(self) -> None:
         """Test Telnet command with custom port."""
         result = build_connection_start_command("telnet", "192.168.1.1", port=23)
         assert result == "telnet 192.168.1.1 23"
 
-    def test_console_basic(self):
+    def test_console_basic(self) -> None:
         """Test console command construction."""
         result = build_connection_start_command("console", "/dev/ttyS0")
         assert result == "cu -l /dev/ttyS0"
 
-    def test_protocol_case_insensitive(self):
+    def test_protocol_case_insensitive(self) -> None:
         """Test that protocol is case insensitive."""
         result1 = build_connection_start_command("SSH", "10.90.41.178")
         result2 = build_connection_start_command("ssh", "10.90.41.178")
         result3 = build_connection_start_command("Ssh", "10.90.41.178")
         assert result1 == result2 == result3 == "ssh 10.90.41.178"
 
-    def test_protocol_with_whitespace(self):
+    def test_protocol_with_whitespace(self) -> None:
         """Test protocol with leading/trailing whitespace."""
         result = build_connection_start_command("  ssh  ", "10.90.41.178")
         assert result == "ssh 10.90.41.178"
 
-    def test_invalid_protocol(self):
+    def test_invalid_protocol(self) -> None:
         """Test error handling for invalid protocol."""
         with pytest.raises(ValueError, match="Unsupported protocol: ftp"):
             build_connection_start_command("ftp", "10.90.41.178")
 
-    def test_empty_protocol(self):
+    def test_empty_protocol(self) -> None:
         """Test error handling for empty protocol."""
         with pytest.raises(ValueError, match="Protocol cannot be None or empty"):
             build_connection_start_command("", "10.90.41.178")
 
-    def test_none_protocol(self):
+    def test_none_protocol(self) -> None:
         """Test error handling for None protocol."""
         with pytest.raises(ValueError, match="Protocol cannot be None or empty"):
             build_connection_start_command(None, "10.90.41.178")
 
-    def test_empty_host(self):
+    def test_empty_host(self) -> None:
         """Test error handling for empty host."""
         with pytest.raises(ValueError, match="Host cannot be None or empty"):
             build_connection_start_command("ssh", "")
 
-    def test_none_host(self):
+    def test_none_host(self) -> None:
         """Test error handling for None host."""
         with pytest.raises(ValueError, match="Host cannot be None or empty"):
             build_connection_start_command("ssh", None)
@@ -119,42 +120,42 @@ class TestBuildConnectionStartCommand:
 class TestBuildSshCommand:
     """Test cases for _build_ssh_command function."""
 
-    def test_basic_ssh(self):
+    def test_basic_ssh(self) -> None:
         """Test basic SSH command."""
         result = _build_ssh_command("10.90.41.178")
         assert result == "ssh 10.90.41.178"
 
-    def test_ssh_with_username(self):
+    def test_ssh_with_username(self) -> None:
         """Test SSH with username."""
         result = _build_ssh_command("10.90.41.178", username="admin")
         assert result == "ssh admin@10.90.41.178"
 
-    def test_ssh_with_port(self):
+    def test_ssh_with_port(self) -> None:
         """Test SSH with port."""
         result = _build_ssh_command("10.90.41.178", port=2222)
         assert result == "ssh 10.90.41.178 -p 2222"
 
-    def test_ssh_invalid_port_zero(self):
+    def test_ssh_invalid_port_zero(self) -> None:
         """Test SSH with invalid port (zero)."""
         with pytest.raises(ValueError, match="Invalid port number: 0"):
             _build_ssh_command("10.90.41.178", port=0)
 
-    def test_ssh_invalid_port_negative(self):
+    def test_ssh_invalid_port_negative(self) -> None:
         """Test SSH with invalid port (negative)."""
         with pytest.raises(ValueError, match="Invalid port number: -1"):
             _build_ssh_command("10.90.41.178", port=-1)
 
-    def test_ssh_invalid_port_too_large(self):
+    def test_ssh_invalid_port_too_large(self) -> None:
         """Test SSH with invalid port (too large)."""
         with pytest.raises(ValueError, match="Invalid port number: 65536"):
             _build_ssh_command("10.90.41.178", port=65536)
 
-    def test_ssh_invalid_port_non_integer(self):
+    def test_ssh_invalid_port_non_integer(self) -> None:
         """Test SSH with non-integer port."""
         with pytest.raises(ValueError, match="Invalid port number: abc"):
-            _build_ssh_command("10.90.41.178", port="abc")
+            _build_ssh_command("10.90.41.178", port="abc")  # type: ignore[arg-type]
 
-    def test_ssh_options_with_leading_dash(self):
+    def test_ssh_options_with_leading_dash(self) -> None:
         """Test SSH options that start with dash."""
         result = _build_ssh_command(
             "10.90.41.178", ssh_options="-o StrictHostKeyChecking=no"
@@ -162,7 +163,7 @@ class TestBuildSshCommand:
         assert result == "ssh 10.90.41.178 -o StrictHostKeyChecking=no"
 
     @patch("nac_test.pyats_core.ssh.connection_utils.logger")
-    def test_ssh_options_without_leading_dash(self, mock_logger):
+    def test_ssh_options_without_leading_dash(self, mock_logger: Any) -> None:
         """Test SSH options that don't start with dash (should warn)."""
         result = _build_ssh_command(
             "10.90.41.178", ssh_options="StrictHostKeyChecking=no"
@@ -170,7 +171,7 @@ class TestBuildSshCommand:
         assert result == "ssh 10.90.41.178 StrictHostKeyChecking=no"
         mock_logger.warning.assert_called_once()
 
-    def test_ssh_options_with_whitespace(self):
+    def test_ssh_options_with_whitespace(self) -> None:
         """Test SSH options with leading/trailing whitespace."""
         result = _build_ssh_command(
             "10.90.41.178", ssh_options="  -o StrictHostKeyChecking=no  "
@@ -181,27 +182,27 @@ class TestBuildSshCommand:
 class TestBuildTelnetCommand:
     """Test cases for _build_telnet_command function."""
 
-    def test_basic_telnet(self):
+    def test_basic_telnet(self) -> None:
         """Test basic Telnet command."""
         result = _build_telnet_command("192.168.1.1")
         assert result == "telnet 192.168.1.1"
 
-    def test_telnet_with_port(self):
+    def test_telnet_with_port(self) -> None:
         """Test Telnet with port."""
         result = _build_telnet_command("192.168.1.1", port=23)
         assert result == "telnet 192.168.1.1 23"
 
-    def test_telnet_invalid_port_zero(self):
+    def test_telnet_invalid_port_zero(self) -> None:
         """Test Telnet with invalid port (zero)."""
         with pytest.raises(ValueError, match="Invalid port number: 0"):
             _build_telnet_command("192.168.1.1", port=0)
 
-    def test_telnet_invalid_port_negative(self):
+    def test_telnet_invalid_port_negative(self) -> None:
         """Test Telnet with invalid port (negative)."""
         with pytest.raises(ValueError, match="Invalid port number: -1"):
             _build_telnet_command("192.168.1.1", port=-1)
 
-    def test_telnet_invalid_port_too_large(self):
+    def test_telnet_invalid_port_too_large(self) -> None:
         """Test Telnet with invalid port (too large)."""
         with pytest.raises(ValueError, match="Invalid port number: 65536"):
             _build_telnet_command("192.168.1.1", port=65536)
@@ -210,12 +211,12 @@ class TestBuildTelnetCommand:
 class TestBuildConsoleCommand:
     """Test cases for _build_console_command function."""
 
-    def test_console_command(self):
+    def test_console_command(self) -> None:
         """Test console command construction."""
         result = _build_console_command("/dev/ttyS0")
         assert result == "cu -l /dev/ttyS0"
 
-    def test_console_command_different_path(self):
+    def test_console_command_different_path(self) -> None:
         """Test console command with different device path."""
         result = _build_console_command("/dev/ttyUSB0")
         assert result == "cu -l /dev/ttyUSB0"
@@ -224,13 +225,13 @@ class TestBuildConsoleCommand:
 class TestBuildConnectionStartList:
     """Test cases for build_connection_start_list function."""
 
-    def test_single_connection(self):
+    def test_single_connection(self) -> None:
         """Test single connection in list."""
         connections = [{"protocol": "ssh", "host": "10.90.41.178", "username": "admin"}]
         result = build_connection_start_list(connections)
         assert result == ["ssh admin@10.90.41.178"]
 
-    def test_dual_connections(self):
+    def test_dual_connections(self) -> None:
         """Test dual connections for HA setup."""
         connections = [
             {"protocol": "ssh", "host": "10.90.41.178", "username": "admin"},
@@ -239,7 +240,7 @@ class TestBuildConnectionStartList:
         result = build_connection_start_list(connections)
         assert result == ["ssh admin@10.90.41.178", "ssh admin@10.90.41.179"]
 
-    def test_mixed_protocols(self):
+    def test_mixed_protocols(self) -> None:
         """Test mixed protocol connections."""
         connections = [
             {
@@ -253,24 +254,24 @@ class TestBuildConnectionStartList:
         result = build_connection_start_list(connections)
         assert result == ["ssh admin@10.90.41.178 -p 22", "telnet 10.90.41.179 23"]
 
-    def test_empty_connections_list(self):
+    def test_empty_connections_list(self) -> None:
         """Test error handling for empty connections list."""
         with pytest.raises(ValueError, match="Connections list cannot be empty"):
             build_connection_start_list([])
 
-    def test_invalid_connection_missing_protocol(self):
+    def test_invalid_connection_missing_protocol(self) -> None:
         """Test error handling for missing protocol."""
         connections = [{"host": "10.90.41.178"}]
         with pytest.raises(ValueError, match="Invalid connection at index 0"):
             build_connection_start_list(connections)
 
-    def test_invalid_connection_missing_host(self):
+    def test_invalid_connection_missing_host(self) -> None:
         """Test error handling for missing host."""
         connections = [{"protocol": "ssh"}]
         with pytest.raises(ValueError, match="Invalid connection at index 0"):
             build_connection_start_list(connections)
 
-    def test_invalid_connection_in_middle(self):
+    def test_invalid_connection_in_middle(self) -> None:
         """Test error handling for invalid connection in middle of list."""
         connections = [
             {"protocol": "ssh", "host": "10.90.41.178", "username": "admin"},
@@ -284,27 +285,27 @@ class TestBuildConnectionStartList:
 class TestDetermineChassisType:
     """Test cases for determine_chassis_type function."""
 
-    def test_single_rp(self):
+    def test_single_rp(self) -> None:
         """Test single RP chassis type."""
         result = determine_chassis_type(1)
         assert result == "single_rp"
 
-    def test_dual_rp(self):
+    def test_dual_rp(self) -> None:
         """Test dual RP chassis type."""
         result = determine_chassis_type(2)
         assert result == "dual_rp"
 
-    def test_stack_three_connections(self):
+    def test_stack_three_connections(self) -> None:
         """Test stack chassis type with 3 connections."""
         result = determine_chassis_type(3)
         assert result == "stack"
 
-    def test_stack_many_connections(self):
+    def test_stack_many_connections(self) -> None:
         """Test stack chassis type with many connections."""
         result = determine_chassis_type(8)
         assert result == "stack"
 
-    def test_zero_connections(self):
+    def test_zero_connections(self) -> None:
         """Test edge case with zero connections."""
         result = determine_chassis_type(0)
         assert result == "stack"  # Falls through to else case
@@ -313,7 +314,7 @@ class TestDetermineChassisType:
 class TestIntegrationScenarios:
     """Integration test scenarios that simulate real-world usage."""
 
-    def test_single_rp_device_construction(self):
+    def test_single_rp_device_construction(self) -> None:
         """Test complete single RP device construction scenario."""
         # Build start command
         start_cmd = build_connection_start_command(
@@ -335,7 +336,7 @@ class TestIntegrationScenarios:
         #     chassis_type=chassis_type
         # )
 
-    def test_dual_rp_ha_device_construction(self):
+    def test_dual_rp_ha_device_construction(self) -> None:
         """Test complete dual RP HA device construction scenario."""
         connections = [
             {"protocol": "ssh", "host": "10.90.41.178", "username": "admin"},
@@ -352,9 +353,9 @@ class TestIntegrationScenarios:
         assert start_commands == ["ssh admin@10.90.41.178", "ssh admin@10.90.41.179"]
         assert chassis_type == "dual_rp"
 
-    def test_telnet_console_mixed_scenario(self):
+    def test_telnet_console_mixed_scenario(self) -> None:
         """Test mixed protocol scenario (Telnet + Console)."""
-        connections = [
+        connections: list[dict[str, Any]] = [
             {"protocol": "telnet", "host": "192.168.1.1", "port": 23},
             {"protocol": "console", "host": "/dev/ttyS0"},
         ]
@@ -365,7 +366,7 @@ class TestIntegrationScenarios:
         assert start_commands == ["telnet 192.168.1.1 23", "cu -l /dev/ttyS0"]
         assert chassis_type == "dual_rp"
 
-    def test_complex_ssh_options_scenario(self):
+    def test_complex_ssh_options_scenario(self) -> None:
         """Test complex SSH options scenario."""
         start_cmd = build_connection_start_command(
             protocol="ssh",
@@ -378,7 +379,7 @@ class TestIntegrationScenarios:
         expected = "ssh admin@10.90.41.178 -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30"
         assert start_cmd == expected
 
-    def test_stack_scenario(self):
+    def test_stack_scenario(self) -> None:
         """Test stack scenario with multiple switches."""
         connections = [
             {"protocol": "ssh", "host": "10.90.41.178", "username": "admin"},
@@ -398,7 +399,7 @@ class TestIntegrationScenarios:
 class TestErrorHandlingAndEdgeCases:
     """Test error handling and edge cases."""
 
-    def test_port_edge_cases(self):
+    def test_port_edge_cases(self) -> None:
         """Test port number edge cases."""
         # Valid edge cases
         assert (
@@ -414,7 +415,7 @@ class TestErrorHandlingAndEdgeCases:
         with pytest.raises(ValueError):
             _build_ssh_command("host", port=65536)
 
-    def test_username_edge_cases(self):
+    def test_username_edge_cases(self) -> None:
         """Test username edge cases."""
         # Empty username should not use @ format
         result = _build_ssh_command("host", username="")
@@ -424,7 +425,7 @@ class TestErrorHandlingAndEdgeCases:
         result = _build_ssh_command("host", username="admin-user_123")
         assert result == "ssh admin-user_123@host"
 
-    def test_host_edge_cases(self):
+    def test_host_edge_cases(self) -> None:
         """Test host edge cases."""
         # IPv6 address
         result = build_connection_start_command("ssh", "2001:db8::1")
