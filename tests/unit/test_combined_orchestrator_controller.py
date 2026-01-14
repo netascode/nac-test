@@ -14,6 +14,16 @@ from nac_test.combined_orchestrator import CombinedOrchestrator
 class TestCombinedOrchestratorController:
     """Tests for CombinedOrchestrator controller detection."""
 
+    @pytest.fixture(autouse=True)
+    def clean_controller_env(self, monkeypatch: MonkeyPatch) -> None:
+        """Clear all controller-related environment variables before each test."""
+        for key in list(os.environ.keys()):
+            if any(
+                prefix in key
+                for prefix in ["ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_"]
+            ):
+                monkeypatch.delenv(key, raising=False)
+
     def test_combined_orchestrator_detects_controller_on_init(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
     ) -> None:
@@ -45,14 +55,7 @@ class TestCombinedOrchestratorController:
         self, tmp_path: Path, monkeypatch: MonkeyPatch
     ) -> None:
         """Test that CombinedOrchestrator exits gracefully when controller detection fails."""
-        # Clear all controller environment variables
-        for key in list(os.environ.keys()):
-            if any(
-                prefix in key
-                for prefix in ["ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_"]
-            ):
-                monkeypatch.delenv(key, raising=False)
-
+        # No controller credentials set (already cleaned by fixture)
         # Create test directories
         data_dir = tmp_path / "data"
         data_dir.mkdir()
