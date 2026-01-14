@@ -11,6 +11,11 @@ $ nac-test --help
  Usage: nac-test [OPTIONS]                                                      
                                                                                 
  A CLI tool to render and execute Robot Framework tests using Jinja templating. 
+
+ Additional Robot Framework options can be passed at the end of the command to
+ further control test execution (e.g., --variable, --listener, --loglevel).
+ These are appended to the pabot invocation. Pabot-specific options and test
+ files/directories are not supported and will result in an error.
                                                                                 
 ╭─ Options ────────────────────────────────────────────────────────────────────╮
 │ *  --data         -d      PATH                     Path to data YAML files.  │
