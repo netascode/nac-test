@@ -1,3 +1,7 @@
+# Unreleased
+
+- Add NETCONF related packages
+
 # 1.2.1
 
 - Fix path handling on Windows platform
