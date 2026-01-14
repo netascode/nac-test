@@ -3,6 +3,9 @@
 
 """PyATS-specific constants and configuration."""
 
+import os
+import tempfile
+
 from nac_test.core.constants import (
     CONNECTION_CLOSE_DELAY,
     # Concurrency
@@ -28,7 +31,7 @@ DEFAULT_CPU_MULTIPLIER = 2
 LOAD_AVERAGE_THRESHOLD = 0.8
 
 # PyATS-specific file paths
-AUTH_CACHE_DIR = "/tmp/nac-test-auth-cache"
+AUTH_CACHE_DIR = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
 
 # Multi-job execution configuration (to avoid reporter crashes)
 TESTS_PER_JOB = 15  # Reduced from 20 for safety margin - each test ~1500 steps
