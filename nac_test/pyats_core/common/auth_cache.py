@@ -43,7 +43,7 @@ class AuthCache:
         cache_dir = Path(AUTH_CACHE_DIR)
         cache_dir.mkdir(exist_ok=True)
 
-        url_hash = hashlib.md5(url.encode()).hexdigest()
+        url_hash = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
         cache_file = cache_dir / f"{controller_type}_{url_hash}.json"
         lock_file = cache_dir / f"{controller_type}_{url_hash}.lock"
 
