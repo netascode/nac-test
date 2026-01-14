@@ -148,8 +148,14 @@ class RobotWriter:
         pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 
         template = env.get_template(str(template_path))
-        # Use pre-converted data model (converted once during initialization)
-        result = template.render(self.template_data, **kwargs)
+        # Use custom_data if provided (for chunked templates), otherwise use pre-converted template_data
+        if custom_data is not None:
+            # Convert custom_data for template rendering (same as initialization conversion)
+            template_data = self._convert_data_model_for_templates(custom_data)
+        else:
+            # Use pre-converted data model (converted once during initialization)
+            template_data = self.template_data
+        result = template.render(template_data, **kwargs)
 
         # remove extra empty lines
         lines = result.splitlines()
