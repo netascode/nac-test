@@ -6,6 +6,7 @@ pattern as PyATSOrchestrator.
 """
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -80,6 +81,12 @@ class RobotOrchestrator:
         self.processes = processes
         self.verbosity = verbosity
 
+        # Determine if ordering file should be used for test-level parallelization
+        if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
+            self.ordering_file: Path | None = self.output_dir / "ordering.txt"
+        else:
+            self.ordering_file = None
+
         # Initialize Robot Framework components (reuse existing implementations)
         self.robot_writer = RobotWriter(
             data_paths=self.data_paths,
@@ -113,7 +120,9 @@ class RobotOrchestrator:
         start_timestamp = start_time.strftime("%H:%M:%S")
         typer.echo(f"[{start_timestamp}] 📝 Rendering Robot Framework templates...")
 
-        self.robot_writer.write(self.templates_dir, self.output_dir)
+        self.robot_writer.write(
+            self.templates_dir, self.output_dir, ordering_file=self.ordering_file
+        )
 
         end_time = datetime.now()
         end_timestamp = end_time.strftime("%H:%M:%S")
@@ -144,6 +153,7 @@ class RobotOrchestrator:
                 processes=self.processes,
                 dry_run=self.dry_run,
                 verbose=(self.verbosity == VerbosityLevel.DEBUG),
+                ordering_file=self.ordering_file,
             )
             typer.echo("✅ Robot Framework tests completed")
         else:
