@@ -1,4 +1,3 @@
-
 """Generic connection pooling for HTTP connections."""
 
 import threading

@@ -1,4 +1,3 @@
-
 """Batching reporter for PyATS to prevent reporter server crashes.
 
 This module implements a batching and queuing system that intercepts PyATS
@@ -429,7 +428,8 @@ class WorkerThread:
     def __init__(
         self,
         overflow_queue: OverflowQueue,
-        drain_callback: Callable[[list[tuple[Any, MessageMetadata]]], None] | None = None,
+        drain_callback: Callable[[list[tuple[Any, MessageMetadata]]], None]
+        | None = None,
         batch_size: int = 100,
     ):
         """Initialize the worker thread manager.

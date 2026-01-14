@@ -1,4 +1,3 @@
-
 """Logging configuration utilities for nac-test framework."""
 
 import logging

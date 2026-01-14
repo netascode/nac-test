@@ -1,4 +1,3 @@
-
 """PyATS progress reporting components."""
 
 from .reporter import ProgressReporter

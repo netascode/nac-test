@@ -1,4 +1,3 @@
-
 """Integration tests for TestDiscovery with TestTypeResolver.
 
 This module validates the integration between TestDiscovery and TestTypeResolver,

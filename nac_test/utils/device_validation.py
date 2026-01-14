@@ -1,4 +1,3 @@
-
 """Device validation utilities for SSH/D2D test architectures.
 
 This module provides validation functions to ensure device inventory

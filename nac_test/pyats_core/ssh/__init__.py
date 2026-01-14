@@ -1,4 +1,3 @@
-
 """SSH testing infrastructure for nac-test.
 
 This module provides generic SSH-based testing capabilities that can be used

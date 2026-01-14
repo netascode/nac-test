@@ -1,4 +1,3 @@
-
 """Type definitions for PyATS HTML reporting."""
 
 from enum import Enum

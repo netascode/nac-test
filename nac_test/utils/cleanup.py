@@ -1,4 +1,3 @@
-
 """Cleanup utilities for nac-test framework."""
 
 import logging

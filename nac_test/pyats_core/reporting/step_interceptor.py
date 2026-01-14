@@ -1,4 +1,3 @@
-
 """Step interceptor for PyATS reporter message batching.
 
 This module intercepts PyATS Step execution to buffer reporter messages

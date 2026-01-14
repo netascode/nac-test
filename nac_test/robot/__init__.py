@@ -1,4 +1,3 @@
-
 """Robot Framework integration module for nac-test."""
 
 from nac_test.robot.orchestrator import RobotOrchestrator

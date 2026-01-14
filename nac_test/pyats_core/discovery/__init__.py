@@ -1,4 +1,3 @@
-
 """PyATS discovery components."""
 
 from .device_inventory import DeviceInventoryDiscovery

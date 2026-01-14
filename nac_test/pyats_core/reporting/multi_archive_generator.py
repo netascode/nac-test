@@ -1,4 +1,3 @@
-
 """Multi-archive report generator for PyATS test results.
 
 This module handles generation of HTML reports from multiple PyATS archives,

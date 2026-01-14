@@ -1,4 +1,3 @@
-
 """PyATS-specific constants and configuration."""
 
 from nac_test.core.constants import (

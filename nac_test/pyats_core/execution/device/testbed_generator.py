@@ -1,4 +1,3 @@
-
 """PyATS testbed generation functionality."""
 
 from typing import Any

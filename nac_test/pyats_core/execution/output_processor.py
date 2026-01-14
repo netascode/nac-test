@@ -1,4 +1,3 @@
-
 """PyATS output processing functionality."""
 
 import json

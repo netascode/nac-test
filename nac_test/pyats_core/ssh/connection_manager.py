@@ -1,4 +1,3 @@
-
 """Device connection manager for SSH testing.
 
 This module provides connection management for SSH-based device testing,

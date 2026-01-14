@@ -1,4 +1,3 @@
-
 """PyATS test discovery functionality.
 
 This module handles discovering and categorizing PyATS test files.

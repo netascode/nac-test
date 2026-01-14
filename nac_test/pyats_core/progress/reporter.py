@@ -1,4 +1,3 @@
-
 """Progress reporting for PyATS test execution."""
 
 import logging

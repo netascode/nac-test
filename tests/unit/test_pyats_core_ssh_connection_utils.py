@@ -1,4 +1,3 @@
-
 """Unit tests for nac_test.pyats_core.ssh.connection_utils module."""
 
 from unittest.mock import patch

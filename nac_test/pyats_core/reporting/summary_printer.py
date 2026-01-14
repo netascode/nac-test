@@ -1,4 +1,3 @@
-
 """Summary and archive information printing for PyATS test execution."""
 
 import logging

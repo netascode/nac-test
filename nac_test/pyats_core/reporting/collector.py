@@ -1,4 +1,3 @@
-
 """Test result collector for PyATS HTML reporting.
 
 This module provides a process-safe collector for test results and command/API

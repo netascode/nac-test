@@ -1,4 +1,3 @@
-
 """Core data models shared across the nac-test framework.
 
 This module contains data structures that are used by multiple components

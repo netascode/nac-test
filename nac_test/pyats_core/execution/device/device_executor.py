@@ -1,4 +1,3 @@
-
 """Device-centric test execution functionality."""
 
 import asyncio

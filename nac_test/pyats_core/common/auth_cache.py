@@ -1,4 +1,3 @@
-
 """Generic file-based authentication token caching for parallel processes."""
 
 import fcntl

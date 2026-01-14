@@ -1,4 +1,3 @@
-
 """System resource calculation utilities for nac-test."""
 
 import logging

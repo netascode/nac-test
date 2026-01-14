@@ -1,4 +1,3 @@
-
 """PyATS HTML reporting module for nac-test."""
 
 from nac_test.pyats_core.reporting.collector import TestResultCollector

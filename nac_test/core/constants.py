@@ -1,4 +1,3 @@
-
 """Core constants shared across the nac-test framework."""
 
 import os

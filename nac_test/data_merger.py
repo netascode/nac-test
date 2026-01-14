@@ -1,4 +1,3 @@
-
 """Shared data merging utilities for both Robot and PyATS test execution."""
 
 import logging

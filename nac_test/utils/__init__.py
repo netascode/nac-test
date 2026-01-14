@@ -1,4 +1,3 @@
-
 """Utility modules for nac-test framework."""
 
 from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime

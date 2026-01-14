@@ -1,4 +1,3 @@
-
 """Unit tests for nac_test.pyats_core.common.auth_cache module.
 
 This module tests the AuthCache class which provides generic file-based
