@@ -1,4 +1,3 @@
-
 """Robot Framework orchestration logic for nac-test.
 
 This module provides the RobotOrchestrator class that manages the complete
@@ -42,6 +41,7 @@ class RobotOrchestrator:
         exclude_tags: list[str] | None = None,
         render_only: bool = False,
         dry_run: bool = False,
+        processes: int | None = None,
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
     ):
         """Initialize the Robot Framework orchestrator.
@@ -57,6 +57,7 @@ class RobotOrchestrator:
             exclude_tags: Optional list of tags to exclude
             render_only: If True, only render templates without executing tests
             dry_run: If True, run tests in dry-run mode
+            processes: Number of parallel processes for test execution
             verbosity: Logging verbosity level
         """
         self.data_paths = data_paths
@@ -76,6 +77,7 @@ class RobotOrchestrator:
         self.exclude_tags = exclude_tags or []
         self.render_only = render_only
         self.dry_run = dry_run
+        self.processes = processes
         self.verbosity = verbosity
 
         # Initialize Robot Framework components (reuse existing implementations)
@@ -139,6 +141,7 @@ class RobotOrchestrator:
                 path=self.output_dir,
                 include=self.include_tags,
                 exclude=self.exclude_tags,
+                processes=self.processes,
                 dry_run=self.dry_run,
                 verbose=(self.verbosity == VerbosityLevel.DEBUG),
             )

@@ -299,6 +299,7 @@ def main(
         exclude_tags=exclude,
         render_only=render_only,
         dry_run=dry_run,
+        processes=processes,
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
         verbosity=verbosity,
