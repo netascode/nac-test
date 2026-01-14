@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Robot Framework integration module for nac-test."""
 
 from nac_test.robot.orchestrator import RobotOrchestrator

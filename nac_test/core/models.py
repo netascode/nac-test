@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Core data models shared across the nac-test framework.
 
 This module contains data structures that are used by multiple components

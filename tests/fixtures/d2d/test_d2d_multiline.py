@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test multi-line D2D class definition parsing.
 
 This fixture validates that AST parsing correctly handles D2D test class

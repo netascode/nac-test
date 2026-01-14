@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Generic file-based authentication token caching for parallel processes."""
 
 import fcntl

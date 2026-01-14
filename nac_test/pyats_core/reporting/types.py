@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Type definitions for PyATS HTML reporting."""
 
 from enum import Enum

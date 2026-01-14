@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Batching reporter for PyATS to prevent reporter server crashes.
 
 This module implements a batching and queuing system that intercepts PyATS

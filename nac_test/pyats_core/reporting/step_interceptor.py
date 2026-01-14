@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Step interceptor for PyATS reporter message batching.
 
 This module intercepts PyATS Step execution to buffer reporter messages

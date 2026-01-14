@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test attribute-style base class references.
 
 This fixture validates detection of qualified/attribute-style inheritance

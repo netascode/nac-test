@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Device connection manager for SSH testing.
 
 This module provides connection management for SSH-based device testing,

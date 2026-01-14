@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Core components shared across the nac-test framework."""
 
 from nac_test.core.constants import (

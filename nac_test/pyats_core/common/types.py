@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Type definitions for NAC test framework verification results.
 
 This module contains TypedDict definitions and type utilities that provide

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Archive aggregation utilities for PyATS device-centric testing.
 
 This module handles aggregation of multiple device-specific archives into

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Unit tests for ConnectionManager integration with connection_utils.
 
 These tests verify that the ConnectionManager correctly uses connection_utils

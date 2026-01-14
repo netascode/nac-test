@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Robot Framework orchestration logic for nac-test.
 
 This module provides the RobotOrchestrator class that manages the complete

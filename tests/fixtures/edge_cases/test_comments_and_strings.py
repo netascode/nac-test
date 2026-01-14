@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test that comments and strings don't interfere with detection.
 
 This fixture validates that the AST-based parser correctly ignores:

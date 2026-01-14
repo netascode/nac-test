@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Unicon connection utilities for manual Connection object construction.
 
 This module provides helper functions to construct Unicon Connection objects

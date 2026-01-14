@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Utility modules for nac-test framework."""
 
 from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime

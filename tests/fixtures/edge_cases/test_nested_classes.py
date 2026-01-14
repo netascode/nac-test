@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test nested class handling.
 
 This fixture validates that the resolver only examines top-level classes
