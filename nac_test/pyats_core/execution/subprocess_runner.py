@@ -1,4 +1,3 @@
-
 """PyATS subprocess execution functionality."""
 
 import asyncio
@@ -283,12 +282,8 @@ class SubprocessRunner:
 
                     line = line_bytes.decode("utf-8", errors="replace").rstrip()
 
-                    # Process the line if we have a handler
-                    if self.output_handler is not None:
-                        self.output_handler(line)
-                    else:
-                        # Default: just print it
-                        print(line)
+                    # Process the line with the output handler
+                    self.output_handler(line)
 
                     # Reset error counter on successful read
                     consecutive_errors = 0

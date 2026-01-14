@@ -1,4 +1,3 @@
-
 """Connection broker service for managing persistent device connections.
 
 This service runs as a long-lived daemon process that:
@@ -13,6 +12,7 @@ import json
 import logging
 import os
 import tempfile
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -46,7 +46,7 @@ class ConnectionBroker:
         self.output_dir = Path(output_dir) if output_dir else Path("/tmp")
 
         # Connection management
-        self.testbed = None
+        self.testbed: Any | None = None
         self.connected_devices: dict[str, Any] = {}  # hostname -> device connection
         self.connection_locks: dict[str, asyncio.Lock] = {}
         self.connection_semaphore = asyncio.Semaphore(max_connections)
@@ -89,6 +89,7 @@ class ConnectionBroker:
 
             # Load testbed using pyATS loader
             self.testbed = loader.load(str(self.testbed_path))
+            assert self.testbed is not None, "loader.load() should never return None"
 
             logger.info(f"Loaded testbed with {len(self.testbed.devices)} devices")
 
@@ -279,7 +280,6 @@ class ConnectionBroker:
         if not self.testbed:
             logger.error("No testbed loaded")
             return None
-
         if hostname not in self.testbed.devices:
             logger.error(f"Device {hostname} not found in testbed")
             return None
@@ -415,7 +415,7 @@ class ConnectionBroker:
         logger.info("Connection broker shutdown complete")
 
     @asynccontextmanager
-    async def run_context(self):
+    async def run_context(self) -> AsyncIterator["ConnectionBroker"]:
         """Context manager for running the broker."""
         try:
             await self.start()

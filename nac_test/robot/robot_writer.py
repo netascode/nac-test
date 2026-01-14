@@ -131,36 +131,6 @@ class RobotWriter:
             # Fallback to original data if conversion fails
             return data
 
-    def _convert_data_model_for_templates(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Convert nested OrderedDict to dict to avoid duplicate dict keys.
-
-        This method performs the same conversion that was previously done per-template,
-        but centralizes it during initialization for performance efficiency.
-
-        Args:
-            data: Raw data model from DataMerger (may contain OrderedDict structures)
-
-        Returns:
-            Converted data model safe for Jinja template rendering
-
-        Note:
-            JSON round-trip approach is used as it's safe for all serializable data
-            and handles nested OrderedDict structures reliably.
-        """
-        logger.debug(
-            "Converting data model for template rendering (one-time conversion)"
-        )
-        try:
-            # JSON round-trip to convert nested OrderedDict to dict
-            # This preserves all data while fixing duplicate key issues (e.g., 'tag' fields)
-            converted_data = cast(dict[str, Any], json.loads(json.dumps(data)))
-            logger.debug("Data model conversion completed successfully")
-            return converted_data
-        except Exception as e:
-            logger.warning(f"Data model conversion failed: {e}. Using original data.")
-            # Fallback to original data if conversion fails
-            return data
-
     def render_template(
         self,
         template_path: Path,
@@ -404,7 +374,7 @@ class RobotWriter:
                         next_template = True
                         path = params[2].split(".")
                         attr = params[3]
-                        elem = self.template_data
+                        elem: Any = self.template_data
                         for p in path:
                             try:
                                 elem = elem.get(p, {})

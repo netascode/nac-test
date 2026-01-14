@@ -1,4 +1,3 @@
-
 """Unicon connection utilities for manual Connection object construction.
 
 This module provides helper functions to construct Unicon Connection objects
@@ -7,13 +6,14 @@ when the 'start' parameter is missing or improperly formatted.
 """
 
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 def build_connection_start_command(
-    protocol: str,
-    host: str,
+    protocol: str | None,
+    host: str | None,
     port: int | None = None,
     username: str | None = None,
     ssh_options: str | None = None,
@@ -145,7 +145,7 @@ def _build_console_command(device_path: str) -> str:
 
 
 def build_connection_start_list(
-    connections: list[dict],
+    connections: list[dict[str, Any]],
 ) -> list[str]:
     """Build a list of start commands for multi-connection scenarios.
 
