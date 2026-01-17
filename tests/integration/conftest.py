@@ -1,13 +1,15 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Pytest fixtures for integration tests."""
 
-import pytest
 import os
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
-from tests.integration.mocks.mock_server import MockAPIServer
 
+import pytest
+
+from tests.integration.mocks.mock_server import MockAPIServer
 
 # Path to the default YAML configuration file
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "fixtures" / "mock_api_config.yaml"

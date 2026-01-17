@@ -116,9 +116,8 @@ def get_pythonpath_for_tests(
 
     Creates a complete PYTHONPATH that includes:
     1. The appropriate import path for the test directory
-    2. The parent directory of pyats_common (if found in test_dir tree)
-    3. Any additional directories (e.g., nac-test source)
-    4. The existing PYTHONPATH from the environment
+    2. Any additional directories (e.g., nac-test source)
+    3. The existing PYTHONPATH from the environment
 
     Args:
         test_dir: Directory containing test files

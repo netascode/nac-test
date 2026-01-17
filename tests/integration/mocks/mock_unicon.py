@@ -3,14 +3,15 @@
 # Unauthorized copying of this file, via any medium is strictly prohibited
 # Proprietary and confidential
 
-import os
 import argparse
-import yaml
+import os
+from typing import Any
 
+import yaml
 from unicon.mock import mock_device
 
 
-def extend_mock_data(mock_data, mock_data_dir):
+def extend_mock_data(mock_data: dict[str, Any], mock_data_dir: str) -> dict[str, Any]:
     for file in os.listdir(mock_data_dir):
         if file.endswith(".yaml"):
             # for file named: <OS>_mock_data_<state_name>.yaml, get the state name

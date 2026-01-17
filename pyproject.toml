@@ -85,6 +85,7 @@ dev = [
     "types-aiofiles>=24.1.0.20250822",
     "types-markdown>=3.8.0.20250809",
     "types-pyyaml>=6.0.12.20250822",
+    "types-requests>=2.32.0.20250809",
 ]
 
 [tool.coverage.run]
@@ -97,7 +98,7 @@ omit = ["*/__main__.py"]
 [tool.ruff]
 target-version = "py310"
 line-length = 88
-extend-exclude = ["tests/fixtures/"]
+extend-exclude = ["tests/fixtures/", "tests/integration/fixtures/"]
 
 [tool.ruff.lint]
 select = [
@@ -150,7 +151,7 @@ warn_unused_configs = true
 warn_unused_ignores = false
 warn_unreachable = true
 show_error_context = true
-exclude = ["^tests/fixtures/"]
+exclude = ["^tests/fixtures/", "^tests/integration/fixtures/"]
 
 [tool.pytest.ini_options]
 markers = ["unit", "integration"]

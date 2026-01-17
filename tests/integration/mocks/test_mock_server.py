@@ -1,4 +1,5 @@
 import requests
+
 from tests.integration.mocks.mock_server import MockAPIServer
 
 
@@ -30,7 +31,7 @@ def test_mock_api_server(mock_api_server: MockAPIServer) -> None:
     assert "error" in response.json()
 
 
-def test_nac_test_with_mock_api_complex_urls(mock_api_server) -> None:
+def test_nac_test_with_mock_api_complex_urls(mock_api_server: MockAPIServer) -> None:
     """Test complex URLs with query parameters (like ACI API).
 
     This demonstrates handling URLs with special characters and query strings.
@@ -53,7 +54,7 @@ def test_nac_test_with_mock_api_complex_urls(mock_api_server) -> None:
     assert data["totalCount"] == "3"
 
 
-def test_nac_test_with_mock_api_dynamic(mock_api_server) -> None:
+def test_nac_test_with_mock_api_dynamic(mock_api_server: MockAPIServer) -> None:
     """Example test showing dynamic endpoint configuration.
 
     You can add endpoints at runtime even with YAML config loaded.

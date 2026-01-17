@@ -6,10 +6,11 @@ participating in cluster operations by ensuring their operational status is "ava
 """
 
 import time
-from pyats import aetest
 
 import jmespath
-from pyats_common.apic_base_test import APICTestBase
+from nac_test_pyats_common.aci.test_base import APICTestBase
+from pyats import aetest
+
 from nac_test.pyats_core.reporting.types import ResultStatus
 
 TITLE = "Verify APIC Appliance Operational Status"

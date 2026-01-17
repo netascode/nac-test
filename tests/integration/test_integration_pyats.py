@@ -14,7 +14,7 @@ from tests.integration.mocks.mock_server import MockAPIServer
 pytestmark = pytest.mark.integration
 
 
-def validate_pyats_results(output_dir: str | Path) -> None:
+def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) -> None:
     """Validate PyATS test results from results.json files.
 
     Args:
@@ -51,12 +51,14 @@ def validate_pyats_results(output_dir: str | Path) -> None:
             f"No tests were run in {results_file.parent.name}: total={summary['total']}"
         )
 
-        # Verify 100% success rate
-        assert summary["success_rate"] == 100.0, (
-            f"Tests failed in {results_file.parent.name}: "
-            f"success_rate={summary['success_rate']}%, "
-            f"passed={summary['passed']}, failed={summary['failed']}, "
-            f"errored={summary['errored']}"
+        # Verify passed and failed counts
+        assert summary["passed"] == passed, (
+            f"Unexpected passed count in {results_file.parent.name}: "
+            f"expected={passed}, actual={summary['passed']}"
+        )
+        assert summary["failed"] == failed, (
+            f"Unexpected failed count in {results_file.parent.name}: "
+            f"expected={failed}, actual={summary['failed']}"
         )
 
 
@@ -73,17 +75,36 @@ def test_nac_test_pyats(tmpdir: str) -> None:
     pytest.fail("not yet finished")
 
 
-def test_nac_test_qs(mock_api_server: MockAPIServer) -> None:
+@pytest.mark.parametrize(
+    "arch,passed,failed,expected_rc",
+    [
+        ("aci", 1, 0, 0),
+    ],
+)
+def test_nac_test_quicksilver_aci(
+    mock_api_server: MockAPIServer,
+    tmpdir: str,
+    arch: str,
+    passed: int,
+    failed: int,
+    expected_rc: int,
+) -> None:
+    """
+    Verify nac-test with quicksilver-generated tests against mock server
+    """
     runner = CliRunner()
-    os.environ["ACI_URL"] = mock_api_server.url
-    os.environ["ACI_USERNAME"] = "does not matter"
-    os.environ["ACI_PASSWORD"] = "does not matter"
-    os.environ["CONTROLLER_TYPE"] = "ACI"
+    os.environ[f"{arch.upper()}_URL"] = mock_api_server.url
+    os.environ[f"{arch.upper()}_USERNAME"] = "does not matter"
+    os.environ[f"{arch.upper()}_PASSWORD"] = "does not matter"
 
     data_path = "tests/integration/fixtures/data/"
-    templates_path = "tests/integration/fixtures/templates_quicksilver/"
+    templates_path = f"tests/integration/fixtures/templates_qs_{arch}/"
 
-    output_dir = "/tmp/nac-test-qs"  # use static output dir for easier debugging
+    # output_dir = tmpdir
+    output_dir = (
+        f"/tmp/nac-test-qs_{arch}"  # use static output dir for easier debugging
+    )
+
     result: Result = runner.invoke(
         nac_test.cli.main.app,
         [
@@ -98,7 +119,6 @@ def test_nac_test_qs(mock_api_server: MockAPIServer) -> None:
         ],
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == expected_rc
 
-    # Verify PyATS test results using helper function
-    validate_pyats_results(output_dir)
+    _validate_pyats_results(output_dir, passed, failed)

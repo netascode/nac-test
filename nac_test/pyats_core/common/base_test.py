@@ -292,7 +292,6 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         cause test failures with high step counts.
         """
         try:
-            # raise NotImplementedError("Disable batching reporter for now")
             # Create batching reporter instance
             self.batching_reporter = BatchingReporter(
                 send_callback=self._send_batch_to_pyats,
