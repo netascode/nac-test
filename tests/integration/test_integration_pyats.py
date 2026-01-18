@@ -94,9 +94,10 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
     "arch,passed,failed,expected_rc",
     [
         ("aci", 1, 0, 0),
+        # ("sdwan", 2, 0, 0),
     ],
 )
-def test_nac_test_quicksilver_aci(
+def test_nac_test_pyats_quicksilver(
     mock_api_server: MockAPIServer,
     tmpdir: str,
     arch: str,
@@ -112,8 +113,8 @@ def test_nac_test_quicksilver_aci(
     os.environ[f"{arch.upper()}_USERNAME"] = "does not matter"
     os.environ[f"{arch.upper()}_PASSWORD"] = "does not matter"
 
-    data_path = "tests/integration/fixtures/data/"
-    templates_path = f"tests/integration/fixtures/templates_qs_{arch}/"
+    data_path = f"tests/integration/fixtures/data_pyats_qs/{arch}"
+    templates_path = f"tests/integration/fixtures/templates_pyats_qs/{arch}/"
 
     output_dir = tmpdir
     # output_dir = (
