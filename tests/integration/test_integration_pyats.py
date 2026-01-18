@@ -62,19 +62,6 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
         )
 
 
-@pytest.mark.skip("not yet finished")
-def test_nac_test_pyats(tmpdir: str) -> None:
-    runner = CliRunner()
-    data_path = "tests/integration/fixtures/data/"
-    templates_path = "tests/integration/fixtures/templates_pyats/"
-    result = runner.invoke(
-        nac_test.cli.main.app,
-        ["-d", data_path, "-t", templates_path, "-o", tmpdir, "--verbosity", "DEBUG"],
-    )
-    assert result.exit_code == 0
-    pytest.fail("not yet finished")
-
-
 @pytest.mark.parametrize(
     "arch,passed,failed,expected_rc",
     [
