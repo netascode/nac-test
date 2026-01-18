@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 import requests
 
 from tests.integration.mocks.mock_server import MockAPIServer

@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # Copyright (c)  Cisco Systems, Inc. - All Rights Reserved
 # Unauthorized copying of this file, via any medium is strictly prohibited
 # Proprietary and confidential

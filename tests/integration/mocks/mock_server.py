@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Flask mock server for API testing."""
@@ -6,9 +9,10 @@ import json
 import logging
 import re
 import threading
-import yaml
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
+
+import yaml
 from flask import Flask, jsonify, request
 
 # Set up logger for mock server
@@ -54,7 +58,7 @@ class MockAPIServer:
         self.port = port
         self.app = Flask(__name__)
         self.server_thread: threading.Thread | None = None
-        self.endpoint_configs: List[Dict[str, Any]] = []
+        self.endpoint_configs: list[dict[str, Any]] = []
 
         # Configure Flask to suppress startup messages
         werkzeug_log = logging.getLogger("werkzeug")
@@ -115,7 +119,7 @@ class MockAPIServer:
             f"{method_str} '{path_pattern}' ({match_type}) -> {status_code} | {name}"
         )
 
-    def add_endpoints(self, endpoints: List[Dict[str, Any]]) -> None:
+    def add_endpoints(self, endpoints: list[dict[str, Any]]) -> None:
         """Add multiple endpoint configurations at once.
 
         Args:
@@ -163,7 +167,7 @@ class MockAPIServer:
         if not yaml_path.exists():
             raise FileNotFoundError(f"YAML configuration file not found: {yaml_path}")
 
-        with open(yaml_path, "r") as f:
+        with open(yaml_path) as f:
             config = yaml.safe_load(f)
 
         if not config or "endpoints" not in config:

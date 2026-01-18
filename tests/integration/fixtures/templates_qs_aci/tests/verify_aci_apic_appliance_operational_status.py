@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """
 [NRFU]: Verify APIC Appliance Operational Status
 ------------------------------------------------
