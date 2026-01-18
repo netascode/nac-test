@@ -56,6 +56,8 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
 
     assert len(results_files) > 0, f"No results.json files found in {pyats_results_dir}"
 
+    total_passed = total_failed = 0
+
     # Validate each results.json file
     for results_file in results_files:
         with open(results_file) as f:
@@ -80,16 +82,12 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
         assert summary["total"] > 0, (
             f"No tests were run in {results_file.parent.name}: total={summary['total']}"
         )
+        total_passed += summary["passed"]
+        total_failed += summary["failed"]
 
-        # Verify passed and failed counts
-        assert summary["passed"] == passed, (
-            f"Unexpected passed count in {results_file.parent.name}: "
-            f"expected={passed}, actual={summary['passed']}"
-        )
-        assert summary["failed"] == failed, (
-            f"Unexpected failed count in {results_file.parent.name}: "
-            f"expected={failed}, actual={summary['failed']}"
-        )
+    # Verify passed and failed counts
+    assert total_passed == passed, f"expected={passed}, actual={total_passed}"
+    assert total_failed == failed, f"expected={failed}, actual={total_failed}"
 
 
 @pytest.mark.parametrize(
