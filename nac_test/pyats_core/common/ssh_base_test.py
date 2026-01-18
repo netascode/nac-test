@@ -152,8 +152,15 @@ class SSHTestBase(NACTestBase):
         self.hostname = hostname
 
         # The rest of the setup is async, we'll run it in the event loop
-        loop = asyncio.get_event_loop()
         try:
+            # Try to get existing event loop, create one if needed
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # No event loop running, create and run async setup
+                asyncio.run(self._async_setup(hostname))
+                return
+            # If we have a running loop, use run_until_complete
             loop.run_until_complete(self._async_setup(hostname))
         except ConnectionError as e:
             # Connection failed - fail the test with clear message
