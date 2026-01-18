@@ -31,6 +31,14 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
 
     # Find all results.json files (can be in api/ or d2d/ subdirs)
     results_files = list(pyats_results_dir.glob("*/results.json"))
+
+    # DEBUG: Print directory structure for CI debugging
+    print(f"\n=== DEBUG: Contents of {pyats_results_dir} ===")
+    import subprocess
+
+    subprocess.run(["find", str(pyats_results_dir), "-type", "f", "-name", "*.json"])
+    print("=== END DEBUG ===\n")
+
     assert len(results_files) > 0, f"No results.json files found in {pyats_results_dir}"
 
     # Validate each results.json file
@@ -45,6 +53,13 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
         )
 
         summary = results_data["report"]["summary"]
+
+        # DEBUG: Print full summary for CI debugging
+        import json
+
+        print(f"\n=== DEBUG: Full results from {results_file.parent.name} ===")
+        print(json.dumps(summary, indent=2))
+        print("=== END DEBUG ===\n")
 
         # Verify tests were run
         assert summary["total"] > 0, (
