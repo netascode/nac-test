@@ -87,10 +87,10 @@ def test_nac_test_quicksilver_aci(
     data_path = "tests/integration/fixtures/data/"
     templates_path = f"tests/integration/fixtures/templates_qs_{arch}/"
 
-    # output_dir = tmpdir
-    output_dir = (
-        f"/tmp/nac-test-qs_{arch}"  # use static output dir for easier debugging
-    )
+    output_dir = tmpdir
+    # output_dir = (
+    #     f"/tmp/nac-test-qs_{arch}"  # use static output dir for easier debugging
+    # )
 
     try:
         result: Result = runner.invoke(
