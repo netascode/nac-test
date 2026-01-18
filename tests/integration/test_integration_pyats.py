@@ -105,20 +105,26 @@ def test_nac_test_quicksilver_aci(
         f"/tmp/nac-test-qs_{arch}"  # use static output dir for easier debugging
     )
 
-    result: Result = runner.invoke(
-        nac_test.cli.main.app,
-        [
-            "-d",
-            data_path,
-            "-t",
-            templates_path,
-            "-o",
-            output_dir,
-            "--verbosity",
-            "DEBUG",
-        ],
-    )
+    try:
+        result: Result = runner.invoke(
+            nac_test.cli.main.app,
+            [
+                "-d",
+                data_path,
+                "-t",
+                templates_path,
+                "-o",
+                output_dir,
+                "--verbosity",
+                "DEBUG",
+            ],
+        )
 
-    assert result.exit_code == expected_rc
+        assert result.exit_code == expected_rc
 
-    _validate_pyats_results(output_dir, passed, failed)
+        _validate_pyats_results(output_dir, passed, failed)
+    finally:
+        # Clean up environment variables
+        del os.environ[f"{arch.upper()}_URL"]
+        del os.environ[f"{arch.upper()}_USERNAME"]
+        del os.environ[f"{arch.upper()}_PASSWORD"]
