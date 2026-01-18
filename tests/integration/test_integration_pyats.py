@@ -36,8 +36,23 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
     print(f"\n=== DEBUG: Contents of {pyats_results_dir} ===")
     import subprocess
 
-    subprocess.run(["find", str(pyats_results_dir), "-type", "f", "-name", "*.json"])
+    subprocess.run(["find", str(pyats_results_dir), "-type", "f"])
     print("=== END DEBUG ===\n")
+
+    # DEBUG: If test errored, try to find and print the error log
+    for results_file in results_files:
+        with open(results_file) as f:
+            results_data = yaml.safe_load(f)
+
+        if results_data.get("report", {}).get("summary", {}).get("errored", 0) > 0:
+            print("\n=== DEBUG: Test ERRORED, searching for error details ===")
+            # Look for TaskLog.* files which contain test execution details
+            log_dir = results_file.parent
+            for log_file in log_dir.glob("*TaskLog*"):
+                print(f"\n--- Contents of {log_file.name} ---")
+                with open(log_file) as f:
+                    print(f.read()[-5000:])  # Print last 5000 chars
+            print("=== END ERROR DEBUG ===\n")
 
     assert len(results_files) > 0, f"No results.json files found in {pyats_results_dir}"
 
@@ -119,8 +134,17 @@ def test_nac_test_quicksilver_aci(
                 output_dir,
                 "--verbosity",
                 "DEBUG",
+                "--verbose",  # Add verbose flag for more PyATS output
             ],
         )
+
+        # DEBUG: Print CLI output for troubleshooting
+        print("\n=== DEBUG: CLI Output ===")
+        print(result.stdout)
+        if result.stderr:
+            print("\n=== DEBUG: CLI Stderr ===")
+            print(result.stderr)
+        print("=== END DEBUG ===\n")
 
         assert result.exit_code == expected_rc
 
