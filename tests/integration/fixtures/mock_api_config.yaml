@@ -331,6 +331,48 @@ endpoints:
       error: "Unauthorized"
       message: "Authentication required"
 
+  # SD-WAN Manager Authentication endpoints
+  - name: "SD-WAN Manager Login"
+    path_pattern: "/j_security_check"
+    match_type: "exact"
+    method: "POST"
+    status_code: 200
+    set_cookies:
+      JSESSIONID: "mock-session-id-12345"
+    response_data: {}
+
+  - name: "SD-WAN Manager XSRF Token"
+    path_pattern: "/dataservice/client/token"
+    match_type: "exact"
+    method: "GET"
+    status_code: 200
+    response_data: "mock-xsrf-token-67890"
+
+  # SD-WAN Manager vEdges endpoint
+  - name: "SD-WAN Manager vEdges List"
+    path_pattern: "/dataservice/system/device/vedges"
+    match_type: "exact"
+    method: "GET"
+    status_code: 200
+    response_data:
+      data:
+        - "host-name": "sd-dc-c8kv-01"
+          configuredSystemIP: "10.0.0.1"
+          "managed-by": "vmanage"
+          configStatusMessage: "In Sync"
+          serialNumber: "ABC123DEF"
+          uuid: "uuid-device-1"
+          deviceModel: "vedge-C8000V"
+          personality: "vedge"
+        - "host-name": "sd-dc-c8kv-02"
+          configuredSystemIP: "10.0.0.2"
+          "managed-by": "vmanage"
+          configStatusMessage: "In Sync"
+          serialNumber: "ABC456GHI"
+          uuid: "uuid-device-2"
+          deviceModel: "vedge-C8000V"
+          personality: "vedge"
+
   # SD-WAN Manager endpoints
   - name: "SD-WAN Manager Device Health"
     path_pattern: "/dataservice/health/devices"

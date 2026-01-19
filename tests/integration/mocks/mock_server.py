@@ -88,6 +88,7 @@ class MockAPIServer:
         response_data: Any = None,
         method: str | None = None,
         match_type: str = "exact",
+        set_cookies: dict[str, str] | None = None,
     ) -> None:
         """Add a mock endpoint configuration.
 
@@ -102,6 +103,7 @@ class MockAPIServer:
                 - "contains": Path contains the pattern
                 - "regex": Pattern is a regular expression
                 - "starts_with": Path starts with the pattern
+            set_cookies: Optional dict of cookies to set in the response
         """
         endpoint_config = {
             "name": name,
@@ -110,6 +112,7 @@ class MockAPIServer:
             "response_data": response_data or {},
             "method": method.upper() if method else None,
             "match_type": match_type,
+            "set_cookies": set_cookies or {},
         }
         self.endpoint_configs.append(endpoint_config)
 
@@ -130,6 +133,7 @@ class MockAPIServer:
                 - response_data: Response data (default: {})
                 - method: HTTP method (optional, default: None = all methods)
                 - match_type: Matching strategy (default: "exact")
+                - set_cookies: Optional dict of cookies to set (default: {})
         """
         for endpoint in endpoints:
             self.add_endpoint(
@@ -139,6 +143,7 @@ class MockAPIServer:
                 response_data=endpoint.get("response_data", {}),
                 method=endpoint.get("method"),
                 match_type=endpoint.get("match_type", "exact"),
+                set_cookies=endpoint.get("set_cookies"),
             )
 
     def load_from_yaml(self, yaml_path: str | Path) -> None:
@@ -266,7 +271,15 @@ class MockAPIServer:
                 else:
                     logger.debug(f"    Response data:\n{response_json}")
 
-                return jsonify(config["response_data"]), config["status_code"]
+                # Create response and set cookies if configured
+                response = jsonify(config["response_data"])
+                for cookie_name, cookie_value in config.get("set_cookies", {}).items():
+                    response.set_cookie(
+                        cookie_name, cookie_value, path="/", httponly=True
+                    )
+                    logger.debug(f"    Set cookie: {cookie_name}={cookie_value}")
+
+                return response, config["status_code"]
             else:
                 logger.debug(
                     f"    [{idx}] no match: '{config['path_pattern']}' ({config['match_type']}) | {config['name']}"
