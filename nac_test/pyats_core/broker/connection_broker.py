@@ -20,6 +20,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
+from ...utils import get_or_create_event_loop
 from ..ssh.command_cache import CommandCache
 
 logger = logging.getLogger(__name__)
@@ -244,7 +245,7 @@ class ConnectionBroker:
             raise ConnectionError(f"Failed to connect to device: {hostname}")
 
         # Execute command in thread pool (since Unicon is synchronous)
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
         try:
             output = await loop.run_in_executor(None, connection.execute, cmd)
             output_str = str(output)
@@ -305,7 +306,7 @@ class ConnectionBroker:
                 logger.info(f"Unicon CLI log will be written to: {logfile_path}")
 
                 # Connect using pyATS testbed with custom logfile location
-                loop = asyncio.get_event_loop()
+                loop = get_or_create_event_loop()
                 await loop.run_in_executor(
                     None,
                     lambda: device.connect(log_stdout=False, logfile=str(logfile_path)),
@@ -337,7 +338,7 @@ class ConnectionBroker:
         if hostname in self.connected_devices:
             try:
                 connection = self.connected_devices[hostname]
-                loop = asyncio.get_event_loop()
+                loop = get_or_create_event_loop()
                 await loop.run_in_executor(None, connection.disconnect)
                 logger.info(f"Disconnected from device: {hostname}")
             except Exception as e:

@@ -13,6 +13,7 @@ from pyats import aetest
 from nac_test.pyats_core.broker.broker_client import BrokerClient, BrokerCommandExecutor
 from nac_test.pyats_core.common.base_test import NACTestBase
 from nac_test.pyats_core.ssh.command_cache import CommandCache
+from nac_test.utils import get_or_create_event_loop
 from nac_test.utils.device_validation import validate_device_inventory
 
 
@@ -173,7 +174,7 @@ class SSHTestBase(NACTestBase):
             if self.testbed_device:
                 # Connect via testbed to enable Genie features
                 self.logger.info(f"Connecting to device {hostname} via PyATS testbed")
-                loop = asyncio.get_event_loop()
+                loop = get_or_create_event_loop()
                 await loop.run_in_executor(None, self.testbed_device.connect)
                 # Store the testbed device connection for command execution
                 self.connection = self.testbed_device
@@ -288,7 +289,7 @@ class SSHTestBase(NACTestBase):
                 output = await connection.execute(command)
             else:
                 # Testbed device or legacy connection - run in thread pool
-                loop = asyncio.get_event_loop()
+                loop = get_or_create_event_loop()
                 output = await loop.run_in_executor(None, connection.execute, command)
 
             # Convert output to string to ensure consistent type
@@ -364,8 +365,7 @@ class SSHTestBase(NACTestBase):
             PyATS framework. The loop was created in setup() and will be
             properly cleaned up by the framework.
         """
-        # Get the existing event loop that was created in setup
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
 
         try:
             # Call the base class generic orchestration
