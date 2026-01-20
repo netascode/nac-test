@@ -24,7 +24,7 @@ jobs:
         run: uv tool install bandit[toml]
 
       - name: Run bandit security scan
-        run: bandit -r nac_test/ -ll -f json -o bandit-security-report.json
+        run: bandit -c pyproject.toml -r nac_test/ -ll -f json -o bandit-security-report.json
         
       - name: Upload security report
         uses: actions/upload-artifact@v6
