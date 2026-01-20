@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Core data models shared across the nac-test framework.
@@ -6,9 +9,9 @@ This module contains data structures that are used by multiple components
 of the framework (PyATS, Robot, CLI, etc.).
 """
 
-from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 
 class TestStatus(str, Enum):
@@ -28,7 +31,7 @@ class TestResult:
 
     test_name: str
     status: TestStatus
-    duration: Optional[float] = None
-    message: Optional[str] = None
-    error: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    duration: float | None = None
+    message: str | None = None
+    error: str | None = None
+    metadata: dict[str, Any] | None = None
