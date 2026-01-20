@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
 """Integration tests for TestDiscovery with TestTypeResolver.
 
 This module validates the integration between TestDiscovery and TestTypeResolver,

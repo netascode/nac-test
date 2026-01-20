@@ -14,8 +14,14 @@ from typing import (
     Generic,
     Protocol,
     TypeVar,
-    Union,
 )
+
+# Python 3.10 doesn't allow inheriting from both TypedDict and Generic.
+# Use typing_extensions for 3.10 compatibility, standard typing for 3.11+.
+if sys.version_info >= (3, 11):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 # Python 3.10 doesn't allow inheriting from both TypedDict and Generic.
 # Use typing_extensions for 3.10 compatibility, standard typing for 3.11+.
@@ -119,14 +125,14 @@ class ExtensibleVerificationResult(BaseVerificationResultOptional):
 
 
 # Comprehensive Union type for all verification results
-VerificationResult = Union[
+VerificationResult = (
     # Base structured results
-    BaseVerificationResultOptional,
+    BaseVerificationResultOptional
     # Generic extensible results
-    GenericVerificationResult[Any, Any],
-    ExtensibleVerificationResult,
+    | GenericVerificationResult[Any, Any]
+    | ExtensibleVerificationResult
     # Protocol-compatible results
-    VerificationResultProtocol,
+    | VerificationResultProtocol
     # Fallback for maximum flexibility
-    dict[str, Any],
-]
+    | dict[str, Any]
+)
