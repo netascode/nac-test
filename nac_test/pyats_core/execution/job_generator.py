@@ -1,11 +1,14 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """PyATS job file generation functionality."""
 
-from pathlib import Path
-from typing import List, Dict, Any
-import textwrap
 import json
+import textwrap
+from pathlib import Path
+from typing import Any
 
 from nac_test.pyats_core.constants import DEFAULT_TEST_TIMEOUT
 
@@ -23,7 +26,7 @@ class JobGenerator:
         self.max_workers = max_workers
         self.output_dir = Path(output_dir)
 
-    def generate_job_file_content(self, test_files: List[Path]) -> str:
+    def generate_job_file_content(self, test_files: list[Path]) -> str:
         """Generate the content for a PyATS job file.
 
         Args:
@@ -71,7 +74,7 @@ class JobGenerator:
         return job_content
 
     def generate_device_centric_job(
-        self, device: Dict[str, Any], test_files: List[Path]
+        self, device: dict[str, Any], test_files: list[Path]
     ) -> str:
         """Generate PyATS job file content for a specific device.
 
