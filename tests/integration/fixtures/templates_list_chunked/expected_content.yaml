@@ -1,0 +1,61 @@
+# used to verify the actual content of the rendered file
+#
+ABC/test1_002.robot: |
+  *** Settings ***
+  Documentation   Test1
+
+  *** Test Cases ***
+
+  Test ABC
+      Should Be Equal   value   value
+
+  Test ABC Child Child7
+      Should Be Equal   value   value
+
+  Test ABC Child Child8
+      Should Be Equal   value   value
+
+  Test ABC Child Child9
+      Should Be Equal   value   value
+
+  Test ABC Child Child10
+      Should Be Equal   value   value
+
+  Test ABC Child Child11
+      Should Be Equal   value   value
+
+ABC/test1_001.robot: |
+  *** Settings ***
+  Documentation   Test1
+
+  *** Test Cases ***
+
+  Test ABC
+      Should Be Equal   value   value
+
+  Test ABC Child Child1
+      Should Be Equal   value   value
+
+  Test ABC Child Child3
+      Should Be Equal   value   value
+
+  Test ABC Child Child4
+      Should Be Equal   value   value
+
+  Test ABC Child Child5
+      Should Be Equal   value   value
+
+  Test ABC Child Child6
+      Should Be Equal   value   value
+
+DEF/test1_001.robot: |
+  *** Settings ***
+  Documentation   Test1
+
+  *** Test Cases ***
+
+  Test DEF
+      Should Be Equal   value   value
+
+  Test DEF Child Child1
+      Should Be Equal   value   value

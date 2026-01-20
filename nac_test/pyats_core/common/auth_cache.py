@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
 """Generic file-based authentication token caching for parallel processes."""
 
 import fcntl
@@ -45,7 +43,7 @@ class AuthCache:
         cache_dir = Path(AUTH_CACHE_DIR)
         cache_dir.mkdir(exist_ok=True)
 
-        url_hash = hashlib.md5(url.encode()).hexdigest()
+        url_hash = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
         cache_file = cache_dir / f"{controller_type}_{url_hash}.json"
         lock_file = cache_dir / f"{controller_type}_{url_hash}.lock"
 

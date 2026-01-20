@@ -6,6 +6,7 @@
 """Combined orchestrator for sequential PyATS and Robot Framework test execution."""
 
 import logging
+import os
 from pathlib import Path
 
 import typer
@@ -46,6 +47,8 @@ class CombinedOrchestrator:
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
+        processes: int | None = None,
+        extra_args: list[str] | None = None,
     ):
         """Initialize the combined orchestrator.
 
@@ -60,6 +63,8 @@ class CombinedOrchestrator:
             exclude_tags: Tags to exclude (Robot only)
             render_only: Only render tests without executing (Robot only)
             dry_run: Dry run mode (Robot only)
+            processes: Number of parallel processes for Robot test execution (Robot only)
+            extra_args: Additional Robot Framework arguments to pass to pabot (Robot only)
             max_parallel_devices: Max parallel devices for PyATS D2D tests
             minimal_reports: Only include command outputs for failed/errored tests (PyATS only)
             verbosity: Logging verbosity level
@@ -78,6 +83,8 @@ class CombinedOrchestrator:
         self.exclude_tags = exclude_tags or []
         self.render_only = render_only
         self.dry_run = dry_run
+        self.processes = processes
+        self.extra_args = extra_args or []
 
         # PyATS-specific parameters
         self.max_parallel_devices = max_parallel_devices
@@ -97,7 +104,11 @@ class CombinedOrchestrator:
             typer.secho(
                 f"\n❌ Controller detection failed:\n{e}", fg=typer.colors.RED, err=True
             )
-            raise typer.Exit(1) from None
+            # Progressive disclosure: clean output for customers, full context for developers
+            debug_mode = os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"
+            if debug_mode:
+                raise typer.Exit(1) from e  # Developer: full exception context
+            raise typer.Exit(1) from None  # Customer: clean output
 
     def run_tests(self) -> None:
         """Main entry point for combined test execution.
@@ -148,6 +159,8 @@ class CombinedOrchestrator:
                 exclude_tags=self.exclude_tags,
                 render_only=self.render_only,
                 dry_run=self.dry_run,
+                processes=self.processes,
+                extra_args=self.extra_args,
                 verbosity=self.verbosity,
             )
             robot_orchestrator.run_tests()
@@ -194,6 +207,8 @@ class CombinedOrchestrator:
                 exclude_tags=self.exclude_tags,
                 render_only=self.render_only,
                 dry_run=self.dry_run,
+                processes=self.processes,
+                extra_args=self.extra_args,
                 verbosity=self.verbosity,
             )
             robot_orchestrator2.run_tests()

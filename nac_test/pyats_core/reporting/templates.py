@@ -13,7 +13,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from jinja2 import BaseLoader, Environment, FileSystemLoader, StrictUndefined
+from jinja2 import (
+    BaseLoader,
+    Environment,
+    FileSystemLoader,
+    StrictUndefined,
+    select_autoescape,
+)
 
 from nac_test.pyats_core.reporting.types import ResultStatus
 
@@ -256,6 +262,7 @@ def get_jinja_environment(directory: str | Path | None = None) -> Environment:
         trim_blocks=True,
         lstrip_blocks=True,
         undefined=StrictUndefined,
+        autoescape=select_autoescape(enabled_extensions=("html", "xml", "j2")),
     )
     environment.filters["format_datetime"] = format_datetime
     environment.filters["format_duration"] = format_duration

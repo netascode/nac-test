@@ -28,6 +28,7 @@ import os
 import pickle
 import queue
 import sys
+import tempfile
 import threading
 import time
 from collections.abc import Callable
@@ -202,8 +203,9 @@ class OverflowQueue:
         self.lock = threading.Lock()  # For memory tracking
 
         # Overflow to disk
+        default_overflow = os.path.join(tempfile.gettempdir(), "nac_test_overflow")
         self.overflow_dir = overflow_dir or Path(
-            os.environ.get("NAC_TEST_OVERFLOW_DIR", "/tmp/nac_test_overflow")
+            os.environ.get("NAC_TEST_OVERFLOW_DIR", default_overflow)
         )
         self.overflow_dir.mkdir(parents=True, exist_ok=True)
         self.overflow_file_count = 0

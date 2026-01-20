@@ -38,7 +38,9 @@ dependencies = [
     "robotframework-requests>=0.9.7",
     "ruamel.yaml>=0.18.15",
     "typer>=0.17.4",
-    "setuptools<81",    # required for RESTinstance which needs pkg_resources (sic)
+    "setuptools<81", # required for RESTinstance which needs pkg_resources (sic)
+    "scrapli-netconf>=2026.1.12",
+    "asyncssh>=2.22.0",
     # PyATS & Genie Ecosystem
     "pyats>=25.5",
     "genie>=25.5",
@@ -96,6 +98,7 @@ omit = ["*/__main__.py"]
 [tool.ruff]
 target-version = "py310"
 line-length = 88
+extend-exclude = ["tests/fixtures/"]
 
 [tool.ruff.lint]
 select = [
@@ -109,6 +112,7 @@ select = [
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)
+    "UP038",  # Use `X | Y` in `isinstance` call instead of `(X, Y)`
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -147,6 +151,7 @@ warn_unused_configs = true
 warn_unused_ignores = false
 warn_unreachable = true
 show_error_context = true
+exclude = ["^tests/fixtures/"]
 
 [tool.pytest.ini_options]
 markers = ["unit", "integration"]

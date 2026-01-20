@@ -91,3 +91,6 @@ report.html
 # Claude configuration
 .claude/
 CLAUDE.md
+
+# bandit security report, if generated
+bandit-security-report.json

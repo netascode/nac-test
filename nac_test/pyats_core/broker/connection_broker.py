@@ -15,7 +15,7 @@ import json
 import logging
 import os
 import tempfile
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -41,15 +41,17 @@ class ConnectionBroker:
             testbed_path: Path to consolidated testbed YAML file
             socket_path: Path for Unix domain socket (auto-generated if None)
             max_connections: Maximum concurrent connections to maintain
-            output_dir: Directory for Unicon CLI logs (defaults to /tmp if None)
+            output_dir: Directory for Unicon CLI logs (defaults to system temp dir if None)
         """
         self.testbed_path = testbed_path
         self.socket_path = socket_path or self._generate_socket_path()
         self.max_connections = max_connections
-        self.output_dir = Path(output_dir) if output_dir else Path("/tmp")
+        self.output_dir = (
+            Path(output_dir) if output_dir else Path(tempfile.gettempdir())
+        )
 
         # Connection management
-        self.testbed = None
+        self.testbed: Any | None = None
         self.connected_devices: dict[str, Any] = {}  # hostname -> device connection
         self.connection_locks: dict[str, asyncio.Lock] = {}
         self.connection_semaphore = asyncio.Semaphore(max_connections)
@@ -92,6 +94,7 @@ class ConnectionBroker:
 
             # Load testbed using pyATS loader
             self.testbed = loader.load(str(self.testbed_path))
+            assert self.testbed is not None, "loader.load() should never return None"
 
             logger.info(f"Loaded testbed with {len(self.testbed.devices)} devices")  # type: ignore[attr-defined]
 
@@ -283,7 +286,7 @@ class ConnectionBroker:
             logger.error("No testbed loaded")
             return None
 
-        if hostname not in self.testbed.devices:  # type: ignore[unreachable, attr-defined]
+        if hostname not in self.testbed.devices:
             logger.error(f"Device {hostname} not found in testbed")
             return None
 
@@ -418,7 +421,7 @@ class ConnectionBroker:
         logger.info("Connection broker shutdown complete")
 
     @asynccontextmanager
-    async def run_context(self) -> AsyncGenerator["ConnectionBroker", None]:
+    async def run_context(self) -> AsyncIterator["ConnectionBroker"]:
         """Context manager for running the broker."""
         try:
             await self.start()
