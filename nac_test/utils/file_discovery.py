@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """File discovery utilities for locating data files in the directory tree."""
 
 import logging
@@ -18,7 +21,7 @@ def find_data_file(
     for the file in each level's subdirectories (data/, config/, etc).
 
     Args:
-        filename: Name of the file to find (e.g., "test_inventory.yaml").
+        filename: Name of the file to find (e.g., "config.yaml").
         start_path: Directory to start searching from. Defaults to cwd.
         search_dirs: Subdirectories to check at each level.
             Defaults to ["data", "config"].
@@ -28,10 +31,10 @@ def find_data_file(
         Path object to the found file, or None if not found.
 
     Example:
-        >>> inventory_path = find_data_file("test_inventory.yaml")
-        >>> if inventory_path:
-        ...     with open(inventory_path) as f:
-        ...         inventory = yaml.safe_load(f)
+        >>> config_path = find_data_file("config.yaml")
+        >>> if config_path:
+        ...     with open(config_path) as f:
+        ...         config = yaml.safe_load(f)
     """
     # Set defaults
     if start_path is None:

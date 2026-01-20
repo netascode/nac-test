@@ -1,10 +1,14 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Environment variable utilities for nac-test framework."""
 
 import os
 import sys
-from typing import List, Optional, Callable
+from collections.abc import Callable
+
 from nac_test.utils.terminal import terminal
 
 
@@ -13,10 +17,10 @@ class EnvironmentValidator:
 
     @staticmethod
     def check_required_vars(
-        required_vars: List[str],
+        required_vars: list[str],
         exit_on_missing: bool = True,
-        custom_formatter: Optional[Callable[[List[str]], str]] = None,
-    ) -> List[str]:
+        custom_formatter: Callable[[list[str]], str] | None = None,
+    ) -> list[str]:
         """Check for required environment variables.
 
         Args:
@@ -45,7 +49,7 @@ class EnvironmentValidator:
         return missing
 
     @staticmethod
-    def format_missing_vars_error(missing_vars: List[str]) -> str:
+    def format_missing_vars_error(missing_vars: list[str]) -> str:
         """Format a generic error message for missing environment variables.
 
         Args:
@@ -134,7 +138,7 @@ class EnvironmentValidator:
         ]
 
         # Use terminal's controller-specific formatter
-        def controller_formatter(missing: List[str]) -> str:
+        def controller_formatter(missing: list[str]) -> str:
             return terminal.format_env_var_error(missing, controller_type)
 
         EnvironmentValidator.check_required_vars(

@@ -1,45 +1,46 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Main PyATS orchestration logic for nac-test."""
 
-import sys
-import os
-import tempfile
-from typing import List, Dict, Any, Optional
-import logging
-from datetime import datetime
 import asyncio
-from nac_test.utils.path_setup import get_pythonpath_for_tests
+import logging
+import os
+import sys
+import tempfile
+from datetime import datetime
 from pathlib import Path
-import yaml
+from typing import Any
 
+import yaml  # type: ignore[import-untyped]
+
+from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
     DEFAULT_CPU_MULTIPLIER,
-    MEMORY_PER_WORKER_GB,
     MAX_WORKERS_HARD_LIMIT,
+    MEMORY_PER_WORKER_GB,
 )
-from nac_test.pyats_core.discovery import TestDiscovery, DeviceInventoryDiscovery
+from nac_test.pyats_core.discovery import DeviceInventoryDiscovery, TestDiscovery
 from nac_test.pyats_core.execution import (
     JobGenerator,
-    SubprocessRunner,
     OutputProcessor,
+    SubprocessRunner,
 )
 from nac_test.pyats_core.execution.device import DeviceExecutor
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
-from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.progress import ProgressReporter
 from nac_test.pyats_core.reporting.multi_archive_generator import (
     MultiArchiveReportGenerator,
 )
 from nac_test.pyats_core.reporting.summary_printer import SummaryPrinter
-from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
 from nac_test.pyats_core.reporting.utils.archive_aggregator import ArchiveAggregator
+from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
+from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
+from nac_test.utils.controller import detect_controller_type
+from nac_test.utils.environment import EnvironmentValidator
+from nac_test.utils.path_setup import get_pythonpath_for_tests
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
-from nac_test.utils.environment import EnvironmentValidator
-from nac_test.utils.cleanup import cleanup_pyats_runtime, cleanup_old_test_outputs
-from nac_test.utils.controller import detect_controller_type
-
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +50,12 @@ class PyATSOrchestrator:
 
     def __init__(
         self,
-        data_paths: List[Path],
+        data_paths: list[Path],
         test_dir: Path,
         output_dir: Path,
         merged_data_filename: str,
         minimal_reports: bool = False,
-        controller_type: Optional[str] = None,
+        controller_type: str | None = None,
     ):
         """Initialize the PyATS orchestrator.
 
@@ -79,9 +80,9 @@ class PyATSOrchestrator:
         self.minimal_reports = minimal_reports
 
         # Track test status by type for combined summary
-        self.api_test_status: Dict[str, Dict[str, Any]] = {}
-        self.d2d_test_status: Dict[str, Dict[str, Any]] = {}
-        self.overall_start_time: Optional[datetime] = None
+        self.api_test_status: dict[str, dict[str, Any]] = {}
+        self.d2d_test_status: dict[str, dict[str, Any]] = {}
+        self.overall_start_time: datetime | None = None
 
         # Use provided controller type or detect it
         if controller_type:
@@ -103,7 +104,7 @@ class PyATSOrchestrator:
         self.max_workers = self._calculate_workers()
 
         # Device parallelism for SSH/D2D tests (can be overridden via CLI)
-        self.max_parallel_devices: Optional[int] = None
+        self.max_parallel_devices: int | None = None
 
         # Note: ProgressReporter will be initialized later with total test count
 
@@ -115,13 +116,13 @@ class PyATSOrchestrator:
 
         # Initialize execution components
         self.job_generator = JobGenerator(self.max_workers, self.output_dir)
-        self.output_processor: Optional[OutputProcessor] = (
+        self.output_processor: OutputProcessor | None = (
             None  # Will be initialized when progress reporter is ready
         )
-        self.subprocess_runner: Optional[SubprocessRunner] = (
+        self.subprocess_runner: SubprocessRunner | None = (
             None  # Will be initialized when output processor is ready
         )
-        self.device_executor: Optional[DeviceExecutor] = (
+        self.device_executor: DeviceExecutor | None = (
             None  # Will be initialized when needed
         )
 
@@ -139,7 +140,7 @@ class PyATSOrchestrator:
 
         return cpu_workers
 
-    def _build_reporter_config(self) -> Dict[str, Any]:
+    def _build_reporter_config(self) -> dict[str, Any]:
         """Build the configuration for PyATS reporters.
 
         This centralizes the reporter setup to use an asynchronous QueueHandler
@@ -184,9 +185,7 @@ class PyATSOrchestrator:
             yaml.dump(reporter_config, f)
         return config_path
 
-    async def _execute_api_tests_standard(
-        self, test_files: List[Path]
-    ) -> Optional[Path]:
+    async def _execute_api_tests_standard(self, test_files: list[Path]) -> Path | None:
         """
         Execute API tests using the standard PyATS job file approach.
 
@@ -255,8 +254,8 @@ class PyATSOrchestrator:
                 os.unlink(job_file_path)
 
     async def _execute_ssh_tests_device_centric(
-        self, test_files: List[Path], devices: List[Dict[str, Any]]
-    ) -> Optional[Path]:
+        self, test_files: list[Path], devices: list[dict[str, Any]]
+    ) -> Path | None:
         """
         Run tests in device-centric mode for SSH.
 
@@ -327,8 +326,8 @@ class PyATSOrchestrator:
             os.environ.pop("NAC_TEST_BROKER_SOCKET", None)
 
     async def _execute_device_tests_with_broker(
-        self, test_files: List[Path], devices: List[Dict[str, Any]]
-    ) -> Optional[Path]:
+        self, test_files: list[Path], devices: list[dict[str, Any]]
+    ) -> Path | None:
         """Execute device tests with broker running."""
 
         # Initialize device executor if not already done
@@ -474,7 +473,7 @@ class PyATSOrchestrator:
         self.progress_reporter = ProgressReporter(
             total_tests=len(test_files), max_workers=self.max_workers
         )
-        self.test_status: Dict[str, Any] = {}
+        self.test_status: dict[str, Any] = {}
         self.start_time = datetime.now()
 
         # Set the test_status reference in progress reporter
@@ -506,6 +505,20 @@ class PyATSOrchestrator:
                 devices = self.device_inventory_discovery.get_device_inventory(
                     d2d_tests
                 )
+
+                # Display any skipped devices
+                skipped = self.device_inventory_discovery.skipped_devices
+                if skipped:
+                    print()  # Blank line before warnings
+                    for skip_info in skipped:
+                        device_id = skip_info.get("device_id", "<unknown>")
+                        reason = skip_info.get("reason", "Unknown error")
+                        print(
+                            terminal.warning(
+                                f"WARNING - Skipping device {device_id}: {reason}"
+                            )
+                        )
+                    print()  # Blank line after warnings
 
                 if devices:
                     print(
@@ -658,7 +671,7 @@ class PyATSOrchestrator:
                         print(f"{f'{archive_type.upper()} Reports:'}   {report_dir}")
             else:
                 # Single archive - show its report location
-                for archive_type, archive_result in result["results"].items():
+                for _archive_type, archive_result in result["results"].items():
                     if archive_result.get("status") == "success":
                         report_dir = Path(archive_result.get("report_dir", ""))
                         summary_report = report_dir / "summary_report.html"

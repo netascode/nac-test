@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test import aliasing - falls back to directory detection.
 
 This fixture tests the documented limitation where import aliasing

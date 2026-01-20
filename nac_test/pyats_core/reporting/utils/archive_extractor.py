@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Archive extraction utilities for PyATS reporting.
@@ -12,7 +15,6 @@ import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ class ArchiveExtractor:
     @staticmethod
     def extract_archive_to_directory(
         archive_path: Path, output_dir: Path, target_subdir: str = "pyats_results/api"
-    ) -> Optional[Path]:
+    ) -> Path | None:
         """Extract PyATS archive to a specific directory.
 
         This is a generic extraction method that works with our multi-archive architecture.
@@ -126,7 +128,7 @@ class ArchiveExtractor:
 
             # Re-create the archive with HTML reports included
             with zipfile.ZipFile(latest_archive, "w", zipfile.ZIP_DEFLATED) as zip_ref:
-                for root, dirs, files in os.walk(temp_path):
+                for root, _dirs, files in os.walk(temp_path):
                     for file in files:
                         file_path = Path(root) / file
                         arcname = file_path.relative_to(temp_path)

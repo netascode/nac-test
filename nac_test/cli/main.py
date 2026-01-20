@@ -1,23 +1,22 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
 import logging
-from typing import Optional
+from datetime import datetime
+from pathlib import Path
+from typing import Annotated
 
 import errorhandler
-
 import typer
-from typing_extensions import Annotated
-
-from pathlib import Path
 
 import nac_test
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.utils.logging import configure_logging, VerbosityLevel
 from nac_test.data_merger import DataMerger
-from datetime import datetime
-
+from nac_test.utils.logging import VerbosityLevel, configure_logging
 
 app = typer.Typer(add_completion=False)
 
@@ -114,7 +113,7 @@ Output = Annotated[
 
 
 Include = Annotated[
-    list[str],
+    list[str] | None,
     typer.Option(
         "-i",
         "--include",
@@ -125,7 +124,7 @@ Include = Annotated[
 
 
 Exclude = Annotated[
-    list[str],
+    list[str] | None,
     typer.Option(
         "-e",
         "--exclude",
@@ -225,13 +224,13 @@ def main(
     output: Output,
     filters: Filters = None,
     tests: Tests = None,
-    include: Include = [],
-    exclude: Exclude = [],
+    include: Include = None,
+    exclude: Exclude = None,
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
     pyats: PyATS = False,
     robot: Robot = False,
-    max_parallel_devices: Optional[MaxParallelDevices] = None,
+    max_parallel_devices: MaxParallelDevices | None = None,
     minimal_reports: MinimalReports = False,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,

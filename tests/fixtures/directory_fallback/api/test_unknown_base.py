@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test in /api/ directory with unknown base for fallback testing.
 
 This fixture has a class with an unknown base class but is located
