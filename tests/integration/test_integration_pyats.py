@@ -81,20 +81,24 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
         total_failed += summary["failed"]
 
     # Verify passed and failed counts
-    assert total_passed == passed, f"passed: expected={passed}, actual={total_passed}"
-    assert total_failed == failed, f"failed: expected={failed}, actual={total_failed}"
+    assert (total_passed, total_failed) == (passed, failed), (
+        f"Test results do not match expected values: "
+        f"expected passed={passed}, failed={failed}; "
+        f"actual passed={total_passed}, failed={total_failed}"
+    )
 
 
 @pytest.mark.parametrize(
-    "arch,passed,failed,expected_rc",
+    "arch,env_prefix,passed,failed,expected_rc",
     [
-        ("aci", 1, 0, 0),
+        ("aci", "ACI", 1, 0, 0),
     ],
 )
 def test_nac_test_pyats_quicksilver_api_only(
     mock_api_server: MockAPIServer,
     tmpdir: str,
     arch: str,
+    env_prefix: str,
     passed: int,
     failed: int,
     expected_rc: int,
@@ -104,9 +108,9 @@ def test_nac_test_pyats_quicksilver_api_only(
     for API-only architectures (i.e. no d2d tests)
     """
     runner = CliRunner()
-    os.environ[f"{arch.upper()}_URL"] = mock_api_server.url
-    os.environ[f"{arch.upper()}_USERNAME"] = "does not matter"
-    os.environ[f"{arch.upper()}_PASSWORD"] = "does not matter"
+    os.environ[f"{env_prefix}_URL"] = mock_api_server.url
+    os.environ[f"{env_prefix}_USERNAME"] = "does not matter"
+    os.environ[f"{env_prefix}_PASSWORD"] = "does not matter"
 
     data_path = f"tests/integration/fixtures/data_pyats_qs/{arch}"
     templates_path = f"tests/integration/fixtures/templates_pyats_qs/{arch}/"
@@ -137,23 +141,25 @@ def test_nac_test_pyats_quicksilver_api_only(
     finally:
         # Clean up environment variables
         for key in [
-            f"{arch.upper()}_URL",
-            f"{arch.upper()}_USERNAME",
-            f"{arch.upper()}_PASSWORD",
+            f"{env_prefix}_URL",
+            f"{env_prefix}_USERNAME",
+            f"{env_prefix}_PASSWORD",
         ]:
             os.environ.pop(key, None)
 
 
 @pytest.mark.parametrize(
-    "arch,passed,failed,expected_rc",
+    "arch,env_prefix,passed,failed,expected_rc",
     [
-        ("sdwan", 3, 0, 0),
+        ("sdwan", "SDWAN", 3, 0, 0),
+        ("catc", "CC", 1, 0, 0),
     ],
 )
 def test_nac_test_pyats_quicksilver_api_d2d(
     mock_api_server: MockAPIServer,
     tmpdir: str,
     arch: str,
+    env_prefix: str,
     passed: int,
     failed: int,
     expected_rc: int,
@@ -189,9 +195,9 @@ def test_nac_test_pyats_quicksilver_api_d2d(
         runner = CliRunner()
 
         # Set up environment for both API (SDWAN_*) and D2D (IOSXE_*) tests
-        os.environ[f"{arch.upper()}_URL"] = mock_api_server.url
-        os.environ[f"{arch.upper()}_USERNAME"] = "does not matter"
-        os.environ[f"{arch.upper()}_PASSWORD"] = "does not matter"
+        os.environ[f"{env_prefix}_URL"] = mock_api_server.url
+        os.environ[f"{env_prefix}_USERNAME"] = "does not matter"
+        os.environ[f"{env_prefix}_PASSWORD"] = "does not matter"
         os.environ["IOSXE_USERNAME"] = "admin"
         os.environ["IOSXE_PASSWORD"] = "admin"
 
@@ -223,9 +229,9 @@ def test_nac_test_pyats_quicksilver_api_d2d(
         finally:
             # Clean up environment
             for key in [
-                f"{arch.upper()}_URL",
-                f"{arch.upper()}_USERNAME",
-                f"{arch.upper()}_PASSWORD",
+                f"{env_prefix}_URL",
+                f"{env_prefix}_USERNAME",
+                f"{env_prefix}_PASSWORD",
                 "IOSXE_USERNAME",
                 "IOSXE_PASSWORD",
             ]:
