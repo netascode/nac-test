@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Utility functions for working with Jinja2 templates.
 
 This module provides Jinja2 environment configuration and custom filters
@@ -8,16 +11,17 @@ Adapted from BRKXAR-2032-test-automation for use in nac-test.
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from jinja2 import BaseLoader, Environment, FileSystemLoader, StrictUndefined
+
 from nac_test.pyats_core.reporting.types import ResultStatus
 
 # Get the absolute path to the templates directory
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
-def format_datetime(dt_str: Union[str, datetime]) -> str:
+def format_datetime(dt_str: str | datetime) -> str:
     """Format an ISO datetime string to a human-readable format with milliseconds.
 
     Args:
@@ -38,7 +42,7 @@ def format_datetime(dt_str: Union[str, datetime]) -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 
-def format_duration(duration_seconds: Union[float, int, None]) -> str:
+def format_duration(duration_seconds: float | int | None) -> str:
     """Format a duration in seconds to a human-readable format.
 
     Uses smart formatting to display durations in the most readable way:
@@ -89,7 +93,7 @@ def format_duration(duration_seconds: Union[float, int, None]) -> str:
     return f"{hours}h {minutes}m"
 
 
-def get_status_style(status: Union[ResultStatus, str]) -> Dict[str, str]:
+def get_status_style(status: ResultStatus | str) -> dict[str, str]:
     """Get the CSS class and display text for a result status.
 
     This function maps ResultStatus enum values to their corresponding
@@ -218,7 +222,7 @@ def format_result_message(message: str) -> str:
     return "\n".join(formatted_lines)
 
 
-def get_jinja_environment(directory: Optional[Union[str, Path]] = None) -> Environment:
+def get_jinja_environment(directory: str | Path | None = None) -> Environment:
     """Create a Jinja2 environment for rendering templates.
 
     Creates a configured Jinja2 environment with custom filters and settings
@@ -240,7 +244,7 @@ def get_jinja_environment(directory: Optional[Union[str, Path]] = None) -> Envir
         >>> env = get_jinja_environment(TEMPLATES_DIR)
         >>> template = env.get_template("test_case/report.html.j2")
     """
-    loader: Union[FileSystemLoader, BaseLoader]
+    loader: FileSystemLoader | BaseLoader
     if directory is not None:
         loader = FileSystemLoader(str(directory))
     else:

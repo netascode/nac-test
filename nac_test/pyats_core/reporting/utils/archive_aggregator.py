@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Archive aggregation utilities for PyATS device-centric testing.
@@ -12,7 +15,6 @@ import shutil
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +24,8 @@ class ArchiveAggregator:
 
     @staticmethod
     async def aggregate_device_archives(
-        device_archives: List[Path], output_dir: Path
-    ) -> Optional[Path]:
+        device_archives: list[Path], output_dir: Path
+    ) -> Path | None:
         """Aggregate multiple device-specific PyATS archives into a single D2D archive.
 
         This method takes individual device archives and combines them into a single
@@ -80,7 +82,7 @@ class ArchiveAggregator:
             with zipfile.ZipFile(
                 aggregated_archive_path, "w", zipfile.ZIP_DEFLATED
             ) as zf:
-                for root, dirs, files in os.walk(temp_dir):
+                for root, _dirs, files in os.walk(temp_dir):
                     for file in files:
                         file_path = Path(root) / file
                         # Calculate archive name relative to temp_dir

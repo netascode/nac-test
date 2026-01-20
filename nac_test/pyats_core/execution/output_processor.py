@@ -1,12 +1,15 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """PyATS output processing functionality."""
 
-import os
-import re
 import json
 import logging
-from typing import Dict, Any, Optional
+import os
+import re
+from typing import Any
 
 from nac_test.pyats_core.progress import ProgressReporter
 from nac_test.utils.terminal import terminal
@@ -19,8 +22,8 @@ class OutputProcessor:
 
     def __init__(
         self,
-        progress_reporter: Optional[ProgressReporter] = None,
-        test_status: Optional[Dict[str, Any]] = None,
+        progress_reporter: ProgressReporter | None = None,
+        test_status: dict[str, Any] | None = None,
     ):
         """Initialize output processor.
 
@@ -62,7 +65,7 @@ class OutputProcessor:
             if self._should_show_line(line):
                 print(line)
 
-    def _handle_progress_event(self, event: Dict[str, Any]) -> None:
+    def _handle_progress_event(self, event: dict[str, Any]) -> None:
         """Handle structured progress event from plugin.
 
         Args:

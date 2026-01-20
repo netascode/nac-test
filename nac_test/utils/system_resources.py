@@ -1,14 +1,16 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """System resource calculation utilities for nac-test."""
 
-import os
-import resource
 import logging
 import multiprocessing as mp
-from typing import Dict
-import psutil
+import os
+import resource
 
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,7 @@ class SystemResourceCalculator:
     """Shared system resource calculation utilities."""
 
     @staticmethod
-    def get_memory_info() -> Dict[str, int]:
+    def get_memory_info() -> dict[str, int]:
         """Get current memory information.
 
         Returns:
@@ -43,7 +45,7 @@ class SystemResourceCalculator:
             }
 
     @staticmethod
-    def get_file_descriptor_limits() -> Dict[str, int]:
+    def get_file_descriptor_limits() -> dict[str, int]:
         """Get current file descriptor limits.
 
         Returns:

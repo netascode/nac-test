@@ -1,70 +1,30 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
+# -*- coding: utf-8 -*-
+
+# Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
+
 import logging
-<<<<<<< HEAD
-import os
-import sys
-from enum import Enum
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-import typer
-=======
-from typing import Optional
-
 import errorhandler
-
 import typer
-from typing_extensions import Annotated
-
-from pathlib import Path
->>>>>>> 903a1a2
 
 import nac_test
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.utils.logging import configure_logging, VerbosityLevel
 from nac_test.data_merger import DataMerger
-from datetime import datetime
+from nac_test.utils.logging import VerbosityLevel, configure_logging
 
-# typer exceptions are BIG (albeit colorful), I feel for a program
-# with this complextiy logging everything is not required, hence disabling
-# them
-app = typer.Typer(add_completion=False, pretty_exceptions_enable=False)
+app = typer.Typer(add_completion=False)
 
 logger = logging.getLogger(__name__)
 
-ORDERING_FILE = "ordering.txt"
+error_handler = errorhandler.ErrorHandler()
 
 
-<<<<<<< HEAD
-def configure_logging(level: str) -> None:
-    if level == "DEBUG":
-        lev = logging.DEBUG
-    elif level == "INFO":
-        lev = logging.INFO
-    elif level == "WARNING":
-        lev = logging.WARNING
-    elif level == "ERROR":
-        lev = logging.ERROR
-    else:
-        lev = logging.CRITICAL
-
-    logging.basicConfig(
-        level=lev, format="%(levelname)s - %(message)s", stream=sys.stdout, force=True
-    )
-
-
-class VerbosityLevel(str, Enum):
-    DEBUG = "DEBUG"
-    INFO = "INFO"
-    WARNING = "WARNING"
-    ERROR = "ERROR"
-    CRITICAL = "CRITICAL"
-
-
-=======
->>>>>>> 903a1a2
 def version_callback(value: bool) -> None:
     if value:
         typer.echo(f"nac-test, version {nac_test.__version__}")
@@ -204,14 +164,6 @@ DryRun = Annotated[
 ]
 
 
-<<<<<<< HEAD
-Processes = Annotated[
-    int | None,
-    typer.Option(
-        "--processes",
-        help="Number of parallel processes for test execution (pabot --processes option), default is max(2, cpu count).",
-        envvar="NAC_TEST_PROCESSES",
-=======
 PyATS = Annotated[
     bool,
     typer.Option(
@@ -250,7 +202,6 @@ MinimalReports = Annotated[
         "--minimal-reports",
         help="Only include detailed command outputs for failed/errored tests in HTML reports (80-95%% artifact size reduction).",
         envvar="NAC_TEST_MINIMAL_REPORTS",
->>>>>>> 903a1a2
     ),
 ]
 
@@ -266,11 +217,8 @@ Version = Annotated[
 ]
 
 
-@app.command(
-    context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
-)
+@app.command()
 def main(
-    ctx: typer.Context,
     data: Data,
     templates: Templates,
     output: Output,
@@ -280,27 +228,9 @@ def main(
     exclude: Exclude = None,
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
-<<<<<<< HEAD
-    processes: Processes = None,
-    verbosity: Verbosity = VerbosityLevel.WARNING,
-    version: Version = False,  # noqa: ARG001
-) -> None:
-    """
-    A CLI tool to render and execute Robot Framework tests using Jinja templating.
-
-    Additional Robot Framework options can be passed at the end of the command to
-    further control test execution (e.g., --variable, --listener, --loglevel).
-    These are appended to the pabot invocation. Pabot-specific options and test
-    files/directories are not supported and will result in an error.
-    """
-    configure_logging(verbosity)
-
-    if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
-        ordering_file = output / ORDERING_FILE
-=======
     pyats: PyATS = False,
     robot: Robot = False,
-    max_parallel_devices: Optional[MaxParallelDevices] = None,
+    max_parallel_devices: MaxParallelDevices | None = None,
     minimal_reports: MinimalReports = False,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,
@@ -391,23 +321,5 @@ def main(
 def exit() -> None:
     if error_handler.fired:
         raise typer.Exit(1)
->>>>>>> 903a1a2
     else:
-        ordering_file = None
-
-    writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
-    writer.write(templates, output, ordering_file=ordering_file)
-    if not render_only:
-        rc = nac_test.pabot.run_pabot(
-            output,
-            include,
-            exclude,
-            processes,
-            dry_run,
-            verbosity == VerbosityLevel.DEBUG,
-            ordering_file=ordering_file,
-            extra_args=ctx.args,
-        )
-    else:
-        rc = 0
-    raise typer.Exit(code=rc)
+        raise typer.Exit(0)

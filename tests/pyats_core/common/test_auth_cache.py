@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Unit tests for nac_test.pyats_core.common.auth_cache module.
@@ -14,7 +17,7 @@ authentication caching for parallel processes. The tests cover:
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Tuple
+from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock
 
 import pytest
@@ -139,7 +142,7 @@ class TestAuthCacheInternal:
         cache_files = list(mock_auth_cache_dir.glob("*.json"))
         assert len(cache_files) == 1
 
-        with open(cache_files[0], "r") as f:
+        with open(cache_files[0]) as f:
             cached_data = json.load(f)
             assert cached_data["token"] == "test-token-123"
             assert (
@@ -190,7 +193,7 @@ class TestAuthCacheInternal:
         cache_files = list(mock_auth_cache_dir.glob("*.json"))
         assert len(cache_files) == 1
 
-        with open(cache_files[0], "r") as f:
+        with open(cache_files[0]) as f:
             cached_data = json.load(f)
             assert cached_data["token"] == "dict-token-456"
             assert cached_data["refresh_token"] == "refresh-789"
@@ -346,7 +349,7 @@ class TestAuthCacheInternal:
         sample_auth_func.assert_called_once()
 
         # Verify cache file was updated
-        with open(cache_file, "r") as f:
+        with open(cache_file) as f:
             updated_data = json.load(f)
             assert updated_data["token"] == "test-token-123"
             assert updated_data["expires_at"] == 1000.0 + 3600 - 60
@@ -405,7 +408,7 @@ class TestAuthCacheInternal:
         sample_dict_auth_func.assert_called_once()
 
         # Verify cache file was updated
-        with open(cache_file, "r") as f:
+        with open(cache_file) as f:
             updated_data = json.load(f)
             assert updated_data["token"] == "dict-token-456"
             assert updated_data["refresh_token"] == "refresh-789"
@@ -455,7 +458,7 @@ class TestAuthCacheInternal:
         sample_auth_func.assert_called_once()
 
         # Verify cache file was recreated with valid content
-        with open(cache_file, "r") as f:
+        with open(cache_file) as f:
             cached_data = json.load(f)
             assert cached_data["token"] == "test-token-123"
 
@@ -684,7 +687,7 @@ class TestAuthCachePublicMethods:
         """
 
         # Arrange
-        def mock_auth_func(url: str, username: str, password: str) -> Tuple[str, int]:
+        def mock_auth_func(url: str, username: str, password: str) -> tuple[str, int]:
             """Mock authentication function for testing."""
             assert url == "https://apic.example.com"
             assert username == "admin"
@@ -707,7 +710,7 @@ class TestAuthCachePublicMethods:
         cache_files = list(mock_auth_cache_dir.glob("*.json"))
         assert len(cache_files) == 1
 
-        with open(cache_files[0], "r") as f:
+        with open(cache_files[0]) as f:
             cached_data = json.load(f)
             assert cached_data["token"] == "backward-compat-token"
 
@@ -732,7 +735,7 @@ class TestAuthCacheIntegration:
         # Arrange
         auth_call_count = 0
 
-        def counting_auth_func() -> Tuple[Dict[str, Any], int]:
+        def counting_auth_func() -> tuple[dict[str, Any], int]:
             """Auth function that counts how many times it's called."""
             nonlocal auth_call_count
             auth_call_count += 1
@@ -777,10 +780,10 @@ class TestAuthCacheIntegration:
         """
 
         # Arrange
-        def auth_func_1() -> Tuple[Dict[str, Any], int]:
+        def auth_func_1() -> tuple[dict[str, Any], int]:
             return {"token": "controller1-token"}, 3600
 
-        def auth_func_2() -> Tuple[Dict[str, Any], int]:
+        def auth_func_2() -> tuple[dict[str, Any], int]:
             return {"token": "controller2-token"}, 3600
 
         # Act
@@ -819,10 +822,10 @@ class TestAuthCacheIntegration:
         """
 
         # Arrange
-        def auth_func_apic() -> Tuple[Dict[str, Any], int]:
+        def auth_func_apic() -> tuple[dict[str, Any], int]:
             return {"token": "apic-token"}, 3600
 
-        def auth_func_cc() -> Tuple[Dict[str, Any], int]:
+        def auth_func_cc() -> tuple[dict[str, Any], int]:
             return {"token": "cc-token"}, 3600
 
         # Act
@@ -887,7 +890,7 @@ class TestAuthCacheIntegration:
 
         auth_call_count = 0
 
-        def counting_auth_func() -> Tuple[Dict[str, Any], int]:
+        def counting_auth_func() -> tuple[dict[str, Any], int]:
             """Auth function that counts calls."""
             nonlocal auth_call_count
             auth_call_count += 1
@@ -937,7 +940,7 @@ class TestAuthCacheErrorHandling:
         """
 
         # Arrange
-        def failing_auth_func() -> Tuple[Dict[str, Any], int]:
+        def failing_auth_func() -> tuple[dict[str, Any], int]:
             raise ValueError("Authentication failed")
 
         # Act & Assert

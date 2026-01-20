@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """Connection broker service for managing persistent device connections.
 
@@ -14,9 +15,10 @@ import json
 import logging
 import os
 import tempfile
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import Any
 
 from ..ssh.command_cache import CommandCache
 
@@ -28,10 +30,10 @@ class ConnectionBroker:
 
     def __init__(
         self,
-        testbed_path: Optional[Path] = None,
-        socket_path: Optional[Path] = None,
+        testbed_path: Path | None = None,
+        socket_path: Path | None = None,
         max_connections: int = 50,
-        output_dir: Optional[Path] = None,
+        output_dir: Path | None = None,
     ):
         """Initialize the connection broker.
 
@@ -48,16 +50,16 @@ class ConnectionBroker:
 
         # Connection management
         self.testbed = None
-        self.connected_devices: Dict[str, Any] = {}  # hostname -> device connection
-        self.connection_locks: Dict[str, asyncio.Lock] = {}
+        self.connected_devices: dict[str, Any] = {}  # hostname -> device connection
+        self.connection_locks: dict[str, asyncio.Lock] = {}
         self.connection_semaphore = asyncio.Semaphore(max_connections)
 
         # Command caching - shared across all clients
-        self.command_cache: Dict[str, CommandCache] = {}  # hostname -> CommandCache
+        self.command_cache: dict[str, CommandCache] = {}  # hostname -> CommandCache
 
         # Socket server
-        self.server: Optional[asyncio.Server] = None
-        self.active_clients: Set[asyncio.StreamWriter] = set()
+        self.server: asyncio.Server | None = None
+        self.active_clients: set[asyncio.StreamWriter] = set()
 
         # Shutdown flag
         self._shutdown_event = asyncio.Event()
@@ -91,10 +93,10 @@ class ConnectionBroker:
             # Load testbed using pyATS loader
             self.testbed = loader.load(str(self.testbed_path))
 
-            logger.info(f"Loaded testbed with {len(self.testbed.devices)} devices")
+            logger.info(f"Loaded testbed with {len(self.testbed.devices)} devices")  # type: ignore[attr-defined]
 
             # Initialize connection locks for all devices
-            for hostname in self.testbed.devices:
+            for hostname in self.testbed.devices:  # type: ignore[attr-defined]
                 self.connection_locks[hostname] = asyncio.Lock()
 
         except Exception as e:
@@ -159,7 +161,7 @@ class ConnectionBroker:
             writer.close()
             await writer.wait_closed()
 
-    async def _process_request(self, message: Dict[str, Any]) -> Dict[str, Any]:
+    async def _process_request(self, message: dict[str, Any]) -> dict[str, Any]:
         """Process a client request and return response."""
         try:
             command = message.get("command")
@@ -257,7 +259,7 @@ class ConnectionBroker:
             await self._disconnect_device(hostname)
             raise
 
-    async def _get_connection(self, hostname: str) -> Optional[Any]:
+    async def _get_connection(self, hostname: str) -> Any | None:
         """Get or create connection to device."""
         if hostname not in self.connection_locks:
             self.connection_locks[hostname] = asyncio.Lock()
@@ -275,13 +277,13 @@ class ConnectionBroker:
             # Create new connection
             return await self._create_connection(hostname)
 
-    async def _create_connection(self, hostname: str) -> Optional[Any]:
+    async def _create_connection(self, hostname: str) -> Any | None:
         """Create new connection to device using testbed."""
         if not self.testbed:
             logger.error("No testbed loaded")
             return None
 
-        if hostname not in self.testbed.devices:
+        if hostname not in self.testbed.devices:  # type: ignore[unreachable, attr-defined]
             logger.error(f"Device {hostname} not found in testbed")
             return None
 
@@ -358,7 +360,7 @@ class ConnectionBroker:
         except Exception:
             return False
 
-    async def _get_broker_status(self) -> Dict[str, Any]:
+    async def _get_broker_status(self) -> dict[str, Any]:
         """Get broker status information."""
         # Collect cache statistics for all devices
         cache_stats = {}
@@ -416,7 +418,7 @@ class ConnectionBroker:
         logger.info("Connection broker shutdown complete")
 
     @asynccontextmanager
-    async def run_context(self):
+    async def run_context(self) -> AsyncGenerator["ConnectionBroker", None]:
         """Context manager for running the broker."""
         try:
             await self.start()

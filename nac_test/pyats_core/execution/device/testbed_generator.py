@@ -1,16 +1,18 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
 
 """PyATS testbed generation functionality."""
 
-import yaml
-from typing import Dict, Any, List
+from typing import Any
+
+import yaml  # type: ignore[import-untyped]
 
 
 class TestbedGenerator:
     """Generates PyATS testbed YAML files for device connections."""
 
     @staticmethod
-    def generate_testbed_yaml(device: Dict[str, Any]) -> str:
+    def generate_testbed_yaml(device: dict[str, Any]) -> str:
         """Generate a PyATS testbed YAML for a single device.
 
         Creates a minimal testbed with just the device information needed for connection.
@@ -33,8 +35,8 @@ class TestbedGenerator:
             "port": device.get("port", 22),
         }
 
-        # Override protocol/port if connection_options is present and pased
-        # This allows per-device SSH port/protocol customization from test_inventory.yaml
+        # Override protocol/port if connection_options is present
+        # This allows per-device SSH port/protocol customization
         if device.get("connection_options"):
             opts = device["connection_options"]
             if "protocol" in opts:
@@ -75,10 +77,10 @@ class TestbedGenerator:
         }
 
         # Convert to YAML
-        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
+        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)  # type: ignore[no-any-return]
 
     @staticmethod
-    def generate_consolidated_testbed_yaml(devices: List[Dict[str, Any]]) -> str:
+    def generate_consolidated_testbed_yaml(devices: list[dict[str, Any]]) -> str:
         """Generate a PyATS testbed YAML for multiple devices.
 
         Creates a consolidated testbed containing all devices for use by the
@@ -151,4 +153,4 @@ class TestbedGenerator:
             }
 
         # Convert to YAML
-        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
+        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)  # type: ignore[no-any-return]

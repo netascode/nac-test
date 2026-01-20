@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Invalid test file with both API and D2D classes.
 
 This fixture is intentionally invalid - it contains classes that inherit from
