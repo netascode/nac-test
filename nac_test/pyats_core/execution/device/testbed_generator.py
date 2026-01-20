@@ -42,14 +42,14 @@ class TestbedGenerator:
                 "port": device.get("port", 22),
             }
 
-            # Override protocol/port if connection_options is present and pased
-            # This allows per-device SSH port/protocol customization from test_inventory.yaml
-            if device.get("connection_options"):
-                opts = device["connection_options"]
-                if "protocol" in opts:
-                    connection_args["protocol"] = opts["protocol"]
-                if "port" in opts:
-                    connection_args["port"] = opts["port"]
+        # Override protocol/port if connection_options is present
+        # This allows per-device SSH port/protocol customization
+        if device.get("connection_options"):
+            opts = device["connection_options"]
+            if "protocol" in opts:
+                connection_args["protocol"] = opts["protocol"]
+            if "port" in opts:
+                connection_args["port"] = opts["port"]
 
             # Add optional SSH arguments if provided
             if device.get("ssh_options"):
@@ -84,7 +84,7 @@ class TestbedGenerator:
         }
 
         # Convert to YAML
-        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
+        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)  # type: ignore[no-any-return]
 
     @staticmethod
     def generate_consolidated_testbed_yaml(devices: list[dict[str, Any]]) -> str:
@@ -166,4 +166,4 @@ class TestbedGenerator:
             }
 
         # Convert to YAML
-        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
+        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)  # type: ignore[no-any-return]

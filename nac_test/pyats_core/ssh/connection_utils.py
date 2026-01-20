@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
+
+# -*- coding: utf-8 -*-
+
+# -*- coding: utf-8 -*-
+
 """Unicon connection utilities for manual Connection object construction.
 
 This module provides helper functions to construct Unicon Connection objects
@@ -180,8 +185,8 @@ def build_connection_start_list(
     for i, conn in enumerate(connections):
         try:
             cmd = build_connection_start_command(
-                protocol=conn.get("protocol"),
-                host=conn.get("host"),
+                protocol=conn["protocol"],
+                host=conn["host"],
                 port=conn.get("port"),
                 username=conn.get("username"),
                 ssh_options=conn.get("ssh_options"),

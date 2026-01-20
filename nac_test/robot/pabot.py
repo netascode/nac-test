@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
+
 import logging
 from pathlib import Path
 
@@ -87,7 +88,7 @@ def run_pabot(
     """Run pabot"""
     include = include or []
     exclude = exclude or []
-    robot_args = []
+    robot_args: list[str] = []
     pabot_args = ["--pabotlib", "--pabotlibport", "0"]
 
     if ordering_file and ordering_file.exists():

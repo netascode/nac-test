@@ -509,6 +509,20 @@ class PyATSOrchestrator:
                     d2d_tests
                 )
 
+                # Display any skipped devices
+                skipped = self.device_inventory_discovery.skipped_devices
+                if skipped:
+                    print()  # Blank line before warnings
+                    for skip_info in skipped:
+                        device_id = skip_info.get("device_id", "<unknown>")
+                        reason = skip_info.get("reason", "Unknown error")
+                        print(
+                            terminal.warning(
+                                f"WARNING - Skipping device {device_id}: {reason}"
+                            )
+                        )
+                    print()  # Blank line after warnings
+
                 if devices:
                     print(
                         f"Found {len(d2d_tests)} D2D test(s) - using device-centric execution"

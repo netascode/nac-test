@@ -107,7 +107,7 @@ class TestBuildConnectionStartCommand:
     def test_none_protocol(self) -> None:
         """Test error handling for None protocol."""
         with pytest.raises(ValueError, match="Protocol cannot be None or empty"):
-            build_connection_start_command(None, "10.90.41.178")
+            build_connection_start_command(None, "10.90.41.178")  # type: ignore[arg-type]
 
     def test_empty_host(self) -> None:
         """Test error handling for empty host."""
@@ -117,7 +117,7 @@ class TestBuildConnectionStartCommand:
     def test_none_host(self) -> None:
         """Test error handling for None host."""
         with pytest.raises(ValueError, match="Host cannot be None or empty"):
-            build_connection_start_command("ssh", None)
+            build_connection_start_command("ssh", None)  # type: ignore[arg-type]
 
 
 class TestBuildSshCommand:

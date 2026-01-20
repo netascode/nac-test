@@ -97,10 +97,10 @@ class ConnectionBroker:
             self.testbed = loader.load(str(self.testbed_path))
             assert self.testbed is not None, "loader.load() should never return None"
 
-            logger.info(f"Loaded testbed with {len(self.testbed.devices)} devices")
+            logger.info(f"Loaded testbed with {len(self.testbed.devices)} devices")  # type: ignore[attr-defined]
 
             # Initialize connection locks for all devices
-            for hostname in self.testbed.devices:
+            for hostname in self.testbed.devices:  # type: ignore[attr-defined]
                 self.connection_locks[hostname] = asyncio.Lock()
 
         except Exception as e:
