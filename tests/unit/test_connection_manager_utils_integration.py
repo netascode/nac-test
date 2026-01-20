@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Unit tests for ConnectionManager integration with connection_utils.
@@ -6,8 +9,9 @@ These tests verify that the ConnectionManager correctly uses connection_utils
 to resolve the "list index out of range" error when creating Connection objects.
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
 
