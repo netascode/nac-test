@@ -1,14 +1,17 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Combined orchestrator for sequential PyATS and Robot Framework test execution."""
 
 import logging
 from pathlib import Path
-from typing import List, Optional, Tuple
+
 import typer
 
-from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.pyats_core.discovery import TestDiscovery
+from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.logging import VerbosityLevel
@@ -28,17 +31,17 @@ class CombinedOrchestrator:
 
     def __init__(
         self,
-        data_paths: List[Path],
+        data_paths: list[Path],
         templates_dir: Path,
         output_dir: Path,
         merged_data_filename: str,
-        filters_path: Optional[Path] = None,
-        tests_path: Optional[Path] = None,
-        include_tags: Optional[List[str]] = None,
-        exclude_tags: Optional[List[str]] = None,
+        filters_path: Path | None = None,
+        tests_path: Path | None = None,
+        include_tags: list[str] | None = None,
+        exclude_tags: list[str] | None = None,
         render_only: bool = False,
         dry_run: bool = False,
-        max_parallel_devices: Optional[int] = None,
+        max_parallel_devices: int | None = None,
         minimal_reports: bool = False,
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
         dev_pyats_only: bool = False,
@@ -94,7 +97,7 @@ class CombinedOrchestrator:
             typer.secho(
                 f"\n❌ Controller detection failed:\n{e}", fg=typer.colors.RED, err=True
             )
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
 
     def run_tests(self) -> None:
         """Main entry point for combined test execution.
@@ -198,7 +201,7 @@ class CombinedOrchestrator:
         # Summary
         self._print_execution_summary(has_pyats, has_robot)
 
-    def _discover_test_types(self) -> Tuple[bool, bool]:
+    def _discover_test_types(self) -> tuple[bool, bool]:
         """Discover which test types are present in the templates directory.
 
         Returns:
