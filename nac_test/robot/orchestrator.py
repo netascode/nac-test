@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Robot Framework orchestration logic for nac-test.
@@ -8,15 +11,15 @@ pattern as PyATSOrchestrator.
 """
 
 import logging
+from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 import typer
 
-from nac_test.robot.robot_writer import RobotWriter
 from nac_test.robot.pabot import run_pabot
+from nac_test.robot.robot_writer import RobotWriter
 from nac_test.utils.logging import VerbosityLevel
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +36,14 @@ class RobotOrchestrator:
 
     def __init__(
         self,
-        data_paths: List[Path],
+        data_paths: list[Path],
         templates_dir: Path,
         output_dir: Path,
         merged_data_filename: str,
-        filters_path: Optional[Path] = None,
-        tests_path: Optional[Path] = None,
-        include_tags: Optional[List[str]] = None,
-        exclude_tags: Optional[List[str]] = None,
+        filters_path: Path | None = None,
+        tests_path: Path | None = None,
+        include_tags: list[str] | None = None,
+        exclude_tags: list[str] | None = None,
         render_only: bool = False,
         dry_run: bool = False,
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
