@@ -40,5 +40,5 @@ class RealTest(SSHTestBase):
     def test_real_method(self) -> None:
         """Test that only real classes are detected."""
         # Comment with NACTestBase shouldn't matter
-        fake_base = "NACTestBase"  # String with base name shouldn't matter
+        _fake_base = "NACTestBase"  # String with base name shouldn't matter
         pass
