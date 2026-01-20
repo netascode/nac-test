@@ -1,16 +1,35 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
 
-import os
 import filecmp
+import os
+from collections.abc import Generator
+from unittest.mock import patch
 
-from typer.testing import CliRunner
 import pytest
+from typer.testing import CliRunner
 
 import nac_test.cli.main
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(autouse=True)
+def mock_controller_detection() -> Generator[None, None, None]:
+    """Mock controller detection for all integration tests.
+
+    These tests only validate template rendering and don't need
+    actual controller credentials. The mock prevents detection
+    failures when no controller environment variables are set.
+    """
+    with patch(
+        "nac_test.combined_orchestrator.detect_controller_type", return_value="TEST"
+    ):
+        yield
 
 
 def test_nac_test(tmpdir: str) -> None:
