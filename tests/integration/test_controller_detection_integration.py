@@ -1,8 +1,12 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Integration test for controller detection across the framework."""
 
 from pathlib import Path
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.utils.controller import detect_controller_type
