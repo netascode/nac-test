@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
 """Archive extraction utilities for PyATS reporting.
 
 This module handles extraction of PyATS archives and preservation of HTML reports

@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
 """Unit tests for nac_test.pyats_core.ssh.connection_utils module."""
 
 from typing import Any

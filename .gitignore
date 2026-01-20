@@ -85,20 +85,12 @@ output.xml
 log.html
 report.html
 
-logs/
-
-# Robot artifacts
-output.xml
-log.html
-report.html
-
 # Pabot
 .pabotsuitenames
 
-<<<<<<< HEAD
-.claude/
-=======
 # Claude configuration
 .claude/
 CLAUDE.md
->>>>>>> 903a1a2
+
+# bandit security report, if generated
+bandit-security-report.json
