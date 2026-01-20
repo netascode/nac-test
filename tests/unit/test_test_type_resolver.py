@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Unit tests for TestTypeResolver.
 
 This module tests the TestTypeResolver class which is responsible for detecting
@@ -28,7 +31,6 @@ from nac_test.pyats_core.discovery.test_type_resolver import (
     NoRecognizedBaseError,
     TestTypeResolver,
 )
-
 
 # Get the fixtures directory path
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
