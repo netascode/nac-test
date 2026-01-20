@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Step interceptor for PyATS reporter message batching.
@@ -13,20 +16,22 @@ The interceptor:
     - Provides fallback to original behavior on errors
 """
 
-import os
 import logging
-from typing import Any, Callable, Dict, Optional, Type
+import os
+from collections.abc import Callable
 from functools import wraps
 from types import TracebackType
+from typing import Any
 
 from pyats.aetest.steps.implementation import Step
+
 from nac_test.pyats_core.reporting.batching_reporter import BatchingReporter
 
 logger = logging.getLogger(__name__)
 
 # Module-level variables for global state
 # These are set by NACTestBase during setup
-batching_reporter: Optional[BatchingReporter] = None
+batching_reporter: BatchingReporter | None = None
 interception_enabled: bool = False
 interception_error_count: int = 0
 MAX_INTERCEPTION_ERRORS: int = 10
@@ -52,8 +57,8 @@ class StepInterceptor:
         self.error_count = 0
 
         # Store original methods (will be set when installing interceptors)
-        self.original_enter: Optional[Callable[..., Any]] = None
-        self.original_exit: Optional[Callable[..., Any]] = None
+        self.original_enter: Callable[..., Any] | None = None
+        self.original_exit: Callable[..., Any] | None = None
 
         logger.debug("StepInterceptor initialized")
 
@@ -174,9 +179,9 @@ class StepInterceptor:
         @wraps(original_exit)
         def wrapped_exit(
             step_self: Step,
-            exc_type: Optional[Type[BaseException]],
-            exc_value: Optional[BaseException],
-            traceback: Optional[TracebackType],
+            exc_type: type[BaseException] | None,
+            exc_value: BaseException | None,
+            traceback: TracebackType | None,
         ) -> Any:
             """Wrapped __exit__ that intercepts step completion.
 
@@ -425,7 +430,7 @@ class StepInterceptor:
             )
             self.uninstall_interceptors()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get interceptor statistics.
 
         Returns:

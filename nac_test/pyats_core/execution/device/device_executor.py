@@ -1,19 +1,23 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Device-centric test execution functionality."""
 
 import asyncio
-import tempfile
-import logging
-from pathlib import Path
-from typing import List, Any, Optional
-import os
 import json
+import logging
+import os
+import tempfile
+from pathlib import Path
+from typing import Any
+
+from nac_test.pyats_core.execution.job_generator import JobGenerator
+from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
+from nac_test.utils.path_setup import get_pythonpath_for_tests
 
 from .testbed_generator import TestbedGenerator
-from nac_test.utils.path_setup import get_pythonpath_for_tests
-from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
-from nac_test.pyats_core.execution.job_generator import JobGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +51,9 @@ class DeviceExecutor:
     async def run_device_job_with_semaphore(
         self,
         device: dict[str, Any],
-        test_files: List[Path],
+        test_files: list[Path],
         semaphore: asyncio.Semaphore,
-    ) -> Optional[Path]:
+    ) -> Path | None:
         """Run PyATS tests for a specific device with semaphore control.
 
         This method:

@@ -1,12 +1,16 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Progress reporting for PyATS test execution."""
 
+import logging
 import threading
 import time
 from datetime import datetime
-import logging
-from typing import Dict, Any
+from typing import Any
+
 from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
@@ -19,7 +23,7 @@ class ProgressReporter:
         self.start_time = time.time()
         self.total_tests = total_tests
         self.max_workers = max_workers
-        self.test_status: Dict[str, Dict[str, Any]] = {}
+        self.test_status: dict[str, dict[str, Any]] = {}
         self.test_counter = 0  # Global test ID counter
         self.current_test_id = 0
         self.lock = threading.Lock()

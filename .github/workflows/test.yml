@@ -5,6 +5,11 @@ on:
   push:
     branches:
       - main
+      # Temporary: release/pyats-integration-v1.1-beta is the MVP feature branch
+      # that all PyATS integration PRs merge into before eventually going to main.
+      # This ensures CI runs on the integrated state after each merge.
+      # Remove this line once the branch is merged to main.
+      - release/pyats-integration-v1.1-beta
 
 jobs:
   security:
@@ -24,7 +29,7 @@ jobs:
         run: uv tool install bandit[toml]
 
       - name: Run bandit security scan
-        run: bandit -r nac_test/ -ll -f json -o bandit-security-report.json
+        run: bandit -c pyproject.toml -r nac_test/ -ll -f json -o bandit-security-report.json
         
       - name: Upload security report
         uses: actions/upload-artifact@v6

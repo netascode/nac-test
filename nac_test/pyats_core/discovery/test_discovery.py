@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """PyATS test discovery functionality.
@@ -14,8 +17,8 @@ structure and will be automatically classified based on their base class
 inheritance (e.g., NACTestBase -> api, SSHTestBase -> d2d).
 """
 
-from pathlib import Path
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 

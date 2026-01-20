@@ -1,12 +1,18 @@
-from nac_test.pyats_core.common.base_test import NACTestBase
-from nac_test.pyats_core.ssh.command_cache import CommandCache
-from nac_test.pyats_core.broker.broker_client import BrokerClient, BrokerCommandExecutor
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 import asyncio
-from pyats import aetest
+import json
 import logging
 import os
-import json
-from typing import Any, Optional, Callable, Coroutine
+from collections.abc import Callable, Coroutine
+from typing import Any
+
+from pyats import aetest
+
+from nac_test.pyats_core.broker.broker_client import BrokerClient, BrokerCommandExecutor
+from nac_test.pyats_core.common.base_test import NACTestBase
+from nac_test.pyats_core.ssh.command_cache import CommandCache
 from nac_test.utils.device_validation import validate_device_inventory
 
 
@@ -22,7 +28,7 @@ class SSHTestBase(NACTestBase):
     """
 
     @property
-    def testbed(self) -> Optional[Any]:
+    def testbed(self) -> Any | None:
         """Access the PyATS testbed object if available.
 
         When tests are run via PyATS with --testbed-file, the testbed is loaded
@@ -46,7 +52,7 @@ class SSHTestBase(NACTestBase):
         return None
 
     @property
-    def testbed_device(self) -> Optional[Any]:
+    def testbed_device(self) -> Any | None:
         """Access the current device from the PyATS testbed.
 
         This provides a convenient way to access the current device's testbed
@@ -186,7 +192,7 @@ class SSHTestBase(NACTestBase):
             # Raise with a clear message that will be caught by the calling method
             raise ConnectionError(
                 f"Device connection failed: {hostname}\nError: {str(e)}"
-            )
+            ) from e
 
         # 2. Create and attach the command cache
         self.command_cache = CommandCache(hostname)
@@ -201,8 +207,8 @@ class SSHTestBase(NACTestBase):
         # hostname already set in setup_ssh_context
 
     def parse_output(
-        self, command: str, output: Optional[str] = None
-    ) -> Optional[dict[str, Any]]:
+        self, command: str, output: str | None = None
+    ) -> dict[str, Any] | None:
         """Parse command output using Genie parser if available.
 
         This method attempts to use Genie parsers when a PyATS testbed is available.

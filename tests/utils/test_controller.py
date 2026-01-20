@@ -1,7 +1,10 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Tests for controller type detection utilities."""
 
 import os
-from typing import Generator
+from collections.abc import Generator
 from unittest.mock import patch
 
 import pytest

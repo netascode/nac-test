@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Simple D2D test with direct SSHTestBase inheritance.
 
 This fixture tests the most basic D2D/SSH test detection scenario - a single

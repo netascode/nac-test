@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test type resolver for NAC-Test framework.
 
 This module provides automated test type detection for PyATS test files, determining

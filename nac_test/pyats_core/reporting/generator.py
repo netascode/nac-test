@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Async HTML report generator for nac-test PyATS framework.
 
 This module provides asynchronous report generation capabilities that are
@@ -21,7 +24,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import aiofiles  # type: ignore[import-untyped]
 
@@ -73,14 +76,14 @@ class ReportGenerator:
         self.temp_data_dir = output_dir / "html_report_data_temp"
         self.max_concurrent = max_concurrent
         self.minimal_reports = minimal_reports
-        self.failed_reports: List[str] = []
+        self.failed_reports: list[str] = []
 
         # Initialize Jinja2 environment using our templates module
         from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR
 
         self.env = get_jinja_environment(TEMPLATES_DIR)
 
-    async def generate_all_reports(self) -> Dict[str, Any]:
+    async def generate_all_reports(self) -> dict[str, Any]:
         """Generate all reports with parallelization and error handling.
 
         This method finds all test result JSON files and generates HTML
@@ -154,7 +157,7 @@ class ReportGenerator:
             "summary_report": str(summary_path) if summary_path else None,
         }
 
-    async def _read_jsonl_results(self, jsonl_path: Path) -> Dict[str, Any]:
+    async def _read_jsonl_results(self, jsonl_path: Path) -> dict[str, Any]:
         """Read JSONL file asynchronously with robust error handling.
 
         Reads a streaming JSONL file produced by TestResultCollector and reconstructs
@@ -175,7 +178,7 @@ class ReportGenerator:
         summary = {}
 
         try:
-            async with aiofiles.open(jsonl_path, "r") as f:
+            async with aiofiles.open(jsonl_path) as f:
                 async for line in f:
                     line = line.strip()
                     if not line:
@@ -234,7 +237,7 @@ class ReportGenerator:
 
     async def _generate_report_safe(
         self, result_file: Path, semaphore: asyncio.Semaphore
-    ) -> Optional[Path]:
+    ) -> Path | None:
         """Generate a single report with error handling.
 
         This method wraps the actual report generation with error handling
@@ -323,7 +326,7 @@ class ReportGenerator:
             + f"\n\n... truncated ({len(lines) - max_lines} lines omitted) ..."
         )
 
-    async def _cleanup_jsonl_files(self, files: List[Path]) -> None:
+    async def _cleanup_jsonl_files(self, files: list[Path]) -> None:
         """Clean up JSONL files after successful report generation.
 
         Removes the intermediate JSONL files to save disk space. This is
@@ -339,8 +342,8 @@ class ReportGenerator:
                 logger.warning(f"Failed to delete {file}: {e}")
 
     async def _generate_summary_report(
-        self, report_paths: List[Path], result_files: List[Path]
-    ) -> Optional[Path]:
+        self, report_paths: list[Path], result_files: list[Path]
+    ) -> Path | None:
         """Generate summary report from individual reports.
 
         Creates an aggregated summary report showing all test results

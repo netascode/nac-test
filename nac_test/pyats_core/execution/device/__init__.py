@@ -1,9 +1,12 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """PyATS device execution components."""
 
-from .testbed_generator import TestbedGenerator
 from .device_executor import DeviceExecutor
+from .testbed_generator import TestbedGenerator
 
 __all__ = [
     "TestbedGenerator",
