@@ -1,10 +1,14 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 """Generic connection pooling for HTTP connections."""
 
 import threading
+from typing import Any
+
 import httpx
-from typing import Dict, Optional, Any
 
 
 class ConnectionPool:
@@ -31,9 +35,9 @@ class ConnectionPool:
 
     def get_client(
         self,
-        base_url: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None,
-        timeout: Optional[httpx.Timeout] = None,
+        base_url: str | None = None,
+        headers: dict[str, str] | None = None,
+        timeout: httpx.Timeout | None = None,
         verify: bool = True,
     ) -> httpx.AsyncClient:
         """Get an async HTTP client with custom headers and timeout
@@ -51,7 +55,7 @@ class ConnectionPool:
             timeout = httpx.Timeout(30.0)
 
         # Build kwargs dict, only including base_url if it's not None
-        client_kwargs: Dict[str, Any] = {
+        client_kwargs: dict[str, Any] = {
             "limits": self.limits,
             "headers": headers or {},
             "timeout": timeout,
