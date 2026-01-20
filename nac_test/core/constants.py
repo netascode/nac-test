@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
 """Core constants shared across the nac-test framework."""
 
 import os
@@ -24,3 +22,7 @@ DEFAULT_SSH_CONCURRENCY = int(os.environ.get("NAC_SSH_CONCURRENCY", "20"))
 
 # Progress reporting
 PROGRESS_UPDATE_INTERVAL = 0.5  # seconds
+
+# Debug mode - enables progressive disclosure of error details
+# Set NAC_TEST_DEBUG=true for developer-level error context
+DEBUG_MODE = os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"

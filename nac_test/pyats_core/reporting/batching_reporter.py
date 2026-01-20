@@ -28,12 +28,15 @@ import os
 import pickle
 import queue
 import sys
+import tempfile
 import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from nac_test.core.constants import DEBUG_MODE
 
 logger = logging.getLogger(__name__)
 
@@ -202,8 +205,9 @@ class OverflowQueue:
         self.lock = threading.Lock()  # For memory tracking
 
         # Overflow to disk
+        default_overflow = os.path.join(tempfile.gettempdir(), "nac_test_overflow")
         self.overflow_dir = overflow_dir or Path(
-            os.environ.get("NAC_TEST_OVERFLOW_DIR", "/tmp/nac_test_overflow")
+            os.environ.get("NAC_TEST_OVERFLOW_DIR", default_overflow)
         )
         self.overflow_dir.mkdir(parents=True, exist_ok=True)
         self.overflow_file_count = 0
@@ -633,9 +637,7 @@ class BatchAccumulator:
         self.default_batch_size = default_batch_size
         self.current_batch_size = default_batch_size
         self.flush_timeout = flush_timeout
-        self.debug_mode = (
-            debug_mode or os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"
-        )
+        self.debug_mode = debug_mode or DEBUG_MODE
 
         # Thread safety
         self.lock = threading.Lock()
@@ -944,11 +946,7 @@ class BatchingReporter:
         self.flush_timeout = flush_timeout or float(
             os.environ.get("NAC_TEST_BATCH_TIMEOUT", "0.5")
         )
-        self.debug_mode = (
-            debug_mode
-            if debug_mode is not None
-            else (os.environ.get("NAC_TEST_DEBUG", "").lower() == "true")
-        )
+        self.debug_mode = debug_mode if debug_mode is not None else DEBUG_MODE
 
         # Initialize batch accumulator
         self.accumulator = BatchAccumulator(

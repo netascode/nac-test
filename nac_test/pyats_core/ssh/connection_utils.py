@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 def build_connection_start_command(
-    protocol: str,
-    host: str,
+    protocol: str | None,
+    host: str | None,
     port: int | None = None,
     username: str | None = None,
     ssh_options: str | None = None,

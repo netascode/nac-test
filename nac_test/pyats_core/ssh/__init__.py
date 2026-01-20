@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
 """SSH testing infrastructure for nac-test.
 
 This module provides generic SSH-based testing capabilities that can be used

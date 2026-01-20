@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
 """PyATS HTML reporting module for nac-test."""
 
 from nac_test.pyats_core.reporting.collector import TestResultCollector

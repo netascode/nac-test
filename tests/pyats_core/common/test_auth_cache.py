@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
 """Unit tests for nac_test.pyats_core.common.auth_cache module.
 
 This module tests the AuthCache class which provides generic file-based

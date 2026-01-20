@@ -3,6 +3,7 @@
 
 """Integration test for controller detection across the framework."""
 
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -14,6 +15,19 @@ from nac_test.utils.controller import detect_controller_type
 
 class TestControllerDetectionIntegration:
     """Integration tests for controller detection across components."""
+
+    @pytest.fixture(autouse=True)
+    def clean_controller_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Clear all controller-related environment variables before each test.
+
+        Ensures tests run in isolation regardless of the caller's shell environment.
+        """
+        for key in list(os.environ.keys()):
+            if any(
+                prefix in key
+                for prefix in ["ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_"]
+            ):
+                monkeypatch.delenv(key, raising=False)
 
     def test_end_to_end_controller_detection(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
