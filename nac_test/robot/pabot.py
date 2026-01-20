@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
@@ -9,12 +12,16 @@ import pabot.pabot
 
 def run_pabot(
     path: Path,
-    include: list[str] = [],
-    exclude: list[str] = [],
+    include: list[str] | None = None,
+    exclude: list[str] | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> None:
     """Run pabot"""
+    if include is None:
+        include = []
+    if exclude is None:
+        exclude = []
     args = ["--pabotlib", "--pabotlibport", "0"]
     if verbose:
         args.append("--verbose")
