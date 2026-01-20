@@ -197,15 +197,15 @@ class RobotWriter:
                         next_template = True
                         path = params[2].split(".")
                         attr = params[3]
-                        elem = self.template_data
+                        elem: Any = self.template_data
                         for p in path:
                             elem = elem.get(p, {})
                         if not isinstance(elem, list):
                             continue
                         for item in elem:
                             value = str(item.get(attr))
-                            if value is None:
-                                continue
+                            if value is None:  # type: ignore[unreachable]
+                                continue  # type: ignore[unreachable]
                             extra: dict[str, Any] = {}
                             if "[" in params[4]:
                                 index = params[4].split("[")[1].split("]")[0]
