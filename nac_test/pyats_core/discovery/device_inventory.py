@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Device inventory discovery for SSH-based tests.
 
 This module handles discovering device inventory from test architectures
