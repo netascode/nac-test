@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Connection broker service for managing persistent device connections.
 
 This service runs as a long-lived daemon process that:
