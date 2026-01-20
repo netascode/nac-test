@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 # -*- coding: utf-8 -*-
 
 # Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
@@ -10,10 +13,15 @@ import pathlib
 import re
 import shutil
 import sys
-from typing import Any, Dict, cast
-
-from jinja2 import Undefined, ChainableUndefined, Environment, FileSystemLoader  # type: ignore
 from pathlib import Path
+from typing import Any, cast
+
+from jinja2 import (  # type: ignore
+    ChainableUndefined,
+    Environment,
+    FileSystemLoader,
+    Undefined,
+)
 
 from nac_test.data_merger import DataMerger
 
@@ -32,16 +40,16 @@ class RobotWriter:
         data_paths: list[Path],
         filters_path: Path | None,
         tests_path: Path | None,
-        include_tags: list[str] = [],
-        exclude_tags: list[str] = [],
+        include_tags: list[str] | None = None,
+        exclude_tags: list[str] | None = None,
     ) -> None:
         self.data = DataMerger.merge_data_files(data_paths)
         # Convert OrderedDict to dict once during initialization instead of per-template
         # This eliminates expensive JSON round-trip serialization for each template render
         self.template_data = self._convert_data_model_for_templates(self.data)
         self.filters: dict[str, Any] = {}
-        self.include_tags = include_tags
-        self.exclude_tags = exclude_tags
+        self.include_tags = include_tags if include_tags is not None else []
+        self.exclude_tags = exclude_tags if exclude_tags is not None else []
         if filters_path:
             logger.info("Loading filters")
             for filename in os.listdir(filters_path):
@@ -72,7 +80,7 @@ class RobotWriter:
                             spec.loader.exec_module(mod)
                             self.tests[mod.Test.name] = mod.Test
 
-    def _convert_data_model_for_templates(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _convert_data_model_for_templates(self, data: dict[str, Any]) -> dict[str, Any]:
         """Convert nested OrderedDict to dict to avoid duplicate dict keys.
 
         This method performs the same conversion that was previously done per-template,
@@ -94,7 +102,7 @@ class RobotWriter:
         try:
             # JSON round-trip to convert nested OrderedDict to dict
             # This preserves all data while fixing duplicate key issues (e.g., 'tag' fields)
-            converted_data = cast(Dict[str, Any], json.loads(json.dumps(data)))
+            converted_data = cast(dict[str, Any], json.loads(json.dumps(data)))
             logger.debug("Data model conversion completed successfully")
             return converted_data
         except Exception as e:
@@ -175,7 +183,7 @@ class RobotWriter:
                 content = ""
                 next_template = False
                 try:
-                    with open(Path(dir, filename), "r") as file:
+                    with open(Path(dir, filename)) as file:
                         content = file.read()
                 except:  # noqa: E722
                     logger.warning("Could not open/read file: %s", Path(dir, filename))
