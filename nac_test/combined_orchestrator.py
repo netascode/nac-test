@@ -6,11 +6,11 @@
 """Combined orchestrator for sequential PyATS and Robot Framework test execution."""
 
 import logging
-import os
 from pathlib import Path
 
 import typer
 
+from nac_test.core.constants import DEBUG_MODE
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
@@ -105,8 +105,7 @@ class CombinedOrchestrator:
                 f"\n❌ Controller detection failed:\n{e}", fg=typer.colors.RED, err=True
             )
             # Progressive disclosure: clean output for customers, full context for developers
-            debug_mode = os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"
-            if debug_mode:
+            if DEBUG_MODE:
                 raise typer.Exit(1) from e  # Developer: full exception context
             raise typer.Exit(1) from None  # Customer: clean output
 

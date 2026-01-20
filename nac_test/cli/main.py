@@ -10,13 +10,13 @@ import typer
 
 import nac_test
 from nac_test.combined_orchestrator import CombinedOrchestrator
+from nac_test.core.constants import DEBUG_MODE
 from nac_test.data_merger import DataMerger
 from nac_test.utils.logging import VerbosityLevel, configure_logging
 
-# typer exceptions are BIG (albeit colorful), I feel for a program
-# with this complextiy logging everything is not required, hence disabling
-# them
-app = typer.Typer(add_completion=False, pretty_exceptions_enable=False)
+# Pretty exceptions are verbose but helpful for debugging.
+# Enable them when NAC_TEST_DEBUG=true, disable for cleaner output otherwise.
+app = typer.Typer(add_completion=False, pretty_exceptions_enable=DEBUG_MODE)
 
 logger = logging.getLogger(__name__)
 
