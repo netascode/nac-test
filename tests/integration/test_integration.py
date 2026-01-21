@@ -18,6 +18,18 @@ import nac_test.cli.main
 pytestmark = pytest.mark.integration
 
 
+@pytest.fixture(autouse=True)
+def setup_bogus_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Set up environment variables for a bogus ACI controller.
+
+    Required for v1.1 CLI which expects controller credentials.
+    Uses monkeypatch for safe, automatic cleanup.
+    """
+    monkeypatch.setenv("ACI_URL", "https://bogus.example.com")
+    monkeypatch.setenv("ACI_USERNAME", "bogus_user")
+    monkeypatch.setenv("ACI_PASSWORD", "bogus_pass")
+
+
 @pytest.fixture
 def temp_cwd_dir() -> Iterator[str]:
     """Create a unique temporary directory in the current working directory.
