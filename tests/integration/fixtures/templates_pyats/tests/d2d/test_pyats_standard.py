@@ -13,6 +13,7 @@
 
 # To get a logger for the script
 import logging
+from pathlib import Path
 
 # Needed for aetest script
 from pyats import aetest
@@ -63,18 +64,24 @@ class common_setup(aetest.CommonSetup):
 # This is how to create a testcase
 # You can have 0 to as many testcase as wanted
 
-# Testcase name : tc_one
-class tc_one(aetest.Testcase):
+# Testcase name : TcOne
+class TcOne(aetest.Testcase):
     """ This is user Testcases section """
 
     def get_ssh_device_inventory(self):
+        # Construct absolute path to mock_unicon.py script
+        mock_script_path = (
+            Path(__file__).parent.parent.parent.parent.parent
+            / "mocks"
+            / "mock_unicon.py"
+        )
         return [
             {
                 "hostname": "mock_iosxe",
                 "os": "iosxe",
                 "username": "cisco",
                 "password": "cisco",
-                "command": "tests/integration/mocks/mock_unicon.py --hostname mock_iosxe iosxe",
+                "command": f"{mock_script_path} --hostname mock_iosxe iosxe",
             }
 
         ]
@@ -93,13 +100,13 @@ class tc_one(aetest.Testcase):
     # You can have 0 to as many test section as wanted
 
     # First test section
-    @ aetest.test
+    @aetest.test
     def simple_test_1(self):
         """ Sample test section. Only print """
         log.info("First test section ")
         self.failed('This is an intentional failure')
     # Second test section
-    @ aetest.test
+    @aetest.test
     def simple_test_2(self):
         """ Sample test section. Only print """
         log.info("Second test section ")
@@ -110,18 +117,18 @@ class tc_one(aetest.Testcase):
         """ Testcase cleanup section """
         log.info("Pass testcase cleanup")
 
-# Testcase name : tc_two
-class tc_two(aetest.Testcase):
+# Testcase name : TcTwo
+class TcTwo(aetest.Testcase):
     """ This is user Testcases section """
 
-    @ aetest.test
+    @aetest.test
     def simple_test_1(self):
         """ Sample test section. Only print """
         log.info("First test section ")
         self.failed('This is an intentional failure')
 
     # Second test section
-    @ aetest.test
+    @aetest.test
     def simple_test_2(self):
         """ Sample test section. Only print """
         log.info("Second test section ")
