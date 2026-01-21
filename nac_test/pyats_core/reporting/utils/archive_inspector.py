@@ -96,7 +96,7 @@ class ArchiveInspector:
         archives: dict[str, list[Path]] = {"api": [], "d2d": [], "legacy": []}
 
         # Find all archives
-        all_archives = list(output_dir.glob("nac_test_job_*.zip"))
+        all_archives = list(output_dir.glob("**/nac_test_job_*.zip"))
 
         # Categorize archives
         for archive in all_archives:
