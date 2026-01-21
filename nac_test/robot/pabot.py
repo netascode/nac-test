@@ -1,10 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
-# Copyright: (c) 2022, Daniel Schmidt <danischm@cisco.com>
-
 import logging
 from pathlib import Path
 

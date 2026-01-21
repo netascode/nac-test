@@ -1,0 +1,58 @@
+enable_isr:
+  commands:
+    # below data does not line up with the actual router's addresses but is sufficient for testing purposes
+    "show sdwan control connections": |
+      PEER    PEER    PEER            SITE       DOMAIN PEER                                    PRIV  PEER                                    PUB                                           GROUP
+      TYPE    PROT    SYSTEM IP       ID         ID     PRIVATE IP                              PORT  PUBLIC IP                               PORT  ORGANIZATION            LOCAL COLOR     PROXY STATE UPTIME      ID
+      -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      vsmart  dtls    100.0.0.103     100        1      172.16.0.103                            12346 172.16.0.103                            12346 cml-sdwan-lab-tool      biz-internet    No    up     14:18:15:462
+      vsmart  dtls    100.0.0.104     100        1      172.16.0.104                            12346 172.16.0.104                            12346 cml-sdwan-lab-tool      biz-internet    No    up     5:00:17:14 2
+      vsmart  dtls    100.0.0.103     100        1      172.16.0.103                            12346 172.16.0.103                            12346 cml-sdwan-lab-tool      mpls            No    up     14:18:15:452
+      vsmart  dtls    100.0.0.104     100        1      172.16.0.104                            12346 172.16.0.104                            12346 cml-sdwan-lab-tool      mpls            No    up     5:00:17:14 2
+      vmanage dtls    100.0.0.1       100        0      172.16.0.1                              12946 172.16.0.1                              12946 cml-sdwan-lab-tool      mpls            No    up     14:18:15:450
+    "show install summary": |
+      [ Switch 1 ] Installed Package(s) Information:
+      State (St): I - Inactive, U - Activated & Uncommitted,
+                  C - Activated & Committed, D - Deactivated & Uncommitted
+      --------------------------------------------------------------------------------
+      Type  St   Filename/Version
+      --------------------------------------------------------------------------------
+      IMG   C    17.15.04.0.6839
+
+      --------------------------------------------------------------------------------
+      Auto abort timer: inactive
+      --------------------------------------------------------------------------------
+
+config:
+  commands:
+    "archive": ""
+    "path flash:rollback_config": ""
+    "no archive": ""
+    "end":
+      new_state: "enable_isr"
+
+want_to_proceed:
+  prompt: "want to proceed. ? [no]: "
+  commands:
+    "y":
+      response: "Rollback Done"
+      new_state: "enable_isr"
+
+proceed_with_reload:
+  prompt: "Proceed with reload?"
+  commands:
+    "y":
+      response: |
+        cisco WS-C4500X-16 (MPC8572) processor (revision 9) with 4194304K bytes of physical memory.
+        Processor board ID JAE220406US
+        MPC8572 CPU at 1.5GHz, Cisco Catalyst 4500X
+        Last reset from Reload
+        1 Virtual Ethernet interface
+        24 Ten Gigabit Ethernet interfaces
+        511K bytes of non-volatile configuration memory.
+
+        Press RETURN to get started!
+      new_state: "enable_isr"
+
+invalidprompt:
+  prompt: "invalidprompt:"

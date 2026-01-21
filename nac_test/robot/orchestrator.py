@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
+
+# -*- coding: utf-8 -*-
+
 # -*- coding: utf-8 -*-
 
 """Robot Framework orchestration logic for nac-test.
