@@ -241,6 +241,7 @@ class VerifySDWANManagerEdgeConfigSync(SDWANManagerTestBase):
                     )
                 else:
                     context["display_context"] = f"{self.TEST_CONFIG['resource_type']} -> Configuration Sync Status"
+                    failures_text = '\n'.join(failures)
                     return self.format_verification_result(
                         status=ResultStatus.FAILED,
                         context=context,
@@ -251,7 +252,7 @@ class VerifySDWANManagerEdgeConfigSync(SDWANManagerTestBase):
                             f"**Validation Results:**\n"
                             f"{result_summary}\n\n"
                             f"**Detailed Failures:**\n"
-                            f"{'\n'.join(failures)}\n\n"
+                            f"{failures_text}\n\n"
                             f"**Edge Configuration Sync Status:**\n"
                             f"• Total checked devices: {len(items_to_check)}\n"
                             f"• Devices 'In Sync': {healthy_count}\n"

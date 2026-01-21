@@ -239,6 +239,7 @@ class VerifyApicApplianceOperationalStatus(APICTestBase):
                         api_duration=api_duration,
                     )
                 else:
+                    failures_text = '\n'.join(failures)
                     return self.format_verification_result(
                         status=ResultStatus.FAILED,
                         context=context,
@@ -248,7 +249,7 @@ class VerifyApicApplianceOperationalStatus(APICTestBase):
                             f"**Validation Results:**\n"
                             f"{result_summary}\n\n"
                             f"**Detailed Failures:**\n"
-                            f"{'\n'.join(failures)}\n\n"
+                            f"{failures_text}\n\n"
                             f"**APIC Appliance Status:**\n"
                             f"• Total discovered controllers: {len(appliances)}\n"
                             f"• Controllers with operSt='available': {healthy_count}\n"

@@ -278,6 +278,7 @@ class VerifySdwanControlConnectionsState(IOSXETestBase):
                     )
                 else:
                     context['display_context'] = "SD-WAN Control Connections -> State"
+                    failures_text = '\n'.join(failures)
                     return self.format_verification_result(
                         status=ResultStatus.FAILED,
                         context=context,
@@ -288,7 +289,7 @@ class VerifySdwanControlConnectionsState(IOSXETestBase):
                             f"**Validation Results:**\n"
                             f"{result_summary}\n\n"
                             f"**Detailed Failures:**\n"
-                            f"{'\n'.join(failures)}\n\n"
+                            f"{failures_text}\n\n"
                             f"**SD-WAN Control Connection Status:**\n"
                             f"• Total control connections: {len(all_connections)}\n"
                             f"• Connections in 'up' state: {up_count}\n"
