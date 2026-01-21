@@ -146,7 +146,7 @@ def test_nac_test_pyats_quicksilver_api_only(
     "arch,env_prefix,passed,failed,expected_rc",
     [
         ("sdwan", "SDWAN", 3, 0, 0),
-        ("catc", "CC", 2, 0, 0),
+        ("catc", "CC", 3, 0, 0),
     ],
 )
 def test_nac_test_pyats_quicksilver_api_d2d(
