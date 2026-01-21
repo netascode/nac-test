@@ -2,6 +2,7 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 import os
+import re
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -14,6 +15,21 @@ import nac_test.cli.main
 from tests.integration.mocks.mock_server import MockAPIServer
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(autouse=True)
+def clear_controller_credentials() -> None:
+    """
+    Clear any controller credentials from environment to avoid conflicts.
+
+    nac-test fails if the user has multiple sets of controller credentials configured.
+    This fixture removes any environment variables matching the pattern:
+    ^[A-Z]+_(URL|USERNAME|PASSWORD)$
+    """
+    pattern = re.compile(r"^[A-Z]+_(URL|USERNAME|PASSWORD)$")
+    keys_to_remove = [key for key in os.environ.keys() if pattern.match(key)]
+    for key in keys_to_remove:
+        del os.environ[key]
 
 
 def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) -> None:
