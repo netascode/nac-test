@@ -5,6 +5,6 @@ catalyst_center:
         device_ip: 192.168.38.1
         fqdn_name: P3-BN1.cisco.eu
         pid: C9300-24P
-        state: INIT
+        state: PROVISION
         device_role: ACCESS
         site: Global/MAX_AREA/MAX_BUILDING
