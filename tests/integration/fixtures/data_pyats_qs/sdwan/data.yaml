@@ -1,4 +1,5 @@
 sdwan:
+  management_ip_variable: vpn0_ip
   sites:
     - name: SITE_100
       site_id: "100"
