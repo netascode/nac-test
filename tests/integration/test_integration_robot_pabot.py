@@ -11,7 +11,6 @@ from pathlib import Path
 
 import pytest
 import yaml  # type: ignore
-from _pytest.monkeypatch import MonkeyPatch
 from robot import run as robot_run  # type: ignore[attr-defined]
 from typer.testing import CliRunner
 
@@ -32,7 +31,7 @@ def temp_cwd_dir() -> Generator[str, None, None]:
 
 
 @pytest.fixture(scope="function", autouse=True)
-def setup_bogus_controller_env(monkeypatch: MonkeyPatch) -> None:
+def setup_bogus_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Set up environment variables for a bogus ACI controller
     to prevent nac-test from exiting early.
 
@@ -69,7 +68,7 @@ def verify_file_content(expected_yaml_path: Path, output_dir: Path) -> None:
         )
 
 
-def test_nac_test(tmpdir: str) -> None:
+def test_nac_test(tmp_path: Path) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates/"
@@ -81,17 +80,17 @@ def test_nac_test(tmpdir: str) -> None:
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
         ],
     )
     assert result.exit_code == 0
 
 
-def test_nac_test_env(tmpdir: str) -> None:
+def test_nac_test_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_env/"
     templates_path = "tests/integration/fixtures/templates/"
-    os.environ["DEF"] = "value"
+    monkeypatch.setenv("DEF", "value")
     result = runner.invoke(
         nac_test.cli.main.app,
         [
@@ -100,13 +99,13 @@ def test_nac_test_env(tmpdir: str) -> None:
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
         ],
     )
     assert result.exit_code == 0
 
 
-def test_nac_test_filter(tmpdir: str) -> None:
+def test_nac_test_filter(tmp_path: Path) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates_filter/"
@@ -121,13 +120,13 @@ def test_nac_test_filter(tmpdir: str) -> None:
             "-f",
             filters_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
         ],
     )
     assert result.exit_code == 0
 
 
-def test_nac_test_test(tmpdir: str) -> None:
+def test_nac_test_test(tmp_path: Path) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates_test/"
@@ -142,13 +141,13 @@ def test_nac_test_test(tmpdir: str) -> None:
             "--tests",
             tests_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
         ],
     )
     assert result.exit_code == 0
 
 
-def test_nac_test_render(tmpdir: str) -> None:
+def test_nac_test_render(tmp_path: Path) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates_fail/"
@@ -160,7 +159,7 @@ def test_nac_test_render(tmpdir: str) -> None:
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
             "--render-only",
         ],
     )
@@ -174,7 +173,7 @@ def test_nac_test_render(tmpdir: str) -> None:
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
             "--render-only",
         ],
     )
@@ -188,14 +187,14 @@ def test_nac_test_render(tmpdir: str) -> None:
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
             "--render-only",
         ],
     )
     assert result.exit_code == 0
 
 
-def test_nac_test_list(tmpdir: str) -> None:
+def test_nac_test_list(tmp_path: Path) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list/"
     templates_path = "tests/integration/fixtures/templates_list/"
@@ -207,16 +206,16 @@ def test_nac_test_list(tmpdir: str) -> None:
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
         ],
     )
-    assert os.path.exists(os.path.join(tmpdir, "ABC", "test1.robot"))
-    assert os.path.exists(os.path.join(tmpdir, "DEF", "test1.robot"))
-    assert os.path.exists(os.path.join(tmpdir, "_abC", "test1.robot"))
+    assert (tmp_path / "ABC" / "test1.robot").exists()
+    assert (tmp_path / "DEF" / "test1.robot").exists()
+    assert (tmp_path / "_abC" / "test1.robot").exists()
     assert result.exit_code == 0
 
 
-def test_nac_test_list_folder(tmpdir: str) -> None:
+def test_nac_test_list_folder(tmp_path: Path) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list/"
     templates_path = "tests/integration/fixtures/templates_list_folder/"
@@ -228,16 +227,16 @@ def test_nac_test_list_folder(tmpdir: str) -> None:
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
         ],
     )
-    assert os.path.exists(os.path.join(tmpdir, "test1", "ABC.robot"))
-    assert os.path.exists(os.path.join(tmpdir, "test1", "DEF.robot"))
-    assert os.path.exists(os.path.join(tmpdir, "test1", "_abC.robot"))
+    assert (tmp_path / "test1" / "ABC.robot").exists()
+    assert (tmp_path / "test1" / "DEF.robot").exists()
+    assert (tmp_path / "test1" / "_abC.robot").exists()
     assert result.exit_code == 0
 
 
-def test_nac_test_list_chunked(tmpdir: str) -> None:
+def test_nac_test_list_chunked(tmp_path: Path) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list_chunked/"
     templates_path = "tests/integration/fixtures/templates_list_chunked/"
@@ -249,17 +248,17 @@ def test_nac_test_list_chunked(tmpdir: str) -> None:
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
         ],
     )
     assert result.exit_code == 0
-    assert not os.path.exists(os.path.join(tmpdir, "ABC", "test1.robot"))
-    assert not os.path.exists(os.path.join(tmpdir, "DEF", "test1.robot"))
+    assert not (tmp_path / "ABC" / "test1.robot").exists()
+    assert not (tmp_path / "DEF" / "test1.robot").exists()
     # files and their content are checked here
-    verify_file_content(Path(templates_path) / "expected_content.yaml", Path(tmpdir))
+    verify_file_content(Path(templates_path) / "expected_content.yaml", tmp_path)
 
 
-def test_nac_test_verbosity_debug(tmpdir: str) -> None:
+def test_nac_test_verbosity_debug(tmp_path: Path) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates_debug/"
@@ -271,7 +270,7 @@ def test_nac_test_verbosity_debug(tmpdir: str) -> None:
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
             "-v",
             "DEBUG",
         ],
@@ -280,15 +279,15 @@ def test_nac_test_verbosity_debug(tmpdir: str) -> None:
     assert result.exit_code == 0, "Robot/Pabot wasn't called with DEBUG loglevel"
 
 
-def test_load_robotlibs(tmpdir: str) -> None:
+def test_load_robotlibs(tmp_path: Path) -> None:
     result = robot_run(
         "tests/integration/fixtures/templates_robotlibs/robotlibs.robot",
-        outputdir=tmpdir,
+        outputdir=str(tmp_path),
     )
     assert result == 0
 
 
-@pytest.mark.parametrize("fixture_name", ["tmpdir", "temp_cwd_dir"])
+@pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_cwd_dir"])
 def test_nac_test_ordering(request: pytest.FixtureRequest, fixture_name: str) -> None:
     # Get the fixture value dynamically based on the parameter
     output_dir = request.getfixturevalue(fixture_name)
@@ -368,14 +367,13 @@ def test_nac_test_ordering(request: pytest.FixtureRequest, fixture_name: str) ->
             )
 
 
-def test_nac_test_ordering_no_concurrent_suites(tmpdir: str) -> None:
+def test_nac_test_ordering_no_concurrent_suites(tmp_path: Path) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates_ordering_2/"
     # create a leftover ordering.txt to also make sure the file
     # is removed by nac-test
-    with open(os.path.join(tmpdir, "ordering.txt"), "w"):
-        pass
+    (tmp_path / "ordering.txt").touch()
 
     result = runner.invoke(
         nac_test.cli.main.app,
@@ -385,42 +383,41 @@ def test_nac_test_ordering_no_concurrent_suites(tmpdir: str) -> None:
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
         ],
     )
 
     assert result.exit_code == 0
-    assert not os.path.exists(os.path.join(tmpdir, "ordering.txt")), (
+    assert not (tmp_path / "ordering.txt").exists(), (
         "ordering.txt file should not exist"
     )
 
 
-def test_nac_test_no_testlevelsplit(tmpdir: str) -> None:
+def test_nac_test_no_testlevelsplit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list/"
     templates_path = "tests/integration/fixtures/templates_ordering_1/"
-    os.environ["NAC_TEST_NO_TESTLEVELSPLIT"] = "1"
+    monkeypatch.setenv("NAC_TEST_NO_TESTLEVELSPLIT", "1")
 
-    try:
-        result = runner.invoke(
-            nac_test.cli.main.app,
-            [
-                "-d",
-                data_path,
-                "-t",
-                templates_path,
-                "-o",
-                tmpdir,
-                "--render-only",  # test execution would fail without testlevelsplit
-            ],
-        )
-        assert result.exit_code == 0
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            str(tmp_path),
+            "--render-only",  # test execution would fail without testlevelsplit
+        ],
+    )
+    assert result.exit_code == 0
 
-        assert not os.path.exists(os.path.join(tmpdir, "ordering.txt")), (
-            "ordering.txt file should not exist when NAC_TEST_NO_TESTLEVELSPLIT is set"
-        )
-    finally:
-        del os.environ["NAC_TEST_NO_TESTLEVELSPLIT"]
+    assert not (tmp_path / "ordering.txt").exists(), (
+        "ordering.txt file should not exist when NAC_TEST_NO_TESTLEVELSPLIT is set"
+    )
 
 
 @pytest.mark.parametrize(
@@ -435,7 +432,7 @@ def test_nac_test_no_testlevelsplit(tmpdir: str) -> None:
     ],
 )
 def test_nac_test_extra_args(
-    tmpdir: str, extra_args: list[str], expected_exit_code: int
+    tmp_path: Path, extra_args: list[str], expected_exit_code: int
 ) -> None:
     """Test extra Robot Framework arguments with/without -- separator."""
     runner = CliRunner()
@@ -450,7 +447,7 @@ def test_nac_test_extra_args(
             "-t",
             templates_path,
             "-o",
-            tmpdir,
+            str(tmp_path),
         ]
         + extra_args,
     )
@@ -465,13 +462,13 @@ def test_nac_test_extra_args(
     ],
 )
 def test_nac_test_render_output_model(
-    tmpdir: str, cli_args: list[str], expected_filename: str
+    tmp_path: Path, cli_args: list[str], expected_filename: str
 ) -> None:
     """Tests the creation of the merged data model YAML file."""
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_merge/"
     templates_path = "tests/integration/fixtures/templates/"
-    output_model_path = os.path.join(tmpdir, expected_filename)
+    output_model_path = tmp_path / expected_filename
     expected_model_path = "tests/integration/fixtures/data_merge/result.yaml"
 
     base_args = [
@@ -482,11 +479,11 @@ def test_nac_test_render_output_model(
         "-t",
         templates_path,
         "-o",
-        tmpdir,
+        str(tmp_path),
         "--render-only",
     ]
 
     result = runner.invoke(nac_test.cli.main.app, base_args + cli_args)
     assert result.exit_code == 0
-    assert os.path.exists(output_model_path)
+    assert output_model_path.exists()
     assert filecmp.cmp(output_model_path, expected_model_path, shallow=False)
