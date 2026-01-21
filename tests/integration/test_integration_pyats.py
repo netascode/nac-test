@@ -34,21 +34,6 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
     # Find all results.json files (can be in api/ or d2d/ subdirs)
     results_files = list(pyats_results_dir.glob("**/results.json"))
 
-    # DEBUG: If test errored, try to find and print the error log
-    for results_file in results_files:
-        with open(results_file) as f:
-            results_data = yaml.safe_load(f)
-
-        if results_data.get("report", {}).get("summary", {}).get("errored", 0) > 0:
-            print("\n=== DEBUG: Test ERRORED, searching for error details ===")
-            # Look for TaskLog.* files which contain test execution details
-            log_dir = results_file.parent
-            for log_file in log_dir.glob("*TaskLog*"):
-                print(f"\n--- Contents of {log_file.name} ---")
-                with open(log_file) as f:
-                    print(f.read()[-5000:])  # Print last 5000 chars
-            print("=== END ERROR DEBUG ===\n")
-
     assert len(results_files) > 0, f"No results.json files found in {pyats_results_dir}"
 
     total_passed = total_failed = 0
@@ -65,13 +50,6 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
         )
 
         summary = results_data["report"]["summary"]
-
-        # DEBUG: Print full summary for CI debugging
-        import json
-
-        print(f"\n=== DEBUG: Full results from {results_file.parent.name} ===")
-        print(json.dumps(summary, indent=2))
-        print("=== END DEBUG ===\n")
 
         # Verify tests were run
         assert summary["total"] > 0, (
@@ -136,8 +114,8 @@ def test_nac_test_pyats_quicksilver_api_only(
         )
 
         assert result.exit_code == expected_rc
-
         _validate_pyats_results(output_dir, passed, failed)
+
     finally:
         # Clean up environment variables
         for key in [
@@ -152,7 +130,7 @@ def test_nac_test_pyats_quicksilver_api_only(
     "arch,env_prefix,passed,failed,expected_rc",
     [
         ("sdwan", "SDWAN", 3, 0, 0),
-        ("catc", "CC", 1, 0, 0),
+        ("catc", "CC", 2, 0, 0),
     ],
 )
 def test_nac_test_pyats_quicksilver_api_d2d(
@@ -204,7 +182,11 @@ def test_nac_test_pyats_quicksilver_api_d2d(
         data_path = f"tests/integration/fixtures/data_pyats_qs/{arch}"
         templates_path = f"tests/integration/fixtures/templates_pyats_qs/{arch}/"
 
-        # outputdir = "/tmp/nac-test-pyats-sdwan-mock"  # static dir for easier debugging
+        # outputdir = "/tmp/nac-test-pyats-catc-mock"  # static dir for easier debugging
+        # # remove outputdir if it exists from previous runs
+        # if Path(outputdir).exists():
+        #     import shutil
+        #     shutil.rmtree(outputdir)
         outputdir = tmpdir
 
         try:
@@ -221,9 +203,8 @@ def test_nac_test_pyats_quicksilver_api_d2d(
                     "DEBUG",
                 ],
             )
-            assert result.exit_code == expected_rc
 
-            # we have one API test and one D2D test, but the latter with two devices. Each devices
+            assert result.exit_code == expected_rc
             _validate_pyats_results(outputdir, passed=passed, failed=failed)
 
         finally:

@@ -21,7 +21,45 @@ enable_isr:
 
       --------------------------------------------------------------------------------
       Auto abort timer: inactive
-      --------------------------------------------------------------------------------
+        --------------------------------------------------------------------------------
+    "show logging": |
+      Syslog logging: enabled (0 messages dropped, 2 messages rate-limited, 0 flushes, 0 overruns, xml disabled, filtering disabled)
+
+      No Active Message Discriminator.
+
+
+
+      No Inactive Message Discriminator.
+
+
+        Console logging: disabled
+        Monitor logging: level debugging, 0 messages logged, xml disabled,
+                          filtering disabled
+        Buffer logging:  level debugging, 6038 messages logged, xml disabled,
+                        filtering disabled
+        Exception Logging: size (4096 bytes)
+        Count and timestamp logging messages: disabled
+        File logging: disabled
+        Persistent logging: disabled
+
+      No active filter modules.
+
+        Trap logging: level informational, 6036 message lines logged
+            Logging Source-Interface:       VRF Name:
+        TLS Profiles: 
+
+      Log Buffer (102400 bytes):
+      ceived (*, 239.255.255.254) Join from 192.168.34.67 for invalid RP 192.168.34.64
+      005285: *Jan 20 01:29:08.097: %PIM-6-INVALID_RP_JOIN: Received (*, 224.0.1.40) Join from 192.168.34.69 for invalid RP 192.168.34.64
+      005286: *Jan 20 01:30:14.538: %PIM-6-INVALID_RP_JOIN: Received (*, 239.255.255.250) Join from 192.168.34.67 for invalid RP 192.168.34.64
+      005287: *Jan 20 01:31:18.638: %PIM-6-INVALID_RP_JOIN: Received (*, 224.0.1.40) Join from 192.168.34.67 for invalid RP 192.168.34.64
+      005288: *Jan 20 01:32:28.638: %PIM-6-INVALID_RP_JOIN: Received (*, 239.255.255.254) Join from 192.168.34.67 for invalid RP 192.168.34.64
+      005289: *Jan 20 01:34:05.892: %PIM-6-INVALID_RP_JOIN: Received (*, 224.0.1.40) Join from 192.168.34.69 for invalid RP 192.168.34.64
+      005290: *Jan 20 01:35:10.438: %PIM-6-INVALID_RP_JOIN: Received (*, 239.255.255.250) Join from 192.168.34.67 for invalid RP 192.168.34.64
+      005291: *Jan 20 01:36:12.738: %PIM-6-INVALID_RP_JOIN: Received (*, 224.0.1.40) Join from 192.168.34.67 for invalid RP 192.168.34.64
+      005292: *Jan 20 01:37:24.038: %PIM-6-INVALID_RP_JOIN: Received (*, 239.255.255.254) Join from 192.168.34.67 for invalid RP 192.168.34.64
+      005293: *Jan 20 01:39:01.186: %PIM-6-INVALID_RP_JOIN: Received (*, 224.0.1.40) Join from 192.168.34.69 for invalid RP 192.168.34.64
+      005294: *Jan 20 01:40:03.538: %PIM-6-INVALID_RP_JOIN: Received (*, 239.255.255.250) Join from 192.168.34.67 for invalid RP 192.168.34.64
 
 config:
   commands:
