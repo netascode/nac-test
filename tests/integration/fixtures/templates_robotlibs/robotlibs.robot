@@ -5,3 +5,4 @@ Load Robot Libs
     JSONLibrary
     pabot.PabotLib
     RequestsLibrary
+    REST
