@@ -9,11 +9,19 @@ import json
 import logging
 import re
 import threading
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
 import yaml
 from flask import Flask, jsonify, request
+from werkzeug.serving import make_server
+
+# Constants for server startup polling
+SERVER_STARTUP_TIMEOUT_SECONDS: float = 5.0
+SERVER_POLL_INTERVAL_SECONDS: float = 0.1
 
 # Set up logger for mock server
 logger = logging.getLogger(__name__)
@@ -58,7 +66,9 @@ class MockAPIServer:
         self.port = port
         self.app = Flask(__name__)
         self.server_thread: threading.Thread | None = None
+        self._server: Any = None  # werkzeug server object for shutdown
         self.endpoint_configs: list[dict[str, Any]] = []
+        self._baseline_endpoint_count: int = 0
 
         # Configure Flask to suppress startup messages
         werkzeug_log = logging.getLogger("werkzeug")
@@ -185,9 +195,32 @@ class MockAPIServer:
         self.add_endpoints(config["endpoints"])
         endpoint_count_after = len(self.endpoint_configs)
 
+        # Set baseline for reset_endpoints() to preserve YAML-loaded endpoints
+        self._baseline_endpoint_count = endpoint_count_after
+
         logger.info(
             f"Loaded {endpoint_count_after - endpoint_count_before} endpoints from {yaml_path.name}"
         )
+
+    def reset_endpoints(self) -> None:
+        """Reset endpoints to the baseline state after YAML loading.
+
+        Removes all dynamically added endpoints while preserving those
+        loaded from the YAML configuration file. This enables test isolation
+        when using a session-scoped mock server fixture.
+
+        If no YAML configuration was loaded (baseline is 0), this clears
+        all endpoints.
+        """
+        if len(self.endpoint_configs) > self._baseline_endpoint_count:
+            removed_count = len(self.endpoint_configs) - self._baseline_endpoint_count
+            self.endpoint_configs = self.endpoint_configs[
+                : self._baseline_endpoint_count
+            ]
+            logger.debug(
+                f"Reset endpoints: removed {removed_count} dynamic endpoint(s), "
+                f"kept {self._baseline_endpoint_count} baseline endpoint(s)"
+            )
 
     def _match_path(self, request_path: str, pattern: str, match_type: str) -> bool:
         """Check if request path matches the pattern based on match type.
@@ -294,6 +327,30 @@ class MockAPIServer:
         logger.debug(f"    Response data:\n{json.dumps(error_response, indent=2)}")
         return jsonify(error_response), 404
 
+    def _wait_for_server_ready(self) -> None:
+        """Poll the server until it responds or timeout.
+
+        Raises:
+            TimeoutError: If server doesn't respond within timeout period.
+        """
+        start_time = time.monotonic()
+        while time.monotonic() - start_time < SERVER_STARTUP_TIMEOUT_SECONDS:
+            try:
+                # Use urllib to avoid adding requests as a dependency
+                req = urllib.request.Request(self.url, method="GET")
+                with urllib.request.urlopen(req, timeout=1.0):
+                    return  # Server is ready
+            except urllib.error.HTTPError:
+                # HTTP error (like 404) means server is responding - it's ready
+                return
+            except (urllib.error.URLError, OSError):
+                # Server not ready yet (connection refused, etc.), wait and retry
+                time.sleep(SERVER_POLL_INTERVAL_SECONDS)
+
+        raise TimeoutError(
+            f"Mock server did not become ready within {SERVER_STARTUP_TIMEOUT_SECONDS} seconds"
+        )
+
     def start(self) -> None:
         """Start the mock server in a background thread."""
         if self.server_thread and self.server_thread.is_alive():
@@ -303,27 +360,42 @@ class MockAPIServer:
         logger.info(f"Starting mock server on {self.url}")
         logger.info(f"Configured with {len(self.endpoint_configs)} endpoint(s)")
 
+        # Create server using make_server for proper shutdown support
+        self._server = make_server(self.host, self.port, self.app, threaded=True)
+
         def run_server() -> None:
-            self.app.run(
-                host=self.host, port=self.port, threaded=True, use_reloader=False
-            )
+            if self._server is not None:
+                self._server.serve_forever()
 
         self.server_thread = threading.Thread(target=run_server, daemon=True)
         self.server_thread.start()
 
-        # Give server time to start
-        import time
+        # Wait for server to be ready with proper polling
+        self._wait_for_server_ready()
 
-        time.sleep(0.5)
-
-        logger.info(f"✓ Mock server ready at {self.url}")
+        logger.info(f"Mock server ready at {self.url}")
 
     def stop(self) -> None:
-        """Stop the mock server."""
-        # Flask's development server doesn't have a clean shutdown method
-        # Using daemon threads ensures cleanup on test exit
-        # Note: Don't log here as pytest may have closed logging streams during teardown
-        pass
+        """Stop the mock server gracefully.
+
+        Shuts down the werkzeug server and waits for the server thread to terminate.
+        Safe to call even if the server is not running.
+        """
+        if self._server is not None:
+            try:
+                self._server.shutdown()
+            except Exception:
+                # Silently ignore shutdown errors during pytest teardown
+                pass
+            self._server = None
+
+        if self.server_thread is not None and self.server_thread.is_alive():
+            try:
+                self.server_thread.join(timeout=2.0)
+            except Exception:
+                # Silently ignore join errors during pytest teardown
+                pass
+            self.server_thread = None
 
     @property
     def url(self) -> str:
