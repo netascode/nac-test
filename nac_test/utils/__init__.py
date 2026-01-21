@@ -3,6 +3,7 @@
 
 """Utility modules for nac-test framework."""
 
+from nac_test.utils.asyncio_utils import get_or_create_event_loop
 from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.device_validation import (
@@ -23,6 +24,8 @@ __all__ = [
     "cleanup_old_test_outputs",
     "configure_logging",
     "VerbosityLevel",
+    # Asyncio utilities (cross-version compatibility)
+    "get_or_create_event_loop",
     # Device validation utilities (SSH/D2D architecture)
     "REQUIRED_DEVICE_FIELDS",
     "validate_device_inventory",

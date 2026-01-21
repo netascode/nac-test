@@ -23,6 +23,7 @@ from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_env
 from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.pyats_core.reporting.utils.archive_extractor import ArchiveExtractor
 from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
+from nac_test.utils import get_or_create_event_loop
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +225,7 @@ class MultiArchiveReportGenerator:
             archive_path: Path to the archive file
             target_dir: Directory to extract contents to
         """
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
 
         def extract() -> None:
             # The target_dir already contains the full path like output_dir/pyats_results/api

@@ -66,6 +66,10 @@ class SubprocessRunner:
             ) as f:
                 f.write(plugin_config)
                 plugin_config_file = f.name
+            logger.debug(
+                f"Created plugin_config {plugin_config_file} with content\n{plugin_config}"
+            )
+
         except Exception as e:
             logger.warning(f"Failed to create plugin config: {e}")
             # If we can't create plugin config, we should probably fail
@@ -90,6 +94,10 @@ class SubprocessRunner:
             "--no-mail",
             "--no-xml-report",
         ]
+
+        # Add verbose flag if logging level is DEBUG
+        if logger.isEnabledFor(logging.DEBUG):
+            cmd.append("--verbose")
 
         logger.info(f"Executing command: {' '.join(cmd)}")
         print(f"\nExecuting PyATS with command: {' '.join(cmd)}")
@@ -205,10 +213,15 @@ class SubprocessRunner:
             "--archive-name",
             archive_name,
             "--no-archive-subdir",
-            "--quiet",
             "--no-mail",
             "--no-xml-report",
         ]
+
+        # Add verbose flag if logging level is DEBUG, otherwise use quiet
+        if logger.isEnabledFor(logging.DEBUG):
+            cmd.append("--verbose")
+        else:
+            cmd.append("--quiet")
 
         logger.info(f"Executing command: {' '.join(cmd)}")
         print(f"\nExecuting PyATS with command: {' '.join(cmd)}")

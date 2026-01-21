@@ -6,6 +6,8 @@
 """Combined orchestrator for sequential PyATS and Robot Framework test execution."""
 
 import logging
+import platform
+import sys
 from pathlib import Path
 
 import typer
@@ -123,6 +125,7 @@ class CombinedOrchestrator:
                 fg=typer.colors.YELLOW,
             )
             typer.echo("🧪 Running PyATS tests only (development mode)...")
+            self._check_python_version()
 
             # Direct call to PyATS orchestrator (base directory) - orchestrator manages its own structure
             orchestrator = PyATSOrchestrator(
@@ -177,6 +180,7 @@ class CombinedOrchestrator:
         # Sequential execution - each orchestrator manages its own directory structure
         if has_pyats:
             typer.echo("\n🧪 Running PyATS tests...\n")
+            self._check_python_version()
 
             # Direct call to PyATS orchestrator (base directory) - orchestrator manages its own structure
             orchestrator = PyATSOrchestrator(
@@ -214,6 +218,18 @@ class CombinedOrchestrator:
 
         # Summary
         self._print_execution_summary(has_pyats, has_robot)
+
+    @staticmethod
+    def _check_python_version() -> None:
+        if platform.system() == "Darwin" and sys.version_info.minor == 11:
+            typer.echo(
+                typer.style(
+                    "Warning: Python 3.11 on macOS has known compatibility issues with PyATS.\n"
+                    "We recommend using Python 3.12 or higher on macOS for optimal reliability.",
+                    fg=typer.colors.YELLOW,
+                )
+            )
+            typer.echo()
 
     def _discover_test_types(self) -> tuple[bool, bool]:
         """Discover which test types are present in the templates directory.

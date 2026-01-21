@@ -21,6 +21,7 @@ from nac_test.pyats_core.ssh.connection_utils import (
     build_connection_start_command,
     determine_chassis_type,
 )
+from nac_test.utils import get_or_create_event_loop
 from nac_test.utils.system_resources import SystemResourceCalculator
 
 logger = logging.getLogger(__name__)
@@ -139,7 +140,7 @@ class DeviceConnectionManager:
 
             try:
                 # Run Unicon connection in thread pool (since it's synchronous)
-                loop = asyncio.get_event_loop()
+                loop = get_or_create_event_loop()
                 conn = await loop.run_in_executor(
                     None, self._unicon_connect, device_info
                 )
@@ -396,7 +397,7 @@ class DeviceConnectionManager:
             try:
                 conn = self.connections[hostname]
                 # Run disconnect in thread pool
-                loop = asyncio.get_event_loop()
+                loop = get_or_create_event_loop()
                 await loop.run_in_executor(None, self._disconnect_unicon, conn)
                 logger.info(f"Closed connection to {hostname}")
             except Exception as e:
