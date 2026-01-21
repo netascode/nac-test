@@ -75,4 +75,33 @@ def mock_api_server() -> Generator[MockAPIServer, None, None]:
 
     server.start()
     yield server
+    server.reset_endpoints()
     server.stop()
+
+
+@pytest.fixture(scope="function")
+def mock_api_server_isolated(
+    mock_api_server: MockAPIServer,
+) -> Generator[MockAPIServer, None, None]:
+    """Provide a mock API server with per-test isolation.
+
+    This fixture wraps the session-scoped mock_api_server and automatically
+    resets dynamically added endpoints after each test. Use this fixture
+    instead of mock_api_server when your test adds endpoints dynamically
+    and you want to ensure those endpoints don't leak into other tests.
+
+    Example usage in tests:
+        def test_custom_endpoint(mock_api_server_isolated):
+            # Add a test-specific endpoint
+            mock_api_server_isolated.add_endpoint(
+                name='Test Endpoint',
+                path_pattern='/api/test',
+                status_code=201,
+                response_data={'created': True},
+                match_type='exact'
+            )
+            # Test logic here...
+            # Endpoint is automatically removed after this test completes
+    """
+    yield mock_api_server
+    mock_api_server.reset_endpoints()
