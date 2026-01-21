@@ -204,13 +204,13 @@ class VerifySDWANManagerEdgeConfigSync(SDWANManagerTestBase):
                         unhealthy_count += 1
                         failures.extend(item_failures)
                         validation_results.append(
-                            f"❌ Device '{device_id}' (System IP: {system_ip}) configStatusMessage: "
+                            f"[FAIL] Device '{device_id}' (System IP: {system_ip}) configStatusMessage: "
                             f"{jmespath.search('configStatusMessage', item) or 'Not Found'}"
                         )
                     else:
                         healthy_count += 1
                         validation_results.append(
-                            f"✅ Device '{device_id}' (System IP: {system_ip}) configStatusMessage: In Sync"
+                            f"[PASS] Device '{device_id}' (System IP: {system_ip}) configStatusMessage: In Sync"
                         )
 
                 context["total_edge_devices"] = len(items_to_check)
@@ -251,7 +251,7 @@ class VerifySDWANManagerEdgeConfigSync(SDWANManagerTestBase):
                             f"**Validation Results:**\n"
                             f"{result_summary}\n\n"
                             f"**Detailed Failures:**\n"
-                            f"{chr(10).join(failures)}\n\n"
+                            f"{'\n'.join(failures)}\n\n"
                             f"**Edge Configuration Sync Status:**\n"
                             f"• Total checked devices: {len(items_to_check)}\n"
                             f"• Devices 'In Sync': {healthy_count}\n"

@@ -202,13 +202,13 @@ class VerifyApicApplianceOperationalStatus(APICTestBase):
                         )
                         failures.append(failure_detail)
                         validation_results.append(
-                            f"❌ {node_name} (ID: {node_id}) - "
+                            f"[FAIL] {node_name} (ID: {node_id}) - "
                             + ", ".join(item_status_values)
                         )
                     else:
                         healthy_count += 1
                         validation_results.append(
-                            f"✅ {node_name} (ID: {node_id}) - "
+                            f"[PASS] {node_name} (ID: {node_id}) - "
                             + ", ".join(item_status_values)
                         )
 
@@ -248,7 +248,7 @@ class VerifyApicApplianceOperationalStatus(APICTestBase):
                             f"**Validation Results:**\n"
                             f"{result_summary}\n\n"
                             f"**Detailed Failures:**\n"
-                            f"{chr(10).join(failures)}\n\n"
+                            f"{'\n'.join(failures)}\n\n"
                             f"**APIC Appliance Status:**\n"
                             f"• Total discovered controllers: {len(appliances)}\n"
                             f"• Controllers with operSt='available': {healthy_count}\n"

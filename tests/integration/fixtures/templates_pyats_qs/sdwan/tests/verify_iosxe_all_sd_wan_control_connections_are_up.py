@@ -235,7 +235,7 @@ class VerifySdwanControlConnectionsState(IOSXETestBase):
                             for attr in attributes_to_verify
                         ]
                         validation_results.append(
-                            f"❌ {peer_type} {peer_system_ip} (Group: {controller_group_id}) - "
+                            f"[FAIL] {peer_type} {peer_system_ip} (Group: {controller_group_id}) - "
                             + ", ".join(conn_status_values)
                         )
                     else:
@@ -245,7 +245,7 @@ class VerifySdwanControlConnectionsState(IOSXETestBase):
                             for attr in attributes_to_verify
                         ]
                         validation_results.append(
-                            f"✅ {peer_type} {peer_system_ip} (Group: {controller_group_id}) - "
+                            f"[PASS] {peer_type} {peer_system_ip} (Group: {controller_group_id}) - "
                             + ", ".join(conn_status_values)
                         )
 
@@ -288,7 +288,7 @@ class VerifySdwanControlConnectionsState(IOSXETestBase):
                             f"**Validation Results:**\n"
                             f"{result_summary}\n\n"
                             f"**Detailed Failures:**\n"
-                            f"{chr(10).join(failures)}\n\n"
+                            f"{'\n'.join(failures)}\n\n"
                             f"**SD-WAN Control Connection Status:**\n"
                             f"• Total control connections: {len(all_connections)}\n"
                             f"• Connections in 'up' state: {up_count}\n"
