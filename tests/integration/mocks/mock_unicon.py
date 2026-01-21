@@ -2,10 +2,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# Copyright (c)  Cisco Systems, Inc. - All Rights Reserved
-# Unauthorized copying of this file, via any medium is strictly prohibited
-# Proprietary and confidential
-
 import argparse
 import os
 from typing import Any
@@ -18,7 +14,8 @@ def extend_mock_data(mock_data: dict[str, Any], mock_data_dir: str) -> dict[str,
     for file in os.listdir(mock_data_dir):
         if file.endswith(".yaml"):
             # for file named: <OS>_mock_data_<state_name>.yaml, get the state name
-            states = yaml.safe_load(open(os.path.join(mock_data_dir, file))) or []
+            with open(os.path.join(mock_data_dir, file)) as f:
+                states = yaml.safe_load(f) or []
             for state in states:
                 if state in mock_data:
                     mock_data[state]["commands"] = {
