@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
+# -*- coding: utf-8 -*-
+
 """Batching reporter for PyATS to prevent reporter server crashes.
 
 This module implements a batching and queuing system that intercepts PyATS
@@ -33,6 +35,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from nac_test.core.constants import DEBUG_MODE
 
 logger = logging.getLogger(__name__)
 
@@ -633,9 +637,7 @@ class BatchAccumulator:
         self.default_batch_size = default_batch_size
         self.current_batch_size = default_batch_size
         self.flush_timeout = flush_timeout
-        self.debug_mode = (
-            debug_mode or os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"
-        )
+        self.debug_mode = debug_mode or DEBUG_MODE
 
         # Thread safety
         self.lock = threading.Lock()
@@ -944,11 +946,7 @@ class BatchingReporter:
         self.flush_timeout = flush_timeout or float(
             os.environ.get("NAC_TEST_BATCH_TIMEOUT", "0.5")
         )
-        self.debug_mode = (
-            debug_mode
-            if debug_mode is not None
-            else (os.environ.get("NAC_TEST_DEBUG", "").lower() == "true")
-        )
+        self.debug_mode = debug_mode if debug_mode is not None else DEBUG_MODE
 
         # Initialize batch accumulator
         self.accumulator = BatchAccumulator(

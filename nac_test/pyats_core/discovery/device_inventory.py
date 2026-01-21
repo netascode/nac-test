@@ -30,6 +30,7 @@ class DeviceInventoryDiscovery:
             merged_data_filepath: Path to the merged data model file
         """
         self.merged_data_filepath = merged_data_filepath
+        self.skipped_devices: list[dict[str, str]] = []
 
     def get_device_inventory(self, test_files: list[Path]) -> list[dict[str, Any]]:
         """Get device inventory from test architecture in an architecture-agnostic way.
@@ -59,7 +60,7 @@ class DeviceInventoryDiscovery:
         #TODO: Prob need to think about "type" and "platform" b/c PyATS/Unicon is picky.
 
         Example implementations:
-        - nac-sdwan: SDWANTestBase parses test_inventory.yaml + sites data
+        - nac-sdwan: SDWANTestBase parses sites.nac.yaml and resolves management IPs
         - future nac-nxos: NXOSTestBase might parse a different YAML structure
         - future nac-iosxe: IOSXETestBase might scan JSON files in data/devices/
 
@@ -158,6 +159,14 @@ class DeviceInventoryDiscovery:
                                 f"Found device inventory method in {cls.__name__}"
                             )
                             devices = cls.get_ssh_device_inventory(data_model)
+
+                            # Capture skipped devices if the resolver exposes them
+                            # Architecture resolvers store their last resolver instance
+                            # with skipped_devices attribute
+                            if hasattr(cls, "_last_resolver") and cls._last_resolver:
+                                self.skipped_devices = getattr(
+                                    cls._last_resolver, "skipped_devices", []
+                                )
 
                             return list(devices)  # Ensure we return a list
 

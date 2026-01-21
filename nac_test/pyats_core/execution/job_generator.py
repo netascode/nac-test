@@ -103,6 +103,7 @@ class JobGenerator:
         from pathlib import Path
         from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
         from pyats.easypy import run
+
         # Device being tested (using hostname)
         HOSTNAME = "{hostname}"
         DEVICE_INFO = {json.dumps(device)}
