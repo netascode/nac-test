@@ -11,6 +11,45 @@ import pytest
 
 from tests.integration.mocks.mock_server import MockAPIServer
 
+
+@pytest.fixture(scope="session", autouse=True)
+def bypass_proxy_for_localhost() -> Generator[None, None, None]:
+    """Ensure 127.0.0.1 is in no_proxy to bypass corporate proxy for mock server.
+
+    The mock API server runs on 127.0.0.1 and must not route through proxies.
+    This fixture ensures proxy bypass is configured for the entire test session.
+    """
+    # Store original values
+    original_no_proxy = os.environ.get("no_proxy", "")
+    original_NO_PROXY = os.environ.get("NO_PROXY", "")
+
+    # Add 127.0.0.1 if not already present
+    if "127.0.0.1" not in original_no_proxy:
+        new_no_proxy = (
+            f"{original_no_proxy},127.0.0.1" if original_no_proxy else "127.0.0.1"
+        )
+        os.environ["no_proxy"] = new_no_proxy
+
+    if "127.0.0.1" not in original_NO_PROXY:
+        new_NO_PROXY = (
+            f"{original_NO_PROXY},127.0.0.1" if original_NO_PROXY else "127.0.0.1"
+        )
+        os.environ["NO_PROXY"] = new_NO_PROXY
+
+    yield
+
+    # Restore original values
+    if original_no_proxy:
+        os.environ["no_proxy"] = original_no_proxy
+    elif "no_proxy" in os.environ:
+        del os.environ["no_proxy"]
+
+    if original_NO_PROXY:
+        os.environ["NO_PROXY"] = original_NO_PROXY
+    elif "NO_PROXY" in os.environ:
+        del os.environ["NO_PROXY"]
+
+
 # Path to the default YAML configuration file
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "fixtures" / "mock_api_config.yaml"
 
