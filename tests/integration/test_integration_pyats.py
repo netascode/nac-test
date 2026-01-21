@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-import os
+import json
+import logging
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -12,6 +13,8 @@ from typer.testing import CliRunner, Result
 
 import nac_test.cli.main
 from tests.integration.mocks.mock_server import MockAPIServer
+
+logger = logging.getLogger(__name__)
 
 pytestmark = pytest.mark.integration
 
@@ -40,14 +43,14 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
             results_data = yaml.safe_load(f)
 
         if results_data.get("report", {}).get("summary", {}).get("errored", 0) > 0:
-            print("\n=== DEBUG: Test ERRORED, searching for error details ===")
+            logger.debug("Test ERRORED, searching for error details")
             # Look for TaskLog.* files which contain test execution details
             log_dir = results_file.parent
             for log_file in log_dir.glob("*TaskLog*"):
-                print(f"\n--- Contents of {log_file.name} ---")
+                logger.debug("Contents of %s", log_file.name)
                 with open(log_file) as f:
-                    print(f.read()[-5000:])  # Print last 5000 chars
-            print("=== END ERROR DEBUG ===\n")
+                    logger.debug(f.read()[-5000:])  # Log last 5000 chars
+            logger.debug("END ERROR DEBUG")
 
     assert len(results_files) > 0, f"No results.json files found in {pyats_results_dir}"
 
@@ -66,12 +69,12 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
 
         summary = results_data["report"]["summary"]
 
-        # DEBUG: Print full summary for CI debugging
-        import json
-
-        print(f"\n=== DEBUG: Full results from {results_file.parent.name} ===")
-        print(json.dumps(summary, indent=2))
-        print("=== END DEBUG ===\n")
+        # Log full summary for CI debugging
+        logger.debug(
+            "Full results from %s: %s",
+            results_file.parent.name,
+            json.dumps(summary, indent=2),
+        )
 
         # Verify tests were run
         assert summary["total"] > 0, (
@@ -98,50 +101,39 @@ def test_nac_test_pyats_quicksilver_api_only(
     passed: int,
     failed: int,
     expected_rc: int,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
     Verify nac-test with quicksilver-generated tests against mock server
     for API-only architectures (i.e. no d2d tests)
     """
     runner = CliRunner()
-    os.environ[f"{arch.upper()}_URL"] = mock_api_server.url
-    os.environ[f"{arch.upper()}_USERNAME"] = "does not matter"
-    os.environ[f"{arch.upper()}_PASSWORD"] = "does not matter"
+    monkeypatch.setenv(f"{arch.upper()}_URL", mock_api_server.url)
+    monkeypatch.setenv(f"{arch.upper()}_USERNAME", "does not matter")
+    monkeypatch.setenv(f"{arch.upper()}_PASSWORD", "does not matter")
 
     data_path = f"tests/integration/fixtures/data_pyats_qs/{arch}"
     templates_path = f"tests/integration/fixtures/templates_pyats_qs/{arch}/"
 
     output_dir = tmpdir
-    # output_dir = (
-    #     f"/tmp/nac-test-qs_{arch}"  # use static output dir for easier debugging
-    # )
 
-    try:
-        result: Result = runner.invoke(
-            nac_test.cli.main.app,
-            [
-                "-d",
-                data_path,
-                "-t",
-                templates_path,
-                "-o",
-                output_dir,
-                "--verbosity",
-                "DEBUG",
-            ],
-        )
+    result: Result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            output_dir,
+            "--verbosity",
+            "DEBUG",
+        ],
+    )
 
-        assert result.exit_code == expected_rc
+    assert result.exit_code == expected_rc
 
-        _validate_pyats_results(output_dir, passed, failed)
-    finally:
-        # Clean up environment variables
-        for key in [
-            f"{arch.upper()}_URL",
-            f"{arch.upper()}_USERNAME",
-            f"{arch.upper()}_PASSWORD",
-        ]:
-            os.environ.pop(key, None)
+    _validate_pyats_results(output_dir, passed, failed)
 
 
 @pytest.mark.parametrize(
@@ -157,6 +149,7 @@ def test_nac_test_pyats_quicksilver_api_d2d(
     passed: int,
     failed: int,
     expected_rc: int,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
     Verify nac-test for architectures with both API and D2D tests
@@ -189,44 +182,31 @@ def test_nac_test_pyats_quicksilver_api_d2d(
         runner = CliRunner()
 
         # Set up environment for both API (SDWAN_*) and D2D (IOSXE_*) tests
-        os.environ[f"{arch.upper()}_URL"] = mock_api_server.url
-        os.environ[f"{arch.upper()}_USERNAME"] = "does not matter"
-        os.environ[f"{arch.upper()}_PASSWORD"] = "does not matter"
-        os.environ["IOSXE_USERNAME"] = "admin"
-        os.environ["IOSXE_PASSWORD"] = "admin"
+        monkeypatch.setenv(f"{arch.upper()}_URL", mock_api_server.url)
+        monkeypatch.setenv(f"{arch.upper()}_USERNAME", "does not matter")
+        monkeypatch.setenv(f"{arch.upper()}_PASSWORD", "does not matter")
+        monkeypatch.setenv("IOSXE_USERNAME", "admin")
+        monkeypatch.setenv("IOSXE_PASSWORD", "admin")
 
         data_path = f"tests/integration/fixtures/data_pyats_qs/{arch}"
         templates_path = f"tests/integration/fixtures/templates_pyats_qs/{arch}/"
 
-        # outputdir = "/tmp/nac-test-pyats-sdwan-mock"  # static dir for easier debugging
         outputdir = tmpdir
 
-        try:
-            result: Result = runner.invoke(
-                nac_test.cli.main.app,
-                [
-                    "-d",
-                    data_path,
-                    "-t",
-                    templates_path,
-                    "-o",
-                    outputdir,
-                    "--verbosity",
-                    "DEBUG",
-                ],
-            )
-            assert result.exit_code == expected_rc
+        result: Result = runner.invoke(
+            nac_test.cli.main.app,
+            [
+                "-d",
+                data_path,
+                "-t",
+                templates_path,
+                "-o",
+                outputdir,
+                "--verbosity",
+                "DEBUG",
+            ],
+        )
+        assert result.exit_code == expected_rc
 
-            # we have one API test and one D2D test, but the latter with two devices. Each devices
-            _validate_pyats_results(outputdir, passed=passed, failed=failed)
-
-        finally:
-            # Clean up environment
-            for key in [
-                f"{arch.upper()}_URL",
-                f"{arch.upper()}_USERNAME",
-                f"{arch.upper()}_PASSWORD",
-                "IOSXE_USERNAME",
-                "IOSXE_PASSWORD",
-            ]:
-                os.environ.pop(key, None)
+        # we have one API test and one D2D test, but the latter with two devices
+        _validate_pyats_results(outputdir, passed=passed, failed=failed)
