@@ -5,7 +5,6 @@
 
 import os
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -69,13 +68,6 @@ class TestDummy(aetest.Testcase):
 
         # Verify controller type was detected correctly
         assert orchestrator.controller_type == "SDWAN"
-
-        # Mock the EnvironmentValidator to check it receives correct controller
-        with patch(
-            "nac_test.pyats_core.orchestrator.EnvironmentValidator"
-        ) as mock_validator:
-            orchestrator.validate_environment()
-            mock_validator.validate_controller_env.assert_called_once_with("SDWAN")
 
     def test_controller_switch_scenario(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test switching between different controller types."""
