@@ -160,6 +160,9 @@ markers = ["unit", "integration"]
 # Exclude fixture files from test collection - they are sample files for testing the resolver
 norecursedirs = ["tests/fixtures"]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
