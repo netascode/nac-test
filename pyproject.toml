@@ -68,11 +68,11 @@ nac-test = "nac_test.cli.main:app"
 #   nac-test-pyats-common requires nac-test (for base classes)
 #   nac-test optionally includes nac-test-pyats-common (for convenience) such that users can do `pip install nac-test[all]` to get both.
 adapters = [
-    "nac-test-pyats-common>=0.1.0",
+    "nac-test-pyats-common @ git+https://github.com/oboehmer/nac-test-pyats-common.git@catc-device-resolver",
 ]
 # Convenience extra that includes all optional dependencies
 all = [
-    "nac-test-pyats-common>=0.1.0",
+    "nac-test-pyats-common @ git+https://github.com/oboehmer/nac-test-pyats-common.git@catc-device-resolver",
 ]
 dev = [
     "ansible-core>=2.17.6",
