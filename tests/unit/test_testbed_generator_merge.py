@@ -3,12 +3,36 @@
 
 """Unit tests for TestbedGenerator with custom testbed merging."""
 
-import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
+import pytest
 import yaml
 
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
+
+
+@pytest.fixture
+def create_testbed_file(tmp_path: Path) -> Callable[[str], Path]:
+    """Fixture that returns a function to create temporary testbed files.
+
+    Args:
+        tmp_path: pytest tmp_path fixture
+
+    Returns:
+        A function that takes YAML content and returns the path to the created file.
+        Each call creates a unique file that is automatically cleaned up by pytest.
+    """
+    counter = 0
+
+    def _create_file(yaml_content: str) -> Path:
+        nonlocal counter
+        counter += 1
+        testbed_file = tmp_path / f"testbed_{counter}.yaml"
+        testbed_file.write_text(yaml_content)
+        return testbed_file
+
+    return _create_file
 
 
 class TestTestbedMerging:
@@ -32,7 +56,9 @@ class TestTestbedMerging:
         assert "router1" in testbed["devices"]
         assert testbed["devices"]["router1"]["os"] == "iosxe"
 
-    def test_generate_with_base_testbed_override(self) -> None:
+    def test_generate_with_base_testbed_override(
+        self, create_testbed_file: Callable[[str], Path]
+    ) -> None:
         """Test that user testbed devices override auto-discovered devices."""
         # Create user testbed with override
         user_testbed_yaml = """
@@ -49,37 +75,33 @@ devices:
         command: python mock_unicon.py iosxe --hostname router1
 """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write(user_testbed_yaml)
-            user_testbed_path = Path(f.name)
+        user_testbed_path = create_testbed_file(user_testbed_yaml)
 
-        try:
-            # Auto-discovered device
-            device = {
-                "hostname": "router1",
-                "host": "10.1.1.1",
-                "os": "iosxe",
-                "username": "admin",
-                "password": "cisco123",
-            }
+        # Auto-discovered device
+        device = {
+            "hostname": "router1",
+            "host": "10.1.1.1",
+            "os": "iosxe",
+            "username": "admin",
+            "password": "cisco123",
+        }
 
-            result = TestbedGenerator.generate_consolidated_testbed_yaml(
-                [device], base_testbed_path=user_testbed_path
-            )
-            testbed = yaml.safe_load(result)
+        result = TestbedGenerator.generate_consolidated_testbed_yaml(
+            [device], base_testbed_path=user_testbed_path
+        )
+        testbed = yaml.safe_load(result)
 
-            # User testbed should take precedence
-            assert testbed["testbed"]["name"] == "custom_testbed"
-            assert testbed["testbed"]["custom"]["environment"] == "test"
-            assert "router1" in testbed["devices"]
-            # Device should have user-defined connection (not auto-discovered)
-            assert "command" in testbed["devices"]["router1"]["connections"]["cli"]
-            assert "ip" not in testbed["devices"]["router1"]["connections"]["cli"]
+        # User testbed should take precedence
+        assert testbed["testbed"]["name"] == "custom_testbed"
+        assert testbed["testbed"]["custom"]["environment"] == "test"
+        assert "router1" in testbed["devices"]
+        # Device should have user-defined connection (not auto-discovered)
+        assert "command" in testbed["devices"]["router1"]["connections"]["cli"]
+        assert "ip" not in testbed["devices"]["router1"]["connections"]["cli"]
 
-        finally:
-            user_testbed_path.unlink()
-
-    def test_generate_with_base_testbed_additional_devices(self) -> None:
+    def test_generate_with_base_testbed_additional_devices(
+        self, create_testbed_file: Callable[[str], Path]
+    ) -> None:
         """Test that auto-discovered devices are added to user testbed."""
         # User testbed with one device
         user_testbed_yaml = """
@@ -96,54 +118,46 @@ devices:
         ip: 10.0.0.1
 """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write(user_testbed_yaml)
-            user_testbed_path = Path(f.name)
+        user_testbed_path = create_testbed_file(user_testbed_yaml)
 
-        try:
-            # Auto-discovered devices
-            devices = [
-                {
-                    "hostname": "router1",
-                    "host": "10.1.1.1",
-                    "os": "iosxe",
-                    "username": "admin",
-                    "password": "cisco123",
-                },
-                {
-                    "hostname": "router2",
-                    "host": "10.1.1.2",
-                    "os": "iosxe",
-                    "username": "admin",
-                    "password": "cisco123",
-                },
-            ]
+        # Auto-discovered devices
+        devices = [
+            {
+                "hostname": "router1",
+                "host": "10.1.1.1",
+                "os": "iosxe",
+                "username": "admin",
+                "password": "cisco123",
+            },
+            {
+                "hostname": "router2",
+                "host": "10.1.1.2",
+                "os": "iosxe",
+                "username": "admin",
+                "password": "cisco123",
+            },
+        ]
 
-            result = TestbedGenerator.generate_consolidated_testbed_yaml(
-                devices, base_testbed_path=user_testbed_path
-            )
-            testbed = yaml.safe_load(result)
+        result = TestbedGenerator.generate_consolidated_testbed_yaml(
+            devices, base_testbed_path=user_testbed_path
+        )
+        testbed = yaml.safe_load(result)
 
-            # Should have all three devices
-            assert len(testbed["devices"]) == 3
-            assert "jumphost" in testbed["devices"]
-            assert "router1" in testbed["devices"]
-            assert "router2" in testbed["devices"]
+        # Should have all three devices
+        assert len(testbed["devices"]) == 3
+        assert "jumphost" in testbed["devices"]
+        assert "router1" in testbed["devices"]
+        assert "router2" in testbed["devices"]
 
-            # Jumphost from user testbed
-            assert testbed["devices"]["jumphost"]["type"] == "linux"
-            # Routers from auto-discovery
-            assert (
-                testbed["devices"]["router1"]["connections"]["cli"]["ip"] == "10.1.1.1"
-            )
-            assert (
-                testbed["devices"]["router2"]["connections"]["cli"]["ip"] == "10.1.1.2"
-            )
+        # Jumphost from user testbed
+        assert testbed["devices"]["jumphost"]["type"] == "linux"
+        # Routers from auto-discovery
+        assert testbed["devices"]["router1"]["connections"]["cli"]["ip"] == "10.1.1.1"
+        assert testbed["devices"]["router2"]["connections"]["cli"]["ip"] == "10.1.1.2"
 
-        finally:
-            user_testbed_path.unlink()
-
-    def test_preserve_pyats_env_variables(self) -> None:
+    def test_preserve_pyats_env_variables(
+        self, create_testbed_file: Callable[[str], Path]
+    ) -> None:
         """Test that PyATS environment variable syntax is preserved."""
         # User testbed with %ENV{} syntax
         user_testbed_yaml = """
@@ -167,47 +181,43 @@ devices:
         ip: 10.1.1.1
 """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write(user_testbed_yaml)
-            user_testbed_path = Path(f.name)
+        user_testbed_path = create_testbed_file(user_testbed_yaml)
 
-        try:
-            # Auto-discovered device (should be overridden)
-            device = {
-                "hostname": "router1",
-                "host": "10.1.1.1",
-                "os": "iosxe",
-                "username": "plaintext_user",
-                "password": "plaintext_pass",
-            }
+        # Auto-discovered device (should be overridden)
+        device = {
+            "hostname": "router1",
+            "host": "10.1.1.1",
+            "os": "iosxe",
+            "username": "plaintext_user",
+            "password": "plaintext_pass",
+        }
 
-            result = TestbedGenerator.generate_consolidated_testbed_yaml(
-                [device], base_testbed_path=user_testbed_path
-            )
-            testbed = yaml.safe_load(result)
+        result = TestbedGenerator.generate_consolidated_testbed_yaml(
+            [device], base_testbed_path=user_testbed_path
+        )
+        testbed = yaml.safe_load(result)
 
-            # Environment variables should be preserved as strings
-            assert (
-                testbed["testbed"]["credentials"]["default"]["username"]
-                == "%ENV{IOSXE_USERNAME}"
-            )
-            assert (
-                testbed["testbed"]["credentials"]["default"]["password"]
-                == "%ENV{IOSXE_PASSWORD}"
-            )
-            assert (
-                testbed["devices"]["router1"]["credentials"]["default"]["username"]
-                == "%ENV{DEVICE_USERNAME}"
-            )
-            assert (
-                testbed["devices"]["router1"]["credentials"]["default"]["password"]
-                == "%ENV{DEVICE_PASSWORD}"
-            )
+        # Environment variables should be preserved as strings
+        assert (
+            testbed["testbed"]["credentials"]["default"]["username"]
+            == "%ENV{IOSXE_USERNAME}"
+        )
+        assert (
+            testbed["testbed"]["credentials"]["default"]["password"]
+            == "%ENV{IOSXE_PASSWORD}"
+        )
+        assert (
+            testbed["devices"]["router1"]["credentials"]["default"]["username"]
+            == "%ENV{DEVICE_USERNAME}"
+        )
+        assert (
+            testbed["devices"]["router1"]["credentials"]["default"]["password"]
+            == "%ENV{DEVICE_PASSWORD}"
+        )
 
-        finally:
-            user_testbed_path.unlink()
-
-    def test_preserve_pyats_custom_data(self) -> None:
+    def test_preserve_pyats_custom_data(
+        self, create_testbed_file: Callable[[str], Path]
+    ) -> None:
         """Test that PyATS custom data sections are preserved."""
         # User testbed with custom data
         user_testbed_yaml = """
@@ -231,41 +241,35 @@ topology:
 devices: {}
 """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write(user_testbed_yaml)
-            user_testbed_path = Path(f.name)
+        user_testbed_path = create_testbed_file(user_testbed_yaml)
 
-        try:
-            # Auto-discovered device
-            device = {
-                "hostname": "router1",
-                "host": "10.1.1.1",
-                "os": "iosxe",
-                "username": "admin",
-                "password": "cisco123",
-            }
+        # Auto-discovered device
+        device = {
+            "hostname": "router1",
+            "host": "10.1.1.1",
+            "os": "iosxe",
+            "username": "admin",
+            "password": "cisco123",
+        }
 
-            result = TestbedGenerator.generate_consolidated_testbed_yaml(
-                [device], base_testbed_path=user_testbed_path
-            )
-            testbed = yaml.safe_load(result)
+        result = TestbedGenerator.generate_consolidated_testbed_yaml(
+            [device], base_testbed_path=user_testbed_path
+        )
+        testbed = yaml.safe_load(result)
 
-            # Custom data should be preserved
-            assert "custom" in testbed["testbed"]
-            assert (
-                testbed["testbed"]["custom"]["shared_vars"]["ntp_server"] == "10.1.1.1"
-            )
-            assert testbed["testbed"]["custom"]["test_config"]["timeout"] == 300
+        # Custom data should be preserved
+        assert "custom" in testbed["testbed"]
+        assert testbed["testbed"]["custom"]["shared_vars"]["ntp_server"] == "10.1.1.1"
+        assert testbed["testbed"]["custom"]["test_config"]["timeout"] == 300
 
-            # Topology should be preserved
-            assert "topology" in testbed
-            assert "router1" in testbed["topology"]
-            assert "GigabitEthernet0/0" in testbed["topology"]["router1"]["interfaces"]
+        # Topology should be preserved
+        assert "topology" in testbed
+        assert "router1" in testbed["topology"]
+        assert "GigabitEthernet0/0" in testbed["topology"]["router1"]["interfaces"]
 
-        finally:
-            user_testbed_path.unlink()
-
-    def test_preserve_device_custom_fields(self) -> None:
+    def test_preserve_device_custom_fields(
+        self, create_testbed_file: Callable[[str], Path]
+    ) -> None:
         """Test that device-level custom fields are preserved."""
         # User testbed with device custom fields
         user_testbed_yaml = """
@@ -285,34 +289,30 @@ devices:
         ip: 10.1.1.1
 """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write(user_testbed_yaml)
-            user_testbed_path = Path(f.name)
+        user_testbed_path = create_testbed_file(user_testbed_yaml)
 
-        try:
-            # Auto-discovered device (should be overridden)
-            device = {
-                "hostname": "router1",
-                "host": "10.1.1.1",
-                "os": "iosxe",
-                "username": "admin",
-                "password": "cisco123",
-            }
+        # Auto-discovered device (should be overridden)
+        device = {
+            "hostname": "router1",
+            "host": "10.1.1.1",
+            "os": "iosxe",
+            "username": "admin",
+            "password": "cisco123",
+        }
 
-            result = TestbedGenerator.generate_consolidated_testbed_yaml(
-                [device], base_testbed_path=user_testbed_path
-            )
-            testbed = yaml.safe_load(result)
+        result = TestbedGenerator.generate_consolidated_testbed_yaml(
+            [device], base_testbed_path=user_testbed_path
+        )
+        testbed = yaml.safe_load(result)
 
-            # Device custom fields should be preserved
-            assert "custom" in testbed["devices"]["router1"]
-            assert testbed["devices"]["router1"]["custom"]["rack_location"] == "A-01"
-            assert testbed["devices"]["router1"]["custom"]["owner"] == "NetworkTeam"
+        # Device custom fields should be preserved
+        assert "custom" in testbed["devices"]["router1"]
+        assert testbed["devices"]["router1"]["custom"]["rack_location"] == "A-01"
+        assert testbed["devices"]["router1"]["custom"]["owner"] == "NetworkTeam"
 
-        finally:
-            user_testbed_path.unlink()
-
-    def test_single_device_testbed_with_base(self) -> None:
+    def test_single_device_testbed_with_base(
+        self, create_testbed_file: Callable[[str], Path]
+    ) -> None:
         """Test single device testbed generation with base testbed."""
         # User testbed
         user_testbed_yaml = """
@@ -327,31 +327,25 @@ devices:
         command: python mock_unicon.py iosxe --hostname router1
 """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write(user_testbed_yaml)
-            user_testbed_path = Path(f.name)
+        user_testbed_path = create_testbed_file(user_testbed_yaml)
 
-        try:
-            # Auto-discovered device
-            device = {
-                "hostname": "router1",
-                "host": "10.1.1.1",
-                "os": "iosxe",
-                "username": "admin",
-                "password": "cisco123",
-            }
+        # Auto-discovered device
+        device = {
+            "hostname": "router1",
+            "host": "10.1.1.1",
+            "os": "iosxe",
+            "username": "admin",
+            "password": "cisco123",
+        }
 
-            result = TestbedGenerator.generate_testbed_yaml(
-                device, base_testbed_path=user_testbed_path
-            )
-            testbed = yaml.safe_load(result)
+        result = TestbedGenerator.generate_testbed_yaml(
+            device, base_testbed_path=user_testbed_path
+        )
+        testbed = yaml.safe_load(result)
 
-            # User device should take precedence
-            assert "command" in testbed["devices"]["router1"]["connections"]["cli"]
-            assert "ip" not in testbed["devices"]["router1"]["connections"]["cli"]
-
-        finally:
-            user_testbed_path.unlink()
+        # User device should take precedence
+        assert "command" in testbed["devices"]["router1"]["connections"]["cli"]
+        assert "ip" not in testbed["devices"]["router1"]["connections"]["cli"]
 
     def test_nonexistent_base_testbed(self) -> None:
         """Test that nonexistent base testbed path is handled gracefully."""
