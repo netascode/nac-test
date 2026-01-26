@@ -75,5 +75,8 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
         total_failed += summary["failed"]
 
     # Verify passed and failed counts
-    assert total_passed == passed, f"passed: expected={passed}, actual={total_passed}"
-    assert total_failed == failed, f"failed: expected={failed}, actual={total_failed}"
+    assert (total_passed, total_failed) == (passed, failed), (
+        f"Test results do not match expected values: "
+        f"expected passed={passed}, failed={failed}; "
+        f"actual passed={total_passed}, failed={total_failed}"
+    )
