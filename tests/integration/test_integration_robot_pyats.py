@@ -9,7 +9,7 @@ from typer.testing import CliRunner, Result
 import nac_test.cli.main
 from tests.integration.mocks.mock_server import MockAPIServer
 
-from .utils import _validate_pyats_results
+from .utils import validate_pyats_results, validate_robot_results
 
 logger = logging.getLogger(__name__)
 
@@ -51,4 +51,6 @@ def test_nac_test_robot_pyats(
 
     assert result.exit_code == 0
 
-    _validate_pyats_results(output_dir, 1, 0)
+    # Validate both PyATS and Robot Framework results
+    validate_pyats_results(output_dir, 1, 0)
+    validate_robot_results(output_dir, 2, 0)

@@ -12,7 +12,7 @@ from typer.testing import CliRunner, Result
 import nac_test.cli.main
 from tests.integration.mocks.mock_server import MockAPIServer
 
-from .utils import _validate_pyats_results
+from .utils import validate_pyats_results
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ def test_nac_test_pyats_quicksilver_api_only(
 
     assert result.exit_code == expected_rc
 
-    _validate_pyats_results(output_dir, passed, failed)
+    validate_pyats_results(output_dir, passed, failed)
 
 
 @pytest.mark.parametrize(
@@ -143,4 +143,4 @@ def test_nac_test_pyats_quicksilver_api_d2d(
         assert result.exit_code == expected_rc
 
         # we have one API test and one D2D test, but the latter with two devices
-        _validate_pyats_results(outputdir, passed=passed, failed=failed)
+        validate_pyats_results(outputdir, passed=passed, failed=failed)

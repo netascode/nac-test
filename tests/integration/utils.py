@@ -2,15 +2,13 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 import json
-import logging
 from pathlib import Path
 
 import yaml  # type: ignore
+from robot.api import ExecutionResult
 
-logger = logging.getLogger(__name__)
 
-
-def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) -> None:
+def validate_pyats_results(output_dir: str | Path, passed: int, failed: int) -> None:
     """Validate PyATS test results from results.json files.
 
     Args:
@@ -34,14 +32,14 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
             results_data = yaml.safe_load(f)
 
         if results_data.get("report", {}).get("summary", {}).get("errored", 0) > 0:
-            logger.debug("Test ERRORED, searching for error details")
+            print("DEBUG: Test ERRORED, searching for error details")
             # Look for TaskLog.* files which contain test execution details
             log_dir = results_file.parent
             for log_file in log_dir.glob("*TaskLog*"):
-                logger.debug("Contents of %s", log_file.name)
+                print(f"DEBUG: Contents of {log_file.name}")
                 with open(log_file) as f:
-                    logger.debug(f.read()[-5000:])  # Log last 5000 chars
-            logger.debug("END ERROR DEBUG")
+                    print(f.read()[-5000:])  # Print last 5000 chars
+            print("DEBUG: END ERROR DEBUG")
 
     assert len(results_files) > 0, f"No results.json files found in {pyats_results_dir}"
 
@@ -60,11 +58,10 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
 
         summary = results_data["report"]["summary"]
 
-        # Log full summary for CI debugging
-        logger.debug(
-            "Full results from %s: %s",
-            results_file.parent.name,
-            json.dumps(summary, indent=2),
+        # Print full summary for CI debugging
+        print(
+            f"DEBUG: Full results from {results_file.parent.name}: "
+            f"{json.dumps(summary, indent=2)}"
         )
 
         # Verify tests were run
@@ -79,4 +76,40 @@ def _validate_pyats_results(output_dir: str | Path, passed: int, failed: int) ->
         f"Test results do not match expected values: "
         f"expected passed={passed}, failed={failed}; "
         f"actual passed={total_passed}, failed={total_failed}"
+    )
+
+
+def validate_robot_results(output_dir: str | Path, passed: int, failed: int) -> None:
+    """Validate Robot Framework test results from output.xml.
+
+    Args:
+        output_dir: Base output directory containing output.xml
+        passed: Expected number of passed tests
+        failed: Expected number of failed tests
+
+    Raises:
+        AssertionError: If validation fails (no tests run, tests failed, etc.)
+    """
+    output_path = Path(output_dir)
+    output_xml = output_path / "output.xml"
+
+    assert output_xml.exists(), f"Robot Framework output.xml not found: {output_xml}"
+
+    # Parse the execution result
+    result = ExecutionResult(str(output_xml))
+
+    # Get statistics from the suite
+    stats = result.suite.statistics
+    total = stats.total
+    actual_passed = stats.passed
+    actual_failed = stats.failed
+
+    # Verify tests were run
+    assert total > 0, f"No tests were run in Robot Framework: total={total}"
+
+    # Verify passed and failed counts
+    assert (actual_passed, actual_failed) == (passed, failed), (
+        f"Robot Framework results do not match expected values: "
+        f"expected passed={passed}, failed={failed}; "
+        f"actual passed={actual_passed}, failed={actual_failed}"
     )
