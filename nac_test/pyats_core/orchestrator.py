@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from robot.rebot import rebot_cli
 
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
@@ -688,6 +689,92 @@ class PyATSOrchestrator:
                         print(f"{'Summary Report:'} {summary_report}")
                         print(f"{'All Reports:'}    {report_dir}")
                         break
+
+            # Collect Robot Framework XML files and generate combined reports
+            robot_xml_files = []
+            for archive_type, archive_result in result["results"].items():
+                robot_xml = archive_result.get("robot_xml", {})
+                if robot_xml.get("status") == "success":
+                    robot_xml_files.append((archive_type, robot_xml.get("output_file")))
+
+            if robot_xml_files:
+                print(f"\n{terminal.info('Robot Framework XML Generated:')}")
+                print("=" * 80)
+                for archive_type, output_file in robot_xml_files:
+                    print(f"{archive_type.upper():8s}: {output_file}")
+
+                # Generate combined Robot reports using rebot API
+                print(f"\n{terminal.info('Generating Robot Framework reports...')}")
+
+                try:
+                    # Collect XML paths
+                    xml_paths = [output_file for _, output_file in robot_xml_files]
+
+                    # Set output directory to pyats_results
+                    pyats_results_dir = self.base_output_dir / "pyats_results"
+                    output_dir = str(pyats_results_dir)
+
+                    # Call rebot to merge XMLs and generate HTML reports
+                    rebot_args = [
+                        "--name",
+                        "pyATS Test Execution",
+                        "--outputdir",
+                        output_dir,
+                        "--output",
+                        "output.xml",
+                        "--log",
+                        "log.html",
+                        "--report",
+                        "report.html",
+                    ] + xml_paths
+
+                    logger.info(f"Calling rebot_cli with args: {rebot_args}")
+                    print(
+                        f"DEBUG: rebot command line equivalent: rebot {' '.join(rebot_args)}"
+                    )
+                    print("DEBUG: XML files to merge:")
+                    for xml_path in xml_paths:
+                        xml_p = Path(xml_path)
+                        print(f"  - {xml_path}")
+                        print(
+                            f"    Exists: {xml_p.exists()}, Size: {xml_p.stat().st_size if xml_p.exists() else 0}"
+                        )
+
+                    rc = rebot_cli(rebot_args)
+                    print(f"DEBUG: rebot_cli returned code: {rc}")
+
+                    # Robot Framework return codes:
+                    # 0: All tests passed
+                    # 1-250: Tests failed (number of failures or specific status)
+                    # 251+: Processing error (invalid args, file not found, etc.)
+                    if rc <= 250:
+                        print("✓ Combined Robot reports generated:")
+                        print(f"  Output: {pyats_results_dir / 'output.xml'}")
+                        print(f"  Log:    {pyats_results_dir / 'log.html'}")
+                        print(f"  Report: {pyats_results_dir / 'report.html'}")
+
+                        # Debug: Parse the combined output to show test counts
+                        try:
+                            from robot.api import ExecutionResult
+
+                            combined_result = ExecutionResult(
+                                str(pyats_results_dir / "output.xml")
+                            )
+                            combined_stats = combined_result.suite.statistics
+                            print(
+                                f"DEBUG: Combined XML contains: {combined_stats.total} tests ({combined_stats.passed} passed, {combined_stats.failed} failed)"
+                            )
+                        except Exception as debug_e:
+                            print(f"DEBUG: Could not parse combined XML: {debug_e}")
+                    else:
+                        print(
+                            f"{terminal.warning('Warning:')} rebot processing error, returned code {rc}"
+                        )
+                except Exception as e:
+                    print(
+                        f"{terminal.warning('Warning:')} Failed to generate Robot reports: {e}"
+                    )
+                    logger.error(f"Robot report generation failed: {e}", exc_info=True)
 
             # Report any failures
             failed_archives = [

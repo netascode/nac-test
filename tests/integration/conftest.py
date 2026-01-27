@@ -17,19 +17,25 @@ DEFAULT_CONFIG_PATH = Path(__file__).parent / "fixtures" / "mock_api_config.yaml
 
 
 @pytest.fixture(autouse=True)
-def clear_controller_credentials() -> None:
-    """
-    Clear any controller credentials from environment to avoid conflicts.
+def clear_test_environment() -> None:
+    """Clear environment variables that could interfere with tests.
 
-    nac-test fails if the user has already a controller credential
-    set in his/her environment.
-    This fixture removes any environment variables matching the pattern:
-    ^[A-Z]+_(URL|USERNAME|PASSWORD)$
+    Removes:
+    - Controller credentials (ACI_URL, SDWAN_USERNAME, etc.)
+    - Reporting control variables (KEEP_HTML_REPORT_DATA, PYATS_DEBUG)
+
+    This prevents environment pollution between tests and ensures each test
+    starts with a clean environment.
     """
+    # Clear controller credentials
     pattern = re.compile(r"^[A-Z]+_(URL|USERNAME|PASSWORD)$")
     keys_to_remove = [key for key in os.environ.keys() if pattern.match(key)]
     for key in keys_to_remove:
         del os.environ[key]
+
+    # Clear reporting control variables
+    os.environ.pop("KEEP_HTML_REPORT_DATA", None)
+    os.environ.pop("PYATS_DEBUG", None)
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -137,14 +137,11 @@ class ReportGenerator:
             successful_reports, result_files
         )
 
-        # Clean up JSONL files (unless in debug mode or KEEP_HTML_REPORT_DATA is set)
-        if os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA"):
-            if os.environ.get("KEEP_HTML_REPORT_DATA"):
-                logger.info("Keeping JSONL result files (KEEP_HTML_REPORT_DATA is set)")
-            else:
-                logger.info("Debug mode enabled - keeping JSONL result files")
-        else:
-            await self._cleanup_jsonl_files(result_files)
+        # Store result_files for potential cleanup later
+        self._result_files = result_files
+
+        # Note: JSONL cleanup is now handled externally by calling cleanup_jsonl_files()
+        # This allows other generators (like RobotXMLGenerator) to access the files
 
         duration = (datetime.now() - start_time).total_seconds()
 
@@ -156,6 +153,24 @@ class ReportGenerator:
             "failed_reports": len(self.failed_reports),
             "summary_report": str(summary_path) if summary_path else None,
         }
+
+    async def cleanup_jsonl_files(self) -> None:
+        """Clean up JSONL files after all report generation is complete.
+
+        This should be called after all generators (HTML, Robot XML, etc.) have
+        finished processing the JSONL files. Respects debug mode and KEEP_HTML_REPORT_DATA.
+        """
+        # Exit early if no files to clean up
+        if not hasattr(self, "_result_files"):
+            return
+
+        if os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA"):
+            if os.environ.get("KEEP_HTML_REPORT_DATA"):
+                logger.info("Keeping JSONL result files (KEEP_HTML_REPORT_DATA is set)")
+            else:
+                logger.info("Debug mode enabled - keeping JSONL result files")
+        else:
+            await self._cleanup_jsonl_files(self._result_files)
 
     async def _read_jsonl_results(self, jsonl_path: Path) -> dict[str, Any]:
         """Read JSONL file asynchronously with robust error handling.
@@ -337,6 +352,7 @@ class ReportGenerator:
         """
         for file in files:
             try:
+                logger.info(f"XXX Deleting JSONL file: {file}")
                 file.unlink()
             except Exception as e:
                 logger.warning(f"Failed to delete {file}: {e}")

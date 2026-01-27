@@ -9,7 +9,12 @@ from typer.testing import CliRunner, Result
 import nac_test.cli.main
 from tests.integration.mocks.mock_server import MockAPIServer
 
-from .utils import validate_pyats_results, validate_robot_results
+from .utils import (
+    validate_pyats_results,
+    validate_reporting_artifacts_pyats_html,
+    validate_reporting_artifacts_pyats_robot,
+    validate_robot_results,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,3 +59,9 @@ def test_nac_test_robot_pyats(
     # Validate both PyATS and Robot Framework results
     validate_pyats_results(output_dir, 1, 0)
     validate_robot_results(output_dir, 2, 0)
+
+    # Validate PyATS HTML reporting artifacts
+    validate_reporting_artifacts_pyats_html(output_dir, ["api"])
+
+    # Validate PyATS Robot Framework reporting artifacts
+    validate_reporting_artifacts_pyats_robot(output_dir, ["api"], 1, 0)

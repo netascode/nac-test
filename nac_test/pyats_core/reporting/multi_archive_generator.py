@@ -19,6 +19,7 @@ from typing import Any, cast
 import aiofiles  # type: ignore[import-untyped]
 
 from nac_test.pyats_core.reporting.generator import ReportGenerator
+from nac_test.pyats_core.reporting.robot_xml_generator import RobotXMLGenerator
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
 from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.pyats_core.reporting.utils.archive_extractor import ArchiveExtractor
@@ -191,11 +192,25 @@ class MultiArchiveReportGenerator:
             # This ensures ReportGenerator can find the JSONL temp files in the correct subdirectory
             type_output_dir = self.output_dir / archive_type
 
-            # Run ReportGenerator on extracted contents
+            # Run ReportGenerator on extracted contents (HTML reports)
             generator = ReportGenerator(
                 type_output_dir, extract_dir, minimal_reports=self.minimal_reports
             )
             result = await generator.generate_all_reports()
+
+            # Generate Robot Framework XML alongside HTML reports
+            try:
+                robot_generator = RobotXMLGenerator(type_output_dir, extract_dir)
+                robot_result = await robot_generator.generate_robot_xml()
+                result["robot_xml"] = robot_result
+                if robot_result.get("status") == "success":
+                    logger.info(f"Generated Robot XML: {robot_result['output_file']}")
+            except Exception as e:
+                logger.warning(f"Failed to generate Robot XML for {archive_type}: {e}")
+                result["robot_xml"] = {"status": "error", "error": str(e)}
+
+            # Clean up JSONL files now that both generators have finished
+            await generator.cleanup_jsonl_files()
 
             # Add archive info to result
             result["archive_path"] = str(archive_path)

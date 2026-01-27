@@ -119,24 +119,43 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         generation 100x faster for large test suites.
 
         Returns:
-            Dictionary containing pre-rendered HTML for:
+            Dictionary containing both original text and pre-rendered HTML:
                 - title: Test title or class name
-                - description_html: Rendered test description
-                - setup_html: Rendered setup information
-                - procedure_html: Rendered test procedure
-                - criteria_html: Rendered pass/fail criteria
+                - description: Original markdown text
+                - setup: Original markdown text
+                - procedure: Original markdown text
+                - criteria: Original markdown text
+                - description_html: Rendered HTML (for HTML reports)
+                - setup_html: Rendered HTML (for HTML reports)
+                - procedure_html: Rendered HTML (for HTML reports)
+                - criteria_html: Rendered HTML (for HTML reports)
         """
         # Get the module object to access module-level constants
         module = sys.modules[cls.__module__]
 
+        # Get original markdown text
+        description = getattr(module, "DESCRIPTION", "")
+        setup = getattr(module, "SETUP", "")
+        procedure = getattr(module, "PROCEDURE", "")
+        criteria = getattr(module, "PASS_FAIL_CRITERIA", "")
+
         return {
             "title": getattr(module, "TITLE", cls.__name__),
-            "description_html": cls._render_html(getattr(module, "DESCRIPTION", "")),
-            "setup_html": cls._render_html(getattr(module, "SETUP", "")),
-            "procedure_html": cls._render_html(getattr(module, "PROCEDURE", "")),
-            "criteria_html": cls._render_html(
-                getattr(module, "PASS_FAIL_CRITERIA", "")
-            ),
+            # Original markdown text (unprocessed)
+            "description": description,
+            "setup": setup,
+            "procedure": procedure,
+            "criteria": criteria,
+            # Robot Framework formatted text
+            "description_robot": cls._render_robot(description),
+            "setup_robot": cls._render_robot(setup),
+            "procedure_robot": cls._render_robot(procedure),
+            "criteria_robot": cls._render_robot(criteria),
+            # Pre-rendered HTML (for HTML reports)
+            "description_html": cls._render_html(description),
+            "setup_html": cls._render_html(setup),
+            "procedure_html": cls._render_html(procedure),
+            "criteria_html": cls._render_html(criteria),
         }
 
     @staticmethod
@@ -174,6 +193,126 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         html = str(md.convert(text))
 
         return html
+
+    @staticmethod
+    def _render_robot(text: str) -> str:
+        """Convert Markdown text to Robot Framework documentation format.
+
+        Robot Framework documentation supports a wiki-like syntax:
+        - Bold: *text*
+        - Italic: _text_
+        - Code: ``code``
+        - Lists: - item (same as markdown)
+        - Section titles: = Title =, == Subtitle ==
+        - Links: [url|text]
+        - Tables: | col1 | col2 |
+        - Preformatted: | text
+
+        Args:
+            text: Markdown-formatted text
+
+        Returns:
+            Robot Framework formatted text
+        """
+        if not text:
+            return ""
+
+        import re
+
+        # Process line by line to handle code blocks and lists
+        lines = text.split("\n")
+        result = []
+        in_code_block = False
+        in_list = False
+        i = 0
+
+        while i < len(lines):
+            line = lines[i]
+
+            # Handle fenced code blocks (```)
+            if line.strip().startswith("```"):
+                in_code_block = not in_code_block
+                if not in_code_block:
+                    # End of code block, add empty line after
+                    result.append("")
+                i += 1
+                continue
+
+            if in_code_block:
+                # Convert code block line to Robot preformatted format
+                result.append(f"| {line}")
+                i += 1
+                continue
+
+            # Convert markdown headings to Robot section titles
+            # ## Heading → == Heading ==
+            heading_match = re.match(r"^(#{1,3})\s+(.+)$", line)
+            if heading_match:
+                level = len(heading_match.group(1))
+                title = heading_match.group(2)
+                equals = "=" * min(level, 3)  # Robot only supports 3 levels
+                result.append(f"{equals} {title} {equals}")
+                result.append("")  # Add blank line after heading
+                i += 1
+                continue
+
+            # Convert inline styles - ORDER MATTERS!
+            # 1. First convert inline code to protect it from style conversions
+            line = re.sub(r"`([^`]+)`", r"``\1``", line)
+
+            # 2. Convert bold: **text** → *text*
+            line = re.sub(r"\*\*([^\*]+)\*\*", r"*\1*", line)
+
+            # 3. Skip italic conversion (*text* → _text_)
+            # Robot Framework supports italic with _text_ but it's rarely used in docs
+            # and causes issues with literal asterisks in paths/content
+            # If users want italic, they can use underscore in their source markdown
+
+            # Convert markdown links [text](url) → [url|text]
+            line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", r"[\2|\1]", line)
+
+            # Horizontal rules: --- (3 or more dashes) stays the same
+            if re.match(r"^-{3,}$", line.strip()):
+                result.append("---")
+                result.append("")
+                i += 1
+                continue
+
+            # Detect and handle list items (lines starting with - or *)
+            # Convert * lists to - lists and ensure proper spacing
+            is_list_item = re.match(r"^[\s]*[*-]\s+", line)
+
+            if is_list_item:
+                # Convert * to - for Robot Framework
+                line = re.sub(r"^(\s*)\*\s+", r"\1- ", line)
+
+                # Add blank line before list if starting a new list
+                if not in_list and result and result[-1].strip():
+                    result.append("")
+
+                result.append(line)
+                in_list = True
+                i += 1
+                continue
+
+            # If we were in a list and this line is not a list item, end the list
+            if in_list and line.strip():  # Non-empty, non-list line
+                in_list = False
+                # Add blank line after list ends
+                if result and result[-1].strip():
+                    result.append("")
+
+            # Keep other lines as-is
+            result.append(line)
+            i += 1
+
+        # Join lines back together
+        output = "\n".join(result)
+
+        # Clean up multiple consecutive blank lines (more than 2)
+        output = re.sub(r"\n{3,}", "\n\n", output)
+
+        return output
 
     @aetest.setup  # type: ignore[untyped-decorator]
     def setup(self) -> None:

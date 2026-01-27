@@ -12,7 +12,11 @@ from typer.testing import CliRunner, Result
 import nac_test.cli.main
 from tests.integration.mocks.mock_server import MockAPIServer
 
-from .utils import validate_pyats_results
+from .utils import (
+    validate_pyats_results,
+    validate_reporting_artifacts_pyats_html,
+    validate_reporting_artifacts_pyats_robot,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +69,14 @@ def test_nac_test_pyats_quicksilver_api_only(
 
     assert result.exit_code == expected_rc
 
+    # Validate PyATS results
     validate_pyats_results(output_dir, passed, failed)
+
+    # Validate HTML reporting artifacts
+    validate_reporting_artifacts_pyats_html(output_dir, ["api"])
+
+    # Validate Robot Framework reporting artifacts
+    validate_reporting_artifacts_pyats_robot(output_dir, ["api"], passed, failed)
 
 
 @pytest.mark.parametrize(
@@ -145,6 +156,14 @@ def test_nac_test_pyats_quicksilver_api_d2d(
         # we have one API test and one D2D test, but the latter with two devices
         validate_pyats_results(outputdir, passed=passed, failed=failed)
 
+        # Validate HTML reporting artifacts for both API and D2D
+        validate_reporting_artifacts_pyats_html(outputdir, ["api", "d2d"])
+
+        # Validate Robot Framework reporting artifacts for both API and D2D
+        validate_reporting_artifacts_pyats_robot(
+            outputdir, ["api", "d2d"], passed, failed
+        )
+
 
 @pytest.mark.parametrize(
     "arch,passed,failed,expected_rc",
@@ -215,7 +234,7 @@ devices:
     templates_path = f"tests/integration/fixtures/templates_pyats_qs/{arch}/"
 
     outputdir = tmpdir
-
+    # outputdir = "/tmp/nac_test_pyats_qs_api_d2d_with_testbed_output"
     result: Result = runner.invoke(
         nac_test.cli.main.app,
         [
@@ -235,3 +254,9 @@ devices:
 
     # we have one API test and one D2D test, but the latter with two devices
     validate_pyats_results(outputdir, passed=passed, failed=failed)
+
+    # Validate HTML reporting artifacts for both API and D2D
+    validate_reporting_artifacts_pyats_html(outputdir, ["api", "d2d"])
+
+    # Validate Robot Framework reporting artifacts for both API and D2D
+    validate_reporting_artifacts_pyats_robot(outputdir, ["api", "d2d"], passed, failed)
