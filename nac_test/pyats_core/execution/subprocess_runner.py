@@ -100,7 +100,6 @@ class SubprocessRunner:
             cmd.append("--verbose")
 
         logger.info(f"Executing command: {' '.join(cmd)}")
-        print(f"\nExecuting PyATS with command: {' '.join(cmd)}")
 
         try:
             # Get buffer limit from environment or use default
@@ -151,13 +150,13 @@ class SubprocessRunner:
         except Exception as e:
             logger.error(f"Error executing PyATS job: {e}", exc_info=True)
             return None
-        # finally:  -- UNCOMMENT ME
-        #     # Clean up the temporary plugin config file
-        #     if plugin_config_file and os.path.exists(plugin_config_file):
-        #         try:
-        #             os.unlink(plugin_config_file)
-        #         except Exception:
-        #             pass
+        finally:
+            # Clean up the temporary plugin config file
+            if plugin_config_file and os.path.exists(plugin_config_file):
+                try:
+                    os.unlink(plugin_config_file)
+                except Exception:
+                    pass
 
     async def execute_job_with_testbed(
         self, job_file_path: Path, testbed_file_path: Path, env: dict[str, Any]
@@ -224,7 +223,6 @@ class SubprocessRunner:
             cmd.append("--quiet")
 
         logger.info(f"Executing command: {' '.join(cmd)}")
-        print(f"\nExecuting PyATS with command: {' '.join(cmd)}")
 
         try:
             # Get buffer limit from environment or use default
@@ -264,13 +262,13 @@ class SubprocessRunner:
         except Exception as e:
             logger.error(f"Error executing PyATS job with testbed: {e}", exc_info=True)
             return None
-        # finally:
-        #     # Clean up the temporary plugin config file
-        #     if plugin_config_file and os.path.exists(plugin_config_file):
-        #         try:
-        #             os.unlink(plugin_config_file)
-        #         except Exception:
-        #             pass
+        finally:
+            # Clean up the temporary plugin config file
+            if plugin_config_file and os.path.exists(plugin_config_file):
+                try:
+                    os.unlink(plugin_config_file)
+                except Exception:
+                    pass
 
     async def _process_output_realtime(
         self, process: asyncio.subprocess.Process
