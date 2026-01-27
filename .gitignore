@@ -94,3 +94,6 @@ CLAUDE.md
 
 # bandit security report, if generated
 bandit-security-report.json
+
+# workspace for local testing
+/workspace/
