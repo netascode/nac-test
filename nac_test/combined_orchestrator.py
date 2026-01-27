@@ -46,6 +46,7 @@ class CombinedOrchestrator:
         dry_run: bool = False,
         max_parallel_devices: int | None = None,
         minimal_reports: bool = False,
+        custom_testbed_path: Path | None = None,
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
@@ -69,6 +70,7 @@ class CombinedOrchestrator:
             extra_args: Additional Robot Framework arguments to pass to pabot (Robot only)
             max_parallel_devices: Max parallel devices for PyATS D2D tests
             minimal_reports: Only include command outputs for failed/errored tests (PyATS only)
+            custom_testbed_path: Path to custom PyATS testbed YAML for device overrides (PyATS only)
             verbosity: Logging verbosity level
             dev_pyats_only: Development mode - run only PyATS tests (skip Robot)
             dev_robot_only: Development mode - run only Robot Framework tests (skip PyATS)
@@ -91,6 +93,7 @@ class CombinedOrchestrator:
         # PyATS-specific parameters
         self.max_parallel_devices = max_parallel_devices
         self.minimal_reports = minimal_reports
+        self.custom_testbed_path = custom_testbed_path
         self.verbosity = verbosity
 
         # Development modes
@@ -134,6 +137,7 @@ class CombinedOrchestrator:
                 output_dir=self.output_dir,
                 merged_data_filename=self.merged_data_filename,
                 minimal_reports=self.minimal_reports,
+                custom_testbed_path=self.custom_testbed_path,
                 controller_type=self.controller_type,
             )
             if self.max_parallel_devices is not None:
@@ -189,6 +193,7 @@ class CombinedOrchestrator:
                 output_dir=self.output_dir,
                 merged_data_filename=self.merged_data_filename,
                 minimal_reports=self.minimal_reports,
+                custom_testbed_path=self.custom_testbed_path,
                 controller_type=self.controller_type,
             )
             if self.max_parallel_devices is not None:
