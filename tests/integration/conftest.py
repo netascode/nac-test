@@ -4,12 +4,32 @@
 """Pytest fixtures for integration tests."""
 
 import os
+import re
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 
 from tests.integration.mocks.mock_server import MockAPIServer
+
+# Path to the default YAML configuration file
+DEFAULT_CONFIG_PATH = Path(__file__).parent / "fixtures" / "mock_api_config.yaml"
+
+
+@pytest.fixture(autouse=True)
+def clear_controller_credentials() -> None:
+    """
+    Clear any controller credentials from environment to avoid conflicts.
+
+    nac-test fails if the user has already a controller credential
+    set in his/her environment.
+    This fixture removes any environment variables matching the pattern:
+    ^[A-Z]+_(URL|USERNAME|PASSWORD)$
+    """
+    pattern = re.compile(r"^[A-Z]+_(URL|USERNAME|PASSWORD)$")
+    keys_to_remove = [key for key in os.environ.keys() if pattern.match(key)]
+    for key in keys_to_remove:
+        del os.environ[key]
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -48,29 +68,6 @@ def bypass_proxy_for_localhost() -> Generator[None, None, None]:
         os.environ["NO_PROXY"] = original_NO_PROXY
     elif "NO_PROXY" in os.environ:
         del os.environ["NO_PROXY"]
-
-
-# Path to the default YAML configuration file
-DEFAULT_CONFIG_PATH = Path(__file__).parent / "fixtures" / "mock_api_config.yaml"
-
-# To see mock server logs, set logging level to INFO or DEBUG in your tests:
-#
-# INFO level shows:
-#   - Server startup/shutdown
-#   - Incoming requests and matched endpoints
-#   - Response status codes
-#
-# DEBUG level additionally shows:
-#   - Request headers and body
-#   - Full response data (JSON)
-#   - All pattern matching attempts
-#
-# Enable with:
-#   logging.basicConfig(level=logging.INFO)
-# or for more detail:
-#   logging.basicConfig(level=logging.DEBUG)
-# or target just the mock server:
-#   logging.getLogger('tests.integration.mock_server').setLevel(logging.DEBUG)
 
 
 @pytest.fixture(scope="session")
