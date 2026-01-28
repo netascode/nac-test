@@ -13,6 +13,7 @@ then validate connection logs to ensure pooling and caching are functioning corr
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -67,10 +68,6 @@ def _validate_broker_connection_pooling(
         f"This indicates the broker was bypassed and direct connections were made.\n\n"
         f"Expected: 0 logs (broker manages connections)\n"
         f"Actual: {len(device_cli_logs)} logs\n\n"
-        f"If this test fails, check:\n"
-        f"1. --testbed-file is NOT passed when broker is active\n"
-        f"2. runtime.tasks.run() is used (not run(testbed=runtime.testbed))\n"
-        f"3. NAC_TEST_BROKER_SOCKET environment variable is set"
     )
 
     # Use print instead of logger to avoid I/O errors with closed file handles
@@ -80,68 +77,70 @@ def _validate_broker_connection_pooling(
     )
 
 
-def _validate_command_caching_from_output(
+def _validate_broker_statistics(
     cli_output: str,
     expected_devices: int,
     expected_test_files: int,
 ) -> None:
-    """Validate command caching by parsing broker debug messages from CLI output.
+    """Validate broker statistics from CLI output.
 
     Args:
         cli_output: Captured stdout/stderr from nac-test execution
         expected_devices: Number of unique devices
-        expected_test_files: Number of test files (each executes same command)
+        expected_test_files: Number of test files per device
 
     Raises:
-        AssertionError: If command caching validation fails
+        AssertionError: If statistics validation fails
     """
-    # Count cache hits and misses from broker debug messages
-    cache_hits = cli_output.count("Broker cache hit")
-    cache_misses = cli_output.count("Broker cache miss")
+    pattern = r"BROKER_STATISTICS: connection_hits=(\d+), connection_misses=(\d+), command_hits=(\d+), command_misses=(\d+)"
+    match = re.search(pattern, cli_output)
 
-    print("Cache statistics from broker logs:")
-    print(f"  Cache hits: {cache_hits}")
-    print(f"  Cache misses: {cache_misses}")
-
-    # With working cache:
-    # - Expected misses = expected_devices (one per device, first execution)
-    # - Expected hits = expected_devices * (expected_test_files - 1)
-    expected_cache_misses = expected_devices
-    expected_cache_hits = expected_devices * (expected_test_files - 1)
-
-    assert cache_misses == expected_cache_misses, (
-        f"Unexpected cache miss count!\n"
-        f"Expected: {expected_cache_misses} (one per device)\n"
-        f"Actual: {cache_misses}\n\n"
-        f"This may indicate tests are not executing as expected."
+    assert match, (
+        "Broker statistics not found in output.\n"
+        "Expected to find BROKER_STATISTICS log line during broker shutdown."
     )
 
-    assert cache_hits >= expected_cache_hits, (
-        f"Command caching NOT working correctly!\n\n"
-        f"Expected cache hits: {expected_cache_hits} (minimum)\n"
-        f"Actual cache hits: {cache_hits}\n\n"
-        f"With {expected_test_files} test files on {expected_devices} devices:\n"
-        f"  Total test runs: {expected_devices * expected_test_files}\n"
-        f"  Expected cache misses: {expected_cache_misses} (first execution per device)\n"
-        f"  Expected cache hits: {expected_cache_hits} (remaining executions)\n\n"
-        f"If this fails, check:\n"
-        f"1. Broker command cache is initialized\n"
-        f"2. Cache lookups happen before command execution\n"
-        f"3. Cache is shared across all broker clients"
+    connection_hits = int(match.group(1))
+    connection_misses = int(match.group(2))
+    command_hits = int(match.group(3))
+    command_misses = int(match.group(4))
+
+    print("\nBroker Statistics:")
+    print(f"  Connection cache hits: {connection_hits}")
+    print(f"  Connection cache misses: {connection_misses}")
+    print(f"  Command cache hits: {command_hits}")
+    print(f"  Command cache misses: {command_misses}")
+
+    # Validate connection cache
+    # Expected: one miss per device (first connection), remaining are hits
+    expected_connection_misses = expected_devices
+    expected_connection_hits = expected_devices * (expected_test_files - 1)
+
+    assert connection_misses == expected_connection_misses, (
+        f"Expected {expected_connection_misses} connection cache misses, "
+        f"got {connection_misses}"
     )
 
-    cache_hit_rate = (
-        cache_hits / (cache_hits + cache_misses)
-        if (cache_hits + cache_misses) > 0
-        else 0
+    assert connection_hits >= expected_connection_hits, (
+        f"Expected at least {expected_connection_hits} connection cache hits, "
+        f"got {connection_hits}"
     )
-    print(
-        f"✓ Command caching validated:\n"
-        f"  Total requests: {cache_hits + cache_misses}\n"
-        f"  Cache misses: {cache_misses} (initial executions)\n"
-        f"  Cache hits: {cache_hits}\n"
-        f"  Cache hit rate: {cache_hit_rate:.1%}"
+
+    # Validate command cache
+    # Expected: one miss per device (first command execution), remaining are hits
+    expected_command_misses = expected_devices
+    expected_command_hits = expected_devices * (expected_test_files - 1)
+
+    assert command_misses == expected_command_misses, (
+        f"Expected {expected_command_misses} command cache misses, got {command_misses}"
     )
+
+    assert command_hits >= expected_command_hits, (
+        f"Expected at least {expected_command_hits} command cache hits, "
+        f"got {command_hits}"
+    )
+
+    print("✓ Broker statistics validated successfully")
 
 
 def test_connection_broker_pooling_and_caching(
@@ -201,6 +200,12 @@ def test_connection_broker_pooling_and_caching(
         # Use broker test fixtures
         data_path = "tests/integration/fixtures/data_broker/"
         templates_path = "tests/integration/fixtures/templates_broker/"
+
+        # Use workspace directory for easier debugging
+        # outputdir_path = Path("workspace") / "integration_test_output"
+        # outputdir_path.mkdir(parents=True, exist_ok=True)
+        # output_dir = str(outputdir_path)
+
         output_dir = tmpdir
 
         result = runner.invoke(
@@ -217,45 +222,60 @@ def test_connection_broker_pooling_and_caching(
             ],
         )
 
-        # Note: We're validating broker functionality, not test results
-        # Tests may pass or fail depending on mock data, but we can still validate
-        # that connection pooling and command caching worked correctly
-        print(f"\nnac-test completed with exit code: {result.exit_code}")
-
-        # First check if tests passed - if they failed due to event loop issues,
-        # we need to fix that before validating broker functionality
-        if result.exit_code != 0:
-            print("\n❌ Tests failed with non-zero exit code")
-            print("=" * 80)
-            print("STDOUT:")
-            print(result.stdout)
-            print("=" * 80)
-            if result.stderr:
-                print("STDERR:")
-                print(result.stderr)
-                print("=" * 80)
-
+        # First check if tests passed - if they failed, show output for debugging
         assert result.exit_code == 0, (
             f"nac-test failed with exit code {result.exit_code}. "
-            f"Cannot validate broker functionality until tests pass."
+            f"Cannot validate broker functionality until tests pass.\n\n"
+            f"STDOUT:\n{result.stdout}\n\n"
+            f"STDERR:\n{result.stderr or '(empty)'}"
         )
 
         # Validate connection pooling
         # Expected: 2 devices, 3 test files
-        print("\nValidating connection pooling...")
         _validate_broker_connection_pooling(
             output_dir=output_dir,
             expected_devices=2,
             expected_test_files=3,
         )
 
-        # Validate command caching from captured output
+        # Validate broker statistics from CLI output
         # All 3 test files execute: 'show sdwan control connections'
-        print("\nValidating command caching...")
-        _validate_command_caching_from_output(
-            cli_output=result.stdout,
+        # Combine stdout and stderr since logs might be in either
+        cli_output = result.stdout + (result.stderr or "")
+        _validate_broker_statistics(
+            cli_output=cli_output,
             expected_devices=2,
             expected_test_files=3,
         )
 
         print("\n✓ All broker validations passed!")
+
+
+def test_broker_validation_detects_non_broker_connections(tmpdir: str) -> None:
+    """Test that validation correctly detects when broker is NOT being used.
+
+    This verifies that _validate_broker_connection_pooling properly fails
+    when CLI logs appear in device directories (indicating direct connections
+    instead of broker-managed connections).
+    """
+    from pathlib import Path
+
+    # Create fake directory structure with CLI logs (as if broker wasn't used)
+    output_dir = Path(tmpdir)
+    d2d_results = output_dir / "pyats_results" / "d2d"
+    device_dir = d2d_results / "device-01"
+    device_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create a fake CLI log file (this should NOT exist when broker is active)
+    cli_log = device_dir / "device-01-cli-12345.log"
+    cli_log.write_text("Fake CLI log content")
+
+    # Validation should FAIL because CLI logs exist in device directories
+    with pytest.raises(AssertionError, match="CLI log files in device directories"):
+        _validate_broker_connection_pooling(
+            output_dir=output_dir,
+            expected_devices=1,
+            expected_test_files=1,
+        )
+
+    print("✓ Validation correctly detected non-broker connections")
