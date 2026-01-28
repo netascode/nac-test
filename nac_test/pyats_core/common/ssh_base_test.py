@@ -28,6 +28,10 @@ class SSHTestBase(NACTestBase):
     #TODO: Move this to its own thing to better adhere for SRP. Hustling the MVP.
     """
 
+    # Instance variables set during setup (type annotations for mypy)
+    connection: BrokerCommandExecutor | Any  # BrokerCommandExecutor or testbed device
+    broker_client: BrokerClient
+
     @property
     def testbed(self) -> Any | None:
         """Access the PyATS testbed object if available.
@@ -165,8 +169,6 @@ class SSHTestBase(NACTestBase):
         """Helper for async setup operations with connection error handling."""
         try:
             # Check if broker is active (priority over testbed to enable connection pooling)
-            import os
-
             broker_active = "NAC_TEST_BROKER_SOCKET" in os.environ
 
             if broker_active:
@@ -381,16 +383,19 @@ class SSHTestBase(NACTestBase):
         finally:
             # SSH-specific cleanup
             try:
-                # Disconnect broker client if it exists
-                if hasattr(self, "broker_client") and self.broker_client:
-                    self.logger.debug("Disconnecting broker client")
-                    loop.run_until_complete(self.broker_client.disconnect())
+                # NOTE: When using broker, do NOT disconnect here!
+                # The broker manages connection lifecycle and keeps connections alive
+                # across tests for pooling efficiency.
+                # The broker will clean up all connections when it shuts down.
 
-                # Disconnect the connection if using broker executor
-                if hasattr(self, "connection") and isinstance(
-                    self.connection, BrokerCommandExecutor
+                # Only disconnect for non-broker connections
+                if (
+                    hasattr(self, "connection")
+                    and self.connection is not None
+                    and not isinstance(self.connection, BrokerCommandExecutor)
+                    and hasattr(self.connection, "disconnect")
                 ):
-                    self.logger.debug("Disconnecting broker command executor")
+                    self.logger.debug("Disconnecting non-broker connection")
                     loop.run_until_complete(self.connection.disconnect())
 
             except Exception as e:

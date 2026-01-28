@@ -67,6 +67,12 @@ class ConnectionBroker:
         # Shutdown flag
         self._shutdown_event = asyncio.Event()
 
+        # Statistics tracking
+        self.stats_connection_cache_hits = 0
+        self.stats_connection_cache_misses = 0
+        self.stats_command_cache_hits = 0
+        self.stats_command_cache_misses = 0
+
     def _generate_socket_path(self) -> Path:
         """Generate a unique socket path in temp directory."""
         temp_dir = Path(tempfile.gettempdir())
@@ -233,10 +239,12 @@ class ConnectionBroker:
         # Check cache first
         cached_output = cache.get(cmd)
         if cached_output is not None:
+            self.stats_command_cache_hits += 1
             logger.debug(f"Broker cache hit for '{cmd}' on {hostname}")
             return cached_output
 
         # Command not in cache, need to execute
+        self.stats_command_cache_misses += 1
         logger.debug(f"Broker cache miss for '{cmd}' on {hostname}, executing...")
 
         # Ensure device is connected
@@ -273,6 +281,7 @@ class ConnectionBroker:
             if hostname in self.connected_devices:
                 connection = self.connected_devices[hostname]
                 if self._is_connection_healthy(connection):
+                    self.stats_connection_cache_hits += 1
                     logger.info(
                         f"[BROKER] Reusing existing connection for {hostname} "
                         f"(total connections: {len(self.connected_devices)})"
@@ -286,6 +295,7 @@ class ConnectionBroker:
                     await self._disconnect_device_internal(hostname)
 
             # Create new connection
+            self.stats_connection_cache_misses += 1
             logger.info(
                 f"[BROKER] Creating NEW connection for {hostname} "
                 f"(current connections: {len(self.connected_devices)})"
@@ -429,6 +439,15 @@ class ConnectionBroker:
                 self.socket_path.unlink()
             except Exception as e:
                 logger.warning(f"Failed to remove socket file: {e}")
+
+        # Log statistics for validation
+        logger.info(
+            f"BROKER_STATISTICS: "
+            f"connection_hits={self.stats_connection_cache_hits}, "
+            f"connection_misses={self.stats_connection_cache_misses}, "
+            f"command_hits={self.stats_command_cache_hits}, "
+            f"command_misses={self.stats_command_cache_misses}"
+        )
 
         logger.info("Connection broker shutdown complete")
 
