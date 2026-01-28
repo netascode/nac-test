@@ -8,6 +8,7 @@
 import json
 import logging
 import re
+import socket
 import threading
 import time
 import urllib.error
@@ -327,6 +328,35 @@ class MockAPIServer:
         logger.debug(f"    Response data:\n{json.dumps(error_response, indent=2)}")
         return jsonify(error_response), 404
 
+    def _find_available_port(self, start_port: int, max_attempts: int = 10) -> int:
+        """Find an available port starting from start_port.
+
+        Args:
+            start_port: Port to start checking from
+            max_attempts: Maximum number of ports to try
+
+        Returns:
+            An available port number
+
+        Raises:
+            OSError: If no available port found within max_attempts
+        """
+        for port_offset in range(max_attempts):
+            port = start_port + port_offset
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                sock.bind((self.host, port))
+                sock.close()
+                return port
+            except OSError:
+                continue
+            finally:
+                sock.close()
+
+        raise OSError(
+            f"Could not find an available port in range {start_port}-{start_port + max_attempts - 1}"
+        )
+
     def _wait_for_server_ready(self) -> None:
         """Poll the server until it responds or timeout.
 
@@ -352,13 +382,29 @@ class MockAPIServer:
         )
 
     def start(self) -> None:
-        """Start the mock server in a background thread."""
+        """Start the mock server in a background thread.
+
+        If the configured port is already in use, automatically finds and
+        uses the next available port.
+        """
         if self.server_thread and self.server_thread.is_alive():
             logger.warning(f"Server already running on {self.url}")
             return
 
-        logger.info(f"Starting mock server on {self.url}")
+        logger.info(f"Starting mock server on {self.host}:{self.port}")
         logger.info(f"Configured with {len(self.endpoint_configs)} endpoint(s)")
+
+        # Try to find an available port starting from the configured port
+        original_port = self.port
+        try:
+            self.port = self._find_available_port(self.port)
+            if self.port != original_port:
+                logger.info(
+                    f"Port {original_port} in use, using port {self.port} instead"
+                )
+        except OSError as e:
+            logger.error(f"Failed to find available port: {e}")
+            raise
 
         # Create server using make_server for proper shutdown support
         self._server = make_server(self.host, self.port, self.app, threaded=True)
