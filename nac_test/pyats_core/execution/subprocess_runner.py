@@ -199,23 +199,35 @@ class SubprocessRunner:
         hostname = env.get("HOSTNAME", "unknown")
         archive_name = f"pyats_archive_device_{hostname}"
 
+        # Check if broker is being used
+        broker_socket = env.get("NAC_TEST_BROKER_SOCKET")
+        use_broker = broker_socket is not None
+
         cmd = [
             "pyats",
             "run",
             "job",
             str(job_file_path),
-            "--testbed-file",
-            str(testbed_file_path),
-            "--configuration",
-            plugin_config_file,
-            "--archive-dir",
-            str(self.output_dir),
-            "--archive-name",
-            archive_name,
-            "--no-archive-subdir",
-            "--no-mail",
-            "--no-xml-report",
         ]
+
+        # Only add testbed file if NOT using broker
+        # When broker is active, testbed should not be passed to avoid bypassing broker
+        if not use_broker:
+            cmd.extend(["--testbed-file", str(testbed_file_path)])
+
+        cmd.extend(
+            [
+                "--configuration",
+                plugin_config_file,
+                "--archive-dir",
+                str(self.output_dir),
+                "--archive-name",
+                archive_name,
+                "--no-archive-subdir",
+                "--no-mail",
+                "--no-xml-report",
+            ]
+        )
 
         # Add verbose flag if logging level is DEBUG, otherwise use quiet
         if logger.isEnabledFor(logging.DEBUG):

@@ -273,12 +273,23 @@ class ConnectionBroker:
             if hostname in self.connected_devices:
                 connection = self.connected_devices[hostname]
                 if self._is_connection_healthy(connection):
+                    logger.info(
+                        f"[BROKER] Reusing existing connection for {hostname} "
+                        f"(total connections: {len(self.connected_devices)})"
+                    )
                     return connection
                 else:
                     # Remove unhealthy connection
+                    logger.warning(
+                        f"[BROKER] Connection to {hostname} is unhealthy, reconnecting"
+                    )
                     await self._disconnect_device_internal(hostname)
 
             # Create new connection
+            logger.info(
+                f"[BROKER] Creating NEW connection for {hostname} "
+                f"(current connections: {len(self.connected_devices)})"
+            )
             return await self._create_connection(hostname)
 
     async def _create_connection(self, hostname: str) -> Any | None:
