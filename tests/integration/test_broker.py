@@ -222,6 +222,24 @@ def test_connection_broker_pooling_and_caching(
         # that connection pooling and command caching worked correctly
         print(f"\nnac-test completed with exit code: {result.exit_code}")
 
+        # First check if tests passed - if they failed due to event loop issues,
+        # we need to fix that before validating broker functionality
+        if result.exit_code != 0:
+            print("\n❌ Tests failed with non-zero exit code")
+            print("=" * 80)
+            print("STDOUT:")
+            print(result.stdout)
+            print("=" * 80)
+            if result.stderr:
+                print("STDERR:")
+                print(result.stderr)
+                print("=" * 80)
+
+        assert result.exit_code == 0, (
+            f"nac-test failed with exit code {result.exit_code}. "
+            f"Cannot validate broker functionality until tests pass."
+        )
+
         # Validate connection pooling
         # Expected: 2 devices, 3 test files
         print("\nValidating connection pooling...")

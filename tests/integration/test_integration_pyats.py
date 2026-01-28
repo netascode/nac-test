@@ -197,7 +197,10 @@ def test_nac_test_pyats_quicksilver_api_d2d(
         data_path = f"tests/integration/fixtures/data_pyats_qs/{arch}"
         templates_path = f"tests/integration/fixtures/templates_pyats_qs/{arch}/"
 
-        outputdir = tmpdir
+        # Use workspace directory for easier debugging
+        outputdir_path = Path("workspace") / arch / "integration_test_output"
+        outputdir_path.mkdir(parents=True, exist_ok=True)
+        outputdir = str(outputdir_path)
 
         result: Result = runner.invoke(
             nac_test.cli.main.app,

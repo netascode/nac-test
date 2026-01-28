@@ -154,14 +154,8 @@ class SSHTestBase(NACTestBase):
 
         # The rest of the setup is async, we'll run it in the event loop
         try:
-            # Try to get existing event loop, create one if needed
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                # No event loop running, create and run async setup
-                asyncio.run(self._async_setup(hostname))
-                return
-            # If we have a running loop, use run_until_complete
+            # Get or create event loop for Python 3.10+ compatibility
+            loop = get_or_create_event_loop()
             loop.run_until_complete(self._async_setup(hostname))
         except ConnectionError as e:
             # Connection failed - fail the test with clear message
@@ -170,16 +164,14 @@ class SSHTestBase(NACTestBase):
     async def _async_setup(self, hostname: str) -> None:
         """Helper for async setup operations with connection error handling."""
         try:
-            # Check if we have a testbed device available
-            if self.testbed_device:
-                # Connect via testbed to enable Genie features
-                self.logger.info(f"Connecting to device {hostname} via PyATS testbed")
-                loop = get_or_create_event_loop()
-                await loop.run_in_executor(None, self.testbed_device.connect)
-                # Store the testbed device connection for command execution
-                self.connection = self.testbed_device
-            else:
+            # Check if broker is active (priority over testbed to enable connection pooling)
+            import os
+
+            broker_active = "NAC_TEST_BROKER_SOCKET" in os.environ
+
+            if broker_active:
                 # Use broker client for connection management
+                # Testbed may still be available for Genie parsers
                 self.logger.info(
                     f"Connecting to device {hostname} via connection broker"
                 )
@@ -191,6 +183,18 @@ class SSHTestBase(NACTestBase):
 
                 # Ensure device connection through broker
                 await self.connection.connect()
+            elif self.testbed_device:
+                # Connect via testbed to enable Genie features
+                self.logger.info(f"Connecting to device {hostname} via PyATS testbed")
+                loop = get_or_create_event_loop()
+                await loop.run_in_executor(None, self.testbed_device.connect)
+                # Store the testbed device connection for command execution
+                self.connection = self.testbed_device
+            else:
+                raise ConnectionError(
+                    f"No connection method available for device {hostname}: "
+                    "broker not active and testbed not available"
+                )
 
         except Exception as e:
             # Connection failed - raise exception to be caught in setup_ssh_context
