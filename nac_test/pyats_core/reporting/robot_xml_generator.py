@@ -13,11 +13,12 @@ Usage:
 
 import json
 import logging
-import xml.etree.ElementTree as ET
-from datetime import datetime
+import xml.etree.ElementTree as ET  # nosec B405 - We generate XML, not parse untrusted input
+from collections.abc import Callable
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
-from xml.dom import minidom
+from xml.dom import minidom  # nosec B408 - We generate XML, not parse untrusted input
 
 import aiofiles  # type: ignore[import-untyped]
 
@@ -54,12 +55,14 @@ class RobotXMLGenerator:
         self,
         output_dir: Path,
         pyats_results_dir: Path,
+        truncator: Callable[[str], str] | None = None,
     ) -> None:
         """Initialize the Robot XML generator.
 
         Args:
             output_dir: Base output directory containing test results
             pyats_results_dir: Directory where PyATS results are extracted
+            truncator: Optional truncation function for command outputs
         """
         self.output_dir = output_dir
         self.pyats_results_dir = pyats_results_dir
@@ -68,12 +71,18 @@ class RobotXMLGenerator:
         self.temp_data_dir = output_dir / "html_report_data_temp"
         self.test_counter = 0
         self.failed_conversions: list[str] = []
+        self.truncator = truncator
 
-    async def generate_robot_xml(self) -> dict[str, Any]:
+    async def generate_robot_xml(
+        self, result_files: list[Path] | None = None
+    ) -> dict[str, Any]:
         """Generate Robot Framework output.xml from all JSONL files.
 
         This is the main entry point. It finds all JSONL test result files,
         converts them to Robot XML format, and writes output.xml.
+
+        Args:
+            result_files: Optional list of JSONL files to process. If None, will glob for files.
 
         Returns:
             Dictionary containing:
@@ -86,9 +95,11 @@ class RobotXMLGenerator:
         """
         start_time = datetime.now()
 
-        # JSONL files have already been moved by ReportGenerator
-        # Just read them from the final location
-        result_files = list(self.html_report_data_dir.glob("*.jsonl"))
+        # Use provided result_files or discover them
+        if result_files is None:
+            # JSONL files have already been moved by ReportGenerator
+            # Just read them from the final location
+            result_files = list(self.html_report_data_dir.glob("*.jsonl"))
 
         if not result_files:
             logger.warning("No test results found to generate Robot XML")
@@ -99,18 +110,11 @@ class RobotXMLGenerator:
         # Create root Robot XML structure
         root = self._create_robot_root()
 
-        # Determine test type from pyats_results_dir path (e.g., "api", "d2d")
-        # Path is like: /path/to/pyats_results/api or /path/to/pyats_results/d2d
-        test_type = (
-            self.pyats_results_dir.name
-            if self.pyats_results_dir.name != "pyats_results"
-            else "unknown"
-        )
-
-        # Create top-level suite with test type suffix
+        # Create top-level suite with consistent name for merging
+        # Note: All archives must have the same root suite name to be merged by rebot
         suite = ET.SubElement(root, "suite")
         suite.set("id", "s1")
-        suite.set("name", f"pyATS Test Execution - {test_type}")
+        suite.set("name", "pyATS Test Execution")
         suite.set("source", str(self.pyats_results_dir))
 
         # Convert each JSONL file to a test
@@ -147,8 +151,9 @@ class RobotXMLGenerator:
         suite_status = ET.SubElement(suite, "status")
         # Determine suite status based on test results
         has_failure = any(
-            test.find("status").get("status") == "FAIL"
+            test.find("status").get("status") == "FAIL"  # type: ignore[union-attr]
             for test in suite.findall("test")
+            if test.find("status") is not None
         )
         suite_status.set("status", "FAIL" if has_failure else "PASS")
         if suite_start:
@@ -180,6 +185,133 @@ class RobotXMLGenerator:
             "failed_conversions": len(self.failed_conversions),
             "output_file": str(output_path),
         }
+
+    def assemble_xml_from_elements(
+        self, test_elements: list[ET.Element], result_files: list[Path]
+    ) -> dict[str, Any]:
+        """Assemble final Robot XML from pre-generated test elements.
+
+        This is the fast, sequential assembly step after parallel test element
+        generation. It combines independent test elements into a suite and writes
+        the final output.xml file.
+
+        Args:
+            test_elements: List of pre-generated <test> Elements
+            result_files: Original result file paths (for metadata)
+
+        Returns:
+            Robot XML generation result dict
+        """
+        start_time = datetime.now()
+
+        if not test_elements:
+            logger.warning("No test elements to assemble")
+            return {"status": "no_results", "duration": 0}
+
+        logger.info(f"Assembling Robot XML from {len(test_elements)} test elements")
+
+        # Create root and suite
+        root = self._create_robot_root()
+        suite = ET.SubElement(root, "suite")
+        suite.set("id", "s1")
+        suite.set("name", "pyATS Test Execution")
+        suite.set("source", str(self.pyats_results_dir))
+
+        # Add all test elements to suite
+        for test_elem in test_elements:
+            suite.append(test_elem)
+
+        # Calculate suite timing from test elements
+        suite_start = None
+        suite_end = None
+        for test_elem in test_elements:
+            status_elem = test_elem.find("status")
+            if status_elem is not None:
+                test_start = status_elem.get("start")
+                if test_start is None:
+                    continue
+
+                # Calculate end time from start + elapsed
+                elapsed_str = status_elem.get("elapsed", "0")
+                try:
+                    elapsed = float(elapsed_str)
+                    test_start_dt = datetime.fromisoformat(
+                        test_start.replace("T", " ").replace(".", " ").split()[0]
+                        + "T"
+                        + test_start.split("T")[1]
+                    )
+                    test_end_dt = test_start_dt + timedelta(seconds=elapsed)
+                    test_end = test_end_dt.isoformat()
+
+                    if suite_start is None or test_start < suite_start:
+                        suite_start = test_start
+                    if suite_end is None or test_end > suite_end:
+                        suite_end = test_end
+                except (ValueError, AttributeError, IndexError):
+                    pass
+
+        # Add suite status
+        if suite_start and suite_end:
+            try:
+                start_dt = datetime.fromisoformat(
+                    suite_start.replace("T", " ", 1).split(".")[0]
+                )
+                end_dt = datetime.fromisoformat(
+                    suite_end.replace("T", " ", 1).split(".")[0]
+                )
+                suite_duration = (end_dt - start_dt).total_seconds()
+            except (ValueError, AttributeError):
+                suite_duration = 0
+        else:
+            suite_duration = 0
+
+        suite_status = ET.SubElement(suite, "status")
+        # Determine suite status based on test results
+        has_failure = any(
+            test.find("status").get("status") == "FAIL"  # type: ignore[union-attr]
+            for test in test_elements
+            if test.find("status") is not None
+        )
+        suite_status.set("status", "FAIL" if has_failure else "PASS")
+        if suite_start:
+            suite_status.set("start", suite_start)
+        suite_status.set("elapsed", str(suite_duration))
+
+        # Add statistics
+        self._add_statistics(root, suite)
+
+        # Add errors section (required by Robot schema)
+        ET.SubElement(root, "errors")
+
+        # Write output.xml
+        output_path = self.pyats_results_dir / "output.xml"
+        self._write_pretty_xml(root, output_path)
+
+        logger.info(f"Generated Robot Framework XML: {output_path}")
+
+        duration = (datetime.now() - start_time).total_seconds()
+
+        return {
+            "status": "success",
+            "duration": duration,
+            "total_tests": len(test_elements),
+            "successful_conversions": len(test_elements),
+            "failed_conversions": 0,
+            "output_file": str(output_path),
+        }
+
+    def _add_test_to_suite(self, suite: ET.Element, test_data: dict[str, Any]) -> None:
+        """Convert test data from JSONL to Robot <test> element and add to suite.
+
+        Deprecated: Use _create_test_element() for parallel processing.
+        This method is kept for backward compatibility.
+
+        Args:
+            suite: Parent suite element
+            test_data: Test data from JSONL
+        """
+        test_elem = self._create_test_element(test_data)
+        suite.append(test_elem)
 
     def _create_robot_root(self) -> ET.Element:
         """Create the root <robot> element with required attributes.
@@ -251,17 +383,22 @@ class RobotXMLGenerator:
             "metadata": summary.get("metadata", {}),
         }
 
-    def _add_test_to_suite(self, suite: ET.Element, test_data: dict[str, Any]) -> None:
-        """Convert test data from JSONL to Robot <test> element.
+    def _create_test_element(self, test_data: dict[str, Any]) -> ET.Element:
+        """Create an independent Robot <test> element from test data.
+
+        Returns a complete test element that can be added to any suite.
+        Does NOT mutate any shared state - enables parallel processing.
 
         Args:
-            suite: Parent suite element
             test_data: Test data from JSONL
+
+        Returns:
+            Complete test Element ready to be added to a suite
         """
         self.test_counter += 1
 
-        # Create test element
-        test = ET.SubElement(suite, "test")
+        # Create test element (independent, not attached to suite yet)
+        test = ET.Element("test")
         test.set("id", f"s1-t{self.test_counter}")
         test.set("name", test_data["metadata"].get("title", test_data["test_id"]))
 
@@ -299,6 +436,8 @@ class RobotXMLGenerator:
         if status_messages:
             status.text = "\n\n".join(status_messages)
 
+        return test
+
     def _build_documentation(self, metadata: dict[str, str]) -> str:
         """Build documentation text from metadata.
 
@@ -334,8 +473,8 @@ class RobotXMLGenerator:
         return "\n".join(parts)
 
     def _group_by_context(
-        self, results: list[dict], command_executions: list[dict]
-    ) -> dict[str, list[dict]]:
+        self, results: list[dict[str, Any]], command_executions: list[dict[str, Any]]
+    ) -> dict[str, list[dict[str, Any]]]:
         """Group results and commands by test_context for keyword organization.
 
         Args:
@@ -345,7 +484,7 @@ class RobotXMLGenerator:
         Returns:
             Dictionary mapping context name to list of items
         """
-        groups: dict[str, list[dict]] = {}
+        groups: dict[str, list[dict[str, Any]]] = {}
 
         # Combine results and commands, preserving order by timestamp
         all_items = []
@@ -373,7 +512,7 @@ class RobotXMLGenerator:
         return groups
 
     def _add_keyword(
-        self, test: ET.Element, context_name: str, items: list[dict]
+        self, test: ET.Element, context_name: str, items: list[dict[str, Any]]
     ) -> None:
         """Add a keyword element with messages for a context group.
 
@@ -410,6 +549,10 @@ class RobotXMLGenerator:
                 device = item.get("device_name", "unknown")
                 command = item.get("command", "")
                 output = item.get("output", "")
+
+                # Apply truncation if available
+                if self.truncator:
+                    output = self.truncator(output)
 
                 msg_text = f"Device: {device}\nCommand: {command}\n\n{output}"
                 msg.text = msg_text
@@ -477,9 +620,30 @@ class RobotXMLGenerator:
 
         # Count test results
         tests = suite.findall("test")
-        passed = sum(1 for t in tests if t.find("status").get("status") == "PASS")
-        failed = sum(1 for t in tests if t.find("status").get("status") == "FAIL")
-        skipped = sum(1 for t in tests if t.find("status").get("status") == "SKIP")
+        passed = len(
+            [
+                t
+                for t in tests
+                if t.find("status") is not None
+                and t.find("status").get("status") == "PASS"  # type: ignore[union-attr]
+            ]
+        )
+        failed = len(
+            [
+                t
+                for t in tests
+                if t.find("status") is not None
+                and t.find("status").get("status") == "FAIL"  # type: ignore[union-attr]
+            ]
+        )
+        skipped = len(
+            [
+                t
+                for t in tests
+                if t.find("status") is not None
+                and t.find("status").get("status") == "SKIP"  # type: ignore[union-attr]
+            ]
+        )
 
         # Total statistics
         total = ET.SubElement(statistics, "total")
@@ -512,8 +676,8 @@ class RobotXMLGenerator:
         # Convert to string
         xml_string = ET.tostring(root, encoding="unicode")
 
-        # Pretty print
-        dom = minidom.parseString(xml_string)
+        # Pretty print - nosec B318: We're formatting our own generated XML, not parsing untrusted input
+        dom = minidom.parseString(xml_string)  # nosec B318
         pretty_xml = dom.toprettyxml(indent="  ", encoding="UTF-8")
 
         # Write to file

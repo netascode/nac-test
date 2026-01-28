@@ -28,6 +28,7 @@ from typing import Any
 
 import aiofiles  # type: ignore[import-untyped]
 
+from nac_test.pyats_core.reporting.robot_xml_generator import RobotXMLGenerator
 from nac_test.pyats_core.reporting.templates import get_jinja_environment
 from nac_test.pyats_core.reporting.types import ResultStatus
 
@@ -123,18 +124,27 @@ class ReportGenerator:
 
         logger.info(f"Found {len(result_files)} test results to process")
 
-        # Generate reports concurrently with semaphore control
+        # UNIFIED PROCESSING: Read once, generate both HTML and XML
         semaphore = asyncio.Semaphore(self.max_concurrent)
-        tasks = [self._generate_report_safe(file, semaphore) for file in result_files]
+        tasks = [self._process_single_test(file, semaphore) for file in result_files]
 
-        report_paths = await asyncio.gather(*tasks)
-        successful_reports = [p for p in report_paths if p is not None]
+        results = await asyncio.gather(*tasks)
 
-        logger.info(f"Successfully generated {len(successful_reports)} reports")
+        # Extract results
+        html_reports = [r["html_path"] for r in results if r["html_path"] is not None]
+        xml_elements = [
+            r["xml_element"] for r in results if r["xml_element"] is not None
+        ]
 
-        # Generate summary report
-        summary_path = await self._generate_summary_report(
-            successful_reports, result_files
+        logger.info(f"Successfully generated {len(html_reports)} HTML reports")
+        logger.info(f"Successfully generated {len(xml_elements)} XML test elements")
+
+        # Generate HTML summary report
+        summary_path = await self._generate_summary_report(html_reports, result_files)
+
+        # Assemble Robot XML from elements (fast, sequential step)
+        robot_result = await self._assemble_robot_xml_from_elements(
+            xml_elements, result_files
         )
 
         # Store result_files for potential cleanup later
@@ -149,9 +159,10 @@ class ReportGenerator:
             "status": "success",
             "duration": duration,
             "total_tests": len(result_files),
-            "successful_reports": len(successful_reports),
+            "successful_reports": len(html_reports),
             "failed_reports": len(self.failed_reports),
             "summary_report": str(summary_path) if summary_path else None,
+            "robot_xml": robot_result,
         }
 
     async def cleanup_jsonl_files(self) -> None:
@@ -273,6 +284,117 @@ class ReportGenerator:
                 self.failed_reports.append(str(result_file))
                 return None
 
+    async def _generate_html_from_data(self, test_data: dict[str, Any]) -> Path:
+        """Generate HTML report from test_data dict.
+
+        Extracted from _generate_single_report() to enable combined processing
+        where both HTML and XML are generated from a single JSONL read.
+
+        Args:
+            test_data: Test data dictionary from _read_jsonl_results()
+
+        Returns:
+            Path to the generated HTML report
+        """
+        import copy
+
+        metadata = test_data.get("metadata", {})
+
+        # Truncate command outputs for HTML display
+        # Work on a deep copy to avoid mutating original data (needed for XML)
+        command_executions = copy.deepcopy(test_data.get("command_executions", []))
+        for execution in command_executions:
+            execution["output"] = self.truncate_output(execution["output"])
+
+        # Use pre-rendered HTML from metadata
+        template = self.env.get_template("test_case/report.html.j2")
+        html_content = template.render(
+            title=metadata.get("title", test_data["test_id"]),
+            description_html=metadata.get("description_html", ""),
+            setup_html=metadata.get("setup_html", ""),
+            procedure_html=metadata.get("procedure_html", ""),
+            criteria_html=metadata.get("criteria_html", ""),
+            results=test_data.get("results", []),
+            command_executions=command_executions,  # Use truncated copy
+            status=test_data.get("overall_status", "unknown"),
+            generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            jobfile_path=metadata.get("jobfile_path", ""),
+        )
+
+        # Write HTML report
+        report_path = self.report_dir / f"{test_data['test_id']}.html"
+        async with aiofiles.open(report_path, "w") as f:
+            await f.write(html_content)
+
+        logger.debug(f"Generated HTML report: {report_path}")
+        return report_path
+
+    def _generate_xml_element(self, test_data: dict[str, Any]) -> Any:
+        """Generate Robot XML test element from test_data dict.
+
+        Delegates to RobotXMLGenerator's element creation method.
+        Lazy-initializes the robot generator on first use.
+
+        Args:
+            test_data: Test data dictionary from _read_jsonl_results()
+
+        Returns:
+            ET.Element representing a Robot Framework <test>
+        """
+        if not hasattr(self, "_robot_generator"):
+            # Lazy initialization to avoid import cycles
+            self._robot_generator = RobotXMLGenerator(
+                self.output_dir, self.pyats_results_dir, truncator=self.truncate_output
+            )
+
+        return self._robot_generator._create_test_element(test_data)
+
+    async def _process_single_test(
+        self, result_file: Path, semaphore: asyncio.Semaphore
+    ) -> dict[str, Any]:
+        """Process a single test file: read once, generate both HTML and XML.
+
+        This is the optimized processing path that reads each JSONL file once
+        and generates both HTML report and XML element in parallel.
+
+        Args:
+            result_file: Path to the JSONL result file
+            semaphore: Semaphore for controlling concurrency
+
+        Returns:
+            Dictionary containing:
+                - html_path: Path to generated HTML report (or None if failed)
+                - xml_element: Generated XML Element (or None if failed)
+                - test_data: Original test data dict (for summary generation)
+                - file: Original file path
+        """
+        async with semaphore:
+            try:
+                # STEP 1: Read JSONL once
+                test_data = await self._read_jsonl_results(result_file)
+
+                # STEP 2: Generate HTML report
+                html_path = await self._generate_html_from_data(test_data)
+
+                # STEP 3: Generate XML element (reuses same test_data)
+                xml_element = self._generate_xml_element(test_data)
+
+                return {
+                    "html_path": html_path,
+                    "xml_element": xml_element,
+                    "test_data": test_data,
+                    "file": result_file,
+                }
+            except Exception as e:
+                logger.error(f"Failed to process {result_file}: {e}")
+                self.failed_reports.append(str(result_file))
+                return {
+                    "html_path": None,
+                    "xml_element": None,
+                    "test_data": None,
+                    "file": result_file,
+                }
+
     async def _generate_single_report(self, result_file: Path) -> Path:
         """Generate a single test report asynchronously.
 
@@ -288,42 +410,14 @@ class ReportGenerator:
         # Read test results from JSONL format
         test_data = await self._read_jsonl_results(result_file)
 
-        # Get metadata (now included in the same file)
-        metadata = test_data.get("metadata", {})
+        # Generate HTML from test_data
+        return await self._generate_html_from_data(test_data)
 
-        # Truncate command outputs for HTML display
-        for execution in test_data.get("command_executions", []):
-            execution["output"] = self._truncate_output(execution["output"])
-
-        # Use pre-rendered HTML from metadata
-        template = self.env.get_template("test_case/report.html.j2")
-        html_content = template.render(
-            title=metadata.get("title", test_data["test_id"]),
-            description_html=metadata.get("description_html", ""),
-            setup_html=metadata.get("setup_html", ""),
-            procedure_html=metadata.get("procedure_html", ""),
-            criteria_html=metadata.get("criteria_html", ""),
-            results=test_data.get("results", []),
-            command_executions=test_data.get("command_executions", []),
-            status=test_data.get("overall_status", "unknown"),
-            generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            jobfile_path=metadata.get("jobfile_path", ""),
-        )
-
-        # Write HTML report
-        report_path = self.report_dir / f"{test_data['test_id']}.html"
-        async with aiofiles.open(report_path, "w") as f:
-            await f.write(html_content)
-
-        logger.debug(f"Generated report: {report_path}")
-        return report_path
-
-    def _truncate_output(self, output: str, max_lines: int = 1000) -> str:
+    def truncate_output(self, output: str, max_lines: int = 1000) -> str:
         """Truncate output with a note.
 
-        Truncates long command outputs to prevent HTML reports from
-        becoming too large. A note is added indicating how many lines
-        were omitted.
+        Public method shared by HTML and Robot XML generators to ensure
+        consistent output size limits across all report formats.
 
         Args:
             output: The output string to truncate
@@ -472,3 +566,75 @@ class ReportGenerator:
         except Exception as e:
             logger.error(f"Failed to generate summary report: {e}")
             return None
+
+    async def _assemble_robot_xml_from_elements(
+        self, xml_elements: list[Any], result_files: list[Path]
+    ) -> dict[str, Any]:
+        """Assemble Robot XML from pre-generated test elements.
+
+        This is the fast, sequential assembly step after parallel processing.
+        Takes independently-generated test elements and combines them into a
+        single Robot Framework XML file.
+
+        Args:
+            xml_elements: List of pre-generated ET.Element test elements
+            result_files: Original result file paths (for metadata)
+
+        Returns:
+            Robot XML generation result dict, or error dict if failed
+        """
+        if not xml_elements:
+            return {"status": "no_results"}
+
+        try:
+            logger.debug(f"Assembling Robot XML from {len(xml_elements)} test elements")
+
+            # Ensure robot generator is initialized
+            if not hasattr(self, "_robot_generator"):
+                self._robot_generator = RobotXMLGenerator(
+                    self.output_dir,
+                    self.pyats_results_dir,
+                    truncator=self.truncate_output,
+                )
+
+            # Delegate assembly to RobotXMLGenerator
+            robot_result = self._robot_generator.assemble_xml_from_elements(
+                xml_elements, result_files
+            )
+            logger.info(f"Robot XML assembled: {robot_result.get('output_file')}")
+            return robot_result
+        except Exception as e:
+            logger.warning(f"Failed to assemble Robot XML: {e}", exc_info=True)
+            return {"status": "error", "error": str(e)}
+
+    async def _generate_robot_xml_internal(
+        self, result_files: list[Path]
+    ) -> dict[str, Any]:
+        """Generate Robot Framework XML output alongside HTML reports.
+
+        This is an internal coordination method that instantiates RobotXMLGenerator
+        and delegates to it. Keeps the XML generation code separate for maintainability.
+
+        Deprecated: This method still reads files twice. Use _process_single_test()
+        with _assemble_robot_xml_from_elements() for optimized single-read processing.
+
+        Args:
+            result_files: List of JSONL files (already discovered)
+
+        Returns:
+            Robot XML generation result dict, or error dict if failed
+        """
+        if not result_files:
+            return {"status": "no_results"}
+
+        try:
+            logger.debug("Generating Robot Framework XML output")
+            robot_generator = RobotXMLGenerator(
+                self.output_dir, self.pyats_results_dir, truncator=self.truncate_output
+            )
+            robot_result = await robot_generator.generate_robot_xml(result_files)
+            logger.info(f"Robot XML generated: {robot_result.get('output_file')}")
+            return robot_result
+        except Exception as e:
+            logger.warning(f"Failed to generate Robot XML: {e}", exc_info=True)
+            return {"status": "error", "error": str(e)}

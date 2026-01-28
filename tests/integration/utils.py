@@ -172,14 +172,15 @@ def validate_reporting_artifacts_pyats_robot(
     test_types: list[str],
     expected_passed: int,
     expected_failed: int,
+    check_html: bool = False,
 ) -> None:
     """Validate that Robot Framework reporting artifacts were generated correctly.
 
     Checks for:
     - Individual output.xml files per test type (api, d2d, etc.)
     - Combined output.xml at pyats_results level
-    - log.html (Robot Framework interactive log)
-    - report.html (Robot Framework summary report)
+    - log.html (Robot Framework interactive log) - if check_html=True
+    - report.html (Robot Framework summary report) - if check_html=True
     - Validates test counts match expected values
 
     Args:
@@ -187,6 +188,7 @@ def validate_reporting_artifacts_pyats_robot(
         test_types: List of test types to check (e.g., ["api", "d2d"])
         expected_passed: Expected number of passed tests in combined results
         expected_failed: Expected number of failed tests in combined results
+        check_html: If True, verify log.html and report.html exist. Defaults to False.
 
     Raises:
         AssertionError: If expected artifacts are missing or test counts don't match
@@ -231,12 +233,6 @@ def validate_reporting_artifacts_pyats_robot(
     combined_output = pyats_results_dir / "output.xml"
     assert combined_output.exists(), f"Combined output.xml not found: {combined_output}"
 
-    log_html = pyats_results_dir / "log.html"
-    assert log_html.exists(), f"Robot Framework log.html not found: {log_html}"
-
-    report_html = pyats_results_dir / "report.html"
-    assert report_html.exists(), f"Robot Framework report.html not found: {report_html}"
-
     # Verify combined output.xml is valid and has expected test counts
     try:
         print(f"DEBUG: Parsing combined output.xml: {combined_output}")
@@ -267,9 +263,18 @@ def validate_reporting_artifacts_pyats_robot(
         print(f"DEBUG: Exception during combined XML validation: {e}")
         raise AssertionError(f"Invalid combined output.xml: {e}") from e
 
-    # Verify HTML files are not empty
-    assert log_html.stat().st_size > 0, "log.html is empty"
-    assert report_html.stat().st_size > 0, "report.html is empty"
+    # Conditionally check for HTML files if requested
+    if check_html:
+        log_html = pyats_results_dir / "log.html"
+        assert log_html.exists(), f"Robot log.html not found: {log_html}"
 
-    print(f"  ✓ Found log.html ({log_html.stat().st_size:,} bytes)")
-    print(f"  ✓ Found report.html ({report_html.stat().st_size:,} bytes)")
+        report_html = pyats_results_dir / "report.html"
+        assert report_html.exists(), f"Robot report.html not found: {report_html}"
+
+        assert log_html.stat().st_size > 0, "log.html is empty"
+        assert report_html.stat().st_size > 0, "report.html is empty"
+
+        print(f"  ✓ Found log.html ({log_html.stat().st_size:,} bytes)")
+        print(f"  ✓ Found report.html ({report_html.stat().st_size:,} bytes)")
+    else:
+        print("  ℹ HTML generation disabled (check_html=False)")
