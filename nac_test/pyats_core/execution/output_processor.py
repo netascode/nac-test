@@ -92,6 +92,9 @@ class OutputProcessor:
                 "title": event.get(
                     "test_title", event["test_name"]
                 ),  # Use test_name as final fallback
+                "hostname": event.get(
+                    "hostname"
+                ),  # Device name for D2D tests, None for API tests
             }
 
         elif event_type == "task_end":
@@ -118,6 +121,13 @@ class OutputProcessor:
 
             # After progress reporter shows the line, add title display
             title = test_info.get("title", event["test_name"])
+            hostname = test_info.get("hostname")
+
+            # Format display title - include hostname for D2D tests
+            if hostname:
+                display_title = f"{title} ({hostname})"
+            else:
+                display_title = title
 
             # Format status for display - distinguish between FAILED and ERRORED
             result_status = event["result"].lower()
@@ -133,17 +143,17 @@ class OutputProcessor:
             if result_status == "passed":
                 # Green for passed
                 print(terminal.success(separator))
-                print(terminal.success(f"{title:<70} | {status_text} |"))
+                print(terminal.success(f"{display_title:<70} | {status_text} |"))
                 print(terminal.success(separator))
             elif result_status in ["failed", "errored"]:
                 # Red for failed/errored
                 print(terminal.error(separator))
-                print(terminal.error(f"{title:<70} | {status_text} |"))
+                print(terminal.error(f"{display_title:<70} | {status_text} |"))
                 print(terminal.error(separator))
             else:
                 # Default (white) for other statuses
                 print(separator)
-                print(f"{title:<70} | {status_text} |")
+                print(f"{display_title:<70} | {status_text} |")
                 print(separator)
 
         elif event_type == "section_start" and os.environ.get("PYATS_DEBUG"):

@@ -142,6 +142,10 @@ class ProgressReporterPlugin(BasePlugin):
             # Get actual worker ID from task runtime
             worker_id = self._get_task_worker_id(task)
 
+            # Get hostname for D2D tests (set by device_executor)
+            # For API tests, this will be None
+            hostname = os.environ.get("HOSTNAME")
+
             # Store task start time for duration calculation
             self.task_start_times[task.taskid] = time.time()
 
@@ -155,6 +159,7 @@ class ProgressReporterPlugin(BasePlugin):
                 "pid": os.getpid(),
                 "timestamp": time.time(),
                 "test_title": title,
+                "hostname": hostname,  # Device name for D2D tests, None for API tests
             }
 
             self._emit_event(event)
