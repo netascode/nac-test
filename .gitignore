@@ -96,4 +96,4 @@ CLAUDE.md
 bandit-security-report.json
 
 # workspace for local testing
-/workspace/
+/workspace/workspace/sdwan/out/
