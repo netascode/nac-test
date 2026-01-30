@@ -24,10 +24,16 @@ class TestbedGenerator:
         Creates a minimal testbed with just the device information needed for connection.
         The testbed uses the Unicon connection library which handles various device types.
 
+        Connection optimization:
+        - Disables init_config_commands to prevent unwanted device configuration during connection
+        - Enables operating_mode for faster connection establishment
+        - Adds custom.abstraction.order for Genie parser optimization
+        - Supports optional platform, model, and series fields for faster device identification
+
         Args:
             device: Device dictionary with connection information
                 Required keys: hostname, host, os, username, password
-                Optional keys: type, platform
+                Optional keys: type, platform, model, series, alias, port, connection_options, ssh_options
             base_testbed_path: Optional path to user-provided base testbed YAML.
                 If provided, the base testbed is loaded and the device is added
                 only if not already present. User-defined device takes precedence.
@@ -87,10 +93,16 @@ class TestbedGenerator:
         connection broker service. This enables connection sharing across
         multiple test subprocesses.
 
+        Connection optimization:
+        - Disables init_config_commands to prevent unwanted device configuration during connection
+        - Enables operating_mode for faster connection establishment
+        - Adds custom.abstraction.order for Genie parser optimization
+        - Supports optional platform, model, and series fields for faster device identification
+
         Args:
             devices: List of device dictionaries with connection information
                 Each device must have: hostname, host, os, username, password
-                Optional keys: type, platform, connection_options
+                Optional keys: type, platform, model, series, alias, port, connection_options, ssh_options
             base_testbed_path: Optional path to user-provided base testbed YAML.
                 If provided, the base testbed is loaded and used as the foundation.
                 Auto-discovered devices are added only if not already present.
@@ -169,6 +181,7 @@ class TestbedGenerator:
         """Build device configuration dict from device dictionary.
 
         Extracted to avoid duplication between single and consolidated methods.
+        This method follows the same pattern as the feat/user_testbed branch for easier merging.
 
         Args:
             device: Device dictionary with connection information
@@ -183,12 +196,20 @@ class TestbedGenerator:
             # Special handling for mock or radkit devices
             connection_args = {
                 "command": device["command"],
+                "arguments": {
+                    "init_config_commands": [],
+                    "operating_mode": True,
+                },
             }
         else:
             connection_args = {
                 "protocol": "ssh",
                 "ip": device["host"],
                 "port": device.get("port", 22),
+                "arguments": {
+                    "init_config_commands": [],
+                    "operating_mode": True,
+                },
             }
 
             # Override protocol/port if connection_options is present
@@ -208,7 +229,6 @@ class TestbedGenerator:
             "alias": device.get("alias", hostname),
             "os": device["os"],
             "type": device.get("type", "router"),
-            "platform": device.get("platform", device["os"]),
             "credentials": {
                 "default": {
                     "username": device["username"],
@@ -216,6 +236,15 @@ class TestbedGenerator:
                 }
             },
             "connections": {"cli": connection_args},
+            "custom": {"abstraction": {"order": ["os"]}},
         }
+
+        if "platform" in device:
+            device_config["platform"] = device["platform"]
+            if "model" in device:
+                device_config["model"] = device["model"]
+
+        if "series" in device:
+            device_config["series"] = device["series"]
 
         return device_config
