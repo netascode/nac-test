@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 import tempfile
 import time
@@ -778,11 +779,8 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # The HOSTNAME environment variable is set by device_executor for d2d tests
         hostname = os.environ.get("HOSTNAME")
         if hostname:
-            # Sanitize hostname for safe filename use - replace special chars with underscore
-            # Keep only alphanumeric, underscore, and hyphen (common in hostnames)
-            import re
-
-            safe_hostname = re.sub(r"[^a-zA-Z0-9_-]", "_", hostname)
+            # Sanitize hostname for safe filename use - replace non-alphanumeric chars with underscore
+            safe_hostname = re.sub(r"[^a-zA-Z0-9]", "_", hostname).lower()
             return f"{class_name}_{safe_hostname}_{timestamp}"
 
         return f"{class_name}_{timestamp}"
