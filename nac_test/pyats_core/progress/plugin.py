@@ -142,9 +142,12 @@ class ProgressReporterPlugin(BasePlugin):
             # Get actual worker ID from task runtime
             worker_id = self._get_task_worker_id(task)
 
-            # Get hostname for D2D tests (set by device_executor)
+            # Get hostname for D2D tests from task kwargs
+            # For D2D tests, hostname is passed as a parameter in job_generator
             # For API tests, this will be None
-            hostname = os.environ.get("HOSTNAME")
+            hostname = None
+            if hasattr(task, "kwargs") and task.kwargs:
+                hostname = task.kwargs.get("hostname")
 
             # Store task start time for duration calculation
             self.task_start_times[task.taskid] = time.time()

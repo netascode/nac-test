@@ -83,7 +83,8 @@ class OutputProcessor:
                 )
 
             # Track status with assigned test ID and title
-            self.test_status[event["test_name"]] = {
+            # Use taskid as key, test_name is not unique across devices for d2d tests
+            self.test_status[event["taskid"]] = {
                 "start_time": event["timestamp"],
                 "status": "EXECUTING",
                 "worker": event["worker_id"],
@@ -98,8 +99,8 @@ class OutputProcessor:
             }
 
         elif event_type == "task_end":
-            # Retrieve the test ID we assigned at start
-            test_info = self.test_status.get(event["test_name"], {})
+            # Retrieve the test ID we assigned at start using taskid
+            test_info = self.test_status.get(event["taskid"], {})
             test_id = test_info.get("test_id", 0)
 
             # Report test completion
@@ -113,9 +114,9 @@ class OutputProcessor:
                     event["duration"],
                 )
 
-            # Update status
-            if event["test_name"] in self.test_status:
-                self.test_status[event["test_name"]].update(
+            # Update status using taskid
+            if event["taskid"] in self.test_status:
+                self.test_status[event["taskid"]].update(
                     {"status": event["result"], "duration": event["duration"]}
                 )
 
