@@ -22,6 +22,7 @@ from typing import Any
 import typer
 
 from nac_test.robot.pabot import run_pabot
+from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
 from nac_test.utils.logging import VerbosityLevel
 
@@ -107,7 +108,7 @@ class RobotOrchestrator:
             exclude_tags=self.exclude_tags,
         )
 
-    def run_tests(self) -> None:
+    def run_tests(self) -> dict[str, Any]:
         """Execute the complete Robot Framework test lifecycle.
 
         This method:
@@ -115,8 +116,13 @@ class RobotOrchestrator:
         2. Renders Robot test templates using RobotWriter
         3. Creates merged data model file in output directory
         4. Executes tests using pabot (unless render_only mode)
+        5. Creates backward compatibility symlinks
+        6. Extracts and returns test statistics
 
         Follows the same pattern as PyATSOrchestrator.run_tests().
+
+        Returns:
+            Dictionary containing test statistics: {"total", "passed", "failed", "skipped"}
         """
         # Create Robot Framework output directory (orchestrator owns its structure)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -177,8 +183,30 @@ class RobotOrchestrator:
                 )
                 raise typer.Exit(252)
             typer.echo("✅ Robot Framework tests completed")
+
+            # Phase 4: Move Robot files to robot_results/ subdirectory
+            self._move_robot_results_to_subdirectory()
+
+            # Phase 5: Create backward compatibility symlinks
+            self._create_backward_compat_symlinks()
+
+            # Phase 5.5: Generate Robot summary report
+            typer.echo("📊 Generating Robot summary report...")
+            generator = RobotReportGenerator(self.base_output_dir)
+            summary_path = generator.generate_summary_report()
+            if summary_path:
+                logger.info(f"Robot summary report: {summary_path}")
+            else:
+                logger.warning(
+                    "Robot summary report generation skipped (no tests or error)"
+                )
+
+            # Phase 6: Extract and return test statistics
+            return self._get_test_statistics()
         else:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
+            # Return empty statistics in render-only mode
+            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
 
     def get_output_summary(self) -> dict[str, Any]:
         """Get summary information about Robot Framework outputs.
@@ -194,3 +222,96 @@ class RobotOrchestrator:
             "merged_data_file": str(self.output_dir / self.merged_data_filename),
             "render_only": self.render_only,
         }
+
+    def _move_robot_results_to_subdirectory(self) -> None:
+        """Move Robot output files from root to robot_results/ subdirectory.
+
+        Moves the following files:
+        - output.xml
+        - log.html
+        - report.html
+        - xunit.xml
+
+        This is done after pabot completes to organize outputs while maintaining
+        pabot's expected behavior.
+        """
+        import shutil
+
+        robot_results_dir = self.base_output_dir / "robot_results"
+        robot_results_dir.mkdir(parents=True, exist_ok=True)
+
+        files_to_move = ["output.xml", "log.html", "report.html", "xunit.xml"]
+
+        for filename in files_to_move:
+            source = self.base_output_dir / filename
+            target = robot_results_dir / filename
+
+            if source.exists():
+                # Remove target if it exists (in case of re-runs)
+                if target.exists():
+                    target.unlink()
+                # Move the file
+                shutil.move(str(source), str(target))
+                logger.debug(f"Moved {filename} to robot_results/")
+
+    def _create_backward_compat_symlinks(self) -> None:
+        """Create backward compatibility symlinks at root pointing to robot_results/.
+
+        Creates symlinks for:
+        - output.xml -> robot_results/output.xml
+        - log.html -> robot_results/log.html
+        - report.html -> robot_results/report.html
+        - xunit.xml -> robot_results/xunit.xml
+
+        This ensures existing tools/scripts that expect these files at root continue to work.
+        """
+        robot_results_dir = self.base_output_dir / "robot_results"
+        files_to_link = ["output.xml", "log.html", "report.html", "xunit.xml"]
+
+        for filename in files_to_link:
+            source = robot_results_dir / filename
+            target = self.base_output_dir / filename
+
+            # Skip if source doesn't exist (shouldn't happen, but be defensive)
+            if not source.exists():
+                logger.warning(f"Source file not found for symlink: {source}")
+                continue
+
+            # Remove existing symlink or file if it exists
+            if target.exists() or target.is_symlink():
+                target.unlink()
+
+            # Create relative symlink
+            target.symlink_to(source.relative_to(self.base_output_dir))
+            logger.debug(f"Created symlink: {target} -> {source}")
+
+    def _get_test_statistics(self) -> dict[str, Any]:
+        """Extract test statistics from Robot Framework output.xml.
+
+        Uses Robot Framework's ExecutionResult API to parse the output.xml file
+        and extract test counts.
+
+        Returns:
+            Dictionary with keys: total, passed, failed, skipped
+        """
+        from robot.api import ExecutionResult
+
+        output_xml = self.base_output_dir / "robot_results" / "output.xml"
+
+        if not output_xml.exists():
+            logger.warning(f"Robot output.xml not found at {output_xml}")
+            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+
+        try:
+            result = ExecutionResult(str(output_xml))
+            stats = result.statistics.total
+
+            return {
+                "total": stats.total,
+                "passed": stats.passed,
+                "failed": stats.failed,
+                "skipped": stats.skipped,
+            }
+        except Exception as e:
+            logger.error(f"Failed to parse Robot output.xml: {e}")
+            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}

@@ -3504,6 +3504,238 @@ class ResultStatus(str, Enum):
 
 ---
 
+### Combined Reporting Dashboard
+
+The combined reporting dashboard provides a unified view of test results across Robot Framework, PyATS API, and PyATS D2D tests in a single root-level `combined_summary.html` file.
+
+#### Architecture
+
+```
+nac_test/
+├── core/
+│   └── reporting/
+│       └── combined_generator.py         # Orchestrates combined dashboard
+├── pyats_core/
+│   └── reporting/
+│       ├── generator.py                  # Single archive report generation
+│       ├── multi_archive_generator.py    # Provides PyATS stats to combined dashboard
+│       └── templates/
+│           └── summary/
+│               ├── report.html.j2        # PyATS summary with breadcrumb
+│               └── combined_report.html.j2 # Combined dashboard template
+└── robot/
+    └── reporting/
+        ├── robot_parser.py               # Parses output.xml via ResultVisitor
+        └── robot_generator.py            # Generates Robot summary report
+```
+
+#### Report Structure
+
+```
+{output_dir}/
+├── combined_summary.html                  # Root-level combined dashboard ✨
+├── robot_results/                         # Robot Framework results
+│   ├── output.xml                        # Robot results XML
+│   ├── log.html                          # Robot log
+│   ├── report.html                       # Robot report
+│   ├── xunit.xml                         # Robot xUnit XML
+│   └── summary_report.html               # Robot summary (PyATS style)
+├── output.xml → robot_results/output.xml  # Backward-compat symlink
+├── log.html → robot_results/log.html      # Backward-compat symlink
+├── report.html → robot_results/report.html # Backward-compat symlink
+├── xunit.xml → robot_results/xunit.xml    # Backward-compat symlink
+└── pyats_results/                         # PyATS results
+    ├── api/
+    │   └── html_reports/
+    │       └── summary_report.html        # API summary with breadcrumb
+    └── d2d/
+        └── html_reports/
+            └── summary_report.html        # D2D summary with breadcrumb
+```
+
+#### Combined Report Generator (`core/reporting/combined_generator.py`)
+
+Orchestrates the unified dashboard generation:
+
+```python
+class CombinedReportGenerator:
+    def generate_combined_summary(
+        self,
+        pyats_stats: Dict[str, Dict[str, int]] | None = None
+    ) -> Path:
+        """Generate combined summary dashboard.
+        
+        Args:
+            pyats_stats: Optional PyATS statistics from multi-archive generator
+                        Format: {"API": {...}, "D2D": {...}}
+                        
+        Returns:
+            Path to generated combined_summary.html
+        """
+```
+
+**Features:**
+
+- **Unified Statistics**: Aggregates test counts from all frameworks
+- **Framework Badges**: Visual indicators for Robot, API, and D2D tests
+- **Deep Linking**: Links to framework-specific summary reports
+- **Success Rate Calculation**: Overall and per-framework success rates
+- **Automatic Generation**: Called by CombinedOrchestrator after all tests complete
+
+#### Robot Report Parser (`robot/reporting/robot_parser.py`)
+
+Parses Robot Framework `output.xml` using the ResultVisitor pattern:
+
+```python
+class RobotResultParser:
+    def parse_output_xml(self, output_xml_path: Path) -> Dict[str, Any]:
+        """Parse Robot output.xml and extract test results.
+        
+        Returns:
+            {
+                "tests": [
+                    {
+                        "name": "Test Case Name",
+                        "status": "PASS",
+                        "elapsed_time": "1.234 s",
+                        "start_time": "2025-02-01 12:00:00",
+                        "message": "Optional message",
+                        "suite_name": "Suite Name",
+                        "test_id": "s1-t1"  # For deep linking
+                    },
+                    ...
+                ],
+                "statistics": {
+                    "total": 10,
+                    "passed": 8,
+                    "failed": 2,
+                    "skipped": 0
+                },
+                "suite_name": "Root Suite"
+            }
+        """
+```
+
+**Implementation:**
+
+- Uses Robot Framework's `ResultVisitor` API
+- Extracts test metadata including timestamps and status
+- Generates test IDs for deep linking to `log.html`
+- Sorts tests (failed first, then passed)
+
+#### Robot Report Generator (`robot/reporting/robot_generator.py`)
+
+Generates PyATS-style summary report for Robot tests:
+
+```python
+class RobotReportGenerator:
+    def generate_summary_report(self) -> Path | None:
+        """Generate Robot summary report in robot_results/.
+        
+        Returns:
+            Path to generated summary_report.html, or None if no tests
+        """
+    
+    def get_aggregated_stats(self) -> Dict[str, int]:
+        """Get aggregated Robot test statistics.
+        
+        Returns:
+            {"total": 10, "passed": 8, "failed": 2, "skipped": 0}
+        """
+```
+
+**Features:**
+
+- Reuses PyATS Jinja2 templates for consistency
+- Generates deep links to Robot log.html
+- Provides statistics for combined dashboard
+- Handles missing output.xml gracefully
+
+#### Statistics Flow
+
+```mermaid
+graph LR
+    subgraph "Test Execution"
+        Robot[RobotOrchestrator] --> RobotStats[Robot Stats]
+        PyATS[PyATSOrchestrator] --> PyATSStats[PyATS Stats]
+    end
+    
+    subgraph "Report Generation"
+        RobotStats --> RobotGen[RobotReportGenerator]
+        PyATSStats --> MultiGen[MultiArchiveReportGenerator]
+        
+        RobotGen --> RobotReport[robot_results/summary_report.html]
+        MultiGen --> APIReport[api/html_reports/summary_report.html]
+        MultiGen --> D2DReport[d2d/html_reports/summary_report.html]
+    end
+    
+    subgraph "Combined Dashboard"
+        RobotGen --> |get_aggregated_stats| CombinedGen[CombinedReportGenerator]
+        MultiGen --> |pyats_stats| CombinedGen
+        CombinedGen --> Dashboard[combined_summary.html]
+    end
+    
+    subgraph "CLI"
+        RobotStats --> |return stats| CLI[CLI Main]
+        PyATSStats --> |return stats| CLI
+        CLI --> |exit code| User[User]
+    end
+```
+
+**Statistics Format:**
+
+All orchestrators return a consistent format:
+
+```python
+{
+    "total": 10,
+    "passed": 8,
+    "failed": 2,
+    "skipped": 0
+}
+```
+
+CombinedOrchestrator aggregates these into:
+
+```python
+{
+    "total": 25,
+    "passed": 23,
+    "failed": 2,
+    "skipped": 0,
+    "by_framework": {
+        "robot": {"total": 10, "passed": 8, "failed": 2, "skipped": 0},
+        "pyats_api": {"total": 10, "passed": 10, "failed": 0, "skipped": 0},
+        "pyats_d2d": {"total": 5, "passed": 5, "failed": 0, "skipped": 0}
+    }
+}
+```
+
+#### Backward Compatibility
+
+Robot results are output to `robot_results/` subdirectory, with symlinks at root for backward compatibility:
+
+- `output.xml` → `robot_results/output.xml`
+- `log.html` → `robot_results/log.html`
+- `report.html` → `robot_results/report.html`
+- `xunit.xml` → `robot_results/xunit.xml`
+
+This ensures existing tools and scripts that expect Robot files at root continue to work.
+
+#### Breadcrumb Navigation
+
+All framework-specific summary reports include breadcrumb navigation:
+
+```html
+<div class="breadcrumb">
+    <a href="../../combined_summary.html">← Back to Combined Dashboard</a>
+</div>
+```
+
+This allows users to easily navigate from any report back to the unified dashboard.
+
+---
+
 ### Robot Framework Orchestrator
 
 #### Robot Orchestrator (`robot/orchestrator.py`)

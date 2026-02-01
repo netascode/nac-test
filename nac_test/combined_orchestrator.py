@@ -9,6 +9,7 @@ import logging
 import platform
 import sys
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -114,10 +115,24 @@ class CombinedOrchestrator:
                 raise typer.Exit(1) from e  # Developer: full exception context
             raise typer.Exit(1) from None  # Customer: clean output
 
-    def run_tests(self) -> None:
+    def run_tests(self) -> dict[str, Any]:
         """Main entry point for combined test execution.
 
         Handles development modes (PyATS only, Robot only) and production mode (combined).
+
+        Returns:
+            Dict with combined test statistics:
+            {
+                "total": X,
+                "passed": Y,
+                "failed": Z,
+                "skipped": W,
+                "by_framework": {
+                    "robot": {"total": ..., "passed": ..., "failed": ..., "skipped": ...},
+                    "pyats_api": {...},
+                    "pyats_d2d": {...}
+                }
+            }
         """
         # Note: Output directory and merged data file created by main.py
 
@@ -142,8 +157,16 @@ class CombinedOrchestrator:
             )
             if self.max_parallel_devices is not None:
                 orchestrator.max_parallel_devices = self.max_parallel_devices
-            orchestrator.run_tests()
-            return
+            pyats_stats = orchestrator.run_tests()
+
+            # Return stats
+            return {
+                "total": pyats_stats["total"],
+                "passed": pyats_stats["passed"],
+                "failed": pyats_stats["failed"],
+                "skipped": pyats_stats["skipped"],
+                "by_framework": {},  # Dev mode, no breakdown
+            }
 
         # Handle development mode (Robot only)
         if self.dev_robot_only:
@@ -169,8 +192,16 @@ class CombinedOrchestrator:
                 extra_args=self.extra_args,
                 verbosity=self.verbosity,
             )
-            robot_orchestrator.run_tests()
-            return
+            robot_stats = robot_orchestrator.run_tests()
+
+            # Return stats
+            return {
+                "total": robot_stats["total"],
+                "passed": robot_stats["passed"],
+                "failed": robot_stats["failed"],
+                "skipped": robot_stats["skipped"],
+                "by_framework": {},  # Dev mode, no breakdown
+            }
 
         # Production mode: Combined execution
         # Discover test types (simple existence checks)
@@ -179,9 +210,25 @@ class CombinedOrchestrator:
         # Handle empty scenarios
         if not has_pyats and not has_robot:
             typer.echo("No test files found (no *.py PyATS tests or *.robot templates)")
-            return
+            return {
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "skipped": 0,
+                "by_framework": {},
+            }
 
         # Sequential execution - each orchestrator manages its own directory structure
+        # Initialize stats tracking
+        combined_stats: dict[str, Any] = {
+            "total": 0,
+            "passed": 0,
+            "failed": 0,
+            "skipped": 0,
+            "by_framework": {},
+        }
+        pyats_stats_for_dashboard: dict[str, Any] | None = None
+
         if has_pyats:
             typer.echo("\n🧪 Running PyATS tests...\n")
             self._check_python_version()
@@ -198,7 +245,26 @@ class CombinedOrchestrator:
             )
             if self.max_parallel_devices is not None:
                 orchestrator.max_parallel_devices = self.max_parallel_devices
-            orchestrator.run_tests()
+            pyats_stats = orchestrator.run_tests()
+
+            # Debug logging
+            logger.debug(f"PyATS stats returned: {pyats_stats}")
+            logger.debug(f"PyATS stats type: {type(pyats_stats)}")
+
+            # Accumulate stats
+            try:
+                combined_stats["total"] += pyats_stats["total"]
+                combined_stats["passed"] += pyats_stats["passed"]
+                combined_stats["failed"] += pyats_stats["failed"]
+                combined_stats["skipped"] += pyats_stats["skipped"]
+            except (TypeError, KeyError) as e:
+                logger.error(f"Error accumulating PyATS stats: {e}")
+                logger.error(f"pyats_stats value: {pyats_stats}")
+                raise
+
+            # Store PyATS stats for dashboard generation
+            # We need the detailed stats from the orchestrator's last report generation
+            pyats_stats_for_dashboard = getattr(orchestrator, "last_pyats_stats", None)
 
         if has_robot:
             typer.echo("\n🤖 Running Robot Framework tests...\n")
@@ -219,10 +285,50 @@ class CombinedOrchestrator:
                 extra_args=self.extra_args,
                 verbosity=self.verbosity,
             )
-            robot_orchestrator2.run_tests()
+            robot_stats = robot_orchestrator2.run_tests()
+
+            # Accumulate stats
+            combined_stats["total"] += robot_stats["total"]
+            combined_stats["passed"] += robot_stats["passed"]
+            combined_stats["failed"] += robot_stats["failed"]
+            combined_stats["skipped"] += robot_stats["skipped"]
+
+            # Add to by_framework breakdown
+            combined_stats["by_framework"]["robot"] = robot_stats
+
+        # Generate combined dashboard if any tests ran
+        if (has_pyats or has_robot) and not self.render_only and not self.dry_run:
+            typer.echo("\n📊 Generating combined dashboard...")
+            from nac_test.core.reporting.combined_generator import (
+                CombinedReportGenerator,
+            )
+
+            # Debug logging
+            logger.debug(
+                f"Calling CombinedReportGenerator with pyats_stats_for_dashboard: {pyats_stats_for_dashboard}"
+            )
+
+            combined_generator = CombinedReportGenerator(self.output_dir)
+            combined_path = combined_generator.generate_combined_summary(
+                pyats_stats_for_dashboard
+            )
+
+            # Debug logging
+            logger.debug(
+                f"Calling CombinedReportGenerator with pyats_stats_for_dashboard: {pyats_stats_for_dashboard}"
+            )
+
+            combined_generator = CombinedReportGenerator(self.output_dir)
+            combined_path = combined_generator.generate_combined_summary(
+                pyats_stats_for_dashboard
+            )
+            if combined_path:
+                typer.echo(f"   ✅ Combined dashboard: {combined_path}")
 
         # Summary
-        self._print_execution_summary(has_pyats, has_robot)
+        self._print_execution_summary(has_pyats, has_robot, combined_stats)
+
+        return combined_stats
 
     @staticmethod
     def _check_python_version() -> None:
@@ -264,28 +370,78 @@ class CombinedOrchestrator:
 
         return has_pyats, has_robot
 
-    def _print_execution_summary(self, has_pyats: bool, has_robot: bool) -> None:
-        """Print execution summary."""
+    def _print_execution_summary(
+        self, has_pyats: bool, has_robot: bool, stats: dict[str, Any] | None = None
+    ) -> None:
+        """Print execution summary with statistics.
+
+        Args:
+            has_pyats: Whether PyATS tests were executed
+            has_robot: Whether Robot tests were executed
+            stats: Combined statistics dictionary (optional for backward compatibility)
+        """
         # Skip combined summary for development modes - individual orchestrators handle their own summaries
         if self.dev_pyats_only or self.dev_robot_only:
             return
 
-        typer.echo("\n" + "=" * 50)
+        typer.echo("\n" + "=" * 70)
         typer.echo("📋 Combined Test Execution Summary")
-        typer.echo("=" * 50)
+        typer.echo("=" * 70)
+
+        # Show overall stats if available
+        if stats:
+            typer.echo("\n📊 Overall Results:")
+            typer.echo(f"   Total: {stats['total']} tests")
+            typer.echo(f"   ✅ Passed: {stats['passed']}")
+            typer.echo(f"   ❌ Failed: {stats['failed']}")
+            typer.echo(f"   ⊘ Skipped: {stats['skipped']}")
+
+            # Combined dashboard is the main entry point
+            if not self.render_only:
+                typer.echo("\n🎯 Combined Dashboard:")
+                combined_dashboard = self.output_dir / "combined_summary.html"
+                if combined_dashboard.exists():
+                    typer.echo(f"   📊 {combined_dashboard}")
+                    typer.echo("   (Aggregated results from all test frameworks)")
+
+        if has_robot:
+            typer.echo("\n✅ Robot Framework tests: Completed")
+            typer.echo(f"   📁 Results: {self.output_dir}/robot_results/")
+            if stats and "robot" in stats.get("by_framework", {}):
+                robot_stats = stats["by_framework"]["robot"]
+                typer.echo(
+                    f"   📊 {robot_stats['total']} tests: "
+                    f"{robot_stats['passed']} passed, {robot_stats['failed']} failed"
+                )
+            if not self.render_only:
+                typer.echo(
+                    f"   📊 Summary: {self.output_dir}/robot_results/summary_report.html"
+                )
+                typer.echo(f"   📊 Detailed: {self.output_dir}/robot_results/log.html")
 
         if has_pyats:
             typer.echo("\n✅ PyATS tests: Completed")
             typer.echo(f"   📁 Results: {self.output_dir}/pyats_results/")
-            typer.echo(f"   📊 Reports: {self.output_dir}/pyats_results/html_reports/")
-
-        if has_robot:
-            typer.echo("\n✅ Robot Framework tests: Completed")
-            typer.echo(f"   📁 Results: {self.output_dir}/")
-            if not self.render_only:
-                typer.echo(f"   📊 Reports: {self.output_dir}/report.html")
+            api_summary = (
+                self.output_dir
+                / "pyats_results"
+                / "api"
+                / "html_reports"
+                / "summary_report.html"
+            )
+            d2d_summary = (
+                self.output_dir
+                / "pyats_results"
+                / "d2d"
+                / "html_reports"
+                / "summary_report.html"
+            )
+            if api_summary.exists():
+                typer.echo(f"   📊 API Summary: {api_summary}")
+            if d2d_summary.exists():
+                typer.echo(f"   📊 D2D Summary: {d2d_summary}")
 
         typer.echo(
             f"\n📄 Merged data model: {self.output_dir}/{self.merged_data_filename}"
         )
-        typer.echo("=" * 50)
+        typer.echo("=" * 70)

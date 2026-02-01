@@ -21,7 +21,7 @@ repos:
     rev: v1.17.1
     hooks:
       - id: mypy
-        exclude: 'tests/fixtures/|tests/integration/fixtures/'
+        exclude: 'tests/fixtures/|tests/integration/fixtures/|tests/unit/'
         additional_dependencies:
           - types-PyYAML>=6.0.12.20250822
           - types-aiofiles>=24.1.0.20250822

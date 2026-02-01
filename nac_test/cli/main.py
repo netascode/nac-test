@@ -333,7 +333,7 @@ def main(
     runtime_start = datetime.now()
 
     try:
-        orchestrator.run_tests()
+        stats = orchestrator.run_tests()
     except Exception as e:
         # Ensure runtime is shown even if orchestrator fails
         typer.echo(f"Error during execution: {e}")
@@ -352,12 +352,23 @@ def main(
         runtime_str = f"{minutes} minutes {secs:.2f} seconds"
 
     typer.echo(f"\nTotal runtime: {runtime_str}")
-    exit()
 
-
-def exit() -> None:
+    # Use test statistics for exit code (issue #469)
+    # Also check error_handler for non-test errors
     if error_handler.fired:
+        # Error handler caught a critical error during execution
+        raise typer.Exit(1)
+    elif stats.get("failed", 0) > 0:
+        typer.echo(
+            f"\n❌ Tests failed: {stats['failed']} out of {stats['total']} tests",
+            err=True,
+        )
+        raise typer.Exit(1)
+    elif stats.get("total", 0) == 0:
+        typer.echo("\n⚠️  No tests were executed", err=True)
         raise typer.Exit(1)
     else:
-        rc = 0
-    raise typer.Exit(code=rc)
+        typer.echo(
+            f"\n✅ All tests passed: {stats['passed']} out of {stats['total']} tests"
+        )
+        raise typer.Exit(0)

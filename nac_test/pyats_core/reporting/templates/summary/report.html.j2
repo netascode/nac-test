@@ -55,6 +55,20 @@
             margin-bottom: 10px;
         }
 
+        /* Breadcrumb navigation styles */
+        .breadcrumb {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .breadcrumb a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            color: white;
+            text-decoration: underline;
+        }
+
         .card {
             background: white;
             border-radius: 8px;
@@ -379,6 +393,9 @@
         <div class="container">
             <h1>Network as Code Test Results Summary</h1>
             <div class="date-info">Generated on {{ generation_time }}</div>
+            <div class="breadcrumb">
+                <a href="../../combined_summary.html">← Back to Combined Dashboard</a>
+            </div>
         </div>
     </header>
 

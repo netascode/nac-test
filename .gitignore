@@ -84,6 +84,7 @@ logs/
 output.xml
 log.html
 report.html
+pabot_results/
 
 # Pabot
 .pabotsuitenames
@@ -96,4 +97,4 @@ CLAUDE.md
 bandit-security-report.json
 
 # workspace for local testing
-/workspace/workspace/sdwan/out/
+/workspace
