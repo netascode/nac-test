@@ -29,7 +29,9 @@ class SSHTestBase(NACTestBase):
     """
 
     # Instance variables set during setup (type annotations for mypy)
-    connection: BrokerCommandExecutor | Any  # BrokerCommandExecutor or testbed device
+    connection: BrokerCommandExecutor | Any | None = (
+        None  # BrokerCommandExecutor or testbed device
+    )
     broker_client: BrokerClient
 
     @property
@@ -383,10 +385,10 @@ class SSHTestBase(NACTestBase):
 
         try:
             # Call the base class generic orchestration
-            results = loop.run_until_complete(self.run_verification_async())  # type: ignore[no-untyped-call]
+            results = loop.run_until_complete(self.run_verification_async())
 
             # Process results using smart configuration-driven processing
-            self.process_results_smart(results, steps)  # type: ignore[no-untyped-call]
+            self.process_results_smart(results, steps)
 
         finally:
             # SSH-specific cleanup
@@ -398,10 +400,11 @@ class SSHTestBase(NACTestBase):
 
                 # Only disconnect for non-broker connections
                 if (
-                    hasattr(self, "connection")
-                    and self.connection is not None
+                    self.connection is not None
                     and not isinstance(self.connection, BrokerCommandExecutor)
-                    and hasattr(self.connection, "disconnect")
+                    and hasattr(
+                        self.connection, "disconnect"
+                    )  # Check duck-typed method on external PyATS object
                 ):
                     self.logger.debug("Disconnecting non-broker connection")
                     loop.run_until_complete(self.connection.disconnect())
