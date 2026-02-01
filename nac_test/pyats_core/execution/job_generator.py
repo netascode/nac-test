@@ -25,10 +25,17 @@ class JobGenerator:
         self.output_dir = Path(output_dir)
 
     def generate_job_file_content(self, test_files: list[Path]) -> str:
-        """Generate the content for a PyATS job file.
+        """Generate the content for a PyATS job file for API tests.
+
+        This method is used for API tests (standard execution mode) where tests
+        call management APIs and don't directly connect to network devices.
+
+        The testbed parameter is passed to run() for consistency and to support
+        future extensions, even though API tests typically don't require device
+        connections or Genie parsers.
 
         Args:
-            test_files: List of test files to include in the job
+            test_files: List of API test files to include in the job
 
         Returns:
             Job file content as a string
@@ -43,7 +50,6 @@ class JobGenerator:
 
         import os
         from pathlib import Path
-
         from pyats.easypy import run
 
         # Test files to execute
@@ -67,7 +73,8 @@ class JobGenerator:
                 run(
                     testscript=test_file,
                     taskid=test_name,
-                    max_runtime={DEFAULT_TEST_TIMEOUT}
+                    max_runtime={DEFAULT_TEST_TIMEOUT},
+                    testbed=runtime.testbed
                 )
         ''')
 
@@ -76,14 +83,23 @@ class JobGenerator:
     def generate_device_centric_job(
         self, device: dict[str, Any], test_files: list[Path]
     ) -> str:
-        """Generate PyATS job file content for a specific device.
+        """Generate PyATS job file content for device-centric D2D/SSH tests.
+
+        This method is used for D2D (device-to-device) tests where tests directly
+        connect to network devices via SSH. These tests are executed in device-centric
+        mode with connection broker support for connection pooling and command caching.
+
+        The testbed parameter is passed to run() to provide access to device metadata
+        and enable Genie parsers for command output parsing. The connection broker
+        (when active) takes priority for actual device connections, but the testbed
+        remains available for parser support.
 
         This job file sets up the environment for SSH tests to run against a single device.
         It ensures the SSHTestBase has access to device info and the data model.
 
         Args:
             device: Device dictionary with connection information
-            test_files: List of test files to run on this device
+            test_files: List of D2D/SSH test files to run on this device
 
         Returns:
             Job file content as a string
@@ -102,8 +118,8 @@ class JobGenerator:
         import os
         import re
         from pathlib import Path
-        from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
         from pyats.easypy import run
+        from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
 
         # Device being tested (using hostname)
         HOSTNAME = "{hostname}"
