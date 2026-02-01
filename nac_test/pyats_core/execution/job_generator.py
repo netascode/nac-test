@@ -113,9 +113,10 @@ class JobGenerator:
         job_content = textwrap.dedent(f'''
         """Auto-generated PyATS job file for device {hostname}"""
 
-        import os
         import json
         import logging
+        import os
+        import re
         from pathlib import Path
         from pyats.easypy import run
         from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
@@ -138,14 +139,17 @@ class JobGenerator:
             # This will be shared across all tests for this device
             runtime.connection_manager = DeviceConnectionManager(max_concurrent=1)
 
+            # Sanitize hostname for taskid (replace non-alphanumeric with underscore and lowercase)
+            safe_hostname = re.sub(r'[^a-zA-Z0-9_]', '_', HOSTNAME).lower()
+
             # Run all test files for this device
             for idx, test_file in enumerate(TEST_FILES):
                 # Create meaningful task ID from test file name and hostname
-                # e.g., "router1_epg_attributes"
                 test_name = Path(test_file).stem
                 run(
                     testscript=test_file,
-                    taskid=f"{{HOSTNAME}}_{{test_name}}",
+                    taskid=f"{{safe_hostname}}_{{test_name}}",
+                    hostname=HOSTNAME,  # Pass original hostname for progress reporting
                     max_runtime={DEFAULT_TEST_TIMEOUT},
                     testbed=runtime.testbed
                 )

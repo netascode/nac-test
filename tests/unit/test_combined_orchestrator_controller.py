@@ -134,6 +134,7 @@ class TestCombinedOrchestratorController:
                 output_dir=output_dir,
                 merged_data_filename="merged.yaml",
                 minimal_reports=False,
+                custom_testbed_path=None,
                 controller_type="SDWAN",
             )
 
@@ -204,6 +205,7 @@ class TestCombinedOrchestratorController:
                     output_dir=output_dir,
                     merged_data_filename="merged.yaml",
                     minimal_reports=False,
+                    custom_testbed_path=None,
                     controller_type="CC",
                 )
 

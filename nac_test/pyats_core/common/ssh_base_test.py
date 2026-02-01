@@ -156,6 +156,13 @@ class SSHTestBase(NACTestBase):
         # Store hostname early so testbed_device property can use it
         self.hostname = hostname
 
+        # Add hostname to metadata as a separate field for d2d tests
+        # Do this BEFORE connection attempt so it's set even if connection fails
+        if hasattr(self, "result_collector") and hasattr(
+            self.result_collector, "metadata"
+        ):
+            self.result_collector.metadata["hostname"] = hostname
+
         # The rest of the setup is async, we'll run it in the event loop
         try:
             # Get or create event loop for Python 3.10+ compatibility
@@ -164,6 +171,7 @@ class SSHTestBase(NACTestBase):
         except ConnectionError as e:
             # Connection failed - fail the test with clear message
             self.failed(str(e))
+            return
 
     async def _async_setup(self, hostname: str) -> None:
         """Helper for async setup operations with connection error handling."""

@@ -227,6 +227,19 @@ Version = Annotated[
 ]
 
 
+Testbed = Annotated[
+    Path | None,
+    typer.Option(
+        "--testbed",
+        exists=True,
+        dir_okay=False,
+        file_okay=True,
+        help="Path to custom PyATS testbed YAML. Devices in this file will override auto-discovered device connections and can include additional helper devices (e.g., jump hosts).",
+        envvar="NAC_TEST_TESTBED",
+    ),
+]
+
+
 @app.command(
     context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
 )
@@ -246,6 +259,7 @@ def main(
     robot: Robot = False,
     max_parallel_devices: MaxParallelDevices | None = None,
     minimal_reports: MinimalReports = False,
+    testbed: Testbed = None,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,  # noqa: ARG001
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
@@ -297,6 +311,7 @@ def main(
     orchestrator = CombinedOrchestrator(
         data_paths=data,
         templates_dir=templates,
+        custom_testbed_path=testbed,
         output_dir=output,
         merged_data_filename=merged_data_filename,
         filters_path=filters,
