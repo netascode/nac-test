@@ -193,7 +193,10 @@ class MultiArchiveReportGenerator:
 
             # Run ReportGenerator on extracted contents
             generator = ReportGenerator(
-                type_output_dir, extract_dir, minimal_reports=self.minimal_reports
+                type_output_dir,
+                extract_dir,
+                minimal_reports=self.minimal_reports,
+                archive_type=archive_type,
             )
             result = await generator.generate_all_reports()
 

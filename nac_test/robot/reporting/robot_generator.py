@@ -110,6 +110,8 @@ class RobotReportGenerator:
                 skipped_tests=stats["skipped_tests"],
                 success_rate=stats["success_rate"],
                 results=results,
+                breadcrumb_link="../combined_summary.html",  # 1 level up from robot_results/
+                report_type="Robot Framework",
             )
 
             # Write summary report

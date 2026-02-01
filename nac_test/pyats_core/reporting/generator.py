@@ -56,6 +56,7 @@ class ReportGenerator:
         pyats_results_dir: Path,
         max_concurrent: int = 10,
         minimal_reports: bool = False,
+        archive_type: str | None = None,
     ) -> None:
         """Initialize the report generator.
 
@@ -65,6 +66,7 @@ class ReportGenerator:
             max_concurrent: Maximum number of concurrent report generations.
                            Defaults to 10.
             minimal_reports: Only include command outputs for failed/errored tests
+            archive_type: Type of archive being processed ("api" or "d2d")
         """
         self.output_dir = output_dir
         self.pyats_results_dir = pyats_results_dir
@@ -76,6 +78,7 @@ class ReportGenerator:
         self.temp_data_dir = output_dir / "html_report_data_temp"
         self.max_concurrent = max_concurrent
         self.minimal_reports = minimal_reports
+        self.archive_type = archive_type
         self.failed_reports: list[str] = []
 
         # Initialize Jinja2 environment using our templates module
@@ -438,6 +441,13 @@ class ReportGenerator:
                 else 0
             )
 
+            # Determine report type title based on archive type
+            report_type = None
+            if self.archive_type == "api":
+                report_type = "PyATS API"
+            elif self.archive_type == "d2d":
+                report_type = "PyATS Direct-to-Device (D2D)"
+
             # Render summary
             template = self.env.get_template("summary/report.html.j2")
             html_content = template.render(
@@ -448,6 +458,8 @@ class ReportGenerator:
                 skipped_tests=skipped_tests,
                 success_rate=success_rate,
                 results=all_results,
+                breadcrumb_link="../../../combined_summary.html",  # 3 levels up from pyats_results/{type}/html_reports/
+                report_type=report_type,
             )
 
             summary_file = self.report_dir / "summary_report.html"

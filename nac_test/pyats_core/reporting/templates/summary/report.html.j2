@@ -55,6 +55,19 @@
             margin-bottom: 10px;
         }
 
+        /* Report type badge styles */
+        .report-type-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
         /* Breadcrumb navigation styles */
         .breadcrumb {
             margin-top: 10px;
@@ -392,9 +405,12 @@
     <header>
         <div class="container">
             <h1>Network as Code Test Results Summary</h1>
+            {% if report_type %}
+            <div class="report-type-badge">{{ report_type }}</div>
+            {% endif %}
             <div class="date-info">Generated on {{ generation_time }}</div>
             <div class="breadcrumb">
-                <a href="../../combined_summary.html">← Back to Combined Dashboard</a>
+                <a href="{{ breadcrumb_link | default('../../combined_summary.html') }}">← Back to Combined Dashboard</a>
             </div>
         </div>
     </header>
