@@ -293,6 +293,7 @@ class ReportGenerator:
             status=test_data.get("overall_status", "unknown"),
             generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             jobfile_path=metadata.get("jobfile_path", ""),
+            hostname=metadata.get("hostname"),  # Device name for D2D tests
         )
 
         # Write HTML report
@@ -379,6 +380,9 @@ class ReportGenerator:
                             {
                                 "test_id": test_id,
                                 "title": metadata.get("title", test_id),
+                                "hostname": metadata.get(
+                                    "hostname"
+                                ),  # Pass hostname separately
                                 "status": test_data.get(
                                     "overall_status", ResultStatus.SKIPPED.value
                                 ),
