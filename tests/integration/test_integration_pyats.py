@@ -226,6 +226,7 @@ def test_nac_test_pyats_quicksilver_api_d2d(
 )
 def test_nac_test_pyats_quicksilver_api_d2d_with_testbed(
     mock_api_server: MockAPIServer,
+    sdwan_user_testbed: str,
     tmpdir: str,
     arch: str,
     passed: int,
@@ -239,41 +240,6 @@ def test_nac_test_pyats_quicksilver_api_d2d_with_testbed(
     Uses the new --testbed feature to provide custom device connection information
     via a user-provided testbed.yaml instead of patching the resolver.
     """
-    # Get absolute path to project root to construct path to mock_unicon.py
-    project_root = Path(__file__).parent.parent.parent.absolute()
-    mock_script = project_root / "tests" / "integration" / "mocks" / "mock_unicon.py"
-
-    # Create a user testbed YAML with mock device connections
-    # Devices sd-dc-c8kv-01 and sd-dc-c8kv-02 are from the SDWAN fixture data
-    user_testbed_yaml = f"""
-testbed:
-  name: integration_test_testbed
-  credentials:
-    default:
-      username: admin
-      password: admin
-
-devices:
-  sd-dc-c8kv-01:
-    os: iosxe
-    type: router
-    connections:
-      cli:
-        command: python {mock_script} iosxe --hostname sd-dc-c8kv-01
-
-  sd-dc-c8kv-02:
-    os: iosxe
-    type: router
-    connections:
-      cli:
-        command: python {mock_script} iosxe --hostname sd-dc-c8kv-02
-"""
-
-    # Write user testbed to temp file
-    testbed_path = Path(tmpdir) / "user_testbed.yaml"
-    with open(testbed_path, "w") as f:
-        f.write(user_testbed_yaml)
-
     runner = CliRunner()
 
     # Set up environment for both API (SDWAN_*) and D2D (IOSXE_*) tests
@@ -298,7 +264,7 @@ devices:
             "-o",
             outputdir,
             "--testbed",
-            str(testbed_path),
+            sdwan_user_testbed,
             "--verbosity",
             "DEBUG",
         ],

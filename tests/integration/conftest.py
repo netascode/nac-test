@@ -5,6 +5,7 @@
 
 import os
 import re
+import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
@@ -141,3 +142,58 @@ def mock_api_server_isolated(
     """
     yield mock_api_server
     mock_api_server.reset_endpoints()
+
+
+@pytest.fixture(scope="session")
+def sdwan_user_testbed() -> Generator[str, None, None]:
+    """Create a user testbed YAML with mock device connections for SDWAN tests.
+
+    This fixture creates a temporary testbed file that can be shared across
+    multiple test modules for SDWAN integration tests.
+
+    Returns:
+        Path string to the testbed YAML file
+    """
+    # Get absolute path to mock_unicon.py
+    project_root = Path(__file__).parent.parent.parent.absolute()
+    mock_script = project_root / "tests" / "integration" / "mocks" / "mock_unicon.py"
+
+    # Create testbed YAML with mock device connections
+    # Devices sd-dc-c8kv-01 and sd-dc-c8kv-02 are from the SDWAN fixture data
+    testbed_content = f"""
+testbed:
+  name: integration_test_testbed
+  credentials:
+    default:
+      username: admin
+      password: admin
+
+devices:
+  sd-dc-c8kv-01:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        command: python {mock_script} iosxe --hostname sd-dc-c8kv-01
+
+  sd-dc-c8kv-02:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        command: python {mock_script} iosxe --hostname sd-dc-c8kv-02
+"""
+
+    # Create temporary file
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix="_testbed.yaml", delete=False
+    ) as f:
+        f.write(testbed_content)
+        testbed_path = Path(f.name)
+
+    try:
+        yield str(testbed_path)
+    finally:
+        # Cleanup
+        if testbed_path.exists():
+            testbed_path.unlink()
