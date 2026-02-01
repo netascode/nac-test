@@ -684,7 +684,7 @@
                     </svg>
                     Back to Summary
                 </a>
-                <h1>{{ title }}</h1>
+                <h1>{{ title }}{% if hostname %} <span style="color: #7f8c8d;">({{ hostname }})</span>{% endif %}</h1>
                 {% set status_style = status|status_style %}
                 <div class="status-banner {{ status_style.css_class }}">
                     Test Status: {{ status_style.display_text }}

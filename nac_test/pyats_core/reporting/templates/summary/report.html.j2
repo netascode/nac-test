@@ -445,7 +445,7 @@
                     {% for result in results %}
                     {% set status_style = result.status|status_style %}
                     <tr data-status="{{ result.status }}">
-                        <td data-label="Test Name">{{ result.title }}</td>
+                        <td data-label="Test Name">{{ result.title }}{% if result.hostname %} <span style="color: #7f8c8d;">({{ result.hostname }})</span>{% endif %}</td>
                         <td data-label="Status" class="status-cell {{ status_style.css_class }}">
                             {{ status_style.display_text }}
                         </td>
