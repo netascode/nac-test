@@ -506,7 +506,7 @@ class PyATSOrchestrator:
             )
         except ValueError as e:
             print(terminal.error(str(e)))
-            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+            raise
 
         # Initialize progress reporter for output formatting
         self.progress_reporter = ProgressReporter(
