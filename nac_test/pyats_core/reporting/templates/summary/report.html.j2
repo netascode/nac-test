@@ -64,18 +64,51 @@
             letter-spacing: 0.5px;
         }
 
-        /* Breadcrumb navigation styles */
-        .breadcrumb {
-            margin-top: 10px;
-            font-size: 14px;
+        .header-content {
+            position: relative;
         }
-        .breadcrumb a {
-            color: rgba(255, 255, 255, 0.9);
-            text-decoration: none;
-        }
-        .breadcrumb a:hover {
+
+        .nav-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.2);
             color: white;
-            text-decoration: underline;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        @media (max-width: 768px) {
+            .nav-button {
+                position: static;
+                margin-bottom: 20px;
+                display: inline-flex;
+            }
+        }
+
+        .date-info {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            margin-top: 10px;
         }
 
         .card {
@@ -400,13 +433,18 @@
 <body>
     <header>
         <div class="container">
-            <h1>Network as Code Test Results Summary</h1>
-            {% if report_type %}
-            <div class="report-type-subtitle">{{ report_type }}</div>
-            {% endif %}
-            <div class="date-info">Generated on {{ generation_time }}</div>
-            <div class="breadcrumb">
-                <a href="{{ breadcrumb_link | default('../../combined_summary.html') }}">← Back to Combined Dashboard</a>
+            <div class="header-content">
+                <a href="{{ breadcrumb_link | default('../../combined_summary.html') }}" class="nav-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                    Back to Combined Dashboard
+                </a>
+                <h1>Network as Code Test Results Summary</h1>
+                {% if report_type %}
+                <div class="report-type-subtitle">{{ report_type }}</div>
+                {% endif %}
+                <div class="date-info">Generated on {{ generation_time }}</div>
             </div>
         </div>
     </header>
