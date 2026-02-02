@@ -5,6 +5,16 @@
 
 This plugin integrates with PyATS's official plugin system to provide
 real-time progress updates in a format `nac-test` can control.
+
+Note on PyATS Architecture:
+    PyATS uses a multi-process architecture where tasks run in separate
+    subprocesses from the parent job process. This means:
+    - pre_job/post_job run in the parent process
+    - pre_task/post_task run in task subprocesses
+    - Plugin state is NOT shared between parent and task processes
+
+    Orphaned test detection (tests that started but never ended) is handled
+    by the OutputProcessor on the parent side, not in this plugin.
 """
 
 import ast
@@ -23,7 +33,7 @@ EVENT_SCHEMA_VERSION = "1.0"
 logger = logging.getLogger(__name__)
 
 
-class ProgressReporterPlugin(BasePlugin):
+class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
     """
     PyATS plugin that emits structured progress events.
 
@@ -41,10 +51,13 @@ class ProgressReporterPlugin(BasePlugin):
         self.worker_id = self._get_worker_id()
         # Track task start times for duration calculation
         self.task_start_times: dict[str, float] = {}
+        # Track total emitted events for stream_complete sentinel
+        self.event_count: int = 0
 
     def _emit_event(self, event: dict[str, Any]) -> None:
         """Emit a progress event in the standard format."""
         print(f"NAC_PROGRESS:{json.dumps(event)}", flush=True)
+        self.event_count += 1
 
     def _get_worker_id(self) -> str:
         """Get the worker ID from PyATS runtime or environment."""
@@ -78,7 +91,10 @@ class ProgressReporterPlugin(BasePlugin):
             logger.error(f"Failed to emit job_start event: {e}")
 
     def post_job(self, job: Any) -> None:
-        """Called when the job completes."""
+        """Called when the job completes.
+
+        Emits job_end and stream_complete sentinel events.
+        """
         try:
             event = {
                 "version": EVENT_SCHEMA_VERSION,
@@ -90,7 +106,25 @@ class ProgressReporterPlugin(BasePlugin):
             }
             self._emit_event(event)
         except Exception as e:
-            logger.error(f"Failed to emit job_end event: {e}")
+            logger.error(f"Failed to emit job_end event: {e}", exc_info=True)
+        finally:
+            # ALWAYS emit stream_complete sentinel, even if job_end failed
+            try:
+                # Pre-calculate expected count (current + 1 for sentinel itself)
+                expected_count = self.event_count + 1
+                sentinel = {
+                    "version": EVENT_SCHEMA_VERSION,
+                    "event": "stream_complete",
+                    "event_count": expected_count,
+                    "timestamp": time.time(),
+                    "pid": os.getpid(),
+                    "worker_id": self.worker_id,
+                }
+                self._emit_event(sentinel)
+            except Exception as e:
+                logger.error(
+                    f"Failed to emit stream_complete sentinel: {e}", exc_info=True
+                )
 
     def pre_task(self, task: Any) -> None:
         """Called before each test file executes."""
