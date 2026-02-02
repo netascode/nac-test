@@ -6,12 +6,15 @@
 import fcntl
 import hashlib
 import json
+import logging
 import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from nac_test.pyats_core.constants import AUTH_CACHE_DIR
+
+logger = logging.getLogger(__name__)
 
 
 class AuthCache:
@@ -61,12 +64,27 @@ class AuthCache:
                                 return str(data["token"])
                             else:
                                 # Return the auth_data dict (minus expires_at)
-                                auth_data = {
+                                return {
                                     k: v for k, v in data.items() if k != "expires_at"
                                 }
-                                return auth_data
-                except (json.JSONDecodeError, KeyError, TypeError):
-                    pass  # Invalid file, will recreate
+                except json.JSONDecodeError as e:
+                    logger.debug(
+                        "Invalid JSON in cache file %s, will recreate: %s",
+                        cache_file,
+                        e,
+                    )
+                except KeyError as e:
+                    logger.debug(
+                        "Missing key in cache file %s, will recreate: %s",
+                        cache_file,
+                        e,
+                    )
+                except TypeError as e:
+                    logger.debug(
+                        "Type error reading cache file %s, will recreate: %s",
+                        cache_file,
+                        e,
+                    )
 
             # Get new auth data
             auth_data, expires_in = auth_func()
