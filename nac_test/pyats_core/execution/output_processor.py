@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import time
 from typing import Any
 
 from nac_test.pyats_core.progress import ProgressReporter
@@ -92,6 +93,9 @@ class OutputProcessor:
                 "title": event.get(
                     "test_title", event["test_name"]
                 ),  # Use test_name as final fallback
+                "test_file": event.get(
+                    "test_file"
+                ),  # Store for test type categorization
             }
 
         elif event_type == "task_end":
@@ -146,12 +150,79 @@ class OutputProcessor:
                 print(f"{title:<70} | {status_text} |")
                 print(separator)
 
+        elif event_type == "job_end":
+            # When job ends, check for orphaned tests (started but never ended)
+            # This handles PyATS multi-process architecture where post_task() may not
+            # be called for tests that error during setup
+            self._finalize_orphaned_tests(event)
+
         elif event_type == "section_start" and os.environ.get("PYATS_DEBUG"):
             # In debug mode, show section progress
             print(f"  -> Section {event['section']} starting")
 
         elif event_type == "section_end" and os.environ.get("PYATS_DEBUG"):
             print(f"  -> Section {event['section']} {event['result']}")
+
+    def _finalize_orphaned_tests(self, job_end_event: dict[str, Any]) -> None:
+        """Finalize any tests that started but never received task_end.
+
+        PyATS uses a multi-process architecture where tasks run in subprocesses.
+        When a test errors during setup, PyATS may not call post_task() in the
+        subprocess, resulting in no task_end event being emitted. This method
+        detects such orphaned tests and generates synthetic completions.
+
+        Important: Only finalizes tests from the SAME worker as the job_end event
+        to avoid incorrectly finalizing tests from parallel jobs.
+
+        Args:
+            job_end_event: The job_end event that triggered finalization.
+        """
+        job_worker_id = job_end_event.get("worker_id", "")
+
+        # Find tests still in EXECUTING status that belong to this worker
+        orphaned_tests = [
+            (test_name, info)
+            for test_name, info in self.test_status.items()
+            if info.get("status") == "EXECUTING" and info.get("worker") == job_worker_id
+        ]
+
+        if not orphaned_tests:
+            return
+
+        logger.debug(
+            f"Found {len(orphaned_tests)} orphaned test(s) for worker {job_worker_id}"
+        )
+
+        for test_name, test_info in orphaned_tests:
+            test_id = test_info.get("test_id", 0)
+            title = test_info.get("title", test_name)
+            worker_id = test_info.get("worker", job_end_event.get("worker_id", "0"))
+            start_time = test_info.get("start_time", time.time())
+            duration = time.time() - start_time
+
+            logger.debug(f"Finalizing orphaned test: {test_name} (ID={test_id})")
+
+            # Report test completion as errored
+            if self.progress_reporter:
+                self.progress_reporter.report_test_end(
+                    test_name,
+                    job_end_event.get("pid", 0),
+                    worker_id,
+                    test_id,
+                    "errored",
+                    duration,
+                )
+
+            # Update status
+            self.test_status[test_name].update(
+                {"status": "errored", "duration": duration}
+            )
+
+            # Display the completion line
+            separator = "-" * 78
+            print(terminal.error(separator))
+            print(terminal.error(f"{title:<70} | ERROR |"))
+            print(terminal.error(separator))
 
     def _should_show_line(self, line: str) -> bool:
         """Determine if line should be shown to user.
