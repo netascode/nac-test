@@ -17,7 +17,7 @@ from tests.integration.mocks.mock_server import MockAPIServer
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "fixtures" / "mock_api_config.yaml"
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def clear_controller_credentials() -> None:
     """
     Clear any controller credentials from environment to avoid conflicts.
@@ -26,6 +26,10 @@ def clear_controller_credentials() -> None:
     set in his/her environment.
     This fixture removes any environment variables matching the pattern:
     ^[A-Z]+_(URL|USERNAME|PASSWORD)$
+
+    Runs at session scope to ensure credentials are cleared before any
+    class-scoped or function-scoped fixtures that might set their own
+    mock credentials.
     """
     pattern = re.compile(r"^[A-Z]+_(URL|USERNAME|PASSWORD)$")
     keys_to_remove = [key for key in os.environ.keys() if pattern.match(key)]
