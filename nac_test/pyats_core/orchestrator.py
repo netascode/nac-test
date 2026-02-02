@@ -8,6 +8,7 @@ import logging
 import os
 import sys
 import tempfile
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -83,6 +84,9 @@ class PyATSOrchestrator:
         self.api_test_status: dict[str, dict[str, Any]] = {}
         self.d2d_test_status: dict[str, dict[str, Any]] = {}
         self.overall_start_time: datetime | None = None
+
+        # Track test status (initialized to None, populated during test execution)
+        self.test_status: dict[str, Any] | None = None
 
         # Use provided controller type or detect it
         if controller_type:
@@ -185,6 +189,58 @@ class PyATSOrchestrator:
             yaml.dump(reporter_config, f)
         return config_path
 
+    def _populate_test_status_from_archive(self, archive_path: Path) -> None:
+        """Populate test_status from archive results.json when progress events are missing.
+
+        This is a fallback mechanism for cases where PyATS doesn't emit task_end
+        events (e.g., when tests error during setup). This ensures accurate test
+        summaries are displayed even when progress events are not captured.
+
+        Args:
+            archive_path: Path to the PyATS archive zip file
+        """
+        if not archive_path or not archive_path.exists():
+            return
+
+        # Only populate if test_status is initialized
+        if self.test_status is None:
+            return
+
+        try:
+            # Use ArchiveInspector to extract test results
+            archive_results = ArchiveInspector.extract_test_results(archive_path)
+
+            # Merge results into test_status, only updating tests that are
+            # missing completion status (e.g., still "EXECUTING")
+            for task_name, result_info in archive_results.items():
+                existing_info = self.test_status.get(task_name, {})
+                if (
+                    existing_info.get("status")
+                    and existing_info.get("status") != "EXECUTING"
+                ):
+                    # Already have completion status from progress events
+                    continue
+
+                logger.debug(
+                    f"Populated test_status from archive: {task_name} = {result_info['status']}"
+                )
+
+                # Update or create test_status entry
+                if task_name in self.test_status:
+                    self.test_status[task_name].update(
+                        {
+                            "status": result_info["status"],
+                            "duration": result_info["duration"],
+                        }
+                    )
+                else:
+                    self.test_status[task_name] = result_info
+
+        except (zipfile.BadZipFile, FileNotFoundError) as e:
+            logger.warning(f"Failed to parse results from archive: {e}")
+        except Exception as e:
+            logger.warning(f"Error populating test_status from archive: {e}")
+
     async def _execute_api_tests_standard(self, test_files: list[Path]) -> Path | None:
         """
         Execute API tests using the standard PyATS job file approach.
@@ -247,6 +303,11 @@ class PyATSOrchestrator:
                 )
                 archive_path.rename(api_archive_path)
                 logger.info(f"API test archive created: {api_archive_path}")
+
+                # Fallback: populate test_status from archive if progress events were missed
+                # This handles cases where PyATS doesn't emit task_end (e.g., setup errors)
+                self._populate_test_status_from_archive(api_archive_path)
+
                 return api_archive_path
 
             return archive_path
@@ -407,6 +468,12 @@ class PyATSOrchestrator:
             aggregated_archive = await ArchiveAggregator.aggregate_device_archives(
                 device_archives, self.base_output_dir
             )
+
+            # Fallback: populate test_status from archive if progress events were missed
+            # This handles cases where PyATS doesn't emit task_end (e.g., setup errors)
+            if aggregated_archive:
+                self._populate_test_status_from_archive(aggregated_archive)
+
             return aggregated_archive
         else:
             logger.warning("No device archives were generated")
@@ -476,7 +543,7 @@ class PyATSOrchestrator:
         self.progress_reporter = ProgressReporter(
             total_tests=len(test_files), max_workers=self.max_workers
         )
-        self.test_status: dict[str, Any] = {}
+        self.test_status = {}
         self.start_time = datetime.now()
 
         # Set the test_status reference in progress reporter
@@ -561,24 +628,29 @@ class PyATSOrchestrator:
         # generation error), OutputProcessor never sees the test. DeviceExecutor's error
         # handling (lines 175-179) captures these failures. By clearing here, we discard
         # DeviceExecutor's buggy success tracking while the error case is still logged.
-        if hasattr(self, "test_status") and self.test_status:
+        if self.test_status is not None and self.test_status:
             self.api_test_status.clear()
             self.d2d_test_status.clear()
+
+            # Create resolver for test type detection (uses caching)
+            from nac_test.pyats_core.discovery.test_type_resolver import (
+                TestTypeResolver,
+            )
+
+            resolver = TestTypeResolver(self.test_dir)
+
             for test_name, test_info in self.test_status.items():
-                if ".api." in test_name or "/api/" in test_name:
-                    self.api_test_status[test_name] = test_info
-                elif ".d2d." in test_name or "/d2d/" in test_name:
+                test_file = test_info.get("test_file")
+                test_type = "api"  # Default
+
+                if test_file:
+                    # Use TestTypeResolver for accurate detection
+                    test_type = resolver.resolve(Path(test_file))
+
+                if test_type == "d2d":
                     self.d2d_test_status[test_name] = test_info
                 else:
-                    # Fallback: if pattern not found, check test file path
-                    test_file = test_info.get("test_file", "")
-                    if "/api/" in test_file or "\\api\\" in test_file:
-                        self.api_test_status[test_name] = test_info
-                    elif "/d2d/" in test_file or "\\d2d\\" in test_file:
-                        self.d2d_test_status[test_name] = test_info
-                    else:
-                        # Default to API if cannot determine type
-                        self.api_test_status[test_name] = test_info
+                    self.api_test_status[test_name] = test_info
 
         # Print summary after all tests complete
         if self.api_test_status or self.d2d_test_status:
