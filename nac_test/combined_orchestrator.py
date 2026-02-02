@@ -238,7 +238,18 @@ class CombinedOrchestrator:
                 extra_args=self.extra_args,
                 verbosity=self.verbosity,
             )
-            robot_stats = robot_orchestrator2.run_tests()
+            try:
+                robot_stats = robot_orchestrator2.run_tests()
+            except Exception as e:
+                # Robot orchestrator failed (e.g., invalid arguments, execution errors)
+                logger.error(f"Robot Framework execution failed: {e}", exc_info=True)
+                typer.echo(
+                    typer.style(
+                        f"⚠️  Robot Framework tests skipped due to error: {e}",
+                        fg=typer.colors.YELLOW,
+                    )
+                )
+                robot_stats = TestCounts.empty()
 
             # Accumulate stats using += operator
             combined_stats += robot_stats

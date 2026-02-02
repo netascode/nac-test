@@ -176,13 +176,17 @@ class RobotOrchestrator:
             )
             # Handle exit code 252 (invalid extra arguments)
             if exit_code == 252:
+                error_msg = (
+                    "Invalid Robot Framework arguments provided via --extra-args"
+                )
+                logger.error(error_msg)
                 typer.echo(
                     typer.style(
-                        "Error: Invalid Robot Framework arguments provided",
+                        f"Error: {error_msg}",
                         fg=typer.colors.RED,
                     )
                 )
-                raise typer.Exit(252)
+                raise RuntimeError(error_msg)
             typer.echo("✅ Robot Framework tests completed")
 
             # Phase 4: Move Robot files to robot_results/ subdirectory
