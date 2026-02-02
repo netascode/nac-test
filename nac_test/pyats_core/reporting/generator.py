@@ -21,7 +21,6 @@ Environment Variables:
 import asyncio
 import json
 import logging
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -140,14 +139,8 @@ class ReportGenerator:
             successful_reports, result_files
         )
 
-        # Clean up JSONL files (unless in debug mode or KEEP_HTML_REPORT_DATA is set)
-        if os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA"):
-            if os.environ.get("KEEP_HTML_REPORT_DATA"):
-                logger.info("Keeping JSONL result files (KEEP_HTML_REPORT_DATA is set)")
-            else:
-                logger.info("Debug mode enabled - keeping JSONL result files")
-        else:
-            await self._cleanup_jsonl_files(result_files)
+        # Note: JSONL cleanup is handled by the caller (MultiArchiveReportGenerator)
+        # after stats collection to ensure data is available for metrics.
 
         duration = (datetime.now() - start_time).total_seconds()
 

@@ -94,9 +94,11 @@ class MultiArchiveReportGenerator:
             shutil.rmtree(self.pyats_results_dir)
         self.pyats_results_dir.mkdir(parents=True)
 
-        # If we have multiple archives, prevent JSONL deletion until combined summary is generated
-        if len(archive_paths) > 1:
-            os.environ["KEEP_HTML_REPORT_DATA"] = "1"
+        # Note: JSONL files are no longer cleaned up by ReportGenerator.
+        # Cleanup happens after stats collection (see below)
+        logger.debug(
+            f"Processing {len(archive_paths)} archive(s) for report generation"
+        )
 
         # Process each archive
         results: dict[str, dict[str, Any]] = {}
@@ -130,23 +132,34 @@ class MultiArchiveReportGenerator:
                 else:
                     results[archive_type] = cast(dict[str, Any], task_results[idx])
 
-        # Collect PyATS stats for combined dashboard (replaces old combined_summary generation)
+        # Collect PyATS stats for combined dashboard
         pyats_stats = None
         successful_archives = [
             k for k, v in results.items() if v.get("status") == "success"
         ]
 
         if len(successful_archives) > 0:
-            try:
-                pyats_stats = await self._collect_pyats_stats(results)
-            finally:
-                # Restore cleanup behavior and clean up JSONL files now that stats are collected
-                os.environ.pop("KEEP_HTML_REPORT_DATA", None)
-                await self._cleanup_all_jsonl_files()
-        elif len(archive_paths) > 1:
-            # Multiple archives were requested but not all succeeded, still clean up
-            os.environ.pop("KEEP_HTML_REPORT_DATA", None)
+            pyats_stats = await self._collect_pyats_stats(results)
+            logger.debug(
+                f"Collected PyATS stats from {len(successful_archives)} archive type(s)"
+            )
+        else:
+            logger.warning("No successful archives to collect stats from")
+
+        # Cleanup JSONL files after stats collection
+        # Respects PYATS_DEBUG and KEEP_HTML_REPORT_DATA environment variables
+        if not (
+            os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA")
+        ):
+            logger.info("Cleaning up JSONL files after stats collection")
             await self._cleanup_all_jsonl_files()
+        else:
+            debug_reason = (
+                "PYATS_DEBUG"
+                if os.environ.get("PYATS_DEBUG")
+                else "KEEP_HTML_REPORT_DATA"
+            )
+            logger.info(f"Keeping JSONL files ({debug_reason} is set)")
 
         # Determine overall status
         if not results:
@@ -395,15 +408,15 @@ class MultiArchiveReportGenerator:
             return {}
 
     async def _cleanup_all_jsonl_files(self) -> None:
-        """Clean up JSONL files from all archive directories after combined summary generation.
+        """Clean up JSONL files from all archive directories after stats collection.
 
-        This method is called after the combined summary has been generated to remove
-        the intermediate JSONL files that are no longer needed. It iterates through
-        all archive type directories (api, d2d) and removes JSONL files.
+        This method is called after PyATS statistics have been collected to remove
+        intermediate JSONL data files. Only HTML reports are kept for end users.
 
-        The cleanup is performed to save disk space while preserving the generated
-        HTML reports which are the final output.
+        The cleanup preserves disk space while maintaining all generated HTML reports
+        which are the final user-facing output.
         """
+        jsonl_count = 0
         try:
             for archive_dir in self.pyats_results_dir.iterdir():
                 if not archive_dir.is_dir():
@@ -416,17 +429,20 @@ class MultiArchiveReportGenerator:
 
                 # Remove all JSONL files
                 jsonl_files = list(json_dir.glob("*.jsonl"))
+                if jsonl_files:
+                    logger.debug(
+                        f"Cleaning up {len(jsonl_files)} JSONL file(s) from {archive_dir.name}"
+                    )
+
                 for jsonl_file in jsonl_files:
                     try:
                         jsonl_file.unlink()
-                        logger.debug(f"Cleaned up JSONL file: {jsonl_file}")
+                        jsonl_count += 1
                     except Exception as e:
                         logger.warning(f"Failed to delete {jsonl_file}: {e}")
 
-                if jsonl_files:
-                    logger.info(
-                        f"Cleaned up {len(jsonl_files)} JSONL files from {archive_dir.name}"
-                    )
+            if jsonl_count > 0:
+                logger.info(f"Cleaned up {jsonl_count} JSONL file(s) total")
 
         except Exception as e:
             logger.warning(f"Failed to cleanup JSONL files: {e}")
