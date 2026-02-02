@@ -353,22 +353,20 @@ def main(
 
     typer.echo(f"\nTotal runtime: {runtime_str}")
 
-    # Use test statistics for exit code (issue #469)
+    # Use test statistics for exit code
     # Also check error_handler for non-test errors
     if error_handler.fired:
         # Error handler caught a critical error during execution
         raise typer.Exit(1)
-    elif stats.get("failed", 0) > 0:
+    elif stats.has_failures:
         typer.echo(
-            f"\n❌ Tests failed: {stats['failed']} out of {stats['total']} tests",
+            f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests",
             err=True,
         )
         raise typer.Exit(1)
-    elif stats.get("total", 0) == 0:
+    elif stats.is_empty:
         typer.echo("\n⚠️  No tests were executed", err=True)
         raise typer.Exit(1)
     else:
-        typer.echo(
-            f"\n✅ All tests passed: {stats['passed']} out of {stats['total']} tests"
-        )
+        typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
         raise typer.Exit(0)

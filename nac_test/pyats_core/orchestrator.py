@@ -14,6 +14,7 @@ from typing import Any
 
 import yaml
 
+from nac_test.core.types import TestCounts
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
     DEFAULT_CPU_MULTIPLIER,
@@ -432,30 +433,32 @@ class PyATSOrchestrator:
 
     def _aggregate_pyats_stats(
         self, pyats_stats: dict[str, dict[str, Any]]
-    ) -> dict[str, Any]:
+    ) -> TestCounts:
         """Aggregate PyATS statistics across API and D2D.
 
         Args:
             pyats_stats: Dict from MultiArchiveReportGenerator with API/D2D stats
 
         Returns:
-            Aggregated stats dict: {"total": X, "passed": Y, "failed": Z, "skipped": W}
+            Aggregated TestCounts
         """
-        aggregated = {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+        aggregated = TestCounts.empty()
 
         for _framework, stats in pyats_stats.items():
-            aggregated["total"] += stats["total_tests"]
-            aggregated["passed"] += stats["passed_tests"]
-            aggregated["failed"] += stats["failed_tests"]
-            aggregated["skipped"] += stats["skipped_tests"]
+            aggregated += TestCounts(
+                total=stats["total_tests"],
+                passed=stats["passed_tests"],
+                failed=stats["failed_tests"],
+                skipped=stats["skipped_tests"],
+            )
 
         return aggregated
 
-    def run_tests(self) -> dict[str, Any]:
+    def run_tests(self) -> TestCounts:
         """Main entry point - triggers the async execution flow.
 
         Returns:
-            Dict with test statistics: {"total": X, "passed": Y, "failed": Z, "skipped": W}
+            TestCounts with test execution results
         """
         # This is the synchronous entry point that kicks off the async orchestration
         try:
@@ -465,13 +468,13 @@ class PyATSOrchestrator:
                 f"An unexpected error occurred during test orchestration: {e}",
                 exc_info=True,
             )
-            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+            return TestCounts.empty()
 
-    async def _run_tests_async(self) -> dict[str, Any]:
+    async def _run_tests_async(self) -> TestCounts:
         """Main async orchestration logic.
 
         Returns:
-            Dict with test statistics: {"total": X, "passed": Y, "failed": Z, "skipped": W}
+            TestCounts with test execution results
         """
         # Track overall start time for combined summary
         self.overall_start_time = datetime.now()
@@ -494,7 +497,7 @@ class PyATSOrchestrator:
 
         if not test_files:
             print("No PyATS test files (*.py) found in test directory")
-            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+            return TestCounts.empty()
 
         print(f"Discovered {len(test_files)} PyATS test files")
         print(f"Running with {self.max_workers} parallel workers")
@@ -637,13 +640,8 @@ class PyATSOrchestrator:
         # Generate HTML reports after all test types have completed
         return await self._generate_html_reports_async()
 
-    async def _generate_html_reports_async(self) -> dict[str, Any]:
-        """Generate HTML reports asynchronously from collected archives.
-
-        This method handles multiple archives (API and D2D) using the
-        MultiArchiveReportGenerator for proper report organization and
-        combined summary generation.
-        """
+    async def _generate_html_reports_async(self) -> TestCounts:
+        """Generate HTML reports asynchronously from collected archives."""
 
         # Use ArchiveInspector to find all archives (stored at base level)
         archives = ArchiveInspector.find_archives(self.base_output_dir)
@@ -668,7 +666,7 @@ class PyATSOrchestrator:
 
         if not archive_paths:
             print("No PyATS job archives found to generate reports from.")
-            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+            return TestCounts.empty()
 
         print(f"\nGenerating reports from {len(archive_paths)} archive(s)...")
 
@@ -756,11 +754,10 @@ class PyATSOrchestrator:
             if result.get("pyats_stats"):
                 return self._aggregate_pyats_stats(result["pyats_stats"])
             else:
-                # No stats available (no successful archives)
-                return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+                return TestCounts.empty()
 
         else:
             print(f"\n{terminal.error('Failed to generate reports')}")
             if result.get("error"):
                 print(f"Error: {result['error']}")
-            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+            return TestCounts.empty()

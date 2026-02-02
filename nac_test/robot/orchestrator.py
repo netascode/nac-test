@@ -21,6 +21,7 @@ from typing import Any
 
 import typer
 
+from nac_test.core.types import TestCounts
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
@@ -108,7 +109,7 @@ class RobotOrchestrator:
             exclude_tags=self.exclude_tags,
         )
 
-    def run_tests(self) -> dict[str, Any]:
+    def run_tests(self) -> TestCounts:
         """Execute the complete Robot Framework test lifecycle.
 
         This method:
@@ -122,7 +123,7 @@ class RobotOrchestrator:
         Follows the same pattern as PyATSOrchestrator.run_tests().
 
         Returns:
-            Dictionary containing test statistics: {"total", "passed", "failed", "skipped"}
+            TestCounts with test execution results
         """
         # Create Robot Framework output directory (orchestrator owns its structure)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -205,8 +206,7 @@ class RobotOrchestrator:
             return self._get_test_statistics()
         else:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
-            # Return empty statistics in render-only mode
-            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+            return TestCounts.empty()
 
     def get_output_summary(self) -> dict[str, Any]:
         """Get summary information about Robot Framework outputs.
@@ -285,33 +285,26 @@ class RobotOrchestrator:
             target.symlink_to(source.relative_to(self.base_output_dir))
             logger.debug(f"Created symlink: {target} -> {source}")
 
-    def _get_test_statistics(self) -> dict[str, Any]:
-        """Extract test statistics from Robot Framework output.xml.
-
-        Uses Robot Framework's ExecutionResult API to parse the output.xml file
-        and extract test counts.
-
-        Returns:
-            Dictionary with keys: total, passed, failed, skipped
-        """
+    def _get_test_statistics(self) -> TestCounts:
+        """Extract test statistics from Robot Framework output.xml."""
         from robot.api import ExecutionResult
 
         output_xml = self.base_output_dir / "robot_results" / "output.xml"
 
         if not output_xml.exists():
             logger.warning(f"Robot output.xml not found at {output_xml}")
-            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+            return TestCounts.empty()
 
         try:
             result = ExecutionResult(str(output_xml))
             stats = result.statistics.total
 
-            return {
-                "total": stats.total,
-                "passed": stats.passed,
-                "failed": stats.failed,
-                "skipped": stats.skipped,
-            }
+            return TestCounts(
+                total=stats.total,
+                passed=stats.passed,
+                failed=stats.failed,
+                skipped=stats.skipped,
+            )
         except Exception as e:
             logger.error(f"Failed to parse Robot output.xml: {e}")
-            return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+            return TestCounts.empty()
