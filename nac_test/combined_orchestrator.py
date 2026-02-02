@@ -262,24 +262,13 @@ class CombinedOrchestrator:
             # Add to by_framework breakdown
             combined_stats["by_framework"]["robot"] = robot_stats
 
-        # Generate combined dashboard if any tests ran
-        if (has_pyats or has_robot) and not self.render_only and not self.dry_run:
+        # Generate combined dashboard and print summary if tests were executed (including dry-run)
+        if (has_pyats or has_robot) and not self.render_only:
             typer.echo("\n📊 Generating combined dashboard...")
             from nac_test.core.reporting.combined_generator import (
                 CombinedReportGenerator,
             )
 
-            # Debug logging
-            logger.debug(
-                f"Calling CombinedReportGenerator with pyats_stats_for_dashboard: {pyats_stats_for_dashboard}"
-            )
-
-            combined_generator = CombinedReportGenerator(self.output_dir)
-            combined_path = combined_generator.generate_combined_summary(
-                pyats_stats_for_dashboard
-            )
-
-            # Debug logging
             logger.debug(
                 f"Calling CombinedReportGenerator with pyats_stats_for_dashboard: {pyats_stats_for_dashboard}"
             )
@@ -291,8 +280,7 @@ class CombinedOrchestrator:
             if combined_path:
                 typer.echo(f"   ✅ Combined dashboard: {combined_path}")
 
-        # Summary (skip in render-only mode)
-        if not self.render_only:
+            # Print execution summary
             self._print_execution_summary(has_pyats, has_robot, combined_stats)
 
         return combined_stats
