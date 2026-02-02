@@ -10,12 +10,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from nac_test.core.types import TestCounts
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import VerbosityLevel
 
 
 @pytest.fixture
-def temp_output_dir(tmp_path: Path) -> None:
+def temp_output_dir(tmp_path: Path) -> Path:
     """Create a temporary output directory for tests."""
     output_dir = tmp_path / "output"
     output_dir.mkdir()
@@ -23,7 +24,7 @@ def temp_output_dir(tmp_path: Path) -> None:
 
 
 @pytest.fixture
-def mock_data_paths(tmp_path: Path) -> None:
+def mock_data_paths(tmp_path: Path) -> list[Path]:
     """Create mock data paths."""
     data_file = tmp_path / "data.yaml"
     data_file.write_text("test: data")
@@ -31,7 +32,7 @@ def mock_data_paths(tmp_path: Path) -> None:
 
 
 @pytest.fixture
-def mock_templates_dir(tmp_path: Path) -> None:
+def mock_templates_dir(tmp_path: Path) -> Path:
     """Create mock templates directory."""
     templates_dir = tmp_path / "templates"
     templates_dir.mkdir()
@@ -39,7 +40,9 @@ def mock_templates_dir(tmp_path: Path) -> None:
 
 
 @pytest.fixture
-def orchestrator(mock_data_paths, mock_templates_dir, temp_output_dir) -> None:
+def orchestrator(
+    mock_data_paths, mock_templates_dir, temp_output_dir
+) -> RobotOrchestrator:
     """Create a RobotOrchestrator instance for testing."""
     return RobotOrchestrator(
         data_paths=mock_data_paths,
@@ -250,8 +253,8 @@ class TestRobotOrchestrator:
 
         stats = orchestrator._get_test_statistics()
 
-        # Should return zeros
-        assert stats == {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+        # Should return zeros (TestCounts object)
+        assert stats == TestCounts.empty()
         assert "Robot output.xml not found" in caplog.text
 
     def test_get_test_statistics_invalid_xml(
@@ -268,8 +271,8 @@ class TestRobotOrchestrator:
 
         stats = orchestrator._get_test_statistics()
 
-        # Should return zeros and log error
-        assert stats == {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+        # Should return zeros and log error (TestCounts object)
+        assert stats == TestCounts.empty()
         assert "Failed to parse Robot output.xml" in caplog.text
 
     @patch("nac_test.robot.orchestrator.run_pabot")
@@ -292,8 +295,8 @@ class TestRobotOrchestrator:
         # Verify pabot was NOT called
         mock_pabot.assert_not_called()
 
-        # Verify empty statistics returned
-        assert stats == {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+        # Verify empty statistics returned (TestCounts object)
+        assert stats == TestCounts.empty()
 
     @patch("nac_test.robot.orchestrator.run_pabot")
     @patch("nac_test.robot.orchestrator.RobotReportGenerator")
@@ -366,24 +369,26 @@ class TestRobotOrchestrator:
         # Mock pabot failure with exit code 252
         mock_pabot.return_value = 252
 
-        # Should raise typer.Exit (which is click.exceptions.Exit)
-        from click.exceptions import Exit
-
-        with pytest.raises(Exit) as exc_info:
+        # Should raise RuntimeError (exit code 252 handling)
+        with pytest.raises(RuntimeError) as exc_info:
             orchestrator.run_tests()
 
-        assert exc_info.value.exit_code == 252
+        assert "Invalid Robot Framework arguments" in str(exc_info.value)
 
     def test_run_tests_return_type(self, orchestrator: RobotOrchestrator) -> None:
-        """Test run_tests returns dict with correct keys."""
+        """Test run_tests returns TestCounts with correct attributes."""
         orchestrator.render_only = True
 
         stats = orchestrator.run_tests()
 
-        # Verify return type and keys
-        assert isinstance(stats, dict)
-        assert "total" in stats
-        assert "passed" in stats
-        assert "failed" in stats
-        assert "skipped" in stats
-        assert all(isinstance(v, int) for v in stats.values())
+        # Verify return type and attributes (TestCounts, not dict)
+        assert isinstance(stats, TestCounts)
+        assert hasattr(stats, "total")
+        assert hasattr(stats, "passed")
+        assert hasattr(stats, "failed")
+        assert hasattr(stats, "skipped")
+        # TestCounts also supports dict-like access for backward compatibility
+        assert stats["total"] == 0
+        assert stats["passed"] == 0
+        assert stats["failed"] == 0
+        assert stats["skipped"] == 0
