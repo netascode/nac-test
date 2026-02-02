@@ -353,6 +353,11 @@ def main(
 
     typer.echo(f"\nTotal runtime: {runtime_str}")
 
+    # Handle render-only mode: exit 0 if no exceptions occurred
+    if render_only:
+        typer.echo("\n✅ Templates rendered successfully (render-only mode)")
+        raise typer.Exit(0)
+
     # Use test statistics for exit code
     # Also check error_handler for non-test errors
     if error_handler.fired:

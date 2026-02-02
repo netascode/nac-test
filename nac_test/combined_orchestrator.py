@@ -241,6 +241,10 @@ class CombinedOrchestrator:
             try:
                 robot_stats = robot_orchestrator2.run_tests()
             except Exception as e:
+                # In render-only mode, propagate exceptions immediately
+                if self.render_only:
+                    raise
+
                 # Robot orchestrator failed (e.g., invalid arguments, execution errors)
                 logger.error(f"Robot Framework execution failed: {e}", exc_info=True)
                 typer.echo(
@@ -287,8 +291,9 @@ class CombinedOrchestrator:
             if combined_path:
                 typer.echo(f"   ✅ Combined dashboard: {combined_path}")
 
-        # Summary
-        self._print_execution_summary(has_pyats, has_robot, combined_stats)
+        # Summary (skip in render-only mode)
+        if not self.render_only:
+            self._print_execution_summary(has_pyats, has_robot, combined_stats)
 
         return combined_stats
 
