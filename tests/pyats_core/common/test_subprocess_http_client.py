@@ -19,7 +19,8 @@ from typing import TYPE_CHECKING
 import httpx
 import pytest
 
-from nac_test.pyats_core.common.connection_pool import (
+from nac_test.pyats_core.common.connection_pool import ConnectionPool
+from nac_test.pyats_core.http import (
     HTTP_STATUS_CLIENT_ERROR_MAX,
     HTTP_STATUS_CLIENT_ERROR_MIN,
     HTTP_STATUS_REDIRECT_MAX,
@@ -28,7 +29,6 @@ from nac_test.pyats_core.common.connection_pool import (
     HTTP_STATUS_SERVER_ERROR_MIN,
     HTTP_STATUS_SUCCESS_MAX,
     HTTP_STATUS_SUCCESS_MIN,
-    ConnectionPool,
     SubprocessHttpClient,
     SubprocessResponse,
 )
@@ -408,7 +408,7 @@ class TestSubprocessHttpClientTimeoutExtraction:
 
     def test_timeout_defaults_when_none(self) -> None:
         """Verify default timeout is used when None provided."""
-        from nac_test.pyats_core.common.connection_pool import (
+        from nac_test.pyats_core.http import (
             SUBPROCESS_HTTP_TIMEOUT_SECONDS,
         )
 
