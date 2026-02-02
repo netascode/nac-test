@@ -10,7 +10,6 @@ results across all test methods.
 """
 
 import logging
-import os
 from typing import Any
 
 import pytest
@@ -38,6 +37,7 @@ class TestCombinedReportingSuccess:
         mock_api_server: MockAPIServer,
         sdwan_user_testbed: str,
         tmp_path_factory: pytest.TempPathFactory,
+        class_mocker: pytest.MonkeyPatch,
     ) -> dict[str, Any]:
         """
         Class-scoped fixture: Run E2E test once, share results.
@@ -52,18 +52,12 @@ class TestCombinedReportingSuccess:
         # Setup: Create class-scoped temp directory
         output_dir = tmp_path_factory.mktemp("e2e_success")
 
-        # Setup: Configure environment (using os.environ for class-scoped fixture)
-        old_env = {}
-        env_vars = {
-            "SDWAN_URL": mock_api_server.url,
-            "SDWAN_USERNAME": "mock_user",
-            "SDWAN_PASSWORD": "mock_pass",
-            "IOSXE_USERNAME": "mock_user",
-            "IOSXE_PASSWORD": "mock_pass",
-        }
-        for key, value in env_vars.items():
-            old_env[key] = os.environ.get(key)
-            os.environ[key] = value
+        # Setup: Configure environment using monkeypatch (auto-cleanup)
+        class_mocker.setenv("SDWAN_URL", mock_api_server.url)
+        class_mocker.setenv("SDWAN_USERNAME", "mock_user")
+        class_mocker.setenv("SDWAN_PASSWORD", "mock_pass")
+        class_mocker.setenv("IOSXE_USERNAME", "mock_user")
+        class_mocker.setenv("IOSXE_PASSWORD", "mock_pass")
 
         # Setup: Fixture paths
         data_path = "tests/integration/fixtures/e2e_success_combined/data.yaml"
@@ -88,13 +82,6 @@ class TestCombinedReportingSuccess:
                 "SHOULD_FAIL:false",  # Robot test passes
             ],
         )
-
-        # Cleanup: Restore environment
-        for key, old_value in old_env.items():
-            if old_value is None:
-                os.environ.pop(key, None)
-            else:
-                os.environ[key] = old_value
 
         # Return: Shared state for all test methods
         return {

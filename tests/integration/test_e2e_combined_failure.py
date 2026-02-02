@@ -10,7 +10,6 @@ and share results across all test methods.
 """
 
 import logging
-import os
 from typing import Any
 
 import pytest
@@ -38,6 +37,7 @@ class TestCombinedReportingAllFail:
         mock_api_server: MockAPIServer,
         sdwan_user_testbed: str,
         tmp_path_factory: pytest.TempPathFactory,
+        class_mocker: pytest.MonkeyPatch,
     ) -> dict[str, Any]:
         """
         Class-scoped fixture: Run E2E test once (all fail), share results.
@@ -51,18 +51,12 @@ class TestCombinedReportingAllFail:
         """
         output_dir = tmp_path_factory.mktemp("e2e_all_fail")
 
-        # Setup environment (using os.environ for class-scoped fixture)
-        old_env = {}
-        env_vars = {
-            "SDWAN_URL": mock_api_server.url,
-            "SDWAN_USERNAME": "mock_user",
-            "SDWAN_PASSWORD": "mock_pass",
-            "IOSXE_USERNAME": "mock_user",
-            "IOSXE_PASSWORD": "mock_pass",
-        }
-        for key, value in env_vars.items():
-            old_env[key] = os.environ.get(key)
-            os.environ[key] = value
+        # Setup environment using monkeypatch (auto-cleanup)
+        class_mocker.setenv("SDWAN_URL", mock_api_server.url)
+        class_mocker.setenv("SDWAN_USERNAME", "mock_user")
+        class_mocker.setenv("SDWAN_PASSWORD", "mock_pass")
+        class_mocker.setenv("IOSXE_USERNAME", "mock_user")
+        class_mocker.setenv("IOSXE_PASSWORD", "mock_pass")
 
         data_path = "tests/integration/fixtures/e2e_failure_combined/data.yaml"
         templates_path = "tests/integration/fixtures/e2e_failure_combined/templates"
@@ -271,6 +265,7 @@ class TestCombinedReportingMixedResults:
         mock_api_server: MockAPIServer,
         sdwan_user_testbed: str,
         tmp_path_factory: pytest.TempPathFactory,
+        class_mocker: pytest.MonkeyPatch,
     ) -> dict[str, Any]:
         """
         Class-scoped fixture: Run E2E test once (mixed results), share results.
@@ -284,18 +279,12 @@ class TestCombinedReportingMixedResults:
         """
         output_dir = tmp_path_factory.mktemp("e2e_mixed")
 
-        # Setup environment (using os.environ for class-scoped fixture)
-        old_env = {}
-        env_vars = {
-            "SDWAN_URL": mock_api_server.url,
-            "SDWAN_USERNAME": "mock_user",
-            "SDWAN_PASSWORD": "mock_pass",
-            "IOSXE_USERNAME": "mock_user",
-            "IOSXE_PASSWORD": "mock_pass",
-        }
-        for key, value in env_vars.items():
-            old_env[key] = os.environ.get(key)
-            os.environ[key] = value
+        # Setup environment using monkeypatch (auto-cleanup)
+        class_mocker.setenv("SDWAN_URL", mock_api_server.url)
+        class_mocker.setenv("SDWAN_USERNAME", "mock_user")
+        class_mocker.setenv("SDWAN_PASSWORD", "mock_pass")
+        class_mocker.setenv("IOSXE_USERNAME", "mock_user")
+        class_mocker.setenv("IOSXE_PASSWORD", "mock_pass")
 
         data_path = "tests/integration/fixtures/e2e_mixed_combined/data.yaml"
         templates_path = "tests/integration/fixtures/e2e_mixed_combined/templates"

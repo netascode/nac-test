@@ -17,6 +17,24 @@ from tests.integration.mocks.mock_server import MockAPIServer
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "fixtures" / "mock_api_config.yaml"
 
 
+@pytest.fixture(scope="class")
+def class_mocker() -> Generator[pytest.MonkeyPatch, None, None]:
+    """Provide a class-scoped monkeypatch fixture for environment variable management.
+
+    This allows class-scoped fixtures to use monkeypatch for automatic cleanup
+    of environment variables instead of manual save/restore logic.
+
+    Usage in class-scoped fixtures:
+        @pytest.fixture(scope="class")
+        def my_fixture(class_mocker: pytest.MonkeyPatch):
+            class_mocker.setenv("MY_VAR", "value")
+            # Automatic cleanup when class scope ends
+    """
+    monkey_patch = pytest.MonkeyPatch()
+    yield monkey_patch
+    monkey_patch.undo()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def clear_controller_credentials() -> None:
     """
