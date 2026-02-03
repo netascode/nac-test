@@ -18,7 +18,7 @@ import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.core.types import TestResults
+from nac_test.core.types import CombinedResults, PyATSResults, TestResults
 
 
 class TestCombinedOrchestratorFlow:
@@ -57,25 +57,16 @@ class TestCombinedOrchestratorFlow:
         )
 
     @pytest.fixture
-    def pyats_results(self) -> TestResults:
+    def pyats_results(self) -> PyATSResults:
         """Create sample PyATS test results."""
-        results = TestResults(total=10, passed=8, failed=1, skipped=1)
-        results.by_framework["API"] = TestResults(
-            total=5, passed=4, failed=1, skipped=0
-        )
-        results.by_framework["D2D"] = TestResults(
-            total=5, passed=4, failed=0, skipped=1
-        )
-        return results
+        api_results = TestResults(total=5, passed=4, failed=1, skipped=0)
+        d2d_results = TestResults(total=5, passed=4, failed=0, skipped=1)
+        return PyATSResults(api=api_results, d2d=d2d_results)
 
     @pytest.fixture
     def robot_results(self) -> TestResults:
         """Create sample Robot test results."""
-        results = TestResults(total=5, passed=4, failed=1, skipped=0)
-        results.by_framework["ROBOT"] = TestResults(
-            total=5, passed=4, failed=1, skipped=0
-        )
-        return results
+        return TestResults(total=5, passed=4, failed=1, skipped=0)
 
 
 class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
@@ -84,7 +75,7 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
     def test_no_tests_found_returns_empty_results(
         self, orchestrator: CombinedOrchestrator
     ) -> None:
-        """When no tests are discovered, return empty TestResults without calling orchestrators."""
+        """When no tests are discovered, return empty CombinedResults without calling orchestrators."""
         with patch.object(
             orchestrator, "_discover_test_types", return_value=(False, False)
         ):
@@ -105,13 +96,16 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
         mock_robot.assert_not_called()
         mock_generator.assert_not_called()
 
-        # Should return empty results
+        # Should return empty CombinedResults
+        assert isinstance(result, CombinedResults)
         assert result.total == 0
         assert result.passed == 0
         assert result.failed == 0
 
     def test_only_pyats_discovered_runs_pyats_only(
-        self, orchestrator: CombinedOrchestrator, pyats_results: TestResults
+        self,
+        orchestrator: CombinedOrchestrator,
+        pyats_results: PyATSResults,
     ) -> None:
         """When only PyATS tests are discovered, only PyATS orchestrator runs."""
         with patch.object(
@@ -148,9 +142,12 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
         mock_generator.assert_called_once()
         mock_gen_instance.generate_combined_summary.assert_called_once()
 
-        # Results should match PyATS results
+        # Results should match PyATS results (API + D2D)
         assert result.total == 10
         assert result.passed == 8
+        assert result.api is not None
+        assert result.d2d is not None
+        assert result.robot is None
 
     def test_only_robot_discovered_runs_robot_only(
         self, orchestrator: CombinedOrchestrator, robot_results: TestResults
@@ -192,11 +189,14 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
         # Results should match Robot results
         assert result.total == 5
         assert result.passed == 4
+        assert result.robot is not None
+        assert result.api is None
+        assert result.d2d is None
 
     def test_both_discovered_runs_both_orchestrators(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: TestResults,
+        pyats_results: PyATSResults,
         robot_results: TestResults,
     ) -> None:
         """When both test types are discovered, both orchestrators run."""
@@ -241,13 +241,19 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
         # Results should be combined
         assert result.total == 15  # 10 + 5
         assert result.passed == 12  # 8 + 4
+        assert result.api is not None
+        assert result.d2d is not None
+        assert result.robot is not None
 
 
 class TestDevModeFlow(TestCombinedOrchestratorFlow):
     """Tests for dev mode flag behavior."""
 
     def test_dev_pyats_only_skips_robot(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch, pyats_results: TestResults
+        self,
+        tmp_path: Path,
+        monkeypatch: MonkeyPatch,
+        pyats_results: PyATSResults,
     ) -> None:
         """dev_pyats_only flag should skip Robot even if Robot tests are discovered."""
         # Set up controller env
@@ -367,7 +373,10 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
         assert result.total == 5
 
     def test_dev_pyats_only_generates_dashboard(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch, pyats_results: TestResults
+        self,
+        tmp_path: Path,
+        monkeypatch: MonkeyPatch,
+        pyats_results: PyATSResults,
     ) -> None:
         """dev_pyats_only mode should still generate the combined dashboard."""
         monkeypatch.setenv("ACI_URL", "https://apic.test.com")
@@ -415,12 +424,13 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
         mock_generator.assert_called_once_with(output_dir)
         mock_gen_instance.generate_combined_summary.assert_called_once()
 
-        # Verify by_framework was passed to generator
+        # Verify CombinedResults was passed to generator with PyATS data
         call_args = mock_gen_instance.generate_combined_summary.call_args
         assert call_args is not None
-        by_framework = call_args[0][0]
-        assert "API" in by_framework
-        assert "D2D" in by_framework
+        combined_results = call_args[0][0]
+        assert isinstance(combined_results, CombinedResults)
+        assert combined_results.api is not None
+        assert combined_results.d2d is not None
 
 
 class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
@@ -561,9 +571,9 @@ class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
         assert result.has_errors is True
         assert "Execution error" in result.errors[0]
 
-        # Robot error should be in by_framework
-        assert "ROBOT" in result.by_framework
-        assert result.by_framework["ROBOT"].has_errors is True
+        # Robot should be set with error
+        assert result.robot is not None
+        assert result.robot.has_errors is True
 
         # Dashboard should still be generated
         mock_generator.assert_called_once()
@@ -575,10 +585,10 @@ class TestDashboardGeneration(TestCombinedOrchestratorFlow):
     def test_dashboard_receives_by_framework_data(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: TestResults,
+        pyats_results: PyATSResults,
         robot_results: TestResults,
     ) -> None:
-        """Dashboard generator should receive by_framework data from combined stats."""
+        """Dashboard generator should receive frameworks dict from combined results."""
         with patch.object(
             orchestrator, "_discover_test_types", return_value=(True, True)
         ):
@@ -608,22 +618,24 @@ class TestDashboardGeneration(TestCombinedOrchestratorFlow):
                         with patch("typer.echo"):
                             orchestrator.run_tests()
 
-        # Verify generate_combined_summary was called with by_framework dict
+        # Verify generate_combined_summary was called with CombinedResults
         mock_gen_instance.generate_combined_summary.assert_called_once()
         call_args = mock_gen_instance.generate_combined_summary.call_args
         assert call_args is not None
 
-        by_framework = call_args[0][0]
-        # Should contain all frameworks
-        assert "API" in by_framework
-        assert "D2D" in by_framework
-        assert "ROBOT" in by_framework
+        combined_results = call_args[0][0]
+        # Should be CombinedResults with all frameworks populated
+        assert isinstance(combined_results, CombinedResults)
+        assert combined_results.api is not None
+        assert combined_results.d2d is not None
+        assert combined_results.robot is not None
 
     def test_dashboard_generated_even_with_empty_results(
         self, orchestrator: CombinedOrchestrator
     ) -> None:
         """Dashboard should be generated even when orchestrators return empty results."""
-        empty_results = TestResults.empty()
+        # PyATS returns PyATSResults with None attributes when no tests found
+        empty_pyats_results = PyATSResults()
 
         with patch.object(
             orchestrator, "_discover_test_types", return_value=(True, False)
@@ -632,7 +644,7 @@ class TestDashboardGeneration(TestCombinedOrchestratorFlow):
                 "nac_test.combined_orchestrator.PyATSOrchestrator"
             ) as mock_pyats:
                 mock_pyats_instance = MagicMock()
-                mock_pyats_instance.run_tests.return_value = empty_results
+                mock_pyats_instance.run_tests.return_value = empty_pyats_results
                 mock_pyats.return_value = mock_pyats_instance
 
                 with patch(
@@ -658,7 +670,7 @@ class TestExecutionSummary(TestCombinedOrchestratorFlow):
     def test_print_execution_summary_called_when_not_render_only(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: TestResults,
+        pyats_results: PyATSResults,
     ) -> None:
         """_print_execution_summary should be called when not in render_only mode."""
         with patch.object(
@@ -691,7 +703,10 @@ class TestExecutionSummary(TestCombinedOrchestratorFlow):
         call_args = mock_print.call_args
         assert call_args[0][0] is True  # has_pyats
         assert call_args[0][1] is False  # has_robot
-        assert call_args[0][2].total == 10  # stats
+        # Third arg is CombinedResults
+        results = call_args[0][2]
+        assert isinstance(results, CombinedResults)
+        assert results.total == 10
 
     def test_print_execution_summary_not_called_in_render_only(
         self, tmp_path: Path, monkeypatch: MonkeyPatch, robot_results: TestResults

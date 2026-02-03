@@ -12,6 +12,7 @@ import typer
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
+from nac_test.core.types import PyATSResults
 
 
 class TestCombinedOrchestratorController:
@@ -126,6 +127,8 @@ class TestCombinedOrchestratorController:
                 "nac_test.combined_orchestrator.PyATSOrchestrator"
             ) as mock_pyats:
                 mock_instance = MagicMock()
+                # PyATS now returns PyATSResults
+                mock_instance.run_tests.return_value = PyATSResults()
                 mock_pyats.return_value = mock_instance
 
                 # Mock CombinedReportGenerator (called in unified flow)
@@ -196,6 +199,8 @@ class TestCombinedOrchestratorController:
         # Mock PyATSOrchestrator and discovery
         with patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats:
             mock_instance = MagicMock()
+            # PyATS now returns PyATSResults
+            mock_instance.run_tests.return_value = PyATSResults()
             mock_pyats.return_value = mock_instance
 
             # Mock TestDiscovery to return PyATS files

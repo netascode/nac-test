@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-from nac_test.core.types import TestResults
+from nac_test.core.types import PyATSResults, TestResults
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
     DEFAULT_CPU_MULTIPLIER,
@@ -431,38 +431,40 @@ class PyATSOrchestrator:
         # Use the detected controller type
         EnvironmentValidator.validate_controller_env(self.controller_type)
 
-    def _aggregate_pyats_stats(
+    def _extract_pyats_stats(
         self, pyats_stats: dict[str, dict[str, Any]]
-    ) -> TestResults:
-        """Aggregate PyATS statistics across API and D2D.
+    ) -> PyATSResults:
+        """Extract PyATS statistics for API and D2D.
 
         Args:
             pyats_stats: Dict from MultiArchiveReportGenerator with API/D2D stats
                 Keys are archive types (e.g., "api", "d2d")
 
         Returns:
-            Aggregated TestResults with by_framework populated for dashboard
+            PyATSResults with api and d2d results (either can be None if not present)
         """
-        aggregated = TestResults.empty()
+        api_results: TestResults | None = None
+        d2d_results: TestResults | None = None
 
         for archive_type, stats in pyats_stats.items():
-            framework_results = TestResults(
+            results = TestResults(
                 total=stats["total_tests"],
                 passed=stats["passed_tests"],
                 failed=stats["failed_tests"],
                 skipped=stats["skipped_tests"],
             )
-            aggregated += framework_results
-            # Populate by_framework with uppercase keys for dashboard (API, D2D)
-            aggregated.by_framework[archive_type.upper()] = framework_results
+            if archive_type.upper() == "API":
+                api_results = results
+            elif archive_type.upper() == "D2D":
+                d2d_results = results
 
-        return aggregated
+        return PyATSResults(api=api_results, d2d=d2d_results)
 
-    def run_tests(self) -> TestResults:
+    def run_tests(self) -> PyATSResults:
         """Main entry point - triggers the async execution flow.
 
         Returns:
-            TestResults with test execution results
+            PyATSResults containing api and d2d results (either can be None)
         """
         # This is the synchronous entry point that kicks off the async orchestration
         try:
@@ -472,13 +474,14 @@ class PyATSOrchestrator:
                 f"An unexpected error occurred during test orchestration: {e}",
                 exc_info=True,
             )
-            return TestResults.from_error(str(e), framework="pyats")
+            # Return error in api slot - CombinedOrchestrator will handle appropriately
+            return PyATSResults(api=TestResults.from_error(str(e)))
 
-    async def _run_tests_async(self) -> TestResults:
+    async def _run_tests_async(self) -> PyATSResults:
         """Main async orchestration logic.
 
         Returns:
-            TestResults with test execution results
+            PyATSResults containing api and d2d results (either can be None)
         """
         # Track overall start time for combined summary
         self.overall_start_time = datetime.now()
@@ -501,7 +504,7 @@ class PyATSOrchestrator:
 
         if not test_files:
             print("No PyATS test files (*.py) found in test directory")
-            return TestResults.empty()
+            return PyATSResults()
 
         print(f"Discovered {len(test_files)} PyATS test files")
         print(f"Running with {self.max_workers} parallel workers")
@@ -644,7 +647,9 @@ class PyATSOrchestrator:
         # Generate HTML reports after all test types have completed
         return await self._generate_html_reports_async()
 
-    async def _generate_html_reports_async(self) -> TestResults:
+    async def _generate_html_reports_async(
+        self,
+    ) -> PyATSResults:
         """Generate HTML reports asynchronously from collected archives."""
 
         # Use ArchiveInspector to find all archives (stored at base level)
@@ -670,7 +675,7 @@ class PyATSOrchestrator:
 
         if not archive_paths:
             print("No PyATS job archives found to generate reports from.")
-            return TestResults.empty()
+            return PyATSResults()
 
         print(f"\nGenerating reports from {len(archive_paths)} archive(s)...")
 
@@ -753,12 +758,12 @@ class PyATSOrchestrator:
 
             # Extract and return test statistics
             if result.get("pyats_stats"):
-                return self._aggregate_pyats_stats(result["pyats_stats"])
+                return self._extract_pyats_stats(result["pyats_stats"])
             else:
-                return TestResults.empty()
+                return PyATSResults()
 
         else:
             print(f"\n{terminal.error('Failed to generate reports')}")
             if result.get("error"):
                 print(f"Error: {result['error']}")
-            return TestResults.empty()
+            return PyATSResults()

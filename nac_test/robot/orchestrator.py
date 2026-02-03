@@ -300,7 +300,7 @@ class RobotOrchestrator:
         """Extract test statistics from Robot Framework output.xml.
 
         Returns:
-            TestResults with stats and by_framework["ROBOT"] populated for dashboard.
+            TestResults with Robot Framework test statistics.
         """
         output_xml = self.base_output_dir / "robot_results" / "output.xml"
 
@@ -312,20 +312,12 @@ class RobotOrchestrator:
             result = ExecutionResult(str(output_xml))
             stats = result.statistics.total
 
-            robot_results = TestResults(
+            return TestResults(
                 total=stats.total,
                 passed=stats.passed,
                 failed=stats.failed,
                 skipped=stats.skipped,
             )
-            # Populate by_framework for combined dashboard
-            robot_results.by_framework["ROBOT"] = TestResults(
-                total=stats.total,
-                passed=stats.passed,
-                failed=stats.failed,
-                skipped=stats.skipped,
-            )
-            return robot_results
         except Exception as e:
             logger.error(f"Failed to parse Robot output.xml: {e}")
             return TestResults.empty()
