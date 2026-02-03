@@ -9,12 +9,11 @@ import logging
 import platform
 import sys
 from pathlib import Path
-from typing import Any
 
 import typer
 
 from nac_test.core.constants import DEBUG_MODE
-from nac_test.core.types import TestCounts
+from nac_test.core.types import TestResults
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
@@ -116,13 +115,13 @@ class CombinedOrchestrator:
                 raise typer.Exit(1) from e  # Developer: full exception context
             raise typer.Exit(1) from None  # Customer: clean output
 
-    def run_tests(self) -> TestCounts:
+    def run_tests(self) -> TestResults:
         """Main entry point for combined test execution.
 
         Handles development modes (PyATS only, Robot only) and production mode (combined).
 
         Returns:
-            TestCounts with combined test execution results and by_framework breakdown
+            TestResults with combined test execution results and by_framework breakdown
         """
         # Note: Output directory and merged data file created by main.py
 
@@ -188,18 +187,17 @@ class CombinedOrchestrator:
         # Handle empty scenarios
         if not has_pyats and not has_robot:
             typer.echo("No test files found (no *.py PyATS tests or *.robot templates)")
-            return TestCounts.empty()
+            return TestResults.empty()
 
         # Sequential execution - each orchestrator manages its own directory structure
-        combined_stats = TestCounts.empty()
-        pyats_stats_for_dashboard: dict[str, Any] | None = None
+        combined_stats = TestResults.empty()
 
         if has_pyats:
             typer.echo("\n🧪 Running PyATS tests...\n")
             self._check_python_version()
 
             # Direct call to PyATS orchestrator (base directory) - orchestrator manages its own structure
-            orchestrator = PyATSOrchestrator(
+            pyats_orchestrator = PyATSOrchestrator(
                 data_paths=self.data_paths,
                 test_dir=self.templates_dir,
                 output_dir=self.output_dir,
@@ -209,21 +207,17 @@ class CombinedOrchestrator:
                 controller_type=self.controller_type,
             )
             if self.max_parallel_devices is not None:
-                orchestrator.max_parallel_devices = self.max_parallel_devices
-            pyats_stats = orchestrator.run_tests()
+                pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
+            pyats_stats = pyats_orchestrator.run_tests()
 
-            # Accumulate stats using += operator
+            # Accumulate stats using += operator (includes by_framework from PyATS: API, D2D)
             combined_stats += pyats_stats
-            combined_stats.by_framework["pyats"] = pyats_stats
-
-            # Store PyATS stats for dashboard generation
-            pyats_stats_for_dashboard = getattr(orchestrator, "last_pyats_stats", None)
 
         if has_robot:
             typer.echo("\n🤖 Running Robot Framework tests...\n")
 
             # Direct call to Robot orchestrator (base directory) - orchestrator manages its own structure
-            robot_orchestrator2 = RobotOrchestrator(
+            robot_orchestrator = RobotOrchestrator(
                 data_paths=self.data_paths,
                 templates_dir=self.templates_dir,
                 output_dir=self.output_dir,
@@ -239,7 +233,7 @@ class CombinedOrchestrator:
                 verbosity=self.verbosity,
             )
             try:
-                robot_stats = robot_orchestrator2.run_tests()
+                robot_stats = robot_orchestrator.run_tests()
             except Exception as e:
                 # In render-only mode, propagate exceptions immediately
                 if self.render_only:
@@ -253,14 +247,10 @@ class CombinedOrchestrator:
                         fg=typer.colors.YELLOW,
                     )
                 )
-                robot_stats = TestCounts.empty()
+                robot_stats = TestResults.empty()
 
-            # Accumulate stats using += operator
+            # Accumulate stats using += operator (includes by_framework from Robot: ROBOT)
             combined_stats += robot_stats
-            combined_stats.by_framework["robot"] = robot_stats
-
-            # Add to by_framework breakdown
-            combined_stats["by_framework"]["robot"] = robot_stats
 
         # Generate combined dashboard and print summary if tests were executed (including dry-run)
         if (has_pyats or has_robot) and not self.render_only:
@@ -269,13 +259,15 @@ class CombinedOrchestrator:
                 CombinedReportGenerator,
             )
 
+            # Pass by_framework directly to the generator
+            # Keys are: "API", "D2D" (from PyATS), "ROBOT" (from Robot)
             logger.debug(
-                f"Calling CombinedReportGenerator with pyats_stats_for_dashboard: {pyats_stats_for_dashboard}"
+                f"Calling CombinedReportGenerator with by_framework: {combined_stats.by_framework}"
             )
 
             combined_generator = CombinedReportGenerator(self.output_dir)
             combined_path = combined_generator.generate_combined_summary(
-                pyats_stats_for_dashboard
+                combined_stats.by_framework
             )
             if combined_path:
                 typer.echo(f"   ✅ Combined dashboard: {combined_path}")
@@ -326,7 +318,7 @@ class CombinedOrchestrator:
         return has_pyats, has_robot
 
     def _print_execution_summary(
-        self, has_pyats: bool, has_robot: bool, stats: TestCounts | None = None
+        self, has_pyats: bool, has_robot: bool, stats: TestResults | None = None
     ) -> None:
         """Print execution summary with statistics."""
         # Skip combined summary for development modes - individual orchestrators handle their own summaries
@@ -356,8 +348,8 @@ class CombinedOrchestrator:
         if has_robot:
             typer.echo("\n✅ Robot Framework tests: Completed")
             typer.echo(f"   📁 Results: {self.output_dir}/robot_results/")
-            if stats and "robot" in stats.by_framework:
-                robot_stats = stats.by_framework["robot"]
+            if stats and "ROBOT" in stats.by_framework:
+                robot_stats = stats.by_framework["ROBOT"]
                 typer.echo(
                     f"   📊 {robot_stats.total} tests: "
                     f"{robot_stats.passed} passed, {robot_stats.failed} failed"

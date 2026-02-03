@@ -3,31 +3,54 @@
 
 """Combined report generator for all test frameworks.
 
-Orchestrates report generation across PyATS, Robot Framework, and future frameworks,
-creating a unified dashboard at the root level.
+Generates a unified dashboard at the root level, rendering statistics
+passed in from the orchestrators.
 """
+
+from __future__ import annotations
 
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
-from nac_test.robot.reporting.robot_generator import RobotReportGenerator
+
+if TYPE_CHECKING:
+    from nac_test.core.types import TestResults
 
 logger = logging.getLogger(__name__)
+
+# Framework display metadata - maps framework keys to dashboard display info
+FRAMEWORK_METADATA: dict[str, dict[str, str]] = {
+    "API": {
+        "title": "PyATS API",
+        "report_path": "pyats_results/api/html_reports/summary_report.html",
+    },
+    "D2D": {
+        "title": "PyATS Direct-to-Device (D2D)",
+        "report_path": "pyats_results/d2d/html_reports/summary_report.html",
+    },
+    "ROBOT": {
+        "title": "Robot Framework",
+        "report_path": "robot_results/summary_report.html",
+    },
+}
 
 
 class CombinedReportGenerator:
     """Generates combined dashboard across all test frameworks.
 
-    Coordinates:
-    - PyATS API results (stats from MultiArchiveReportGenerator)
-    - PyATS D2D results (stats from MultiArchiveReportGenerator)
-    - Robot Framework results (via RobotReportGenerator)
+    This is a pure renderer - it takes TestResults objects from the
+    orchestrators and generates HTML. It does not discover or parse test
+    results itself.
 
-    Creates root-level combined_summary.html with up to 3 blocks (Robot, API, D2D).
-    Shows blocks with 0 tests (user can hide via Jinja2 conditionals if desired).
+    The orchestrators are responsible for:
+    - Running tests and collecting results as TestResults
+    - Populating by_framework with per-framework TestResults
+    - Passing by_framework dict to this generator
+
+    Creates root-level combined_summary.html with blocks for each framework.
 
     Attributes:
         output_dir: Base output directory for all test results
@@ -44,15 +67,15 @@ class CombinedReportGenerator:
         self.env = get_jinja_environment(TEMPLATES_DIR)
 
     def generate_combined_summary(
-        self, pyats_stats: dict[str, dict[str, Any]] | None = None
+        self, framework_results: dict[str, TestResults | Any] | None = None
     ) -> Path | None:
         """Generate combined summary dashboard.
 
         Args:
-            pyats_stats: Optional dict of PyATS statistics by archive type.
-                         Populated by MultiArchiveReportGenerator._collect_pyats_stats()
-                         Format: {"API": {...stats...}, "D2D": {...stats...}}
-                         If None or empty, no PyATS blocks will be shown.
+            framework_results: Dict mapping framework key to TestResults.
+                Keys should be: "API", "D2D", "ROBOT"
+                Values: TestResults objects with test statistics
+                If None or empty, an empty dashboard will be generated.
 
         Returns:
             Path to combined_summary.html at root level, or None if generation fails
@@ -67,47 +90,38 @@ class CombinedReportGenerator:
                 "success_rate": 0.0,
             }
 
-            test_type_stats = {}
+            test_type_stats: dict[str, dict[str, Any]] = {}
 
-            # Add PyATS results if available
-            if pyats_stats:
-                for archive_type, stats in pyats_stats.items():
-                    # Skip if stats is None (shouldn't happen, but defensive)
-                    if stats is None:
-                        continue  # type: ignore[unreachable]
+            # Process all framework results passed in
+            if framework_results:
+                for framework_key, results in framework_results.items():
+                    # Skip if results is None
+                    if results is None:
+                        continue
+
+                    # Get display metadata for this framework
+                    key_upper = framework_key.upper()
+                    metadata = FRAMEWORK_METADATA.get(key_upper, {})
+
+                    # Convert TestResults to template-expected format
+                    stats = {
+                        "title": metadata.get("title", framework_key),
+                        "total_tests": results.total,
+                        "passed_tests": results.passed,
+                        "failed_tests": results.failed,
+                        "skipped_tests": results.skipped,
+                        "success_rate": results.success_rate,
+                        "report_path": metadata.get("report_path", "#"),
+                    }
 
                     # Add to test_type_stats (will be shown as blocks)
-                    test_type_stats[archive_type] = stats
+                    test_type_stats[key_upper] = stats
 
                     # Accumulate to overall stats
-                    overall_stats["total_tests"] += stats["total_tests"]
-                    overall_stats["passed_tests"] += stats["passed_tests"]
-                    overall_stats["failed_tests"] += stats["failed_tests"]
-                    overall_stats["skipped_tests"] += stats["skipped_tests"]
-
-            # Add Robot Framework results if available
-            robot_output_xml = self.output_dir / "robot_results" / "output.xml"
-            if robot_output_xml.exists():
-                robot_generator = RobotReportGenerator(self.output_dir)
-                robot_stats = robot_generator.get_aggregated_stats()
-
-                # Always add Robot block (even if 0 tests)
-                # User can add Jinja2 conditionals later to hide empty blocks if desired
-                test_type_stats["ROBOT"] = {
-                    "title": "Robot Framework",
-                    "total_tests": robot_stats["total_tests"],
-                    "passed_tests": robot_stats["passed_tests"],
-                    "failed_tests": robot_stats["failed_tests"],
-                    "skipped_tests": robot_stats["skipped_tests"],
-                    "success_rate": robot_stats["success_rate"],
-                    "report_path": "robot_results/summary_report.html",
-                }
-
-                # Accumulate to overall stats
-                overall_stats["total_tests"] += robot_stats["total_tests"]
-                overall_stats["passed_tests"] += robot_stats["passed_tests"]
-                overall_stats["failed_tests"] += robot_stats["failed_tests"]
-                overall_stats["skipped_tests"] += robot_stats["skipped_tests"]
+                    overall_stats["total_tests"] += results.total
+                    overall_stats["passed_tests"] += results.passed
+                    overall_stats["failed_tests"] += results.failed
+                    overall_stats["skipped_tests"] += results.skipped
 
             # Calculate overall success rate
             total = overall_stats["total_tests"]

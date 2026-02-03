@@ -8,42 +8,29 @@ from pathlib import Path
 import pytest
 
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
+from nac_test.core.types import TestResults
 
 
 @pytest.fixture
-def robot_output_xml(tmp_path: Path) -> Path:
-    """Create a minimal Robot output.xml for testing."""
-    robot_results_dir = tmp_path / "robot_results"
-    robot_results_dir.mkdir()
-
-    output_xml = robot_results_dir / "output.xml"
-    content = """<?xml version="1.0" encoding="UTF-8"?>
-<robot generator="Robot 7.0" generated="2025-02-01 12:00:00.000">
-<suite id="s1" name="Test Suite">
-<test id="s1-t1" name="Test 1">
-<status status="PASS" start="20250201 12:00:01.000" elapsed="0.100"/>
-</test>
-<test id="s1-t2" name="Test 2">
-<status status="PASS" start="20250201 12:00:02.000" elapsed="0.050"/>
-</test>
-<status status="PASS" start="20250201 12:00:00.000" elapsed="1.000"/>
-</suite>
-<statistics>
-<total>
-<stat pass="2" fail="0" skip="0">All Tests</stat>
-</total>
-</statistics>
-</robot>"""
-    output_xml.write_text(content)
-    return output_xml
+def robot_results() -> TestResults:
+    """Create Robot Framework TestResults for testing."""
+    return TestResults(
+        total=2,
+        passed=2,
+        failed=0,
+        skipped=0,
+    )
 
 
-def test_combined_report_robot_only(tmp_path: Path, robot_output_xml: Path) -> None:
+def test_combined_report_robot_only(tmp_path: Path, robot_results: TestResults) -> None:
     """Test combined report generation with Robot Framework results only."""
     generator = CombinedReportGenerator(tmp_path)
 
-    # Generate combined summary
-    result_path = generator.generate_combined_summary(pyats_stats=None)
+    # Generate combined summary with Robot stats only
+    framework_results = {"ROBOT": robot_results}
+    result_path = generator.generate_combined_summary(
+        framework_results=framework_results
+    )
 
     # Verify file was created
     assert result_path is not None
@@ -58,35 +45,22 @@ def test_combined_report_robot_only(tmp_path: Path, robot_output_xml: Path) -> N
 
 
 def test_combined_report_with_pyats_and_robot(
-    tmp_path: Path, robot_output_xml: Path
+    tmp_path: Path, robot_results: TestResults
 ) -> None:
     """Test combined report generation with both PyATS and Robot results."""
     generator = CombinedReportGenerator(tmp_path)
 
-    # Mock PyATS stats
-    pyats_stats = {
-        "API": {
-            "title": "PyATS API",
-            "total_tests": 3,
-            "passed_tests": 2,
-            "failed_tests": 1,
-            "skipped_tests": 0,
-            "success_rate": 66.7,
-            "report_path": "pyats_results/api/html_reports/summary_report.html",
-        },
-        "D2D": {
-            "title": "PyATS D2D",
-            "total_tests": 5,
-            "passed_tests": 5,
-            "failed_tests": 0,
-            "skipped_tests": 0,
-            "success_rate": 100.0,
-            "report_path": "pyats_results/d2d/html_reports/summary_report.html",
-        },
+    # Combine PyATS and Robot stats using TestResults objects
+    framework_results = {
+        "API": TestResults(total=3, passed=2, failed=1, skipped=0),
+        "D2D": TestResults(total=5, passed=5, failed=0, skipped=0),
+        "ROBOT": robot_results,
     }
 
     # Generate combined summary
-    result_path = generator.generate_combined_summary(pyats_stats=pyats_stats)
+    result_path = generator.generate_combined_summary(
+        framework_results=framework_results
+    )
 
     # Verify file was created
     assert result_path is not None
@@ -96,7 +70,7 @@ def test_combined_report_with_pyats_and_robot(
     content = result_path.read_text()
     assert "Robot Framework" in content
     assert "PyATS API" in content
-    assert "PyATS D2D" in content
+    assert "PyATS Direct-to-Device (D2D)" in content
 
     # Verify overall stats: 2 (Robot) + 3 (API) + 5 (D2D) = 10 total
     assert "Overall Executive Summary" in content
@@ -107,21 +81,15 @@ def test_combined_report_pyats_only(tmp_path: Path) -> None:
     """Test combined report generation with PyATS results only (no Robot)."""
     generator = CombinedReportGenerator(tmp_path)
 
-    # Mock PyATS stats
-    pyats_stats = {
-        "API": {
-            "title": "PyATS API",
-            "total_tests": 10,
-            "passed_tests": 8,
-            "failed_tests": 2,
-            "skipped_tests": 0,
-            "success_rate": 80.0,
-            "report_path": "pyats_results/api/html_reports/summary_report.html",
-        }
+    # PyATS stats only
+    framework_results = {
+        "API": TestResults(total=10, passed=8, failed=2, skipped=0),
     }
 
-    # Generate combined summary (no robot_results/ directory exists)
-    result_path = generator.generate_combined_summary(pyats_stats=pyats_stats)
+    # Generate combined summary (no Robot stats passed)
+    result_path = generator.generate_combined_summary(
+        framework_results=framework_results
+    )
 
     # Verify file was created
     assert result_path is not None
@@ -134,28 +102,22 @@ def test_combined_report_pyats_only(tmp_path: Path) -> None:
 
 
 def test_combined_report_success_rate_calculation(
-    tmp_path: Path, robot_output_xml: Path
+    tmp_path: Path, robot_results: TestResults
 ) -> None:
     """Test that overall success rate is calculated correctly."""
     generator = CombinedReportGenerator(tmp_path)
 
-    # Mock PyATS stats with 3 passed, 1 failed (75% success)
-    pyats_stats = {
-        "API": {
-            "title": "PyATS API",
-            "total_tests": 4,
-            "passed_tests": 3,
-            "failed_tests": 1,
-            "skipped_tests": 0,
-            "success_rate": 75.0,
-            "report_path": "pyats_results/api/html_reports/summary_report.html",
-        }
+    # Combine PyATS stats (3 passed, 1 failed = 75% success) with Robot stats (2 passed, 0 failed = 100%)
+    # Overall: (3 + 2) passed / (4 + 2) total = 5/6 = 83.3%
+    framework_results = {
+        "API": TestResults(total=4, passed=3, failed=1, skipped=0),
+        "ROBOT": robot_results,
     }
 
     # Generate combined summary
-    # Robot has 2 passed, 0 failed (100% success)
-    # Overall: (3 + 2) passed / (4 + 2) total = 5/6 = 83.3%
-    result_path = generator.generate_combined_summary(pyats_stats=pyats_stats)
+    result_path = generator.generate_combined_summary(
+        framework_results=framework_results
+    )
 
     assert result_path is not None
     content = result_path.read_text()
@@ -169,8 +131,8 @@ def test_combined_report_no_tests(tmp_path: Path) -> None:
     """Test combined report generation with no test results at all."""
     generator = CombinedReportGenerator(tmp_path)
 
-    # Generate combined summary with no PyATS stats and no Robot results
-    result_path = generator.generate_combined_summary(pyats_stats=None)
+    # Generate combined summary with no framework stats
+    result_path = generator.generate_combined_summary(framework_results=None)
 
     # Should still generate a report
     assert result_path is not None
@@ -179,3 +141,20 @@ def test_combined_report_no_tests(tmp_path: Path) -> None:
     # Content should show 0 tests
     content = result_path.read_text()
     assert "Overall Executive Summary" in content
+
+
+def test_combined_report_empty_dict(tmp_path: Path) -> None:
+    """Test combined report generation with empty framework stats dict."""
+    generator = CombinedReportGenerator(tmp_path)
+
+    # Generate combined summary with empty dict
+    result_path = generator.generate_combined_summary(framework_results={})
+
+    # Should still generate a report
+    assert result_path is not None
+    assert result_path.exists()
+
+    # Content should show 0 tests
+    content = result_path.read_text()
+    assert "Overall Executive Summary" in content
+    assert ">0<" in content  # 0 total tests

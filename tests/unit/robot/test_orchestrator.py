@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from nac_test.core.types import TestCounts
+from nac_test.core.types import TestResults
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import VerbosityLevel
 
@@ -243,10 +243,10 @@ class TestRobotOrchestrator:
         stats = orchestrator._get_test_statistics()
 
         # Verify statistics
-        assert stats["total"] == 3
-        assert stats["passed"] == 1
-        assert stats["failed"] == 1
-        assert stats["skipped"] == 1
+        assert stats.total == 3
+        assert stats.passed == 1
+        assert stats.failed == 1
+        assert stats.skipped == 1
 
     def test_get_test_statistics_missing_output_xml(
         self, orchestrator, temp_output_dir, caplog
@@ -256,8 +256,8 @@ class TestRobotOrchestrator:
 
         stats = orchestrator._get_test_statistics()
 
-        # Should return zeros (TestCounts object)
-        assert stats == TestCounts.empty()
+        # Should return zeros (TestResults object)
+        assert stats == TestResults.empty()
         assert "Robot output.xml not found" in caplog.text
 
     def test_get_test_statistics_invalid_xml(
@@ -274,8 +274,8 @@ class TestRobotOrchestrator:
 
         stats = orchestrator._get_test_statistics()
 
-        # Should return zeros and log error (TestCounts object)
-        assert stats == TestCounts.empty()
+        # Should return zeros and log error (TestResults object)
+        assert stats == TestResults.empty()
         assert "Failed to parse Robot output.xml" in caplog.text
 
     @patch("nac_test.robot.orchestrator.run_pabot")
@@ -298,8 +298,8 @@ class TestRobotOrchestrator:
         # Verify pabot was NOT called
         mock_pabot.assert_not_called()
 
-        # Verify empty statistics returned (TestCounts object)
-        assert stats == TestCounts.empty()
+        # Verify empty statistics returned (TestResults object)
+        assert stats == TestResults.empty()
 
     @patch("nac_test.robot.orchestrator.run_pabot")
     @patch("nac_test.robot.orchestrator.RobotReportGenerator")
@@ -355,16 +355,16 @@ class TestRobotOrchestrator:
         mock_generator_instance.generate_summary_report.assert_called_once()
 
         # Verify statistics returned
-        assert stats["total"] == 1
-        assert stats["passed"] == 1
-        assert stats["failed"] == 0
-        assert stats["skipped"] == 0
+        assert stats.total == 1
+        assert stats.passed == 1
+        assert stats.failed == 0
+        assert stats.skipped == 0
 
     @patch("nac_test.robot.orchestrator.run_pabot")
     def test_run_tests_handles_pabot_error_252(
         self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
     ) -> None:
-        """Test run_tests handles pabot error code 252 (invalid arguments)."""
+        """Test run_tests raises RuntimeError on pabot exit code 252 (invalid arguments)."""
         # Mock RobotWriter instance methods
         orchestrator.robot_writer.write = MagicMock()
         orchestrator.robot_writer.write_merged_data_model = MagicMock()
@@ -372,26 +372,40 @@ class TestRobotOrchestrator:
         # Mock pabot failure with exit code 252
         mock_pabot.return_value = 252
 
-        # Should raise RuntimeError (exit code 252 handling)
-        with pytest.raises(RuntimeError) as exc_info:
+        # Should raise RuntimeError (handled by combined_orchestrator)
+        with pytest.raises(RuntimeError, match="Invalid Robot Framework arguments"):
             orchestrator.run_tests()
 
-        assert "Invalid Robot Framework arguments" in str(exc_info.value)
-
     def test_run_tests_return_type(self, orchestrator: RobotOrchestrator) -> None:
-        """Test run_tests returns TestCounts with correct attributes."""
+        """Test run_tests returns TestResults with correct attributes."""
         orchestrator.render_only = True
 
         stats = orchestrator.run_tests()
 
-        # Verify return type and attributes (TestCounts, not dict)
-        assert isinstance(stats, TestCounts)
+        # Verify return type and attributes (TestResults, not dict)
+        assert isinstance(stats, TestResults)
         assert hasattr(stats, "total")
         assert hasattr(stats, "passed")
         assert hasattr(stats, "failed")
         assert hasattr(stats, "skipped")
-        # TestCounts also supports dict-like access for backward compatibility
-        assert stats["total"] == 0
-        assert stats["passed"] == 0
-        assert stats["failed"] == 0
-        assert stats["skipped"] == 0
+        # Verify values for render-only mode
+        assert stats.total == 0
+        assert stats.passed == 0
+        assert stats.failed == 0
+        assert stats.skipped == 0
+
+    def test_run_tests_raises_on_template_rendering_error(
+        self, orchestrator: RobotOrchestrator
+    ) -> None:
+        """Test run_tests raises exception on template rendering errors.
+
+        Exceptions are caught at the combined_orchestrator level, not here.
+        """
+        # Mock RobotWriter.write to raise an exception
+        orchestrator.robot_writer.write = MagicMock(
+            side_effect=ValueError("Template error: invalid syntax")
+        )
+
+        # Should raise exception (handled by combined_orchestrator)
+        with pytest.raises(ValueError, match="Template error"):
+            orchestrator.run_tests()
