@@ -323,21 +323,6 @@ class ReportGenerator:
             + f"\n\n... truncated ({len(lines) - max_lines} lines omitted) ..."
         )
 
-    async def _cleanup_jsonl_files(self, files: list[Path]) -> None:
-        """Clean up JSONL files after successful report generation.
-
-        Removes the intermediate JSONL files to save disk space. This is
-        skipped if PYATS_DEBUG environment variable is set.
-
-        Args:
-            files: List of JSONL file paths to delete
-        """
-        for file in files:
-            try:
-                file.unlink()
-            except Exception as e:
-                logger.warning(f"Failed to delete {file}: {e}")
-
     async def _generate_summary_report(
         self, report_paths: list[Path], result_files: list[Path]
     ) -> Path | None:
