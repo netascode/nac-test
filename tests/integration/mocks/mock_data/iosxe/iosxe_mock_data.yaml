@@ -21,7 +21,15 @@ enable_isr:
 
       --------------------------------------------------------------------------------
       Auto abort timer: inactive
-        --------------------------------------------------------------------------------
+      --------------------------------------------------------------------------------
+    "show sdwan software": |
+      VERSION          ACTIVE  DEFAULT  PREVIOUS  CONFIRMED  TIMESTAMP
+      ----------------------------------------------------------------------------------
+      17.15.04.0.6839  true    true     false     -          2026-01-28T16:56:24-00:00
+
+      Total Space:387M Used Space:168M Available Space:215M
+    "show sdwan version": |
+      17.15.04.0.6839
     "show logging": |
       Syslog logging: enabled (0 messages dropped, 2 messages rate-limited, 0 flushes, 0 overruns, xml disabled, filtering disabled)
 
