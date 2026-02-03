@@ -565,10 +565,13 @@ graph LR
 
 **Key Responsibilities:**
 
-- **Data Merging**: Combines multiple YAML files with variable substitution
-- **Test Orchestration**: Coordinates API and D2D test flows
-- **Result Aggregation**: Combines results from both test types
-- **Summary Generation**: Produces final execution summary
+- **Test Type Discovery**: Detects presence of PyATS and Robot Framework tests
+- **Development Mode Routing**: Handles `--pyats` and `--robot` flags for fast iteration
+- **Sequential Execution**: Runs PyATS first, then Robot Framework (production mode)
+- **Result Aggregation**: Combines results into typed `CombinedResults` dataclass
+- **Combined Dashboard**: Triggers generation of unified `combined_summary.html`
+
+**Note**: Data merging happens in CLI (`main.py`) before orchestrator initialization, establishing a Single Source of Truth shared across frameworks.
 
 ##### 3. **Data Merger** (`data_merger.py`)
 
@@ -3582,28 +3585,36 @@ Orchestrates the unified dashboard generation:
 
 ```python
 class CombinedReportGenerator:
+    """Generates combined dashboard across all test frameworks.
+    
+    This is a pure renderer - it takes CombinedResults from the orchestrator
+    and generates HTML. It does not discover or parse test results itself.
+    """
+    
     def generate_combined_summary(
         self,
-        pyats_stats: Dict[str, Dict[str, int]] | None = None
-    ) -> Path:
+        results: CombinedResults | None = None
+    ) -> Path | None:
         """Generate combined summary dashboard.
         
         Args:
-            pyats_stats: Optional PyATS statistics from multi-archive generator
-                        Format: {"API": {...}, "D2D": {...}}
-                        
+            results: CombinedResults with .api, .d2d, .robot attributes.
+                Each attribute is a TestResults dataclass or None if that
+                framework wasn't executed.
+                    
         Returns:
-            Path to generated combined_summary.html
+            Path to combined_summary.html at root level, or None if generation fails
         """
 ```
 
 **Features:**
 
-- **Unified Statistics**: Aggregates test counts from all frameworks
+- **Unified Statistics**: Aggregates test counts using CombinedResults computed properties (`.total`, `.passed`, etc.)
 - **Framework Badges**: Visual indicators for Robot, API, and D2D tests
 - **Deep Linking**: Links to framework-specific summary reports
-- **Success Rate Calculation**: Overall and per-framework success rates
+- **Success Rate Calculation**: Overall and per-framework success rates via `.success_rate` property
 - **Automatic Generation**: Called by CombinedOrchestrator after all tests complete
+- **Pure Renderer**: Takes typed CombinedResults, no internal result discovery
 
 #### Robot Report Parser (`robot/reporting/robot_parser.py`)
 
@@ -3679,13 +3690,18 @@ class RobotReportGenerator:
 ```mermaid
 graph LR
     subgraph "Test Execution"
-        Robot[RobotOrchestrator] --> RobotStats[Robot Stats]
-        PyATS[PyATSOrchestrator] --> PyATSStats[PyATS Stats]
+        Robot[RobotOrchestrator] --> |TestResults| RobotStats[robot: TestResults]
+        PyATS[PyATSOrchestrator] --> |PyATSResults| PyATSStats[api/d2d: TestResults]
+    end
+    
+    subgraph "Result Aggregation"
+        RobotStats --> Combined[CombinedResults]
+        PyATSStats --> Combined
     end
     
     subgraph "Report Generation"
-        RobotStats --> RobotGen[RobotReportGenerator]
-        PyATSStats --> MultiGen[MultiArchiveReportGenerator]
+        Combined --> |results.robot| RobotGen[RobotReportGenerator]
+        Combined --> |results.api/d2d| MultiGen[MultiArchiveReportGenerator]
         
         RobotGen --> RobotReport[robot_results/summary_report.html]
         MultiGen --> APIReport[api/html_reports/summary_report.html]
@@ -3693,45 +3709,76 @@ graph LR
     end
     
     subgraph "Combined Dashboard"
-        RobotGen --> |get_aggregated_stats| CombinedGen[CombinedReportGenerator]
-        MultiGen --> |pyats_stats| CombinedGen
+        Combined --> |CombinedResults| CombinedGen[CombinedReportGenerator]
         CombinedGen --> Dashboard[combined_summary.html]
     end
     
     subgraph "CLI"
-        RobotStats --> |return stats| CLI[CLI Main]
-        PyATSStats --> |return stats| CLI
-        CLI --> |exit code| User[User]
+        Combined --> |.exit_code| CLI[Exit Code]
     end
 ```
 
-**Statistics Format:**
+**Type System:**
 
-All orchestrators return a consistent format:
+Results are represented using typed dataclasses from `nac_test.core.types`:
 
 ```python
-{
-    "total": 10,
-    "passed": 8,
-    "failed": 2,
-    "skipped": 0
-}
+@dataclass
+class TestResults:
+    """Results from a single test framework/type."""
+    total: int = 0
+    passed: int = 0
+    failed: int = 0
+    skipped: int = 0
+    errors: list[str] = field(default_factory=list)
+    
+    # Computed properties: success_rate, has_failures, has_errors, is_empty, exit_code
+    
+    def __str__(self) -> str:
+        return f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
+
+@dataclass
+class PyATSResults:
+    """Groups API and D2D results from PyATS."""
+    api: TestResults | None = None
+    d2d: TestResults | None = None
+
+@dataclass
+class CombinedResults:
+    """Aggregates results across all frameworks."""
+    api: TestResults | None = None   # From PyATSResults.api
+    d2d: TestResults | None = None   # From PyATSResults.d2d
+    robot: TestResults | None = None # From RobotOrchestrator
+    
+    # Computed properties aggregate across all non-None results:
+    # .total, .passed, .failed, .skipped, .success_rate, .has_failures, .exit_code
 ```
 
-CombinedOrchestrator aggregates these into:
+**Orchestrator Return Types:**
+
+- `RobotOrchestrator.run_tests()` → `TestResults`
+- `PyATSOrchestrator.run_tests()` → `PyATSResults` (contains `.api` and `.d2d`)
+- `CombinedOrchestrator.run_tests()` → `CombinedResults` (flat structure with all three)
+
+**Example Usage:**
 
 ```python
-{
-    "total": 25,
-    "passed": 23,
-    "failed": 2,
-    "skipped": 0,
-    "by_framework": {
-        "robot": {"total": 10, "passed": 8, "failed": 2, "skipped": 0},
-        "pyats_api": {"total": 10, "passed": 10, "failed": 0, "skipped": 0},
-        "pyats_d2d": {"total": 5, "passed": 5, "failed": 0, "skipped": 0}
-    }
-}
+# CombinedOrchestrator aggregates results
+results = CombinedResults()
+if has_pyats:
+    pyats_results = PyATSOrchestrator(...).run_tests()  # Returns PyATSResults
+    results.api = pyats_results.api
+    results.d2d = pyats_results.d2d
+if has_robot:
+    results.robot = RobotOrchestrator(...).run_tests()  # Returns TestResults
+
+# CombinedReportGenerator receives typed results
+CombinedReportGenerator(output_dir).generate_combined_summary(results)
+
+# Access aggregated stats via computed properties
+print(f"Total: {results.total}, Passed: {results.passed}")
+print(f"Success Rate: {results.success_rate:.1f}%")
+print(f"Exit Code: {results.exit_code}")
 ```
 
 #### Backward Compatibility
