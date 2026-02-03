@@ -25,37 +25,37 @@ def sample_output_xml(tmp_path: Path) -> Path:
     """
     output_xml = tmp_path / "output.xml"
     content = """<?xml version="1.0" encoding="UTF-8"?>
-<robot generator="Robot 7.0" generated="2025-02-01 12:00:00.000" rpa="false" schemaversion="5">
+<robot generator="Robot 7.0" generated="2025-02-01T12:00:00.000" rpa="false" schemaversion="5">
 <suite id="s1" name="Test Suite" source="/path/to/tests">
 <test id="s1-t1" name="Test Case 1" line="10">
 <kw name="Log" owner="BuiltIn">
 <arg>Test message</arg>
-<status status="PASS" start="20250201 12:00:01.000" elapsed="0.100"/>
+<status status="PASS" start="2025-02-01T12:00:01.000" elapsed="0.100"/>
 </kw>
-<status status="PASS" start="20250201 12:00:01.000" elapsed="0.100">Test passed</status>
+<status status="PASS" start="2025-02-01T12:00:01.000" elapsed="0.100">Test passed</status>
 </test>
 <test id="s1-t2" name="Test Case 2" line="15">
 <kw name="Fail" owner="BuiltIn">
 <arg>Expected failure</arg>
-<status status="FAIL" start="20250201 12:00:02.000" elapsed="0.050"/>
+<status status="FAIL" start="2025-02-01T12:00:02.000" elapsed="0.050"/>
 </kw>
-<status status="FAIL" start="20250201 12:00:02.000" elapsed="0.050">Expected failure</status>
+<status status="FAIL" start="2025-02-01T12:00:02.000" elapsed="0.050">Expected failure</status>
 </test>
 <test id="s1-t3" name="Test Case 3" line="20">
 <kw name="Pass Execution" owner="BuiltIn">
 <arg>Skipped test</arg>
-<status status="PASS" start="20250201 12:00:03.000" elapsed="0.010"/>
+<status status="PASS" start="2025-02-01T12:00:03.000" elapsed="0.010"/>
 </kw>
-<status status="SKIP" start="20250201 12:00:03.000" elapsed="0.010">Skipped test</status>
+<status status="SKIP" start="2025-02-01T12:00:03.000" elapsed="0.010">Skipped test</status>
 </test>
 <test id="s1-t4" name="Test Case 4" line="25">
 <kw name="Log" owner="BuiltIn">
 <arg>Another passing test</arg>
-<status status="PASS" start="20250201 12:00:04.000" elapsed="0.200"/>
+<status status="PASS" start="2025-02-01T12:00:04.000" elapsed="0.200"/>
 </kw>
-<status status="PASS" start="20250201 12:00:04.000" elapsed="0.200">Another pass</status>
+<status status="PASS" start="2025-02-01T12:00:04.000" elapsed="0.200">Another pass</status>
 </test>
-<status status="FAIL" start="20250201 12:00:00.000" elapsed="5.000"/>
+<status status="FAIL" start="2025-02-01T12:00:00.000" elapsed="5.000"/>
 </suite>
 <statistics>
 <total>
@@ -151,15 +151,15 @@ def test_parser_all_passed(tmp_path: Path) -> None:
     """Test parser with all tests passing."""
     output_xml = tmp_path / "output.xml"
     content = """<?xml version="1.0" encoding="UTF-8"?>
-<robot generator="Robot 7.0" generated="2025-02-01 12:00:00.000">
+<robot generator="Robot 7.0" generated="2025-02-01T12:00:00.000">
 <suite id="s1" name="Test Suite">
 <test id="s1-t1" name="Test 1" line="10">
-<status status="PASS" start="20250201 12:00:01" elapsed="100"/>
+<status status="PASS" start="2025-02-01T12:00:01" elapsed="100"/>
 </test>
 <test id="s1-t2" name="Test 2" line="15">
-<status status="PASS" start="20250201 12:00:02" elapsed="150"/>
+<status status="PASS" start="2025-02-01T12:00:02" elapsed="150"/>
 </test>
-<status status="PASS" start="20250201 12:00:00" elapsed="300"/>
+<status status="PASS" start="2025-02-01T12:00:00" elapsed="300"/>
 </suite>
 <statistics>
 <total>
@@ -211,9 +211,9 @@ def test_collector_empty_results(tmp_path: Path) -> None:
     """Test parser with no tests."""
     output_xml = tmp_path / "output.xml"
     content = """<?xml version="1.0" encoding="UTF-8"?>
-<robot generator="Robot 7.0" generated="2025-02-01 12:00:00.000">
+<robot generator="Robot 7.0" generated="2025-02-01T12:00:00.000">
 <suite id="s1" name="Empty Suite">
-<status status="PASS" start="20250201 12:00:00" elapsed="0"/>
+<status status="PASS" start="2025-02-01T12:00:00" elapsed="0"/>
 </suite>
 <statistics>
 <total>
