@@ -3,7 +3,6 @@
 
 """Generic file-based authentication token caching for parallel processes."""
 
-import fcntl
 import hashlib
 import json
 import logging
@@ -11,6 +10,8 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from filelock import FileLock
 
 from nac_test.pyats_core.constants import AUTH_CACHE_DIR
 
@@ -50,9 +51,7 @@ class AuthCache:
         cache_file = cache_dir / f"{controller_type}_{url_hash}.json"
         lock_file = cache_dir / f"{controller_type}_{url_hash}.lock"
 
-        with open(lock_file, "w") as lock:
-            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-
+        with FileLock(str(lock_file)):
             # Check if valid cached data exists
             if cache_file.exists():
                 try:
@@ -68,19 +67,19 @@ class AuthCache:
                                     k: v for k, v in data.items() if k != "expires_at"
                                 }
                 except json.JSONDecodeError as e:
-                    logger.debug(
+                    logger.warning(
                         "Invalid JSON in cache file %s, will recreate: %s",
                         cache_file,
                         e,
                     )
                 except KeyError as e:
-                    logger.debug(
+                    logger.warning(
                         "Missing key in cache file %s, will recreate: %s",
                         cache_file,
                         e,
                     )
                 except TypeError as e:
-                    logger.debug(
+                    logger.warning(
                         "Type error reading cache file %s, will recreate: %s",
                         cache_file,
                         e,
