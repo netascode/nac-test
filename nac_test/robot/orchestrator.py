@@ -196,6 +196,9 @@ class RobotOrchestrator:
             typer.echo("✅ Robot Framework tests completed")
 
             # Phase 4: Move Robot files to robot_results/ subdirectory
+            #
+            # Unfortunately pabot does not allow me to specify the output.xml/etc. to be in a different
+            # directory than the outputdir, so we have to move them after the fact.
             self._move_robot_results_to_subdirectory()
 
             # Phase 5: Create backward compatibility symlinks

@@ -13,6 +13,7 @@ from pathlib import Path
 import typer
 
 from nac_test.core.constants import DEBUG_MODE
+from nac_test.core.reporting.combined_generator import CombinedReportGenerator
 from nac_test.core.types import TestResults
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
@@ -119,70 +120,36 @@ class CombinedOrchestrator:
         """Main entry point for combined test execution.
 
         Handles development modes (PyATS only, Robot only) and production mode (combined).
+        Dev mode flags act as filters - they restrict which test types run but use the
+        same execution flow, dashboard generation, and summary output.
 
         Returns:
             TestResults with combined test execution results and by_framework breakdown
         """
         # Note: Output directory and merged data file created by main.py
 
-        # Handle development mode (PyATS only)
+        # Print dev mode warnings if applicable
         if self.dev_pyats_only:
             typer.secho(
-                "\n\n⚠️  WARNING: --pyats flag is for development use only. Production runs should use combined execution.",
+                "\n\n⚠️  WARNING: --pyats flag is for development use only. "
+                "Production runs should use combined execution.",
                 fg=typer.colors.YELLOW,
             )
-            typer.echo("🧪 Running PyATS tests only (development mode)...")
-            self._check_python_version()
-
-            # Direct call to PyATS orchestrator (base directory) - orchestrator manages its own structure
-            orchestrator = PyATSOrchestrator(
-                data_paths=self.data_paths,
-                test_dir=self.templates_dir,
-                output_dir=self.output_dir,
-                merged_data_filename=self.merged_data_filename,
-                minimal_reports=self.minimal_reports,
-                custom_testbed_path=self.custom_testbed_path,
-                controller_type=self.controller_type,
-            )
-            if self.max_parallel_devices is not None:
-                orchestrator.max_parallel_devices = self.max_parallel_devices
-            pyats_stats = orchestrator.run_tests()
-
-            # Return stats (dev mode, no breakdown)
-            return pyats_stats
-
-        # Handle development mode (Robot only)
         if self.dev_robot_only:
             typer.secho(
-                "\n\n⚠️  WARNING: --robot flag is for development use only. Production runs should use combined execution.",
+                "\n\n⚠️  WARNING: --robot flag is for development use only. "
+                "Production runs should use combined execution.",
                 fg=typer.colors.YELLOW,
             )
-            typer.echo("🤖 Running Robot Framework tests only (development mode)...")
 
-            # Direct call to Robot orchestrator (base directory) - orchestrator manages its own structure
-            robot_orchestrator = RobotOrchestrator(
-                data_paths=self.data_paths,
-                templates_dir=self.templates_dir,
-                output_dir=self.output_dir,
-                merged_data_filename=self.merged_data_filename,
-                filters_path=self.filters_path,
-                tests_path=self.tests_path,
-                include_tags=self.include_tags,
-                exclude_tags=self.exclude_tags,
-                render_only=self.render_only,
-                dry_run=self.dry_run,
-                processes=self.processes,
-                extra_args=self.extra_args,
-                verbosity=self.verbosity,
-            )
-            robot_stats = robot_orchestrator.run_tests()
-
-            # Return stats (dev mode, no breakdown)
-            return robot_stats
-
-        # Production mode: Combined execution
         # Discover test types (simple existence checks)
         has_pyats, has_robot = self._discover_test_types()
+
+        # Apply dev mode filters - these flags restrict which test types run
+        if self.dev_pyats_only:
+            has_robot = False
+        if self.dev_robot_only:
+            has_pyats = False
 
         # Handle empty scenarios
         if not has_pyats and not has_robot:
@@ -196,7 +163,6 @@ class CombinedOrchestrator:
             typer.echo("\n🧪 Running PyATS tests...\n")
             self._check_python_version()
 
-            # Direct call to PyATS orchestrator (base directory) - orchestrator manages its own structure
             pyats_orchestrator = PyATSOrchestrator(
                 data_paths=self.data_paths,
                 test_dir=self.templates_dir,
@@ -208,15 +174,12 @@ class CombinedOrchestrator:
             )
             if self.max_parallel_devices is not None:
                 pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
-            pyats_stats = pyats_orchestrator.run_tests()
 
-            # Accumulate stats using += operator (includes by_framework from PyATS: API, D2D)
-            combined_stats += pyats_stats
+            combined_stats += pyats_orchestrator.run_tests()
 
         if has_robot:
             typer.echo("\n🤖 Running Robot Framework tests...\n")
 
-            # Direct call to Robot orchestrator (base directory) - orchestrator manages its own structure
             robot_orchestrator = RobotOrchestrator(
                 data_paths=self.data_paths,
                 templates_dir=self.templates_dir,
@@ -247,20 +210,15 @@ class CombinedOrchestrator:
                         fg=typer.colors.YELLOW,
                     )
                 )
-                robot_stats = TestResults.empty()
+                # Create error result and ensure it's in by_framework for dashboard
+                robot_stats = TestResults.from_error(str(e))
+                robot_stats.by_framework["ROBOT"] = TestResults.from_error(str(e))
 
-            # Accumulate stats using += operator (includes by_framework from Robot: ROBOT)
             combined_stats += robot_stats
 
-        # Generate combined dashboard and print summary if tests were executed (including dry-run)
-        if (has_pyats or has_robot) and not self.render_only:
+        # Generate combined dashboard and print summary (unless render_only mode)
+        if not self.render_only:
             typer.echo("\n📊 Generating combined dashboard...")
-            from nac_test.core.reporting.combined_generator import (
-                CombinedReportGenerator,
-            )
-
-            # Pass by_framework directly to the generator
-            # Keys are: "API", "D2D" (from PyATS), "ROBOT" (from Robot)
             logger.debug(
                 f"Calling CombinedReportGenerator with by_framework: {combined_stats.by_framework}"
             )
@@ -272,7 +230,6 @@ class CombinedOrchestrator:
             if combined_path:
                 typer.echo(f"   ✅ Combined dashboard: {combined_path}")
 
-            # Print execution summary
             self._print_execution_summary(has_pyats, has_robot, combined_stats)
 
         return combined_stats
@@ -321,10 +278,6 @@ class CombinedOrchestrator:
         self, has_pyats: bool, has_robot: bool, stats: TestResults | None = None
     ) -> None:
         """Print execution summary with statistics."""
-        # Skip combined summary for development modes - individual orchestrators handle their own summaries
-        if self.dev_pyats_only or self.dev_robot_only:
-            return
-
         typer.echo("\n" + "=" * 70)
         typer.echo("📋 Combined Test Execution Summary")
         typer.echo("=" * 70)

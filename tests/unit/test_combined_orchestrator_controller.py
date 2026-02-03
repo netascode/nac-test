@@ -117,29 +117,45 @@ class TestCombinedOrchestratorController:
         # Verify controller type was detected
         assert orchestrator.controller_type == "SDWAN"
 
-        # Mock PyATSOrchestrator to verify it receives the controller type
-        with patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats:
-            mock_instance = MagicMock()
-            mock_pyats.return_value = mock_instance
+        # Mock discovery to return PyATS tests found
+        with patch.object(
+            orchestrator, "_discover_test_types", return_value=(True, False)
+        ):
+            # Mock PyATSOrchestrator to verify it receives the controller type
+            with patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator"
+            ) as mock_pyats:
+                mock_instance = MagicMock()
+                mock_pyats.return_value = mock_instance
 
-            # Mock typer functions
-            with patch("typer.secho"), patch("typer.echo"):
-                # Run tests
-                orchestrator.run_tests()
+                # Mock CombinedReportGenerator (called in unified flow)
+                with patch(
+                    "nac_test.combined_orchestrator.CombinedReportGenerator"
+                ) as mock_generator:
+                    mock_gen_instance = MagicMock()
+                    mock_gen_instance.generate_combined_summary.return_value = (
+                        output_dir / "combined_summary.html"
+                    )
+                    mock_generator.return_value = mock_gen_instance
 
-            # Verify PyATSOrchestrator was called with controller_type
-            mock_pyats.assert_called_once_with(
-                data_paths=[data_dir],
-                test_dir=templates_dir,
-                output_dir=output_dir,
-                merged_data_filename="merged.yaml",
-                minimal_reports=False,
-                custom_testbed_path=None,
-                controller_type="SDWAN",
-            )
+                    # Mock typer functions
+                    with patch("typer.secho"), patch("typer.echo"):
+                        # Run tests
+                        orchestrator.run_tests()
 
-            # Verify run_tests was called on the instance
-            mock_instance.run_tests.assert_called_once()
+                # Verify PyATSOrchestrator was called with controller_type
+                mock_pyats.assert_called_once_with(
+                    data_paths=[data_dir],
+                    test_dir=templates_dir,
+                    output_dir=output_dir,
+                    merged_data_filename="merged.yaml",
+                    minimal_reports=False,
+                    custom_testbed_path=None,
+                    controller_type="SDWAN",
+                )
+
+                # Verify run_tests was called on the instance
+                mock_instance.run_tests.assert_called_once()
 
     def test_combined_orchestrator_production_mode_passes_controller(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
