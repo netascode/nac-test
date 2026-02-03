@@ -48,39 +48,49 @@ nac_test/
 
 ### Statistics Return Format
 
+All orchestrators return typed dataclasses from `nac_test.core.types`:
+
 **RobotOrchestrator.run_tests() returns:**
 ```python
-{
-    "total": 100,
-    "passed": 97,
-    "failed": 3,
-    "skipped": 0
-}
+from nac_test.core.types import TestResults
+
+# Returns TestResults (Robot doesn't distinguish test types)
+TestResults(total=100, passed=97, failed=3, skipped=0, errors=[])
+# str(): "100/97/3/0" (total/passed/failed/skipped)
 ```
 
 **PyATSOrchestrator.run_tests() returns:**
 ```python
-{
-    "total": 50,
-    "passed": 48,
-    "failed": 2,
-    "skipped": 0
-}
+from nac_test.core.types import PyATSResults, TestResults
+
+# Returns PyATSResults grouping API and D2D results
+PyATSResults(
+    api=TestResults(total=30, passed=28, failed=2, skipped=0, errors=[]),
+    d2d=TestResults(total=20, passed=20, failed=0, skipped=0, errors=[])
+)
+# str(): "PyATSResults(API: 30/28/2/0, D2D: 20/20/0/0)"
 ```
 
-**CombinedOrchestrator.run_tests() returns:**
+**CombinedOrchestrator uses CombinedResults internally:**
 ```python
-{
-    "total": 150,
-    "passed": 145,
-    "failed": 5,
-    "skipped": 0,
-    "by_framework": {
-        "robot": {"total": 100, "passed": 97, "failed": 3, "skipped": 0},
-        "pyats_api": {"total": 30, "passed": 28, "failed": 2, "skipped": 0},
-        "pyats_d2d": {"total": 20, "passed": 20, "failed": 0, "skipped": 0}
-    }
-}
+from nac_test.core.types import CombinedResults, TestResults
+
+# CombinedResults aggregates all frameworks with explicit attributes
+CombinedResults(
+    api=TestResults(total=30, passed=28, failed=2, skipped=0, errors=[]),
+    d2d=TestResults(total=20, passed=20, failed=0, skipped=0, errors=[]),
+    robot=TestResults(total=100, passed=97, failed=3, skipped=0, errors=[])
+)
+# str(): "CombinedResults(API: 30/28/2/0, D2D: 20/20/0/0, Robot: 100/97/3/0)"
+
+# CombinedResults provides computed properties:
+combined.total    # 150 (sum across all frameworks)
+combined.passed   # 145
+combined.failed   # 5
+combined.skipped  # 0
+combined.success_rate  # 96.67%
+combined.has_failures  # True
+combined.exit_code     # 5 (min of failed count, 250)
 ```
 
 ### Efficiency: Avoid Re-reading JSONL Files
@@ -412,14 +422,16 @@ def run_pabot(
 
 **Changes**:
 
-1. Update `run_tests()` signature to return stats:
+1. Update `run_tests()` signature to return `TestResults`:
 
 ```python
-def run_tests(self) -> dict[str, Any]:
+from nac_test.core.types import TestResults
+
+def run_tests(self) -> TestResults:
     """Execute Robot Framework tests.
     
     Returns:
-        Dict with test statistics: {"total": X, "passed": Y, "failed": Z, "skipped": W}
+        TestResults with test statistics (total, passed, failed, skipped, errors)
     """
     # ... existing setup code ...
     
@@ -440,8 +452,7 @@ def run_tests(self) -> dict[str, Any]:
     self._create_backward_compat_symlinks()
     
     # Parse results and return stats
-    stats = self._get_test_statistics()
-    return stats
+    return self._get_test_statistics()
 ```
 
 2. Add helper methods:
@@ -471,17 +482,17 @@ def _create_backward_compat_symlinks(self) -> None:
             target.symlink_to(f"robot_results/{filename}")
             logger.debug(f"Created symlink: {target} -> robot_results/{filename}")
 
-def _get_test_statistics(self) -> dict[str, Any]:
+def _get_test_statistics(self) -> TestResults:
     """Get test statistics from Robot output.xml.
     
     Returns:
-        Dict with total, passed, failed, skipped counts
+        TestResults with total, passed, failed, skipped counts
     """
     output_xml = self.output_dir / "robot_results" / "output.xml"
     
     if not output_xml.exists():
-        logger.warning("No output.xml found, returning zero stats")
-        return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+        logger.warning("No output.xml found, returning empty stats")
+        return TestResults.empty()
     
     try:
         from robot.api import ExecutionResult
@@ -489,15 +500,15 @@ def _get_test_statistics(self) -> dict[str, Any]:
         result = ExecutionResult(str(output_xml))
         stats = result.statistics.total.all
         
-        return {
-            "total": stats.total,
-            "passed": stats.passed,
-            "failed": stats.failed,
-            "skipped": stats.skipped,
-        }
+        return TestResults(
+            total=stats.total,
+            passed=stats.passed,
+            failed=stats.failed,
+            skipped=stats.skipped,
+        )
     except Exception as e:
         logger.error(f"Failed to read Robot statistics: {e}")
-        return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+        return TestResults.from_error(str(e))
 ```
 
 **Tests to Add** (create `tests/unit/robot/test_orchestrator.py`):
@@ -967,10 +978,9 @@ creating a unified dashboard at the root level.
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
+from nac_test.core.types import CombinedResults
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
-from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -978,13 +988,8 @@ logger = logging.getLogger(__name__)
 class CombinedReportGenerator:
     """Generates combined dashboard across all test frameworks.
     
-    Coordinates:
-    - PyATS API results (stats from MultiArchiveReportGenerator)
-    - PyATS D2D results (stats from MultiArchiveReportGenerator)
-    - Robot Framework results (via RobotReportGenerator)
-    
     Creates root-level combined_summary.html with up to 3 blocks (Robot, API, D2D).
-    Shows blocks with 0 tests (user can hide via Jinja2 conditionals if desired).
+    Accepts CombinedResults directly - no dict transformation needed.
     
     Attributes:
         output_dir: Base output directory for all test results
@@ -1000,76 +1005,66 @@ class CombinedReportGenerator:
         self.output_dir = output_dir
         self.env = get_jinja_environment(TEMPLATES_DIR)
 
-    async def generate_combined_summary(
-        self, pyats_stats: dict[str, dict[str, Any]] | None = None
+    def generate_combined_summary(
+        self, results: CombinedResults | None = None
     ) -> Path | None:
         """Generate combined summary dashboard.
         
         Args:
-            pyats_stats: Optional dict of PyATS statistics by archive type.
-                         Populated by MultiArchiveReportGenerator._collect_pyats_stats()
-                         Format: {"API": {...stats...}, "D2D": {...stats...}}
-                         If None or empty, no PyATS blocks will be shown.
+            results: CombinedResults with api, d2d, robot TestResults.
+                    If None, generates empty dashboard.
         
         Returns:
             Path to combined_summary.html at root level, or None if generation fails
         """
         try:
-            # Initialize overall stats
-            overall_stats = {
-                "total_tests": 0,
-                "passed_tests": 0,
-                "failed_tests": 0,
-                "skipped_tests": 0,
-                "success_rate": 0.0,
-            }
+            if results is None:
+                results = CombinedResults()
             
+            # Build test_type_stats for template (preserving template compatibility)
             test_type_stats = {}
             
-            # Add PyATS results if available
-            if pyats_stats:
-                for archive_type, stats in pyats_stats.items():
-                    # Add to test_type_stats (will be shown as blocks)
-                    test_type_stats[archive_type] = stats
-                    
-                    # Accumulate to overall stats
-                    overall_stats["total_tests"] += stats["total_tests"]
-                    overall_stats["passed_tests"] += stats["passed_tests"]
-                    overall_stats["failed_tests"] += stats["failed_tests"]
-                    overall_stats["skipped_tests"] += stats["skipped_tests"]
+            if results.api is not None:
+                test_type_stats["API"] = {
+                    "title": "API",
+                    "total_tests": results.api.total,
+                    "passed_tests": results.api.passed,
+                    "failed_tests": results.api.failed,
+                    "skipped_tests": results.api.skipped,
+                    "success_rate": results.api.success_rate,
+                    "report_path": "pyats_results/api/html_reports/summary_report.html",
+                }
             
-            # Add Robot Framework results if available
-            robot_output_xml = self.output_dir / "robot_results" / "output.xml"
-            if robot_output_xml.exists():
-                robot_generator = RobotReportGenerator(self.output_dir)
-                robot_stats = robot_generator.get_aggregated_stats()
-                
-                # Always add Robot block (even if 0 tests)
-                # User can add Jinja2 conditionals later to hide empty blocks if desired
+            if results.d2d is not None:
+                test_type_stats["D2D"] = {
+                    "title": "Direct-to-Device (D2D)",
+                    "total_tests": results.d2d.total,
+                    "passed_tests": results.d2d.passed,
+                    "failed_tests": results.d2d.failed,
+                    "skipped_tests": results.d2d.skipped,
+                    "success_rate": results.d2d.success_rate,
+                    "report_path": "pyats_results/d2d/html_reports/summary_report.html",
+                }
+            
+            if results.robot is not None:
                 test_type_stats["ROBOT"] = {
                     "title": "Robot Framework",
-                    "total_tests": robot_stats["total_tests"],
-                    "passed_tests": robot_stats["passed_tests"],
-                    "failed_tests": robot_stats["failed_tests"],
-                    "skipped_tests": robot_stats["skipped_tests"],
-                    "success_rate": robot_stats["success_rate"],
+                    "total_tests": results.robot.total,
+                    "passed_tests": results.robot.passed,
+                    "failed_tests": results.robot.failed,
+                    "skipped_tests": results.robot.skipped,
+                    "success_rate": results.robot.success_rate,
                     "report_path": "robot_results/summary_report.html",
                 }
-                
-                # Accumulate to overall stats
-                overall_stats["total_tests"] += robot_stats["total_tests"]
-                overall_stats["passed_tests"] += robot_stats["passed_tests"]
-                overall_stats["failed_tests"] += robot_stats["failed_tests"]
-                overall_stats["skipped_tests"] += robot_stats["skipped_tests"]
             
-            # Calculate overall success rate
-            total = overall_stats["total_tests"]
-            skipped = overall_stats["skipped_tests"]
-            passed = overall_stats["passed_tests"]
-            
-            tests_with_results = total - skipped
-            if tests_with_results > 0:
-                overall_stats["success_rate"] = (passed / tests_with_results) * 100
+            # Use CombinedResults computed properties for overall stats
+            overall_stats = {
+                "total_tests": results.total,
+                "passed_tests": results.passed,
+                "failed_tests": results.failed,
+                "skipped_tests": results.skipped,
+                "success_rate": results.success_rate,
+            }
             
             # Render combined summary template
             template = self.env.get_template("summary/combined_report.html.j2")
@@ -1083,10 +1078,8 @@ class CombinedReportGenerator:
             combined_summary_path = self.output_dir / "combined_summary.html"
             combined_summary_path.write_text(html_content)
             
-            frameworks_included = ", ".join(test_type_stats.keys())
             logger.info(f"Generated combined dashboard: {combined_summary_path}")
-            logger.info(f"  Total tests across all frameworks: {total}")
-            logger.info(f"  Frameworks included: {frameworks_included or 'none'}")
+            logger.info(f"  Results: {results}")  # Uses __str__: "CombinedResults(API: 30/28/2/0, ...)"
             
             return combined_summary_path
             
@@ -1096,15 +1089,12 @@ class CombinedReportGenerator:
 ```
 
 **Tests to Add** (create `tests/unit/core/reporting/test_combined_generator.py`):
-- Test combined summary with Robot + PyATS API + PyATS D2D
-- Test combined summary with Robot only
-- Test combined summary with PyATS only (API)
-- Test combined summary with PyATS only (D2D)
-- Test with all frameworks having 0 tests
-- Test stats accumulation accuracy
-- Test success rate calculation
-- Test missing robot_results/ directory
-- Test template rendering
+- Test combined summary with CombinedResults(api, d2d, robot)
+- Test combined summary with Robot only (robot attribute set)
+- Test combined summary with PyATS only (api/d2d attributes set)
+- Test combined summary with None results (empty dashboard)
+- Test CombinedResults computed properties used correctly
+- Test template receives correct data structure
 
 ---
 
@@ -1284,46 +1274,51 @@ async def generate_reports_from_archives(
 
 **Changes**:
 
-1. Update `run_tests()` signature to return stats:
+1. Update `run_tests()` signature to return `PyATSResults`:
 
 ```python
-def run_tests(self) -> dict[str, Any]:
+from nac_test.core.types import PyATSResults, TestResults
+
+def run_tests(self) -> PyATSResults:
     """Execute PyATS tests (API and/or D2D).
     
     Returns:
-        Dict with test statistics: {"total": X, "passed": Y, "failed": Z, "skipped": W}
+        PyATSResults with api and d2d TestResults (either may be None)
     """
     # ... existing test discovery and execution code ...
     
     # After report generation, extract stats from report result
-    if report_result.get("pyats_stats"):
-        # Aggregate stats across API and D2D
-        stats = self._aggregate_pyats_stats(report_result["pyats_stats"])
-        return stats
-    else:
-        # No stats available (no successful archives)
-        return {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+    return self._extract_pyats_stats(report_result)
 
-def _aggregate_pyats_stats(
-    self, pyats_stats: dict[str, dict[str, Any]]
-) -> dict[str, Any]:
-    """Aggregate PyATS statistics across API and D2D.
+def _extract_pyats_stats(self, report_result: dict) -> PyATSResults:
+    """Extract PyATSResults from report generation result.
     
     Args:
-        pyats_stats: Dict from MultiArchiveReportGenerator with API/D2D stats
+        report_result: Dict from MultiArchiveReportGenerator
     
     Returns:
-        Aggregated stats dict: {"total": X, "passed": Y, "failed": Z, "skipped": W}
+        PyATSResults with api/d2d TestResults (either may be None)
     """
-    aggregated = {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+    api_results = None
+    d2d_results = None
     
-    for framework, stats in pyats_stats.items():
-        aggregated["total"] += stats["total_tests"]
-        aggregated["passed"] += stats["passed_tests"]
-        aggregated["failed"] += stats["failed_tests"]
-        aggregated["skipped"] += stats["skipped_tests"]
+    if pyats_stats := report_result.get("pyats_stats"):
+        if api_stats := pyats_stats.get("API"):
+            api_results = TestResults(
+                total=api_stats["total_tests"],
+                passed=api_stats["passed_tests"],
+                failed=api_stats["failed_tests"],
+                skipped=api_stats["skipped_tests"],
+            )
+        if d2d_stats := pyats_stats.get("D2D"):
+            d2d_results = TestResults(
+                total=d2d_stats["total_tests"],
+                passed=d2d_stats["passed_tests"],
+                failed=d2d_stats["failed_tests"],
+                skipped=d2d_stats["skipped_tests"],
+            )
     
-    return aggregated
+    return PyATSResults(api=api_results, d2d=d2d_results)
 ```
 
 **Tests to Update**:
@@ -1338,29 +1333,21 @@ def _aggregate_pyats_stats(
 
 **Changes**:
 
-1. Update `run_tests()` signature to return combined stats:
+1. Update `run_tests()` to use typed results:
 
 ```python
-def run_tests(self) -> dict[str, Any]:
+from nac_test.core.types import CombinedResults, PyATSResults, TestResults
+
+def run_tests(self) -> CombinedResults:
     """Main entry point for combined test execution.
     
     Handles development modes (PyATS only, Robot only) and production mode (combined).
     
     Returns:
-        Dict with combined test statistics:
-        {
-            "total": X,
-            "passed": Y,
-            "failed": Z,
-            "skipped": W,
-            "by_framework": {
-                "robot": {"total": ..., "passed": ..., "failed": ..., "skipped": ...},
-                "pyats_api": {...},
-                "pyats_d2d": {...}
-            }
-        }
+        CombinedResults with api, d2d, robot TestResults (any may be None)
     """
     # Note: Output directory and merged data file created by main.py
+    combined_results = CombinedResults()
 
     # Handle development mode (PyATS only)
     if self.dev_pyats_only:
@@ -1374,16 +1361,11 @@ def run_tests(self) -> dict[str, Any]:
         orchestrator = PyATSOrchestrator(...)
         if self.max_parallel_devices is not None:
             orchestrator.max_parallel_devices = self.max_parallel_devices
-        pyats_stats = orchestrator.run_tests()
+        pyats_results = orchestrator.run_tests()  # Returns PyATSResults
         
-        # Return stats
-        return {
-            "total": pyats_stats["total"],
-            "passed": pyats_stats["passed"],
-            "failed": pyats_stats["failed"],
-            "skipped": pyats_stats["skipped"],
-            "by_framework": {},  # Dev mode, no breakdown
-        }
+        combined_results.api = pyats_results.api
+        combined_results.d2d = pyats_results.d2d
+        return combined_results
 
     # Handle development mode (Robot only)
     if self.dev_robot_only:
@@ -1394,33 +1376,15 @@ def run_tests(self) -> dict[str, Any]:
         typer.echo("🤖 Running Robot Framework tests only (development mode)...")
 
         robot_orchestrator = RobotOrchestrator(...)
-        robot_stats = robot_orchestrator.run_tests()
-        
-        # Return stats
-        return {
-            "total": robot_stats["total"],
-            "passed": robot_stats["passed"],
-            "failed": robot_stats["failed"],
-            "skipped": robot_stats["skipped"],
-            "by_framework": {},  # Dev mode, no breakdown
-        }
+        combined_results.robot = robot_orchestrator.run_tests()  # Returns TestResults
+        return combined_results
 
     # Production mode: Combined execution
     has_pyats, has_robot = self._discover_test_types()
 
     if not has_pyats and not has_robot:
         typer.echo("No test files found")
-        return {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "by_framework": {}}
-
-    # Initialize stats tracking
-    combined_stats = {
-        "total": 0,
-        "passed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "by_framework": {},
-    }
-    pyats_stats_for_dashboard = None
+        return combined_results  # Empty CombinedResults
 
     # Sequential execution - PyATS first
     if has_pyats:
@@ -1430,33 +1394,17 @@ def run_tests(self) -> dict[str, Any]:
         orchestrator = PyATSOrchestrator(...)
         if self.max_parallel_devices is not None:
             orchestrator.max_parallel_devices = self.max_parallel_devices
-        pyats_stats = orchestrator.run_tests()
+        pyats_results = orchestrator.run_tests()  # Returns PyATSResults
         
-        # Accumulate stats
-        combined_stats["total"] += pyats_stats["total"]
-        combined_stats["passed"] += pyats_stats["passed"]
-        combined_stats["failed"] += pyats_stats["failed"]
-        combined_stats["skipped"] += pyats_stats["skipped"]
-        
-        # Get detailed stats for dashboard (from MultiArchiveReportGenerator)
-        # This is available from the last report generation
-        pyats_stats_for_dashboard = self._get_pyats_dashboard_stats()
+        combined_results.api = pyats_results.api
+        combined_results.d2d = pyats_results.d2d
 
     # Then Robot
     if has_robot:
         typer.echo("\n🤖 Running Robot Framework tests...\n")
 
         robot_orchestrator = RobotOrchestrator(...)
-        robot_stats = robot_orchestrator.run_tests()
-        
-        # Accumulate stats
-        combined_stats["total"] += robot_stats["total"]
-        combined_stats["passed"] += robot_stats["passed"]
-        combined_stats["failed"] += robot_stats["failed"]
-        combined_stats["skipped"] += robot_stats["skipped"]
-        
-        # Add to by_framework breakdown
-        combined_stats["by_framework"]["robot"] = robot_stats
+        combined_results.robot = robot_orchestrator.run_tests()  # Returns TestResults
         
         # Generate Robot summary report
         if not self.render_only and not self.dry_run:
@@ -1473,7 +1421,7 @@ def run_tests(self) -> dict[str, Any]:
                 typer.echo(f"   ✅ {summary_path}")
 
     # Generate combined dashboard if any tests ran
-    if has_pyats or has_robot:
+    if not combined_results.is_empty:
         typer.echo("\n📊 Generating combined dashboard...")
         from nac_test.core.reporting.combined_generator import CombinedReportGenerator
         import asyncio
@@ -1481,43 +1429,21 @@ def run_tests(self) -> dict[str, Any]:
         combined_generator = CombinedReportGenerator(self.output_dir)
         loop = asyncio.get_event_loop()
         combined_path = loop.run_until_complete(
-            combined_generator.generate_combined_summary(pyats_stats_for_dashboard)
+            combined_generator.generate_combined_summary(combined_results)
         )
         if combined_path:
             typer.echo(f"   ✅ Combined dashboard: {combined_path}")
 
-    # Print summary
-    self._print_execution_summary(has_pyats, has_robot, combined_stats)
+    # Print summary using CombinedResults computed properties
+    self._print_execution_summary(combined_results)
     
-    return combined_stats
+    return combined_results
 
-def _get_pyats_dashboard_stats(self) -> dict[str, dict[str, Any]] | None:
-    """Get detailed PyATS stats for dashboard from last report generation.
-    
-    This reads the pyats_stats returned by MultiArchiveReportGenerator.
-    Since we just ran report generation, we can access it from the orchestrator.
-    
-    Returns:
-        Dict with API/D2D stats, or None if not available
-    """
-    # Implementation depends on how we store/access the report result
-    # Option 1: Store as instance variable in PyATSOrchestrator
-    # Option 2: Read from a temporary file
-    # Option 3: Re-collect from JSONL (inefficient, avoid)
-    
-    # For now, assuming we store it in PyATSOrchestrator
-    # This needs to be implemented based on PyATSOrchestrator refactor
-    pass
-
-def _print_execution_summary(
-    self, has_pyats: bool, has_robot: bool, stats: dict[str, Any]
-) -> None:
+def _print_execution_summary(self, results: CombinedResults) -> None:
     """Print execution summary with statistics.
     
     Args:
-        has_pyats: Whether PyATS tests were executed
-        has_robot: Whether Robot tests were executed
-        stats: Combined statistics dictionary
+        results: CombinedResults with api, d2d, robot TestResults
     """
     if self.dev_pyats_only or self.dev_robot_only:
         return
@@ -1526,49 +1452,42 @@ def _print_execution_summary(
     typer.echo("📋 Combined Test Execution Summary")
     typer.echo("=" * 70)
     
-    # Show overall stats
+    # Show overall stats using CombinedResults computed properties
     typer.echo(f"\n📊 Overall Results:")
-    typer.echo(f"   Total: {stats['total']} tests")
-    typer.echo(f"   ✅ Passed: {stats['passed']}")
-    typer.echo(f"   ❌ Failed: {stats['failed']}")
-    typer.echo(f"   ⊘ Skipped: {stats['skipped']}")
+    typer.echo(f"   Total: {results.total} tests")
+    typer.echo(f"   ✅ Passed: {results.passed}")
+    typer.echo(f"   ❌ Failed: {results.failed}")
+    typer.echo(f"   ⊘ Skipped: {results.skipped}")
     
     # Combined dashboard is the main entry point
     typer.echo("\n🎯 Combined Dashboard:")
     typer.echo(f"   📊 {self.output_dir}/combined_summary.html")
     typer.echo("   (Aggregated results from all test frameworks)")
 
-    if has_robot:
-        robot_stats = stats["by_framework"].get("robot", {})
+    if results.robot:
         typer.echo("\n✅ Robot Framework tests: Completed")
         typer.echo(f"   📁 Results: {self.output_dir}/robot_results/")
-        if robot_stats:
-            typer.echo(
-                f"   📊 {robot_stats['total']} tests: "
-                f"{robot_stats['passed']} passed, {robot_stats['failed']} failed"
-            )
+        typer.echo(
+            f"   📊 {results.robot.total} tests: "
+            f"{results.robot.passed} passed, {results.robot.failed} failed"
+        )
         if not self.render_only:
             typer.echo(f"   📊 Summary: {self.output_dir}/robot_results/summary_report.html")
             typer.echo(f"   📊 Detailed: {self.output_dir}/robot_results/log.html")
 
-    if has_pyats:
+    if results.api or results.d2d:
         typer.echo("\n✅ PyATS tests: Completed")
         typer.echo(f"   📁 Results: {self.output_dir}/pyats_results/")
-        api_dir = self.output_dir / "pyats_results" / "api" / "html_reports" / "summary_report.html"
-        d2d_dir = self.output_dir / "pyats_results" / "d2d" / "html_reports" / "summary_report.html"
-        if api_dir.exists():
-            typer.echo(f"   📊 API Summary: {api_dir}")
-        if d2d_dir.exists():
-            typer.echo(f"   📊 D2D Summary: {d2d_dir}")
+        if results.api:
+            typer.echo(f"   📊 API: {results.api.total} tests ({results.api.passed} passed)")
+        if results.d2d:
+            typer.echo(f"   📊 D2D: {results.d2d.total} tests ({results.d2d.passed} passed)")
 
     typer.echo(f"\n📄 Merged data model: {self.output_dir}/{self.merged_data_filename}")
     typer.echo("=" * 70)
 ```
 
-**Note**: The `_get_pyats_dashboard_stats()` method needs coordination with PyATSOrchestrator to pass the stats. This could be done by:
-- Storing pyats_stats as instance variable in PyATSOrchestrator
-- Passing it through the return value (already done)
-- Or having CombinedOrchestrator call MultiArchiveReportGenerator directly
+**Note**: The `_get_pyats_dashboard_stats()` method is no longer needed since `PyATSOrchestrator.run_tests()` now returns `PyATSResults` directly with the api/d2d breakdown.
 
 **Tests to Update**:
 - Update existing combined orchestrator tests to check return value
@@ -1586,9 +1505,11 @@ def _print_execution_summary(
 
 **Changes**:
 
-1. Update main CLI entry point to use returned stats (for issue #469):
+1. Update main CLI entry point to use returned CombinedResults (for issue #469):
 
 ```python
+from nac_test.core.types import CombinedResults
+
 @cli.command()
 @click.pass_context
 def run(...):
@@ -1597,20 +1518,20 @@ def run(...):
     
     # Create and run orchestrator
     orchestrator = CombinedOrchestrator(...)
-    stats = orchestrator.run_tests()  # Now returns stats
+    results = orchestrator.run_tests()  # Returns CombinedResults
     
-    # Use stats for exit code (issue #469)
-    if stats["failed"] > 0:
+    # Use CombinedResults computed properties for exit code (issue #469)
+    if results.has_failures:
         typer.echo(
-            f"\n❌ Tests failed: {stats['failed']} out of {stats['total']} tests",
+            f"\n❌ Tests failed: {results.failed} out of {results.total} tests",
             err=True
         )
-        raise typer.Exit(1)
-    elif stats["total"] == 0:
+        raise typer.Exit(results.exit_code)  # Uses CombinedResults.exit_code property
+    elif results.is_empty:
         typer.echo("\n⚠️  No tests were executed", err=True)
         raise typer.Exit(1)
     else:
-        typer.echo(f"\n✅ All tests passed: {stats['passed']} out of {stats['total']} tests")
+        typer.echo(f"\n✅ All tests passed: {results.passed} out of {results.total} tests")
         raise typer.Exit(0)
 ```
 

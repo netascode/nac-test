@@ -1720,8 +1720,13 @@ class CombinedOrchestrator:
         self.dev_robot_only = dev_robot_only
         # ... initialization ...
 
-    def run_tests(self) -> None:
-        """Main entry point for combined test execution."""
+    def run_tests(self) -> CombinedResults:
+        """Main entry point for combined test execution.
+
+        Returns:
+            CombinedResults: Aggregated results with api, d2d, and robot TestResults.
+        """
+        results = CombinedResults()
 
         # DEVELOPMENT MODE: PyATS only
         if self.dev_pyats_only:
@@ -1730,8 +1735,10 @@ class CombinedOrchestrator:
                 fg=typer.colors.YELLOW
             )
             orchestrator = PyATSOrchestrator(...)
-            orchestrator.run_tests()
-            return
+            pyats_results = orchestrator.run_tests()  # Returns PyATSResults
+            results.api = pyats_results.api
+            results.d2d = pyats_results.d2d
+            return results
 
         # DEVELOPMENT MODE: Robot only
         if self.dev_robot_only:
@@ -1740,8 +1747,8 @@ class CombinedOrchestrator:
                 fg=typer.colors.YELLOW
             )
             robot_orchestrator = RobotOrchestrator(...)
-            robot_orchestrator.run_tests()
-            return
+            results.robot = robot_orchestrator.run_tests()  # Returns TestResults
+            return results
 
         # PRODUCTION MODE: Combined execution
         has_pyats, has_robot = self._discover_test_types()
@@ -1749,14 +1756,17 @@ class CombinedOrchestrator:
         if has_pyats:
             typer.echo("\n🧪 Running PyATS tests...\n")
             orchestrator = PyATSOrchestrator(...)
-            orchestrator.run_tests()
+            pyats_results = orchestrator.run_tests()  # Returns PyATSResults
+            results.api = pyats_results.api
+            results.d2d = pyats_results.d2d
 
         if has_robot:
             typer.echo("\n🤖 Running Robot Framework tests...\n")
             robot_orchestrator = RobotOrchestrator(...)
-            robot_orchestrator.run_tests()
+            results.robot = robot_orchestrator.run_tests()  # Returns TestResults
 
-        self._print_execution_summary(has_pyats, has_robot)
+        self._print_execution_summary(results)
+        return results
 ```
 
 **Key Design Decision**: CombinedOrchestrator does NOT merge data files or create merged data model. The CLI (`main.py`) creates the merged data model **once** before orchestrator initialization, establishing a Single Source of Truth shared across both PyATS and Robot frameworks. This eliminates redundant merging and ensures consistency.
@@ -1869,8 +1879,13 @@ PyATSOrchestrator separates tests into two execution strategies:
 **Core run_tests() Orchestration:**
 
 ```python
-async def run_tests(self) -> None:
-    """Main orchestration entry point."""
+def run_tests(self) -> PyATSResults:
+    """Main orchestration entry point.
+
+    Returns:
+        PyATSResults: Contains api and d2d TestResults (may be None if not executed).
+    """
+    results = PyATSResults()
 
     # PHASE 1: Pre-flight checks
     EnvironmentValidator.validate_controller_environment()
@@ -1900,9 +1915,11 @@ async def run_tests(self) -> None:
 
     if api_test_files:
         api_archive = await self._execute_api_tests_standard(api_test_files)
+        results.api = self._extract_stats_from_archive(api_archive)  # Returns TestResults
 
     if d2d_test_files and devices:
         d2d_archive = await self._execute_ssh_tests_device_centric(d2d_test_files, devices)
+        results.d2d = self._extract_stats_from_archive(d2d_archive)  # Returns TestResults
 
     # PHASE 6: Generate HTML reports
     archives = [a for a in [api_archive, d2d_archive] if a is not None]
@@ -1916,8 +1933,9 @@ async def run_tests(self) -> None:
     cleanup_pyats_runtime()
     cleanup_old_test_outputs(self.output_dir)
 
-    # PHASE 8: Summary
-    self.summary_printer.print_summary(...)
+    # PHASE 8: Summary and return results
+    self.summary_printer.print_summary(results)
+    return results
 ```
 
 ---
@@ -2737,21 +2755,26 @@ class MonolithicOrchestrator:
 **Alternative 2: Lightweight Coordinator (Current)**
 ```python
 class CombinedOrchestrator:
-    def run_tests(self):
-        # Simple delegation (40 lines)
+    def run_tests(self) -> CombinedResults:
+        # Simple delegation with typed results (40 lines)
+        results = CombinedResults()
+
         if dev_pyats_only:
-            PyATSOrchestrator(...).run_tests()
-            return
+            pyats_results = PyATSOrchestrator(...).run_tests()  # Returns PyATSResults
+            results.api, results.d2d = pyats_results.api, pyats_results.d2d
+            return results
 
         if dev_robot_only:
-            RobotOrchestrator(...).run_tests()
-            return
+            results.robot = RobotOrchestrator(...).run_tests()  # Returns TestResults
+            return results
 
         # Production: sequential execution
         if has_pyats:
-            PyATSOrchestrator(...).run_tests()
+            pyats_results = PyATSOrchestrator(...).run_tests()  # Returns PyATSResults
+            results.api, results.d2d = pyats_results.api, pyats_results.d2d
         if has_robot:
-            RobotOrchestrator(...).run_tests()
+            results.robot = RobotOrchestrator(...).run_tests()  # Returns TestResults
+        return results
 ```
 
 **Benefits:**
@@ -24715,8 +24738,9 @@ if self.dev_pyats_only:
     )
     if self.max_parallel_devices is not None:
         orchestrator.max_parallel_devices = self.max_parallel_devices
-    orchestrator.run_tests()
-    return  # Exit immediately - skip Robot Framework entirely
+    pyats_results = orchestrator.run_tests()  # Returns PyATSResults
+    # Results available: pyats_results.api, pyats_results.d2d (each is TestResults or None)
+    return CombinedResults(api=pyats_results.api, d2d=pyats_results.d2d)
 ```
 
 **What Gets Skipped**:
@@ -24843,8 +24867,9 @@ if self.dev_robot_only:
         dry_run=self.dry_run,
         verbosity=self.verbosity,
     )
-    robot_orchestrator.run_tests()
-    return  # Exit immediately - skip PyATS entirely
+    robot_results = robot_orchestrator.run_tests()  # Returns TestResults
+    # Results available: robot_results.total, .passed, .failed, .skipped
+    return CombinedResults(robot=robot_results)
 ```
 
 **What Gets Skipped**:
@@ -24933,11 +24958,12 @@ Speedup primarily from skipping PyATS overhead (broker startup, parallel executi
 # Production mode: Combined execution
 # Discover test types (simple existence checks)
 has_pyats, has_robot = self._discover_test_types()
+results = CombinedResults()
 
 # Handle empty scenarios
 if not has_pyats and not has_robot:
     typer.echo("No test files found (no *.py PyATS tests or *.robot templates)")
-    return
+    return results  # Empty CombinedResults
 
 # Sequential execution - each orchestrator manages its own directory structure
 if has_pyats:
@@ -24953,7 +24979,9 @@ if has_pyats:
     )
     if self.max_parallel_devices is not None:
         orchestrator.max_parallel_devices = self.max_parallel_devices
-    orchestrator.run_tests()
+    pyats_results = orchestrator.run_tests()  # Returns PyATSResults
+    results.api = pyats_results.api
+    results.d2d = pyats_results.d2d
 
 if has_robot:
     typer.echo("\n🤖 Running Robot Framework tests...\n")
@@ -24972,10 +25000,11 @@ if has_robot:
         dry_run=self.dry_run,
         verbosity=self.verbosity,
     )
-    robot_orchestrator2.run_tests()
+    results.robot = robot_orchestrator2.run_tests()  # Returns TestResults
 
-# Summary
-self._print_execution_summary(has_pyats, has_robot)
+# Summary - now uses CombinedResults with computed properties
+self._print_execution_summary(results)
+return results
 ```
 
 **Test Discovery Mechanism** (from `combined_orchestrator.py:186-213`):
