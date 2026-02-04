@@ -12,12 +12,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from nac_test.core.types import CombinedResults
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
-
-if TYPE_CHECKING:
-    from nac_test.core.types import CombinedResults
 
 logger = logging.getLogger(__name__)
 
