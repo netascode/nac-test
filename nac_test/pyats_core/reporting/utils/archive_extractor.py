@@ -14,6 +14,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+from nac_test.pyats_core.reporting.utils.archive_security import validate_archive_paths
+
 logger = logging.getLogger(__name__)
 
 
@@ -62,9 +64,14 @@ class ArchiveExtractor:
         # Extract archive
         try:
             with zipfile.ZipFile(archive_path, "r") as zip_ref:
+                # Validate archive paths before extraction (Zip Slip protection)
+                validate_archive_paths(zip_ref, extract_dir)
                 zip_ref.extractall(extract_dir)
             logger.info(f"Extracted {archive_path} to {extract_dir}")
             return extract_dir
+        except ValueError as e:
+            logger.error(f"Security error extracting {archive_path}: {e}")
+            return None
         except Exception as e:
             logger.error(f"Failed to extract {archive_path}: {e}")
             return None
@@ -113,6 +120,8 @@ class ArchiveExtractor:
 
             # Extract the existing archive
             with zipfile.ZipFile(latest_archive, "r") as zip_ref:
+                # Validate archive paths before extraction (Zip Slip protection)
+                validate_archive_paths(zip_ref, temp_path)
                 zip_ref.extractall(temp_path)
 
             # Copy HTML reports into the extracted content

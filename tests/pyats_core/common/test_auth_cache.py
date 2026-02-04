@@ -62,13 +62,22 @@ def mock_auth_cache_dir(mocker: "MockerFixture", tmp_path: Path) -> Path:
 def mock_fcntl(mocker: "MockerFixture") -> Any:
     """Fixture to mock file locking operations.
 
+    Note: This fixture now mocks filelock.FileLock instead of fcntl.flock,
+    as the implementation was changed to use the cross-platform filelock
+    library for Windows/macOS/Linux compatibility.
+
     Args:
         mocker: Pytest mocker fixture for creating mocks.
 
     Returns:
-        Mock object for fcntl.flock operations.
+        Mock object for FileLock context manager.
     """
-    return mocker.patch("fcntl.flock")
+    mock_lock = mocker.MagicMock()
+    mock_lock.__enter__ = mocker.MagicMock(return_value=None)
+    mock_lock.__exit__ = mocker.MagicMock(return_value=None)
+    return mocker.patch(
+        "nac_test.pyats_core.common.auth_cache.FileLock", return_value=mock_lock
+    )
 
 
 @pytest.fixture
@@ -513,12 +522,12 @@ class TestAuthCacheInternal:
     ) -> None:
         """Test that file locking is properly called during cache operations.
 
-        This test verifies that fcntl.flock is called with the correct
-        parameters to ensure thread/process safety during cache operations.
+        This test verifies that FileLock is used as a context manager
+        to ensure thread/process safety during cache operations.
 
         Args:
             mock_auth_cache_dir: Mocked auth cache directory path.
-            mock_fcntl: Mocked file locking.
+            mock_fcntl: Mocked file locking (FileLock).
             mock_time: Mocked time.time() for consistent testing.
             sample_auth_func: Mock authentication function.
         """
@@ -534,13 +543,14 @@ class TestAuthCacheInternal:
             extract_token=True,
         )
 
-        # Assert
+        # Assert - FileLock should be instantiated with the lock file path
         mock_fcntl.assert_called_once()
-        # Verify it was called with LOCK_EX (exclusive lock)
-        import fcntl
-
+        # Verify FileLock was used as context manager
         call_args = mock_fcntl.call_args
-        assert call_args[0][1] == fcntl.LOCK_EX
+        lock_file_path = call_args[0][0]
+        assert lock_file_path.endswith(".lock"), (
+            f"Expected .lock file, got: {lock_file_path}"
+        )
 
     def test_cache_file_permissions(
         self,
