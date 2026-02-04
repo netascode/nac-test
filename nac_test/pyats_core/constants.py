@@ -4,6 +4,7 @@
 """PyATS-specific constants and configuration."""
 
 import os
+import platform
 import tempfile
 
 from nac_test.core.constants import (
@@ -41,6 +42,34 @@ JOB_RETRY_ATTEMPTS = 1  # Retry failed jobs once
 # PyATS subprocess output handling
 DEFAULT_BUFFER_LIMIT = 10 * 1024 * 1024  # 10MB - handles large PyATS output lines
 
+# Platform detection for macOS-specific behavior
+IS_MACOS: bool = platform.system() == "Darwin"
+
+# Sentinel-based IPC synchronization timeout (seconds)
+# Expected sync time: <100ms under normal conditions
+# This timeout protects against deadlock if sentinel mechanism fails
+# Default: 5.0 seconds (50x expected latency, should never be hit under normal operation)
+_sentinel_timeout_env = os.getenv("NAC_TEST_SENTINEL_TIMEOUT", "5.0")
+try:
+    SENTINEL_TIMEOUT_SECONDS: float = float(_sentinel_timeout_env)
+    if SENTINEL_TIMEOUT_SECONDS <= 0:
+        raise ValueError("Timeout must be positive")
+except ValueError:
+    SENTINEL_TIMEOUT_SECONDS = 5.0  # Fallback to safe default
+
+# macOS subprocess pipe drain configuration (secondary fallback for backward compatibility)
+# Used as fallback when sentinel-based synchronization is unavailable (e.g., old plugins
+# that don't emit sentinels). Prefer sentinel-based sync when possible.
+# macOS has different pipe buffering behavior that requires extra time for kernel flush
+# Default: 100ms on macOS (balances reliability vs performance), 1ms on Linux
+# These values can be overridden via environment variables for CI tuning
+PIPE_DRAIN_DELAY_SECONDS: float = float(
+    os.getenv("NAC_TEST_PIPE_DRAIN_DELAY", "0.1" if IS_MACOS else "0.001")
+)
+PIPE_DRAIN_TIMEOUT_SECONDS: float = float(
+    os.getenv("NAC_TEST_PIPE_DRAIN_TIMEOUT", "2.0")
+)
+
 # Re-export all constants for backward compatibility
 __all__ = [
     # From core
@@ -67,4 +96,9 @@ __all__ = [
     "JOB_RETRY_ATTEMPTS",
     # Subprocess handling
     "DEFAULT_BUFFER_LIMIT",
+    # Platform detection, sentinel sync, and pipe drain configuration
+    "IS_MACOS",
+    "SENTINEL_TIMEOUT_SECONDS",
+    "PIPE_DRAIN_DELAY_SECONDS",
+    "PIPE_DRAIN_TIMEOUT_SECONDS",
 ]
