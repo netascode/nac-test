@@ -20,7 +20,6 @@ class E2EScenario:
         description: Human-readable description of what this scenario tests.
         data_path: Path to the data.yaml fixture file.
         templates_path: Path to the templates fixture directory.
-        robot_variable: Optional Robot Framework variable (e.g., "SHOULD_FAIL:true").
         requires_testbed: Whether this scenario requires a --testbed argument (D2D tests).
         architecture: The network architecture (SDWAN, ACI, CC) - determines env vars.
 
@@ -45,7 +44,6 @@ class E2EScenario:
     description: str
     data_path: str
     templates_path: str
-    robot_variable: str | None = None
     requires_testbed: bool = True  # D2D tests require testbed, Robot/API-only don't
     architecture: str = (
         ""  # Controller type: "SDWAN", "ACI", "CC" - determines env var prefix
@@ -206,7 +204,6 @@ SUCCESS_SCENARIO = E2EScenario(
     description="All tests pass - Robot (1 pass) + PyATS API (1 pass) + PyATS D2D (1 pass)",
     data_path=f"{_FIXTURE_BASE}/success/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/success/templates",
-    robot_variable="SHOULD_FAIL:false",
     architecture="SDWAN",
     expected_exit_code=0,
     expected_robot_passed=1,
@@ -224,7 +221,6 @@ ALL_FAIL_SCENARIO = E2EScenario(
     description="All tests fail - Robot (1 fail) + PyATS API (1 fail) + PyATS D2D (1 fail)",
     data_path=f"{_FIXTURE_BASE}/failure/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/failure/templates",
-    robot_variable="SHOULD_FAIL:true",
     architecture="SDWAN",
     expected_exit_code=1,
     expected_robot_passed=0,
@@ -242,7 +238,6 @@ MIXED_SCENARIO = E2EScenario(
     description="Mixed results - Robot (1 pass, 1 fail) + PyATS API (0 pass, 1 fail) + PyATS D2D (1 pass, 0 fail)",
     data_path=f"{_FIXTURE_BASE}/mixed/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/mixed/templates",
-    robot_variable=None,  # Test file has explicit pass/fail cases
     architecture="SDWAN",
     expected_exit_code=1,
     expected_robot_passed=1,
@@ -260,7 +255,6 @@ ROBOT_ONLY_SCENARIO = E2EScenario(
     description="Robot Framework only - 1 passing test, no PyATS tests",
     data_path=f"{_FIXTURE_BASE}/robot_only/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/robot_only/templates",
-    robot_variable="SHOULD_FAIL:false",
     requires_testbed=False,  # No D2D tests, no testbed needed
     architecture="SDWAN",
     expected_exit_code=0,

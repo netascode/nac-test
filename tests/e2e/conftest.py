@@ -157,10 +157,6 @@ def _run_e2e_scenario(
     if scenario.requires_testbed and sdwan_user_testbed:
         cli_args.extend(["--testbed", sdwan_user_testbed])
 
-    # Add Robot variable if specified
-    if scenario.robot_variable:
-        cli_args.extend(["--variable", scenario.robot_variable])
-
     # Execute CLI
     runner = CliRunner()
     result = runner.invoke(nac_test.cli.main.app, cli_args)
