@@ -142,8 +142,8 @@ class CombinedOrchestrator:
         """
         # Note: Output directory and merged data file created by main.py
 
-        # Print dev mode warnings if applicable
-        if self.dev_pyats_only:
+        # Print dev mode warnings if applicable (skip in render-only mode)
+        if self.dev_pyats_only and not self.render_only:
             typer.secho(
                 "\n\n⚠️  WARNING: --pyats flag is for development use only. "
                 "Production runs should use combined execution.",
@@ -231,7 +231,6 @@ class CombinedOrchestrator:
                 # Record error in robot results
                 combined_results.robot = TestResults.from_error(str(e))
 
-        # Generate combined dashboard and print summary (unless render_only mode)
         if not self.render_only:
             typer.echo("\n📊 Generating combined dashboard...")
             logger.debug(
