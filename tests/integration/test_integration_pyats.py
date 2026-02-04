@@ -235,3 +235,94 @@ def test_nac_test_pyats_quicksilver_api_d2d(
 
         # we have one API test and one D2D test, but the latter with two devices
         _validate_pyats_results(outputdir, passed=passed, failed=failed)
+
+
+@pytest.mark.parametrize(
+    "arch,passed,failed,expected_rc",
+    [
+        ("sdwan", 3, 0, 0),
+    ],
+)
+def test_nac_test_pyats_quicksilver_api_d2d_with_testbed(
+    mock_api_server: MockAPIServer,
+    tmpdir: str,
+    arch: str,
+    passed: int,
+    failed: int,
+    expected_rc: int,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Verify nac-test for architectures with both API and D2D tests using user testbed.
+
+    Uses the new --testbed feature to provide custom device connection information
+    via a user-provided testbed.yaml instead of patching the resolver.
+    """
+    # Get absolute path to project root to construct path to mock_unicon.py
+    project_root = Path(__file__).parent.parent.parent.absolute()
+    mock_script = project_root / "tests" / "integration" / "mocks" / "mock_unicon.py"
+
+    # Create a user testbed YAML with mock device connections
+    # Devices sd-dc-c8kv-01 and sd-dc-c8kv-02 are from the SDWAN fixture data
+    user_testbed_yaml = f"""
+testbed:
+  name: integration_test_testbed
+  credentials:
+    default:
+      username: admin
+      password: admin
+
+devices:
+  sd-dc-c8kv-01:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        command: python {mock_script} iosxe --hostname sd-dc-c8kv-01
+
+  sd-dc-c8kv-02:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        command: python {mock_script} iosxe --hostname sd-dc-c8kv-02
+"""
+
+    # Write user testbed to temp file
+    testbed_path = Path(tmpdir) / "user_testbed.yaml"
+    with open(testbed_path, "w") as f:
+        f.write(user_testbed_yaml)
+
+    runner = CliRunner()
+
+    # Set up environment for both API (SDWAN_*) and D2D (IOSXE_*) tests
+    monkeypatch.setenv(f"{arch.upper()}_URL", mock_api_server.url)
+    monkeypatch.setenv(f"{arch.upper()}_USERNAME", "does not matter")
+    monkeypatch.setenv(f"{arch.upper()}_PASSWORD", "does not matter")
+    monkeypatch.setenv("IOSXE_USERNAME", "admin")
+    monkeypatch.setenv("IOSXE_PASSWORD", "admin")
+
+    data_path = f"tests/integration/fixtures/data_pyats_qs/{arch}"
+    templates_path = f"tests/integration/fixtures/templates_pyats_qs/{arch}/"
+
+    outputdir = tmpdir
+
+    result: Result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            outputdir,
+            "--testbed",
+            str(testbed_path),
+            "--verbosity",
+            "DEBUG",
+        ],
+    )
+    assert result.exit_code == expected_rc
+
+    # we have one API test and one D2D test, but the latter with two devices
+    _validate_pyats_results(outputdir, passed=passed, failed=failed)

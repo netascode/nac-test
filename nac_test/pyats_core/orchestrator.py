@@ -56,6 +56,7 @@ class PyATSOrchestrator:
         output_dir: Path,
         merged_data_filename: str,
         minimal_reports: bool = False,
+        custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
     ):
         """Initialize the PyATS orchestrator.
@@ -66,6 +67,7 @@ class PyATSOrchestrator:
             output_dir: Base output directory (orchestrator creates pyats_results subdirectory)
             merged_data_filename: Name of the merged data model file
             minimal_reports: Only include command outputs for failed/errored tests in reports
+            custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
                 If not provided, will be detected automatically.
         """
@@ -79,6 +81,7 @@ class PyATSOrchestrator:
         )  # PyATS works in its own subdirectory
         self.merged_data_filename = merged_data_filename
         self.minimal_reports = minimal_reports
+        self.custom_testbed_path = custom_testbed_path
 
         # Track test status by type for combined summary
         self.api_test_status: dict[str, dict[str, Any]] = {}
@@ -349,7 +352,9 @@ class PyATSOrchestrator:
         logger.info(f"Creating consolidated testbed for {len(devices)} devices")
         try:
             consolidated_testbed_yaml = (
-                TestbedGenerator.generate_consolidated_testbed_yaml(devices)
+                TestbedGenerator.generate_consolidated_testbed_yaml(
+                    devices, base_testbed_path=self.custom_testbed_path
+                )
             )
 
             # Write testbed to temporary file
@@ -403,6 +408,7 @@ class PyATSOrchestrator:
                 self.d2d_test_status,  # Use d2d_test_status for device tests
                 self.test_dir,
                 self.base_output_dir,
+                self.custom_testbed_path,
             )
 
         # Use a local narrowed variable to satisfy mypy

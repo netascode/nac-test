@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 import tempfile
 import time
@@ -761,15 +762,27 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         """Generate unique test ID based on class name and timestamp.
 
         Creates a unique identifier for this test execution using the
-        test class name and current timestamp.
+        test class name and current timestamp. For D2D tests, includes
+        the device hostname for better file organization.
 
         Returns:
-            Unique test ID string in format: classname_YYYYMMDD_HHMMSS_mmm
+            Unique test ID string in format:
+            - D2D tests: classname_hostname_YYYYMMDD_HHMMSS_mmm
+            - API tests: classname_YYYYMMDD_HHMMSS_mmm
         """
         class_name = self.__class__.__name__.lower()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[
             :-3
         ]  # Millisecond precision
+
+        # For D2D tests, include hostname in test_id for clearer filenames
+        # The HOSTNAME environment variable is set by device_executor for d2d tests
+        hostname = os.environ.get("HOSTNAME")
+        if hostname:
+            # Sanitize hostname for safe filename use - replace non-alphanumeric chars with underscore
+            safe_hostname = re.sub(r"[^a-zA-Z0-9]", "_", hostname).lower()
+            return f"{class_name}_{safe_hostname}_{timestamp}"
+
         return f"{class_name}_{timestamp}"
 
     def load_data_model(self) -> dict[str, Any]:

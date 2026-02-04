@@ -28,6 +28,12 @@ class SSHTestBase(NACTestBase):
     #TODO: Move this to its own thing to better adhere for SRP. Hustling the MVP.
     """
 
+    # Instance variables set during setup (type annotations for mypy)
+    connection: BrokerCommandExecutor | Any | None = (
+        None  # BrokerCommandExecutor or testbed device
+    )
+    broker_client: BrokerClient
+
     @property
     def testbed(self) -> Any | None:
         """Access the PyATS testbed object if available.
@@ -152,34 +158,32 @@ class SSHTestBase(NACTestBase):
         # Store hostname early so testbed_device property can use it
         self.hostname = hostname
 
+        # Add hostname to metadata as a separate field for d2d tests
+        # Do this BEFORE connection attempt so it's set even if connection fails
+        if hasattr(self, "result_collector") and hasattr(
+            self.result_collector, "metadata"
+        ):
+            self.result_collector.metadata["hostname"] = hostname
+
         # The rest of the setup is async, we'll run it in the event loop
         try:
-            # Try to get existing event loop, create one if needed
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                # No event loop running, create and run async setup
-                asyncio.run(self._async_setup(hostname))
-                return
-            # If we have a running loop, use run_until_complete
+            # Get or create event loop for Python 3.10+ compatibility
+            loop = get_or_create_event_loop()
             loop.run_until_complete(self._async_setup(hostname))
         except ConnectionError as e:
             # Connection failed - fail the test with clear message
             self.failed(str(e))
+            return
 
     async def _async_setup(self, hostname: str) -> None:
         """Helper for async setup operations with connection error handling."""
         try:
-            # Check if we have a testbed device available
-            if self.testbed_device:
-                # Connect via testbed to enable Genie features
-                self.logger.info(f"Connecting to device {hostname} via PyATS testbed")
-                loop = get_or_create_event_loop()
-                await loop.run_in_executor(None, self.testbed_device.connect)
-                # Store the testbed device connection for command execution
-                self.connection = self.testbed_device
-            else:
+            # Check if broker is active (priority over testbed to enable connection pooling)
+            broker_active = "NAC_TEST_BROKER_SOCKET" in os.environ
+
+            if broker_active:
                 # Use broker client for connection management
+                # Testbed may still be available for Genie parsers
                 self.logger.info(
                     f"Connecting to device {hostname} via connection broker"
                 )
@@ -191,6 +195,18 @@ class SSHTestBase(NACTestBase):
 
                 # Ensure device connection through broker
                 await self.connection.connect()
+            elif self.testbed_device:
+                # Connect via testbed to enable Genie features
+                self.logger.info(f"Connecting to device {hostname} via PyATS testbed")
+                loop = get_or_create_event_loop()
+                await loop.run_in_executor(None, self.testbed_device.connect)
+                # Store the testbed device connection for command execution
+                self.connection = self.testbed_device
+            else:
+                raise ConnectionError(
+                    f"No connection method available for device {hostname}: "
+                    "broker not active and testbed not available"
+                )
 
         except Exception as e:
             # Connection failed - raise exception to be caught in setup_ssh_context
@@ -369,24 +385,28 @@ class SSHTestBase(NACTestBase):
 
         try:
             # Call the base class generic orchestration
-            results = loop.run_until_complete(self.run_verification_async())  # type: ignore[no-untyped-call]
+            results = loop.run_until_complete(self.run_verification_async())
 
             # Process results using smart configuration-driven processing
-            self.process_results_smart(results, steps)  # type: ignore[no-untyped-call]
+            self.process_results_smart(results, steps)
 
         finally:
             # SSH-specific cleanup
             try:
-                # Disconnect broker client if it exists
-                if hasattr(self, "broker_client") and self.broker_client:
-                    self.logger.debug("Disconnecting broker client")
-                    loop.run_until_complete(self.broker_client.disconnect())
+                # NOTE: When using broker, do NOT disconnect here!
+                # The broker manages connection lifecycle and keeps connections alive
+                # across tests for pooling efficiency.
+                # The broker will clean up all connections when it shuts down.
 
-                # Disconnect the connection if using broker executor
-                if hasattr(self, "connection") and isinstance(
-                    self.connection, BrokerCommandExecutor
+                # Only disconnect for non-broker connections
+                if (
+                    self.connection is not None
+                    and not isinstance(self.connection, BrokerCommandExecutor)
+                    and hasattr(
+                        self.connection, "disconnect"
+                    )  # Check duck-typed method on external PyATS object
                 ):
-                    self.logger.debug("Disconnecting broker command executor")
+                    self.logger.debug("Disconnecting non-broker connection")
                     loop.run_until_complete(self.connection.disconnect())
 
             except Exception as e:
