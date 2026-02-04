@@ -82,7 +82,7 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       matrix:
         python:
@@ -105,7 +105,10 @@ jobs:
       - name: Test
         run: |
           uv sync --extra dev --extra adapters    # --extra adapters will pull in nac-test-pyats-common
-          uv run pytest
+          # Run unit and integration tests sequentially
+          uv run pytest tests/unit/ tests/integration/
+          # Run E2E tests in parallel (--dist loadscope keeps test classes together)
+          uv run pytest tests/e2e/ -n auto --dist loadscope
 
   notification:
     name: Notification

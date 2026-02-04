@@ -869,11 +869,11 @@ wheels = [
 
 [[package]]
 name = "filelock"
-version = "3.20.0"
+version = "3.20.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/58/46/0028a82567109b5ef6e4d2a1f04a583fb513e6cf9527fcdd09afd817deeb/filelock-3.20.0.tar.gz", hash = "sha256:711e943b4ec6be42e1d4e6690b48dc175c822967466bb31c0c293f34334c13f4", size = 18922, upload-time = "2025-10-08T18:03:50.056Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1d/65/ce7f1b70157833bf3cb851b556a37d4547ceafc158aa9b34b36782f23696/filelock-3.20.3.tar.gz", hash = "sha256:18c57ee915c7ec61cff0ecf7f0f869936c7c30191bb0cf406f1341778d0834e1", size = 19485, upload-time = "2026-01-09T17:55:05.421Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/76/91/7216b27286936c16f5b4d0c530087e4a54eead683e6b0b73dd0c64844af6/filelock-3.20.0-py3-none-any.whl", hash = "sha256:339b4732ffda5cd79b13f4e2711a31b0365ce445d95d243bb996273d072546a2", size = 16054, upload-time = "2025-10-08T18:03:48.35Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/36/7fb70f04bf00bc646cd5bb45aa9eddb15e19437a28b8fb2b4a5249fac770/filelock-3.20.3-py3-none-any.whl", hash = "sha256:4b0dda527ee31078689fc205ec4f1c1bf7d56cf88b6dc9426c4f230e46c2dce1", size = 16701, upload-time = "2026-01-09T17:55:04.334Z" },
 ]
 
 [[package]]
@@ -1931,13 +1931,14 @@ wheels = [
 
 [[package]]
 name = "nac-test"
-version = "1.1.0b2"
+version = "1.1.0b3"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
     { name = "asyncssh" },
     { name = "colorama" },
     { name = "errorhandler" },
+    { name = "filelock" },
     { name = "genie" },
     { name = "httpx" },
     { name = "jinja2" },
@@ -1973,6 +1974,7 @@ dev = [
     { name = "bandit", extra = ["toml"] },
     { name = "flask" },
     { name = "mypy" },
+    { name = "nac-test-pyats-common" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1992,6 +1994,7 @@ requires-dist = [
     { name = "bandit", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=1.8.6" },
     { name = "colorama", specifier = ">=0.4.6" },
     { name = "errorhandler", specifier = ">=2.0" },
+    { name = "filelock", specifier = ">=3.0.0" },
     { name = "flask", marker = "extra == 'dev'", specifier = ">=3.1" },
     { name = "genie", specifier = ">=25.5" },
     { name = "httpx", specifier = ">=0.28" },
@@ -2001,6 +2004,7 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
     { name = "nac-test-pyats-common", marker = "extra == 'adapters'", specifier = ">=0.2.0" },
     { name = "nac-test-pyats-common", marker = "extra == 'all'", specifier = ">=0.2.0" },
+    { name = "nac-test-pyats-common", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "nac-yaml", specifier = ">=1.1.1" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.3.0" },
     { name = "psutil", specifier = ">=7.0.0" },
@@ -2029,15 +2033,16 @@ provides-extras = ["adapters", "all", "dev"]
 
 [[package]]
 name = "nac-test-pyats-common"
-version = "0.2.0"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "filelock" },
     { name = "httpx" },
     { name = "nac-test" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c6/11/362cab57ef48525d2c4126b2fe8b602d875182d78c4c3e43a01f995d6153/nac_test_pyats_common-0.2.0.tar.gz", hash = "sha256:27068bf9ef157c3f5f3a6e7440ce10e5b8802ac6af12ede4c6de8f8ebcfa0207", size = 44677, upload-time = "2026-01-27T20:40:11.397Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/64/901e022f04acb4f77097f520146299769943d01c968410eca46e9ac529b4/nac_test_pyats_common-0.2.1.tar.gz", hash = "sha256:344ab7b3ce92884e258f8543544d378ac30abd17e8d3b75f8140cb2f7644f340", size = 51124, upload-time = "2026-02-04T03:01:23.211Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/df/ae93b063316fa89e42cea82c5f6505c456f0135367a0c7088925704d80d6/nac_test_pyats_common-0.2.0-py3-none-any.whl", hash = "sha256:879a445b2df29c99f8a14eac9afc6e02f12b08dbfedac7773ecade8fb06c09c5", size = 49745, upload-time = "2026-01-27T20:40:12.404Z" },
+    { url = "https://files.pythonhosted.org/packages/27/6e/b4d57531a0110fa29e85562894147c21363ae5b62b8aa0baac705481efdb/nac_test_pyats_common-0.2.1-py3-none-any.whl", hash = "sha256:43f4c6d7a052555826c3f1c82f33b0632d6bc50707609d8bfa8465b465d8ac2f", size = 54859, upload-time = "2026-02-04T03:01:24.051Z" },
 ]
 
 [[package]]
