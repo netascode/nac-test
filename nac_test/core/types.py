@@ -3,8 +3,6 @@
 
 """Core types for nac-test orchestration."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 
 
@@ -31,12 +29,12 @@ class TestResults:
     errors: list[str] = field(default_factory=list)
 
     @classmethod
-    def empty(cls) -> TestResults:
+    def empty(cls) -> "TestResults":
         """Create empty results (all zeros, no errors)."""
         return cls()
 
     @classmethod
-    def from_error(cls, error: str) -> TestResults:
+    def from_error(cls, error: str) -> "TestResults":
         """Create TestResults representing an execution error.
 
         Args:
