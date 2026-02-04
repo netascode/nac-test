@@ -7,9 +7,11 @@ This module provides lightweight inspection of PyATS archives to display
 their contents without the overhead of full extraction.
 """
 
+import json
 import logging
 import zipfile
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +83,137 @@ class ArchiveInspector:
             return "d2d"
         else:
             return "legacy"
+
+    @staticmethod
+    def extract_test_results(archive_path: Path) -> dict[str, dict[str, Any]]:
+        """Extract test results from a PyATS archive's results.json.
+
+        This method parses the results.json file within a PyATS archive and returns
+        a mapping of test names to their result information. It handles the PyATS
+        result format and normalizes status values.
+
+        Args:
+            archive_path: Path to the PyATS archive zip file
+
+        Returns:
+            Dictionary mapping test names to result info containing:
+                - status: Normalized status (passed/failed/errored/skipped/blocked)
+                - duration: Test runtime in seconds
+                - title: Test title (from section description or task name)
+                - test_id: Fallback test ID (always 0 for archive-extracted results)
+
+        Raises:
+            zipfile.BadZipFile: If the archive is corrupted or invalid
+            FileNotFoundError: If the archive path doesn't exist
+        """
+        if not archive_path.exists():
+            raise FileNotFoundError(f"Archive not found: {archive_path}")
+
+        results: dict[str, dict[str, Any]] = {}
+
+        with zipfile.ZipFile(archive_path, "r") as zf:
+            # Find results.json in the archive
+            results_json_path = None
+            for name in zf.namelist():
+                if name.endswith("results.json"):
+                    results_json_path = name
+                    break
+
+            if not results_json_path:
+                logger.debug("No results.json found in archive")
+                return results
+
+            with zf.open(results_json_path) as f:
+                results_data = json.load(f)
+
+        # Parse tasks from results
+        report = results_data.get("report", {})
+        tasks = report.get("tasks", [])
+
+        # Map PyATS result values to our status format
+        status_map = {
+            "passed": "passed",
+            "failed": "failed",
+            "errored": "errored",
+            "skipped": "skipped",
+            "blocked": "blocked",
+        }
+
+        for task in tasks:
+            task_name = task.get("name", "")
+            if not task_name:
+                continue
+
+            # Generate test name from testscript path to match plugin format.
+            # The PyATS plugin uses the testscript path (e.g., "tests/nrfu/foo.py")
+            # to generate test names like "nrfu.foo", but results.json only stores
+            # the task name (e.g., "foo"). Using testscript ensures key consistency
+            # between progress events and archive fallback.
+            test_key = ArchiveInspector._derive_test_name_from_path(
+                task.get("testscript", ""), task_name
+            )
+
+            # Extract result from results.json
+            result_value = task.get("result", {}).get("value", "unknown")
+            runtime = task.get("runtime", 0)
+
+            # Normalize status
+            status = status_map.get(result_value.lower(), result_value)
+
+            # Get title from testcase description or task name
+            title = task_name
+            sections = task.get("sections", [])
+            if sections:
+                section_title = sections[0].get("description", task_name)
+                if section_title:
+                    title = section_title.strip().split("\n")[0]  # First line only
+
+            results[test_key] = {
+                "status": status,
+                "duration": runtime,
+                "title": title,
+                "test_id": 0,  # Fallback ID for archive-extracted results
+            }
+
+            logger.debug(f"Extracted test result: {test_key} = {status}")
+
+        return results
+
+    @staticmethod
+    def _derive_test_name_from_path(testscript: str, fallback_name: str) -> str:
+        """Derive a test name from the testscript path.
+
+        This mirrors the logic in the PyATS progress plugin's _get_test_name()
+        method to ensure consistent key generation between progress events
+        and archive-extracted results.
+
+        Args:
+            testscript: Full path to the test script file
+            fallback_name: Fallback name if path cannot be parsed
+
+        Returns:
+            Dot-notation test name (e.g., "nrfu.verify_device_status")
+        """
+        if not testscript:
+            return fallback_name
+
+        try:
+            path = Path(testscript)
+            parts = path.parts
+
+            # Find where 'tests' directory starts
+            try:
+                test_idx = parts.index("tests")
+                relevant_parts = parts[test_idx + 1 :]
+            except ValueError:
+                # If no 'tests' dir, use the whole path
+                relevant_parts = parts
+
+            # Remove .py extension and join with dots
+            name_parts = list(relevant_parts[:-1]) + [path.stem]
+            return ".".join(name_parts)
+        except Exception:
+            return fallback_name
 
     @staticmethod
     def find_archives(output_dir: Path) -> dict[str, list[Path]]:
