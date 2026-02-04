@@ -22,7 +22,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from nac_test.robot.reporting.robot_parser import RobotResultParser
+from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 from tests.e2e.conftest import E2EResults
 from tests.e2e.html_helpers import (
     assert_combined_stats,

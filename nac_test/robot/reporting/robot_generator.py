@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
-from nac_test.robot.reporting.robot_parser import RobotResultParser
+from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 
 logger = logging.getLogger(__name__)
 

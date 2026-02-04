@@ -3551,7 +3551,7 @@ nac_test/
 │               └── combined_report.html.j2 # Combined dashboard template
 └── robot/
     └── reporting/
-        ├── robot_parser.py               # Parses output.xml via ResultVisitor
+        ├── robot_output_parser.py        # Parses output.xml via ResultVisitor
         └── robot_generator.py            # Generates Robot summary report
 ```
 
@@ -3616,7 +3616,7 @@ class CombinedReportGenerator:
 - **Automatic Generation**: Called by CombinedOrchestrator after all tests complete
 - **Pure Renderer**: Takes typed CombinedResults, no internal result discovery
 
-#### Robot Report Parser (`robot/reporting/robot_parser.py`)
+#### Robot Output Parser (`robot/reporting/robot_output_parser.py`)
 
 Parses Robot Framework `output.xml` using the ResultVisitor pattern:
 

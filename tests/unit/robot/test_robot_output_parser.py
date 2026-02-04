@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from nac_test.robot.reporting.robot_parser import RobotResultParser
+from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 
 
 @pytest.fixture

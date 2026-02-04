@@ -530,12 +530,12 @@ def _get_test_statistics(self) -> TestResults:
 """Robot Framework reporting module."""
 
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
-from nac_test.robot.reporting.robot_parser import RobotResultParser
+from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 
 __all__ = ["RobotReportGenerator", "RobotResultParser"]
 ```
 
-#### File: `nac_test/robot/reporting/robot_parser.py`
+#### File: `nac_test/robot/reporting/robot_output_parser.py`
 
 ```python
 # SPDX-License-Identifier: MPL-2.0
@@ -784,7 +784,7 @@ from pathlib import Path
 from typing import Any
 
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
-from nac_test.robot.reporting.robot_parser import RobotResultParser
+from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 
 logger = logging.getLogger(__name__)
 
