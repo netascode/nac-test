@@ -3,15 +3,19 @@
 
 """Generic file-based authentication token caching for parallel processes."""
 
-import fcntl
 import hashlib
 import json
+import logging
 import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from filelock import FileLock
+
 from nac_test.pyats_core.constants import AUTH_CACHE_DIR
+
+logger = logging.getLogger(__name__)
 
 
 class AuthCache:
@@ -47,9 +51,7 @@ class AuthCache:
         cache_file = cache_dir / f"{controller_type}_{url_hash}.json"
         lock_file = cache_dir / f"{controller_type}_{url_hash}.lock"
 
-        with open(lock_file, "w") as lock:
-            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-
+        with FileLock(str(lock_file)):
             # Check if valid cached data exists
             if cache_file.exists():
                 try:
@@ -61,12 +63,27 @@ class AuthCache:
                                 return str(data["token"])
                             else:
                                 # Return the auth_data dict (minus expires_at)
-                                auth_data = {
+                                return {
                                     k: v for k, v in data.items() if k != "expires_at"
                                 }
-                                return auth_data
-                except (json.JSONDecodeError, KeyError, TypeError):
-                    pass  # Invalid file, will recreate
+                except json.JSONDecodeError as e:
+                    logger.warning(
+                        "Invalid JSON in cache file %s, will recreate: %s",
+                        cache_file,
+                        e,
+                    )
+                except KeyError as e:
+                    logger.warning(
+                        "Missing key in cache file %s, will recreate: %s",
+                        cache_file,
+                        e,
+                    )
+                except TypeError as e:
+                    logger.warning(
+                        "Type error reading cache file %s, will recreate: %s",
+                        cache_file,
+                        e,
+                    )
 
             # Get new auth data
             auth_data, expires_in = auth_func()

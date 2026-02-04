@@ -25736,27 +25736,100 @@ uv run pytest tests/ -v --tb=short
 
 ### File-Based Locking Portability
 
-**Current State**: `AuthCache` in nac-test uses `fcntl.flock()` for process-safe token caching:
+**Current State**: `AuthCache` in nac-test uses the `filelock` library for cross-platform process-safe token caching:
 
 ```python
-# nac_test/pyats_core/common/auth_cache.py line 49
-with open(lock_file, "w") as lock:
-    fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+# nac_test/pyats_core/common/auth_cache.py
+from filelock import FileLock
+
+with FileLock(str(lock_file)):
+    # Cache operations are protected by cross-platform file lock
 ```
 
-**Limitation**: `fcntl` is Unix-only and may behave unexpectedly on:
-- Windows (not supported)
-- NFS/network filesystems (locking semantics vary)
-- Some containerized CI/CD environments with shared `/tmp`
+**Cross-Platform Support**: The `filelock` library provides consistent file locking behavior on:
+- **Linux**: Uses `fcntl.flock()` internally
+- **macOS**: Uses `fcntl.flock()` internally
+- **Windows**: Uses `msvcrt.locking()` internally
 
-**Impact**: This is an existing limitation in nac-test. The forklift migration preserves current behavior.
+**Known Considerations**:
+- NFS/network filesystems: Locking semantics may vary depending on NFS configuration
+- Some containerized CI/CD environments with shared `/tmp`: May need volume configuration
 
-**Future Work** (out of scope for current version):
-- [ ] Evaluate cross-platform locking alternatives (`filelock` library)
-- [ ] Consider Redis/memcached for distributed environments
-- [ ] Add CI environment detection to warn about potential issues
+**Future Work** (optional enhancements):
+- [ ] Consider Redis/memcached for distributed environments with high concurrency
+- [ ] Add CI environment detection to warn about potential NFS locking issues
 
-**Current Mitigation**: Document that nac-test requires Unix-like environment (Linux, macOS).
+### macOS Fork Safety: SSL and HTTP Client Considerations
+
+**Problem**: On macOS, certain HTTP libraries (notably `httpx`) crash silently when used after `fork()` due to OpenSSL threading primitive initialization issues.
+
+**Root Cause**: When PyATS runs tests, it uses Python's `multiprocessing` module with fork-based process creation. On macOS:
+
+1. **OpenSSL Threading**: OpenSSL initializes threading primitives (mutexes, condition variables) at first use
+2. **Fork Inheritance**: `fork()` copies parent process memory but NOT thread state
+3. **Deadlock/Crash**: When the forked child tries to use SSL (via httpx, which uses httpcore/h11/ssl), OpenSSL's threading primitives are in an inconsistent state, causing:
+   - Silent hangs (deadlocks on mutex acquisition)
+   - Segmentation faults (accessing invalid thread state)
+   - Cryptic error messages like "ssl.SSLError: [SSL] internal error"
+
+**Why subprocess.run() Also Fails**: The `subprocess.run()` function creates pipes for stdin/stdout/stderr using `os.pipe()`, which also crashes after fork on macOS due to similar threading issues in the pipe creation code path.
+
+**The Solution - os.system() with Temp Files**:
+
+The ONLY reliable way to perform HTTP/SSL operations from a forked process on macOS is:
+
+1. Write parameters to a temporary JSON file
+2. Use `os.system()` to launch a fresh Python interpreter (not forked, but exec'd)
+3. The new interpreter runs the auth script, writes results to another temp file
+4. Parent reads the results from the temp file
+
+```python
+# This pattern is implemented in nac_test.pyats_core.common.subprocess_auth
+
+# 1. Write params to temp file
+with open(params_file, "w") as f:
+    json.dump(auth_params, f)
+
+# 2. Launch NEW Python interpreter (os.system avoids pipe creation)
+os.system(f"python3 {script_file}")  # Fresh process, no fork issues
+
+# 3. Read results from temp file
+with open(result_file, "r") as f:
+    return json.load(f)
+```
+
+**Platform-Specific Behavior**:
+
+| Platform | HTTP Client Used | Why |
+|----------|------------------|-----|
+| **macOS** | `SubprocessHttpClient` (via os.system + temp files) | Fork+SSL crash avoidance |
+| **Linux** | `httpx.AsyncClient` (direct) | No fork+SSL issues |
+| **Windows** | `httpx.AsyncClient` (direct) | Uses spawn, not fork |
+
+**Implementation Locations**:
+
+- `nac_test/pyats_core/common/subprocess_auth.py` - `execute_auth_subprocess()` function
+- `nac_test/pyats_core/http/subprocess_client.py` - `SubprocessHttpClient` class
+- `nac_test_pyats_common/*/auth.py` - Each architecture adapter's `_authenticate()` method
+
+**Performance Implications**:
+
+The subprocess approach adds ~100-200ms overhead per authentication request due to:
+- Temp file I/O (~10ms)
+- Python interpreter startup (~50-100ms)
+- Process termination cleanup (~10ms)
+
+This is acceptable because:
+1. Authentication happens infrequently (tokens cached for 10-60 minutes)
+2. Only affects macOS users
+3. Correctness > Performance (silent crashes are worse than slow auth)
+
+**Testing Considerations**:
+
+When writing tests for authentication code:
+- Mock `execute_auth_subprocess()` in unit tests (avoid actual subprocess)
+- Integration tests should verify the full subprocess flow works
+- Test both SSL verification enabled and disabled paths
 
 ---
 

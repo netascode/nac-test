@@ -2,6 +2,7 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -19,6 +20,15 @@ logger = logging.getLogger(__name__)
 pytestmark = pytest.mark.integration
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason=(
+        "macOS fork+SSL crash: PyATS uses fork() for task subprocesses, but httpx "
+        "client creation crashes on macOS after fork() due to OpenSSL threading "
+        "primitives that are not fork-safe. Authentication is fixed via subprocess, "
+        "but API client creation still requires httpx. Run on Linux instead."
+    ),
+)
 @pytest.mark.parametrize(
     "arch,env_prefix,passed,failed,expected_rc",
     [
@@ -68,6 +78,15 @@ def test_nac_test_pyats_quicksilver_api_only(
     validate_pyats_results(output_dir, passed, failed)
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason=(
+        "macOS fork+SSL crash: PyATS uses fork() for task subprocesses, but httpx "
+        "client creation crashes on macOS after fork() due to OpenSSL threading "
+        "primitives that are not fork-safe. Authentication is fixed via subprocess, "
+        "but API client creation still requires httpx. Run on Linux instead."
+    ),
+)
 @pytest.mark.parametrize(
     "arch,env_prefix,passed,failed,expected_rc",
     [

@@ -4,16 +4,23 @@
 """PyATS subprocess execution functionality."""
 
 import asyncio
+import json
 import logging
 import os
+import sys
 import tempfile
 import textwrap
+import time
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from nac_test.pyats_core.constants import DEFAULT_BUFFER_LIMIT
+from nac_test.pyats_core.constants import (
+    DEFAULT_BUFFER_LIMIT,
+    PIPE_DRAIN_DELAY_SECONDS,
+    PIPE_DRAIN_TIMEOUT_SECONDS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +86,14 @@ class SubprocessRunner:
         job_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
         archive_name = f"nac_test_job_{job_timestamp}.zip"
 
+        # Use pyats script from the same directory as the current Python interpreter
+        # to ensure we use the correct virtual environment rather than whatever
+        # 'pyats' is found in PATH (which may be from a different environment)
+        python_dir = Path(sys.executable).parent
+        pyats_script = python_dir / "pyats"
+
         cmd = [
-            "pyats",
+            str(pyats_script),
             "run",
             "job",
             str(job_file_path),
@@ -151,13 +164,6 @@ class SubprocessRunner:
         except Exception as e:
             logger.error(f"Error executing PyATS job: {e}", exc_info=True)
             return None
-        # finally:  -- UNCOMMENT ME
-        #     # Clean up the temporary plugin config file
-        #     if plugin_config_file and os.path.exists(plugin_config_file):
-        #         try:
-        #             os.unlink(plugin_config_file)
-        #         except Exception:
-        #             pass
 
     async def execute_job_with_testbed(
         self, job_file_path: Path, testbed_file_path: Path, env: dict[str, Any]
@@ -199,8 +205,14 @@ class SubprocessRunner:
         hostname = env.get("HOSTNAME", "unknown")
         archive_name = f"pyats_archive_device_{hostname}"
 
+        # Use pyats script from the same directory as the current Python interpreter
+        # to ensure we use the correct virtual environment rather than whatever
+        # 'pyats' is found in PATH (which may be from a different environment)
+        python_dir = Path(sys.executable).parent
+        pyats_script = python_dir / "pyats"
+
         cmd = [
-            "pyats",
+            str(pyats_script),
             "run",
             "job",
             str(job_file_path),
@@ -269,24 +281,114 @@ class SubprocessRunner:
         except Exception as e:
             logger.error(f"Error executing PyATS job with testbed: {e}", exc_info=True)
             return None
-        # finally:
-        #     # Clean up the temporary plugin config file
-        #     if plugin_config_file and os.path.exists(plugin_config_file):
-        #         try:
-        #             os.unlink(plugin_config_file)
-        #         except Exception:
-        #             pass
+
+    def _parse_progress_event(self, line: str) -> dict[str, Any] | None:
+        """Parse NAC_PROGRESS line and return event dict, or None if not a progress event.
+
+        Args:
+            line: Output line to parse.
+
+        Returns:
+            Parsed event dict if line is NAC_PROGRESS event, None otherwise.
+        """
+        if not line.startswith("NAC_PROGRESS:"):
+            return None
+        try:
+            result: dict[str, Any] = json.loads(
+                line[13:]
+            )  # Remove "NAC_PROGRESS:" prefix
+            return result
+        except json.JSONDecodeError:
+            return None
+
+    async def _drain_remaining_buffer_safe(self, stdout: asyncio.StreamReader) -> None:
+        """Fallback drain for plugins without sentinel-based synchronization.
+
+        This method addresses a macOS-specific race condition where the kernel pipe
+        closes before asyncio's event loop reads all buffered data from the pipe.
+        It is used as a fallback when the subprocess does not emit a stream_complete
+        sentinel (e.g., older plugins or non-nac-test processes).
+
+        Race condition sequence on macOS:
+            1. Subprocess writes final progress events (e.g., task_end)
+            2. Subprocess exits and kernel closes pipe (EOF signaled to reader)
+            3. asyncio's StreamReader detects EOF and stops normal read loop
+            4. Buffered data in kernel pipe buffer may not yet be transferred
+            5. Normal read loop exits, leaving progress events unread
+
+        Mitigation:
+            - Sleep briefly (100ms on macOS, 1ms on Linux) to allow kernel flush
+            - Explicitly drain any remaining data with timeout protection
+            - Log warnings if data is lost due to timeouts
+
+        Environment variables for CI tuning:
+            - NAC_TEST_PIPE_DRAIN_DELAY: Seconds to wait before drain (default: 0.1 on macOS)
+            - NAC_TEST_PIPE_DRAIN_TIMEOUT: Max seconds to wait for drain (default: 2.0)
+
+        Args:
+            stdout: The subprocess stdout stream reader.
+        """
+        drain_start = time.perf_counter()
+        bytes_recovered = 0
+
+        try:
+            # Give kernel time to flush any remaining pipe buffers
+            # This is primarily needed on macOS due to different pipe semantics
+            await asyncio.sleep(PIPE_DRAIN_DELAY_SECONDS)
+
+            remaining = await asyncio.wait_for(
+                stdout.read(), timeout=PIPE_DRAIN_TIMEOUT_SECONDS
+            )
+
+            drain_duration = time.perf_counter() - drain_start
+
+            if remaining:
+                bytes_recovered = len(remaining)
+                logger.debug(
+                    "Recovered %d bytes from subprocess buffer after %.3fs "
+                    "(delay=%.3fs, read=%.3fs)",
+                    bytes_recovered,
+                    drain_duration,
+                    PIPE_DRAIN_DELAY_SECONDS,
+                    drain_duration - PIPE_DRAIN_DELAY_SECONDS,
+                )
+
+                for line in remaining.decode("utf-8", errors="replace").splitlines():
+                    line = line.rstrip()
+                    if line:
+                        self.output_handler(line)
+            else:
+                logger.debug(
+                    "No buffered data recovered after %.3fs drain delay",
+                    drain_duration,
+                )
+
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Timeout after %.2fs draining subprocess buffer - some test output "
+                "may be lost. Consider increasing NAC_TEST_PIPE_DRAIN_TIMEOUT.",
+                PIPE_DRAIN_TIMEOUT_SECONDS,
+            )
+        except Exception as drain_error:
+            logger.warning(
+                "Failed to drain remaining subprocess buffer: %s - test results may be incomplete",
+                drain_error,
+            )
 
     async def _process_output_realtime(
         self, process: asyncio.subprocess.Process
     ) -> int:
-        """Process subprocess output in real-time.
+        """Process subprocess output in real-time with sentinel-based synchronization.
+
+        Uses stream_complete sentinel from progress plugin for reliable synchronization.
+        Falls back to legacy buffer drain if sentinel is not received (backward
+        compatibility with plugins that don't emit sentinels).
 
         Args:
-            process: The subprocess to monitor
+            process: The subprocess to monitor.
 
         Returns:
-            Return code of the process
+            Return code of the process.
         """
         if not process.stdout:
             return await process.wait()
@@ -294,16 +396,28 @@ class SubprocessRunner:
         try:
             consecutive_errors = 0
             max_consecutive_errors = 5
+            sentinel_received = False
 
             while True:
                 try:
                     line_bytes = await process.stdout.readline()
                     if not line_bytes:
+                        # EOF - use legacy drain only if no sentinel was received
+                        if not sentinel_received:
+                            logger.debug(
+                                "EOF without stream_complete sentinel - using legacy drain"
+                            )
+                            await self._drain_remaining_buffer_safe(process.stdout)
                         break
 
                     line = line_bytes.decode("utf-8", errors="replace").rstrip()
 
-                    # Process the line with the output handler
+                    # Check for sentinel (parse once)
+                    event = self._parse_progress_event(line)
+                    if event is not None and event.get("event") == "stream_complete":
+                        sentinel_received = True
+
+                    # Always pass to output handler
                     self.output_handler(line)
 
                     # Reset error counter on successful read
