@@ -122,7 +122,7 @@ class CombinedOrchestrator:
         # Note: Output directory and merged data file created by main.py
 
         # Handle development mode (PyATS only)
-        if self.dev_pyats_only:
+        if self.dev_pyats_only and not self.render_only:
             typer.secho(
                 "\n\n⚠️  WARNING: --pyats flag is for development use only. Production runs should use combined execution.",
                 fg=typer.colors.YELLOW,
@@ -182,7 +182,7 @@ class CombinedOrchestrator:
             return
 
         # Sequential execution - each orchestrator manages its own directory structure
-        if has_pyats:
+        if has_pyats and not self.render_only:
             typer.echo("\n🧪 Running PyATS tests...\n")
             self._check_python_version()
 
