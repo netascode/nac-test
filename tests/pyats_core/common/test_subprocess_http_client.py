@@ -3,21 +3,10 @@
 
 """Unit tests for SubprocessResponse and SubprocessHttpClient.
 
-This module tests actual business logic for the fork-safe HTTP client:
-1. SubprocessResponse.raise_for_status() error handling behavior
+Tests the fork-safe HTTP client:
+1. SubprocessResponse.raise_for_status() error handling
 2. SubprocessHttpClient URL resolution logic
 3. ConnectionPool platform-specific client selection
-
-NOTE: The following test classes were removed as they tested Python stdlib:
-- TestSubprocessResponseIsSuccess (tests >= operator on integers)
-- TestSubprocessResponseIsRedirect (tests >= operator on integers)
-- TestSubprocessResponseIsClientError (tests >= operator on integers)
-- TestSubprocessResponseIsServerError (tests >= operator on integers)
-- TestSubprocessResponseIsError (tests >= operator on integers)
-- TestSubprocessResponseContentMethods (tests bytes.decode() and json.loads())
-- TestSubprocessHttpClientInitialization (tests dict assignment)
-- TestSubprocessHttpClientTimeoutExtraction (tests attribute access)
-- TestSubprocessHttpClientAsyncContextManager (tests __aenter__ returns self)
 """
 
 from typing import TYPE_CHECKING
@@ -36,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class TestSubprocessResponseRaiseForStatus:
-    """Tests for SubprocessResponse.raise_for_status() method - actual error handling."""
+    """Tests for SubprocessResponse.raise_for_status() method."""
 
     @pytest.mark.parametrize("status_code", [200, 201, 204, 301, 302])
     def test_does_not_raise_for_non_error_status(self, status_code: int) -> None:
@@ -68,7 +57,7 @@ class TestSubprocessResponseRaiseForStatus:
 
 
 class TestSubprocessHttpClientUrlResolution:
-    """Tests for SubprocessHttpClient URL resolution - actual business logic."""
+    """Tests for SubprocessHttpClient URL resolution."""
 
     def test_absolute_url_returned_unchanged(self) -> None:
         """Verify absolute URLs are returned without modification."""
@@ -92,7 +81,7 @@ class TestSubprocessHttpClientUrlResolution:
 
 
 class TestConnectionPoolPlatformSelection:
-    """Tests for ConnectionPool client selection based on platform - critical behavior."""
+    """Tests for ConnectionPool client selection based on platform."""
 
     def test_returns_subprocess_client_on_darwin(self, mocker: "MockerFixture") -> None:
         """Verify SubprocessHttpClient is returned on macOS (fork-safety)."""

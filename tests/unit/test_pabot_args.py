@@ -1,12 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Unit tests for pabot argument validation - error handling only.
+"""Unit tests for pabot argument validation.
 
-This module tests actual business logic: argument validation that raises
-errors for invalid inputs. The wrapper function tests (TestRunPabotWithArgs)
-were removed because they only verified that mocks were called correctly,
-not actual business logic.
+This module tests argument validation error handling for the pabot runner.
 """
 
 from pathlib import Path
@@ -19,7 +16,7 @@ from nac_test.robot.pabot import parse_and_validate_extra_args, run_pabot
 
 
 class TestParseAndValidateExtraArgs:
-    """Test suite for parse_and_validate_extra_args function - error handling."""
+    """Test suite for parse_and_validate_extra_args function."""
 
     def test_datasource_raises_error(self) -> None:
         """Test that filenames/datasources in extra_args raise ValueError."""

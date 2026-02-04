@@ -3,17 +3,10 @@
 
 """Unit tests for subprocess_auth module.
 
-This module tests actual business logic for the fork-safe subprocess
-authentication mechanism:
+Tests the fork-safe subprocess authentication mechanism:
 1. Secure file permissions setting
 2. Auth subprocess execution and result handling
 3. Error propagation and cleanup
-
-NOTE: The following test classes were removed as they tested Python stdlib:
-- TestParseExitCode (tests bit shifting with >> operator)
-- TestQuotePathForShell (tests shlex.quote())
-- TestEscapePathForPython (tests repr())
-- TestIndentScriptBody (tests string join/split)
 """
 
 import os
@@ -30,7 +23,7 @@ from nac_test.pyats_core.common.subprocess_auth import (
 
 
 class TestSetSecurePermissions:
-    """Test secure file permissions - actual security behavior."""
+    """Test secure file permissions."""
 
     def test_sets_permissions_on_file(self) -> None:
         """Test that secure permissions are set on a file."""
@@ -48,7 +41,7 @@ class TestSetSecurePermissions:
 
 
 class TestExecuteAuthSubprocess:
-    """Test the main subprocess execution function - actual business logic."""
+    """Test the main subprocess execution function."""
 
     def test_successful_execution(self) -> None:
         """Test successful auth subprocess execution."""
