@@ -13,7 +13,6 @@ from typing import Any
 
 from nac_test.pyats_core.execution.job_generator import JobGenerator
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
-from nac_test.utils.path_setup import get_pythonpath_for_tests
 
 from .testbed_generator import TestbedGenerator
 
@@ -100,25 +99,14 @@ class DeviceExecutor:
                 # Set up environment for this device
                 # Always start with a copy of os.environ to preserve PATH and other variables
                 env = os.environ.copy()
-                nac_test_dir = Path(
-                    __file__
-                ).parent.parent.parent.parent  # nac-test root
                 env.update(
                     {
                         "HOSTNAME": hostname,
-                        "DEVICE_INFO": json.dumps(
-                            device
-                        ),  # Will be loaded by the job file
-                        # Environment variables are used because PyATS tests run as separate subprocess processes.
-                        # The merged data file is created by main.py at the base output level.
+                        "DEVICE_INFO": json.dumps(device),
                         "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
                             self.base_output_dir
                             / "merged_data_model_test_variables.yaml"
                         ),
-                        "PYTHONPATH": get_pythonpath_for_tests(
-                            self.test_dir, [nac_test_dir]
-                        ),
-                        # D2D test type identification to prevent race conditions
                         "NAC_TEST_TYPE": "d2d",
                     }
                 )
