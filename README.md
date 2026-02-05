@@ -647,10 +647,19 @@ The diagnostic script:
 ### Quick Start
 
 ```bash
-# Download and run the diagnostic script
+# 1. Activate your virtual environment
+source .venv/bin/activate
+
+# 2. Set your environment variables (as you normally would for nac-test)
+# Example for SD-WAN:
+export SDWAN_URL=https://your-sdwan-manager.example.com
+export SDWAN_USERNAME=admin
+export SDWAN_PASSWORD=your-password
+
+# 3. Download and run the diagnostic script
 curl -O https://raw.githubusercontent.com/netascode/nac-test/main/support/nac-test-diagnostic.sh
 chmod +x nac-test-diagnostic.sh
-./nac-test-diagnostic.sh
+./nac-test-diagnostic.sh -o ./results "nac-test -d ./data -t ./tests -o ./results --pyats"
 ```
 
 The script will generate a `nac-test-diagnostics-YYYYMMDD_HHMMSS.zip` file containing all diagnostic information with sensitive data automatically masked.
