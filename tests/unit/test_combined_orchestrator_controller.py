@@ -208,7 +208,7 @@ class TestCombinedOrchestratorController:
         )
 
         # Verify controller_type is empty (no detection occurred)
-        assert orchestrator.controller_type == ""
+        assert orchestrator.controller_type is None
 
         # Mock PyATSOrchestrator to verify it's never instantiated
         with patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats:
