@@ -114,6 +114,11 @@ class CombinedOrchestrator:
                 )
                 raise typer.Exit(1) from None
 
+    # def _verify_args(self) -> None:
+    #     """Verify that development mode arguments are not used together."""
+    #     if self.dev_pyats_only and self.dev_robot_only:
+    #         typer.secho(
+    #             "\n❌ Invalid argument combination: --pyats and --robot cannot be used together.",
     def run_tests(self) -> None:
         """Main entry point for combined test execution.
 
