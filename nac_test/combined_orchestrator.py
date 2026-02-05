@@ -136,9 +136,9 @@ class CombinedOrchestrator:
                 test_dir=self.templates_dir,
                 output_dir=self.output_dir,
                 merged_data_filename=self.merged_data_filename,
+                controller_type=self.controller_type,
                 minimal_reports=self.minimal_reports,
                 custom_testbed_path=self.custom_testbed_path,
-                controller_type=self.controller_type,
             )
             if self.max_parallel_devices is not None:
                 orchestrator.max_parallel_devices = self.max_parallel_devices
@@ -192,9 +192,9 @@ class CombinedOrchestrator:
                 test_dir=self.templates_dir,
                 output_dir=self.output_dir,
                 merged_data_filename=self.merged_data_filename,
+                controller_type=self.controller_type,
                 minimal_reports=self.minimal_reports,
                 custom_testbed_path=self.custom_testbed_path,
-                controller_type=self.controller_type,
             )
             if self.max_parallel_devices is not None:
                 orchestrator.max_parallel_devices = self.max_parallel_devices
