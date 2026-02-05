@@ -1,0 +1,375 @@
+name: Bug Report
+description: Report a bug in nac-test runtime, test execution, or CLI behavior
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Is This the Right Template?
+
+        **Use this template if**:
+        - nac-test crashes, hangs, or shows unexpected errors/tracebacks
+        - Test discovery or execution fails unexpectedly
+        - CLI commands don't work as documented
+        - Test counts or results are incorrect
+
+        **Use a DIFFERENT template if**:
+        - HTML reports look wrong → Use **"HTML Reporting Issue"**
+        - You want a new feature → Use **"Feature Request"**
+        - You need help using nac-test → Use **"How-To / Usage Question"**
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is and its impact.
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: test-framework
+    attributes:
+      label: Test Framework
+      description: Which test framework are you using when this bug occurs?
+      options:
+        - PyATS (Python-based tests)
+        - Robot Framework (.robot or .j2 templates)
+        - Both (combined execution mode)
+        - N/A (bug occurs before test execution)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: test-type
+    attributes:
+      label: Test Type (PyATS Only)
+      description: If using PyATS, what type of tests are affected?
+      options:
+        - API Tests (controller REST APIs - tests/ NOT under d2d/)
+        - D2D/SSH Tests (direct-to-device - tests/d2d/)
+        - Both
+        - N/A
+    validations:
+      required: false
+
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Network as Code (NaC) Architecture
+      description: Which NaC architecture are you using? See https://netascode.cisco.com for supported architectures.
+      options:
+        - ACI (APIC)
+        - NDO (Nexus Dashboard Orchestrator)
+        - NDFC / VXLAN-EVPN (Nexus Dashboard Fabric Controller)
+        - Catalyst SD-WAN (SDWAN Manager / vManage)
+        - Catalyst Center (DNA Center)
+        - ISE (Identity Services Engine)
+        - FMC (Firepower Management Center)
+        - Meraki (Cloud-managed)
+        - NX-OS (Nexus Direct-to-Device)
+        - IOS-XE (Direct-to-Device)
+        - IOS-XR (Direct-to-Device)
+        - Hyperfabric
+        - Multiple architectures
+        - N/A (architecture-independent)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: "nac-test is supported on macOS and Linux only. Windows is NOT supported."
+      options:
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS Version
+      description: "Specify your OS version (e.g., macOS Sonoma 14.2 or Ubuntu 22.04 LTS)"
+      placeholder: "e.g., macOS Sonoma 14.2 or Ubuntu 22.04 LTS"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation-method
+    attributes:
+      label: Installation Method
+      description: How did you install nac-test?
+      options:
+        - uv (uv pip install nac-test)
+        - pip (pip install nac-test)
+        - Editable/Development (uv pip install -e . or pip install -e .)
+        - NaC Container (Docker/Podman)
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## System Information
+
+        Please run the appropriate command for your operating system and paste the output below.
+
+        ---
+
+        ### macOS Users - Run This Command:
+
+        ```bash
+        echo "=== System Info ===" && \
+        sw_vers && \
+        echo "" && \
+        echo "=== Hardware ===" && \
+        sysctl -n machdep.cpu.brand_string && \
+        echo "" && \
+        echo "=== Python Info ===" && \
+        python3 --version && \
+        which python3 && \
+        echo "" && \
+        echo "=== Virtual Environment ===" && \
+        echo "VIRTUAL_ENV: $VIRTUAL_ENV" && \
+        echo "" && \
+        echo "=== NaC Packages ===" && \
+        (pip freeze 2>/dev/null || uv pip freeze 2>/dev/null) | grep -E "^nac-"
+        ```
+
+        ---
+
+        ### Linux Users - Run This Command:
+
+        ```bash
+        echo "=== System Info ===" && \
+        cat /etc/os-release | grep -E "^(NAME|VERSION)=" && \
+        uname -r && \
+        echo "" && \
+        echo "=== Hardware ===" && \
+        cat /proc/cpuinfo | grep "model name" | head -1 && \
+        free -h | head -2 && \
+        echo "" && \
+        echo "=== Python Info ===" && \
+        python3 --version && \
+        which python3 && \
+        echo "" && \
+        echo "=== Virtual Environment ===" && \
+        echo "VIRTUAL_ENV: $VIRTUAL_ENV" && \
+        echo "" && \
+        echo "=== NaC Packages ===" && \
+        (pip freeze 2>/dev/null || uv pip freeze 2>/dev/null) | grep -E "^nac-"
+        ```
+
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Information Output
+      description: Paste the output from the command above.
+      render: text
+      placeholder: |
+        === System Info ===
+        ...
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Environment Variables
+
+        Run the command below to safely check your NaC environment variables. This command **automatically masks sensitive values** while showing which variables are set:
+
+        ```bash
+        # NaC Environment Variables Check (auto-masks sensitive values)
+        for var in \
+          APIC_URL APIC_USERNAME APIC_PASSWORD APIC_INSECURE \
+          ACI_URL ACI_USERNAME ACI_PASSWORD \
+          SDWAN_URL SDWAN_USERNAME SDWAN_PASSWORD \
+          CC_URL CC_USERNAME CC_PASSWORD CC_INSECURE \
+          ISE_URL ISE_USERNAME ISE_PASSWORD \
+          FMC_URL FMC_USERNAME FMC_PASSWORD \
+          MERAKI_API_KEY MERAKI_ORG_ID \
+          NDO_URL NDO_USERNAME NDO_PASSWORD \
+          NDFC_URL NDFC_USERNAME NDFC_PASSWORD \
+          IOSXE_USERNAME IOSXE_PASSWORD \
+          NXOS_USERNAME NXOS_PASSWORD \
+          IOSXR_USERNAME IOSXR_PASSWORD \
+          NAC_TEST_DEBUG NAC_API_CONCURRENCY NAC_SSH_CONCURRENCY; do
+          if [ -n "${!var+x}" ]; then
+            case "$var" in
+              *PASSWORD*|*USERNAME*|*KEY*|*URL*|*SECRET*|*TOKEN*)
+                echo "$var=*** SET (${#!var} chars) ***"
+                ;;
+              *)
+                echo "$var=${!var}"
+                ;;
+            esac
+          else
+            echo "$var=(not set)"
+          fi
+        done
+        ```
+
+        Example output:
+        ```
+        APIC_URL=*** SET (28 chars) ***
+        APIC_USERNAME=*** SET (5 chars) ***
+        APIC_PASSWORD=*** SET (12 chars) ***
+        APIC_INSECURE=(not set)
+        SDWAN_URL=(not set)
+        ...
+        NAC_TEST_DEBUG=true
+        NAC_API_CONCURRENCY=5
+        ```
+
+  - type: textarea
+    id: environment-variables
+    attributes:
+      label: Environment Variables Output
+      description: |
+        Paste the output from the command above. Sensitive values are automatically masked.
+      render: bash
+      placeholder: |
+        APIC_URL=*** SET (28 chars) ***
+        APIC_USERNAME=*** SET (5 chars) ***
+        APIC_PASSWORD=*** SET (12 chars) ***
+        APIC_INSECURE=(not set)
+        ACI_URL=(not set)
+        ...
+        SDWAN_URL=*** SET (24 chars) ***
+        SDWAN_USERNAME=*** SET (5 chars) ***
+        SDWAN_PASSWORD=*** SET (10 chars) ***
+        ...
+        NAC_TEST_DEBUG=true
+        NAC_API_CONCURRENCY=5
+        NAC_SSH_CONCURRENCY=(not set)
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Reproduction Steps
+      description: Steps to reliably reproduce the behavior.
+      placeholder: |
+        1. Set environment variables as shown above
+        2. Run command: `nac-test --data ./data --templates ./tests --output ./results`
+        3. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: command-used
+    attributes:
+      label: Command Used
+      description: The exact nac-test command you ran.
+      render: bash
+      placeholder: "nac-test --data ./data --templates ./tests --output ./results --pyats"
+    validations:
+      required: true
+
+  - type: textarea
+    id: data-model
+    attributes:
+      label: Data Model Snippet (if relevant)
+      description: If the bug relates to data model parsing, provide a sanitized snippet.
+      render: yaml
+      placeholder: |
+        # Paste relevant YAML snippet here (remove sensitive data!)
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior / Terminal Output
+      description: What actually happened. Include full terminal output and tracebacks.
+      render: text
+      placeholder: |
+        PASTE FULL TERMINAL OUTPUT HERE
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: troubleshooting
+    attributes:
+      label: Troubleshooting Attempted
+      description: What have you already tried?
+      options:
+        - label: Verified environment variables are set correctly
+        - label: Tried with `NAC_TEST_DEBUG=true` for verbose output
+        - label: Checked file permissions on data/test directories
+        - label: Tested with a minimal data model
+        - label: Verified controller is reachable
+
+  - type: textarea
+    id: troubleshooting-other
+    attributes:
+      label: Other Troubleshooting Attempted
+      description: Describe any other troubleshooting steps you've tried that aren't listed above.
+      placeholder: |
+        - I also tried...
+        - I checked...
+        - I verified...
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Project Directory Structure
+
+        If possible, show your project directory structure. This helps us understand your setup.
+
+        **If you have `tree` installed:**
+
+        ```bash
+        tree -I '__pycache__|.venv|venv|site-packages|*.pyc|.git' --dirsfirst -L 3
+        ```
+
+        **If you don't have `tree`:**
+
+        ```bash
+        find . -type d \( -name __pycache__ -o -name .venv -o -name venv -o -name .git \) -prune -o -type f -print | head -50
+        ```
+
+  - type: textarea
+    id: directory-structure
+    attributes:
+      label: Project Directory Structure
+      description: Paste the output from the tree command above (or describe your directory layout).
+      render: text
+      placeholder: |
+        .
+        ├── data/
+        │   ├── defaults.yaml
+        │   └── site1.yaml
+        ├── tests/
+        │   ├── verify_bgp.py
+        │   └── d2d/
+        │       └── verify_interfaces.py
+        └── nac-test-results/
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        - Frequency: Does this happen consistently or intermittently?
+        - History: Did this work in a previous version? If so, which version?
+        - Workarounds: Any temporary solutions found?
+    validations:
+      required: false
