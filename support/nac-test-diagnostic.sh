@@ -466,8 +466,8 @@ collect "031_python_path" "
 which python
 which python3
 echo ''
-echo 'VIRTUAL_ENV: $VIRTUAL_ENV'
-echo 'Python executable: $(python -c \"import sys; print(sys.executable)\")'
+echo \"VIRTUAL_ENV: \$VIRTUAL_ENV\"
+python -c 'import sys; print(\"Python executable:\", sys.executable)'
 "
 
 collect "032_pip_packages" "
@@ -692,6 +692,20 @@ echo '   review them before sharing if you have concerns about credential exposu
     log "  Copied $ARCHIVE_COUNT recent PyATS archives"
     if [ "$ARCHIVE_COUNT" -gt 0 ]; then
         log "  ${YELLOW}⚠️  WARNING: Archives may contain logs with credentials - review before sharing${NC}"
+    fi
+
+    # Collect Robot Framework outputs (if running --robot)
+    collect "120_robot_outputs" "
+echo 'Robot Framework output files:'
+find '$OUTPUT_DIR' -name 'output.xml' -o -name 'log.html' -o -name 'report.html' 2>/dev/null | head -20
+"
+
+    ROBOT_COUNT=0
+    for robot_file in $(find "$OUTPUT_DIR" \( -name 'output.xml' -o -name 'log.html' -o -name 'report.html' \) -mmin -60 2>/dev/null); do
+        cp "$robot_file" "$DIAG_DIR/" 2>/dev/null && ROBOT_COUNT=$((ROBOT_COUNT + 1))
+    done
+    if [ "$ROBOT_COUNT" -gt 0 ]; then
+        log "  Copied $ROBOT_COUNT Robot Framework output files"
     fi
 else
     log "  ${YELLOW}Output directory not found: $OUTPUT_DIR${NC}"
