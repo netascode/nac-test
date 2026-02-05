@@ -106,6 +106,7 @@ body:
         - uv (uv pip install nac-test)
         - pip (pip install nac-test)
         - Editable/Development (uv pip install -e . or pip install -e .)
+        - NaC Container (Docker/Podman)
     validations:
       required: true
 
@@ -179,28 +180,49 @@ body:
       value: |
         ## Environment Variables
 
-        Run the command below to dump your environment variables, then **sanitize the output** before pasting:
-
-        **IMPORTANT - Before pasting, replace these with `********`:**
-        - Passwords (any `*_PASSWORD` values)
-        - Usernames (any `*_USERNAME` values)
-        - IP addresses and URLs (replace with `x.x.x.x` or `https://controller.example.com`)
-        - API keys and tokens
-
-        **Leave everything else intact** - we need to see all variables that might affect nac-test behavior.
-
-        ---
-
-        ### macOS Users:
+        Run the command below to safely check your NaC environment variables. This command **automatically masks sensitive values** while showing which variables are set:
 
         ```bash
-        env | sort
+        # NaC Environment Variables Check (auto-masks sensitive values)
+        for var in \
+          APIC_URL APIC_USERNAME APIC_PASSWORD APIC_INSECURE \
+          ACI_URL ACI_USERNAME ACI_PASSWORD \
+          SDWAN_URL SDWAN_USERNAME SDWAN_PASSWORD \
+          CC_URL CC_USERNAME CC_PASSWORD CC_INSECURE \
+          ISE_URL ISE_USERNAME ISE_PASSWORD \
+          FMC_URL FMC_USERNAME FMC_PASSWORD \
+          MERAKI_API_KEY MERAKI_ORG_ID \
+          NDO_URL NDO_USERNAME NDO_PASSWORD \
+          NDFC_URL NDFC_USERNAME NDFC_PASSWORD \
+          IOSXE_USERNAME IOSXE_PASSWORD \
+          NXOS_USERNAME NXOS_PASSWORD \
+          IOSXR_USERNAME IOSXR_PASSWORD \
+          NAC_TEST_DEBUG NAC_API_CONCURRENCY NAC_SSH_CONCURRENCY; do
+          if [ -n "${!var+x}" ]; then
+            case "$var" in
+              *PASSWORD*|*USERNAME*|*KEY*|*URL*|*SECRET*|*TOKEN*)
+                echo "$var=*** SET (${#!var} chars) ***"
+                ;;
+              *)
+                echo "$var=${!var}"
+                ;;
+            esac
+          else
+            echo "$var=(not set)"
+          fi
+        done
         ```
 
-        ### Linux Users:
-
-        ```bash
-        env | sort
+        Example output:
+        ```
+        APIC_URL=*** SET (28 chars) ***
+        APIC_USERNAME=*** SET (5 chars) ***
+        APIC_PASSWORD=*** SET (12 chars) ***
+        APIC_INSECURE=(not set)
+        SDWAN_URL=(not set)
+        ...
+        NAC_TEST_DEBUG=true
+        NAC_API_CONCURRENCY=5
         ```
 
   - type: textarea
@@ -208,18 +230,22 @@ body:
     attributes:
       label: Environment Variables Output
       description: |
-        Paste the output of `env | sort` here. **Remember to sanitize passwords, usernames, IPs, and API keys!**
+        Paste the output from the command above. Sensitive values are automatically masked.
       render: bash
       placeholder: |
-        # Example (sanitized):
-        APIC_PASSWORD=********
-        APIC_URL=https://controller.example.com
-        APIC_USERNAME=********
-        HOME=/Users/username
-        NAC_TEST_DEBUG=true
-        PATH=/usr/local/bin:/usr/bin:/bin
-        VIRTUAL_ENV=/path/to/venv
+        APIC_URL=*** SET (28 chars) ***
+        APIC_USERNAME=*** SET (5 chars) ***
+        APIC_PASSWORD=*** SET (12 chars) ***
+        APIC_INSECURE=(not set)
+        ACI_URL=(not set)
         ...
+        SDWAN_URL=*** SET (24 chars) ***
+        SDWAN_USERNAME=*** SET (5 chars) ***
+        SDWAN_PASSWORD=*** SET (10 chars) ***
+        ...
+        NAC_TEST_DEBUG=true
+        NAC_API_CONCURRENCY=5
+        NAC_SSH_CONCURRENCY=(not set)
     validations:
       required: true
 
