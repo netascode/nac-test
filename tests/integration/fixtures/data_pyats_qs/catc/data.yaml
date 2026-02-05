@@ -1,0 +1,26 @@
+catalyst_center:
+  inventory:
+    devices:
+      # define three devices, one of them should be skipped. each device is counted as one test,
+      # so we can check by number of run tests if the skip worked as expected
+      - name: P3-E1
+        device_ip: 192.168.38.1
+        fqdn_name: P3-E1.cisco.eu
+        pid: C9300-24P
+        state: PROVISION
+        device_role: ACCESS
+        site: Global/MAX_AREA/MAX_BUILDING
+      - name: P3-E2
+        device_ip: 192.168.38.2
+        fqdn_name: P3-E2.cisco.eu
+        pid: C9300-24P
+        state: PROVISION
+        device_role: ACCESS
+        site: Global/MAX_AREA/MAX_BUILDING
+      - name: P3-E3
+        device_ip: 192.168.38.3
+        fqdn_name: P3-E3.cisco.eu
+        pid: C9300-24P
+        state: INIT
+        device_role: ACCESS
+        site: Global/MAX_AREA/MAX_BUILDING
