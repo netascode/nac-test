@@ -116,7 +116,7 @@ class CombinedOrchestrator:
         self.dev_robot_only = dev_robot_only
 
         # Detect controller type early (unless we are in render-only mode, which doesn't require controller access)
-        self.controller_type: str = ""
+        self.controller_type: str | None = None
         if not self.render_only:
             try:
                 self.controller_type = detect_controller_type()
