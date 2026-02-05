@@ -199,6 +199,9 @@ class RobotOrchestrator:
             #
             # Unfortunately pabot does not allow me to specify the output.xml/etc. to be in a different
             # directory than the outputdir, so we have to move them after the fact.
+            # pabot 5.2.0 due to be released shortly will have a fix, then we can
+            # change run_pabot to specify the output files to be in robot_results/ directly and
+            # remove this step.
             self._move_robot_results_to_subdirectory()
 
             # Phase 5: Create backward compatibility symlinks
