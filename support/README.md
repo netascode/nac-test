@@ -6,7 +6,7 @@ This directory contains diagnostic and troubleshooting tools for nac-test.
 
 **Script:** `nac-test-diagnostic.sh`
 
-A cross-platform (macOS/Linux) script that collects comprehensive diagnostic information to help troubleshoot nac-test issues.
+A cross-platform (macOS/Linux), architecture-agnostic script that collects comprehensive diagnostic information to help troubleshoot nac-test issues.
 
 ### When to Use
 
@@ -17,6 +17,21 @@ Use this script when:
 - You're experiencing platform-specific issues (especially on macOS)
 - You need to provide diagnostic information for a GitHub issue
 
+### Supported Architectures
+
+The script automatically detects your NaC architecture based on environment variables:
+
+| Architecture | Detection Variables |
+|-------------|---------------------|
+| ACI | `APIC_URL`, `ACI_URL` |
+| SD-WAN | `SDWAN_URL` |
+| Catalyst Center | `CC_URL` |
+| Meraki | `MERAKI_API_KEY` |
+| ISE | `ISE_URL` |
+| FMC | `FMC_URL` |
+| NDO | `NDO_URL` |
+| NDFC | `NDFC_URL` |
+
 ### What It Collects
 
 | Category | Information Collected |
@@ -24,11 +39,11 @@ Use this script when:
 | **System** | OS version, architecture, CPU, memory |
 | **Python** | Version, executable path, virtual environment |
 | **Packages** | nac-test, nac-test-pyats-common, PyATS versions |
-| **Environment** | Relevant env vars (with sensitive values filtered) |
+| **Environment** | Which env vars are SET (not their values) |
 | **Configuration** | PyATS config, multiprocessing settings |
-| **Network** | SSL certificates, proxy settings, connectivity |
+| **Network** | SSL certificates |
 | **Crash Reports** | macOS crash reports (before and during execution) |
-| **Execution** | nac-test output with debug flags enabled |
+| **Execution** | Your nac-test command output with debug flags |
 | **Results** | PyATS results, HTML reports, archives |
 
 ### What It Does NOT Collect
@@ -40,40 +55,70 @@ The script is designed with security in mind:
 - **Tokens** (including JWTs) are automatically masked
 - **URLs with embedded credentials** are masked
 - **API keys and secrets** are automatically masked
-- **Environment variables** containing sensitive keywords are filtered out
+- **Environment variable values** are never logged (only whether they're SET)
 
 > **Note:** PyATS archive files (`.zip`) are included for completeness but may contain logs with credentials if debug logging was enabled. The script warns about this in its output.
 
 ### Usage
 
-1. Navigate to your nac-test project directory (where your `data/` and `tests/` folders are)
+**Prerequisites:**
+1. Activate your virtual environment
+2. Set your environment variables as you normally would
+3. Navigate to your project directory (where you run nac-test from)
 
-2. Set your environment variables as you normally would:
+**Syntax:**
+```bash
+./nac-test-diagnostic.sh -o <output_dir> "<your nac-test command>"
+```
+
+**Examples:**
+
+```bash
+# SD-WAN with PyATS tests
+./nac-test-diagnostic.sh -o ./results "nac-test -d ./data -t ./tests -o ./results --pyats"
+
+# ACI with Robot Framework tests
+./nac-test-diagnostic.sh -o ./output "nac-test -d ./data -t ./tests -o ./output --robot"
+
+# With filters
+./nac-test-diagnostic.sh -o ./out "nac-test -d ./data -f ./filters -t ./tests -o ./out"
+```
+
+**Step-by-step:**
+
+1. Activate your virtual environment:
    ```bash
-   export SDWAN_URL=https://your-controller.example.com
-   export SDWAN_USERNAME=your-username
-   export SDWAN_PASSWORD=your-password
-   # ... other variables
+   source .venv/bin/activate
    ```
 
-3. Run the diagnostic script:
+2. Set your environment variables:
    ```bash
-   # Download and run (if not already in repo)
+   # For SD-WAN:
+   export SDWAN_URL=https://your-sdwan-manager.example.com
+   export SDWAN_USERNAME=admin
+   export SDWAN_PASSWORD=your-password
+   export IOSXE_USERNAME=admin
+   export IOSXE_PASSWORD=device-password
+
+   # For ACI:
+   export APIC_URL=https://your-apic.example.com
+   export APIC_USERNAME=admin
+   export APIC_PASSWORD=your-password
+
+   # For Catalyst Center:
+   export CC_URL=https://your-catalyst-center.example.com
+   export CC_USERNAME=admin
+   export CC_PASSWORD=your-password
+   ```
+
+3. Download and run the diagnostic script:
+   ```bash
    curl -O https://raw.githubusercontent.com/netascode/nac-test/main/support/nac-test-diagnostic.sh
    chmod +x nac-test-diagnostic.sh
-   ./nac-test-diagnostic.sh
-
-   # Or if you have the repo cloned
-   /path/to/nac-test/support/nac-test-diagnostic.sh
+   ./nac-test-diagnostic.sh -o ./results "nac-test -d ./data -t ./tests -o ./results --pyats"
    ```
 
-4. The script will:
-   - Collect system and environment information
-   - Run `nac-test` with debug flags
-   - Capture any crash reports generated during execution
-   - Package everything into a `.zip` file
-
-5. Output:
+4. Output:
    ```
    nac-test-diagnostics-YYYYMMDD_HHMMSS/     # Directory with all collected files
    nac-test-diagnostics-YYYYMMDD_HHMMSS.zip  # Compressed archive for sharing
@@ -92,7 +137,7 @@ When opening a GitHub issue:
 
 The script displays its version at the start of execution. When reporting issues, please include the script version in your report.
 
-Current version: **4.1**
+Current version: **5.0**
 
 ### Troubleshooting the Script Itself
 
@@ -100,4 +145,5 @@ If the diagnostic script fails to run:
 
 - **Permission denied**: Run `chmod +x nac-test-diagnostic.sh`
 - **bash not found**: The script requires bash. On some systems, try `bash ./nac-test-diagnostic.sh`
-- **Commands not found**: Some optional diagnostics may fail if tools aren't installed (e.g., `lsof`, `tree`). This is normal and won't affect the core diagnostics.
+- **nac-test not found**: Make sure your virtual environment is activated
+- **Missing -o argument**: You must specify the output directory with `-o`
