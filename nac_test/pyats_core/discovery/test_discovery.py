@@ -4,18 +4,20 @@
 """PyATS test discovery functionality.
 
 This module handles discovering and categorizing PyATS test files.
-Test type detection uses a three-tier strategy:
 
+Discovery identifies PyATS tests by checking for:
+    - Import from nac_test or nac_test_pyats_common
+    - Presence of @aetest.test, @aetest.setup, or @aetest.cleanup decorators
+
+Test type detection uses a three-tier strategy:
     1. **Static Analysis** (Primary): AST-based detection of base class inheritance
     2. **Directory Structure** (Fallback): Checks for /api/ or /d2d/ in path
     3. **Default** (Last Resort): Falls back to 'api' with warning
-
-This allows flexible test organization - tests can be placed in any directory
-structure and will be automatically classified based on their base class
-inheritance (e.g., NACTestBase -> api, SSHTestBase -> d2d).
 """
 
 import logging
+import os
+import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -24,89 +26,141 @@ logger = logging.getLogger(__name__)
 class TestDiscovery:
     """Handles PyATS test file discovery and categorization."""
 
-    def __init__(self, test_dir: Path):
+    # PyATS test markers
+    # using regex to avoid matching the terms in comments/strings
+    # use multiple statements to provide good granularity for skip
+    # reasons in logging
+    _PYATS_IMPORT_PATTERN = re.compile(
+        r"^\s*(?:from|import)\s+(?:nac_test|nac_test_pyats_common)\b",
+        re.MULTILINE,
+    )
+    _PYATS_DECORATOR_PATTERN = re.compile(
+        r"^\s*@aetest\.(test|setup|cleanup)",
+        re.MULTILINE,
+    )
+
+    def __init__(self, test_dir: Path, exclude_paths: list[Path] | None = None):
         """Initialize test discovery.
 
         Args:
             test_dir: Root directory containing test files
+            exclude_paths: Directories to exclude from discovery (e.g., filters, jinja tests)
         """
         self.test_dir = Path(test_dir)
+        self.exclude_paths = [Path(p).resolve() for p in (exclude_paths or [])]
+
+    def _is_excluded(self, path: Path) -> bool:
+        """Check if path is within any excluded directory."""
+        resolved = path.resolve()
+        for excluded in self.exclude_paths:
+            try:
+                resolved.relative_to(excluded)
+                return True
+            except ValueError:
+                continue
+        return False
+
+    def _should_skip_path(self, filename: str, test_path: Path) -> bool:
+        """Check if a path should be skipped based on name/location.
+
+        Args:
+            filename: The filename to check
+            test_path: Full path to the file
+
+        Returns:
+            True if the path should be skipped
+        """
+        if "__pycache__" in str(test_path):
+            return True
+        # Skip private/internal files (also covers __init__.py)
+        if filename.startswith("_"):
+            return True
+        if self._is_excluded(test_path):
+            return True
+        return False
+
+    def _is_valid_pyats_test(self, content: str) -> tuple[bool, str | None]:
+        """Check if file content represents a valid PyATS test.
+
+        Args:
+            content: File content to check
+
+        Returns:
+            Tuple of (is_valid, skip_reason). skip_reason is None if valid.
+        """
+        if not self._PYATS_IMPORT_PATTERN.search(content):
+            return False, "No nac_test imports"
+        if not self._PYATS_DECORATOR_PATTERN.search(content):
+            return False, "No @aetest decorators"
+        return True, None
+
+    def has_pyats_tests(self) -> bool:
+        """Check if at least one PyATS test exists.
+
+        Uses os.walk for true early exit from directory traversal.
+        More efficient than discover_pyats_tests() when only existence check is needed.
+
+        Returns:
+            True if at least one valid PyATS test file exists
+        """
+        for dirpath, _, filenames in os.walk(self.test_dir):
+            for filename in filenames:
+                if not filename.endswith(".py"):
+                    continue
+                test_path = Path(dirpath) / filename
+                if self._should_skip_path(filename, test_path):
+                    continue
+                try:
+                    content = test_path.read_text()
+                    is_valid, _ = self._is_valid_pyats_test(content)
+                    if is_valid:
+                        return True
+                except (OSError, UnicodeDecodeError):
+                    # Skip unreadable files (permission denied, encoding issues, etc.)
+                    pass
+        return False
 
     def discover_pyats_tests(self) -> tuple[list[Path], list[tuple[Path, str]]]:
-        """Find all .py test files when --pyats flag is set
+        """Find all PyATS test files in the test directory.
 
-        Searches for Python test files in the test directory structure.
-        Supports both traditional paths (test/operational/) and
-        categorized paths (test/api/operational/, test/d2d/operational/).
-
-        Excludes utility directories and non-test files.
-        Validates files are readable and appear to contain test code.
+        Searches for Python files and validates them as PyATS tests by checking
+        for nac_test imports and @aetest decorators.
 
         Returns:
             Tuple of (test_files, skipped_files) where skipped_files contains
             tuples of (path, reason) for each skipped file
         """
-        test_files = []
-        skipped_files = []
+        test_files: list[Path] = []
+        skipped_files: list[tuple[Path, str]] = []
 
-        # Use rglob for recursive search - finds .py files at any depth
         for test_path in self.test_dir.rglob("*.py"):
-            # Skip non-test files
-            if "__pycache__" in str(test_path):
-                continue
-            if test_path.name.startswith("_"):
-                continue
-            if test_path.name == "__init__.py":
+            if self._should_skip_path(test_path.name, test_path):
                 continue
 
-            # Convert to string for efficient path checking
-            path_str = str(test_path)
+            try:
+                content = test_path.read_text()
+                is_valid, skip_reason = self._is_valid_pyats_test(content)
 
-            # Include files in standard test directories
-            # This supports paths like:
-            # - /test/operational/
-            # - /test/api/operational/
-            # - /test/d2d/operational/
-            # - /tests/api/
-            # - /tests/d2d/
-            if "/test/" in path_str or "/tests/" in path_str:
-                # Exclude utility directories
-                if "pyats_common" not in path_str and "jinja_filters" not in path_str:
-                    # Try to validate the file
-                    try:
-                        # Quick validation - check if file is readable and has test indicators
-                        content = test_path.read_text()
+                if not is_valid:
+                    assert (
+                        skip_reason is not None
+                    )  # mypy: skip_reason is set when invalid
+                    logger.debug(f"Skipping {test_path}: {skip_reason}")
+                    skipped_files.append((test_path, skip_reason))
+                    continue
 
-                        # Check for PyATS test indicators
-                        if not ("aetest" in content or "from pyats" in content):
-                            logger.debug(
-                                f"Skipping {test_path}: No PyATS imports found"
-                            )
-                            skipped_files.append((test_path, "No PyATS imports"))
-                            continue
+                test_files.append(test_path.resolve())
 
-                        # Check for test classes or functions
-                        if not ("class" in content or "def test" in content):
-                            logger.debug(
-                                f"Skipping {test_path}: No test classes or functions found"
-                            )
-                            skipped_files.append((test_path, "No test definitions"))
-                            continue
+            except (OSError, UnicodeDecodeError) as e:
+                rel_path = test_path.relative_to(self.test_dir)
+                reason = f"{type(e).__name__}: {str(e)}"
+                logger.warning(f"Skipping {rel_path}: {reason}")
+                skipped_files.append((test_path, reason))
+                continue
 
-                        test_files.append(test_path.resolve())
-
-                    except Exception as e:
-                        # File read error - warn and skip
-                        rel_path = test_path.relative_to(self.test_dir)
-                        reason = f"{type(e).__name__}: {str(e)}"
-                        logger.warning(f"Skipping {rel_path}: {reason}")
-                        skipped_files.append((test_path, reason))
-                        continue
-
-        # Log summary of skipped files if any
         if skipped_files:
             logger.info(f"Skipped {len(skipped_files)} file(s) during discovery:")
-            for path, reason in skipped_files[:5]:  # Show first 5
+            for path, reason in skipped_files[:5]:
                 logger.debug(f"  - {path.name}: {reason}")
             if len(skipped_files) > 5:
                 logger.debug(f"  ... and {len(skipped_files) - 5} more")
@@ -128,22 +182,11 @@ class TestDiscovery:
             2. **Directory Fallback**: Checks for /api/ or /d2d/ in path
             3. **Default**: Falls back to 'api' with warning
 
-        This approach allows tests to be organized by feature/domain rather
-        than requiring rigid /api/ and /d2d/ directory structure, while
-        maintaining 100% backward compatibility with existing projects.
-
         Args:
             test_files: List of discovered test file paths
 
         Returns:
             Tuple of (api_tests, d2d_tests)
-
-        Example:
-            ```python
-            discovery = TestDiscovery(Path("/tests"))
-            files, _ = discovery.discover_pyats_tests()
-            api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
-            ```
         """
         # Lazy import to avoid circular dependencies
         from .test_type_resolver import TestTypeResolver
@@ -157,7 +200,7 @@ class TestDiscovery:
 
             if test_type == "api":
                 api_tests.append(test_file)
-            else:  # "d2d"
+            else:
                 d2d_tests.append(test_file)
 
         logger.info(
