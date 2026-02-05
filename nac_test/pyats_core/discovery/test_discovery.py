@@ -35,7 +35,7 @@ class TestDiscovery:
         re.MULTILINE,
     )
     _PYATS_DECORATOR_PATTERN = re.compile(
-        r"^\s*@aetest\.(test|setup|cleanup)",
+        r"^\s*@aetest\.(test|setup|cleanup)\b",
         re.MULTILINE,
     )
 
@@ -115,9 +115,10 @@ class TestDiscovery:
                     is_valid, _ = self._is_valid_pyats_test(content)
                     if is_valid:
                         return True
-                except (OSError, UnicodeDecodeError):
-                    # Skip unreadable files (permission denied, encoding issues, etc.)
-                    pass
+                except (OSError, UnicodeDecodeError) as e:
+                    rel_path = test_path.relative_to(self.test_dir)
+                    reason = f"{type(e).__name__}: {str(e)}"
+                    logger.debug(f"Skipping {rel_path}: {reason}")
         return False
 
     def discover_pyats_tests(self) -> tuple[list[Path], list[tuple[Path, str]]]:
