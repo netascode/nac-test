@@ -345,18 +345,17 @@ log ""
 
 log "${BLUE}=== Verifying Environment ===${NC}"
 
-# Check if we're in a virtual environment
-if [ -z "$VIRTUAL_ENV" ]; then
-    log "${YELLOW}WARNING: No virtual environment detected (VIRTUAL_ENV not set)${NC}"
-    log "${YELLOW}         Make sure you activated your venv before running this script${NC}"
-else
+# Log virtual environment status (informational - venv not required for container/system installs)
+if [ -n "$VIRTUAL_ENV" ]; then
     log "  Virtual environment: ${GREEN}$VIRTUAL_ENV${NC}"
+else
+    log "  Virtual environment: (none - system/container install)"
 fi
 
 # Check if nac-test is available
 if ! command -v nac-test &> /dev/null; then
     log "${RED}ERROR: nac-test command not found${NC}"
-    log "${RED}       Make sure your virtual environment is activated${NC}"
+    log "${RED}       Make sure nac-test is installed and in your PATH${NC}"
     exit 1
 fi
 
