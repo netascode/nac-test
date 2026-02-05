@@ -631,3 +631,26 @@ nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --loglevel INFO -
 **Note:** Only Robot Framework options are supported. Pabot-specific options (like `--testlevelsplit`, `--pabotlib`, etc.) and test file paths are not allowed and will result in an error with exit code 252.
 
 See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#command-line-options) for all available options.
+
+## Troubleshooting
+
+If you're experiencing issues with nac-test (crashes, unexpected errors, test failures), we provide a diagnostic collection script to help with troubleshooting.
+
+**[Diagnostic Collection Guide](support/README.md)**
+
+The diagnostic script:
+- Collects system information, Python environment, and package versions
+- Captures error logs and crash reports (especially useful for macOS issues)
+- Automatically masks credentials before generating output
+- Produces a single `.zip` file you can safely attach to GitHub issues
+
+### Quick Start
+
+```bash
+# Download and run the diagnostic script
+curl -O https://raw.githubusercontent.com/netascode/nac-test/main/support/nac-test-diagnostic.sh
+chmod +x nac-test-diagnostic.sh
+./nac-test-diagnostic.sh
+```
+
+The script will generate a `nac-test-diagnostics-YYYYMMDD_HHMMSS.zip` file containing all diagnostic information with sensitive data automatically masked.
