@@ -387,163 +387,165 @@ class TestTestbedErrorHandling:
     with user-friendly error messages, as specified in issue #480.
     """
 
-    def test_malformed_yaml_syntax(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
-    ) -> None:
-        """Test that malformed YAML raises ValueError with helpful message."""
-        # YAML with invalid syntax (missing colon after 'cli')
-        malformed_yaml = """
-testbed:
-  name: broken
+    YAML_WITH_DEVICES = """
 devices:
   router1:
     os: iosxe
     connections:
-      cli
-        invalid: structure
+      cli:
+        protocol: ssh
+        ip: 10.1.1.1
 """
-        testbed_path = create_testbed_file(malformed_yaml)
+
+    YAML_WITH_TESTBED = """
+testbed:
+  name: my_testbed
+  credentials:
+    default:
+      username: admin
+      password: cisco123
+"""
+
+    YAML_MINIMAL = """
+custom_key: some_value
+"""
+
+    @pytest.mark.parametrize(
+        "yaml_content,method",
+        [
+            (
+                "testbed:\n  name: broken\ndevices:\n  router1:\n    os: iosxe\n"
+                "    connections:\n      cli\n        invalid: structure\n",
+                "consolidated",
+            ),
+            (
+                "key: [unclosed bracket",
+                "consolidated",
+            ),
+            (
+                "key: [unclosed bracket",
+                "single",
+            ),
+        ],
+        ids=[
+            "malformed-missing-colon-consolidated",
+            "malformed-unclosed-bracket-consolidated",
+            "malformed-unclosed-bracket-single",
+        ],
+    )
+    def test_malformed_yaml_syntax(
+        self,
+        create_testbed_file: Callable[[str], Path],
+        sample_device: dict[str, Any],
+        yaml_content: str,
+        method: str,
+    ) -> None:
+        """Test that malformed YAML raises ValueError with helpful message."""
+        testbed_path = create_testbed_file(yaml_content)
 
         with pytest.raises(ValueError, match="Invalid YAML syntax"):
-            TestbedGenerator.generate_consolidated_testbed_yaml(
-                [sample_device], base_testbed_path=testbed_path
-            )
+            if method == "consolidated":
+                TestbedGenerator.generate_consolidated_testbed_yaml(
+                    [sample_device], base_testbed_path=testbed_path
+                )
+            else:
+                TestbedGenerator.generate_testbed_yaml(
+                    sample_device, base_testbed_path=testbed_path
+                )
 
-    def test_malformed_yaml_syntax_single_device(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
+    @pytest.mark.parametrize(
+        "yaml_content,method",
+        [
+            ("", "consolidated"),
+            ("", "single"),
+            (
+                "# This is a comment\n# Another comment\n",
+                "consolidated",
+            ),
+        ],
+        ids=[
+            "empty-file-consolidated",
+            "empty-file-single",
+            "comments-only",
+        ],
+    )
+    def test_empty_yaml_content(
+        self,
+        create_testbed_file: Callable[[str], Path],
+        sample_device: dict[str, Any],
+        yaml_content: str,
+        method: str,
     ) -> None:
-        """Test that malformed YAML raises ValueError for single device method."""
-        malformed_yaml = "key: [unclosed bracket"
-        testbed_path = create_testbed_file(malformed_yaml)
-
-        with pytest.raises(ValueError, match="Invalid YAML syntax"):
-            TestbedGenerator.generate_testbed_yaml(
-                sample_device, base_testbed_path=testbed_path
-            )
-
-    def test_empty_yaml_file(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
-    ) -> None:
-        """Test that empty YAML file raises ValueError."""
-        testbed_path = create_testbed_file("")
+        """Test that empty YAML content raises ValueError."""
+        testbed_path = create_testbed_file(yaml_content)
 
         with pytest.raises(ValueError, match="is empty"):
+            if method == "consolidated":
+                TestbedGenerator.generate_consolidated_testbed_yaml(
+                    [sample_device], base_testbed_path=testbed_path
+                )
+            else:
+                TestbedGenerator.generate_testbed_yaml(
+                    sample_device, base_testbed_path=testbed_path
+                )
+
+    @pytest.mark.parametrize(
+        "yaml_content,expected_type",
+        [
+            ("- item1\n- item2\n- item3\n", "list"),
+            ("just a plain string", "str"),
+            ("42", "int"),
+        ],
+        ids=["list", "string", "integer"],
+    )
+    def test_invalid_yaml_root_type(
+        self,
+        create_testbed_file: Callable[[str], Path],
+        sample_device: dict[str, Any],
+        yaml_content: str,
+        expected_type: str,
+    ) -> None:
+        """Test that YAML with invalid root type raises ValueError."""
+        testbed_path = create_testbed_file(yaml_content)
+
+        with pytest.raises(
+            ValueError, match=f"must contain a YAML mapping.*got {expected_type}"
+        ):
             TestbedGenerator.generate_consolidated_testbed_yaml(
                 [sample_device], base_testbed_path=testbed_path
             )
 
-    def test_empty_yaml_file_single_device(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
+    @pytest.mark.parametrize(
+        "yaml_content,expected_type",
+        [
+            (
+                'testbed:\n  name: test_testbed\ndevices: "this should be a dict"\n',
+                "str",
+            ),
+            (
+                "testbed:\n  name: test_testbed\ndevices:\n  - router1\n  - router2\n",
+                "list",
+            ),
+            (
+                "testbed:\n  name: test_testbed\ndevices: 123\n",
+                "int",
+            ),
+        ],
+        ids=["string", "list", "integer"],
+    )
+    def test_invalid_devices_key_type(
+        self,
+        create_testbed_file: Callable[[str], Path],
+        sample_device: dict[str, Any],
+        yaml_content: str,
+        expected_type: str,
     ) -> None:
-        """Test that empty YAML file raises ValueError for single device method."""
-        testbed_path = create_testbed_file("")
+        """Test that 'devices' key with invalid type raises ValueError."""
+        testbed_path = create_testbed_file(yaml_content)
 
-        with pytest.raises(ValueError, match="is empty"):
-            TestbedGenerator.generate_testbed_yaml(
-                sample_device, base_testbed_path=testbed_path
-            )
-
-    def test_yaml_with_only_comments(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
-    ) -> None:
-        """Test that YAML file with only comments is treated as empty."""
-        comments_only_yaml = """
-# This is a comment
-# Another comment
-"""
-        testbed_path = create_testbed_file(comments_only_yaml)
-
-        with pytest.raises(ValueError, match="is empty"):
-            TestbedGenerator.generate_consolidated_testbed_yaml(
-                [sample_device], base_testbed_path=testbed_path
-            )
-
-    def test_yaml_contains_list_instead_of_dict(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
-    ) -> None:
-        """Test that YAML containing a list raises ValueError."""
-        list_yaml = """
-- item1
-- item2
-- item3
-"""
-        testbed_path = create_testbed_file(list_yaml)
-
-        with pytest.raises(ValueError, match="must contain a YAML mapping.*got list"):
-            TestbedGenerator.generate_consolidated_testbed_yaml(
-                [sample_device], base_testbed_path=testbed_path
-            )
-
-    def test_yaml_contains_string_instead_of_dict(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
-    ) -> None:
-        """Test that YAML containing a plain string raises ValueError."""
-        string_yaml = "just a plain string"
-        testbed_path = create_testbed_file(string_yaml)
-
-        with pytest.raises(ValueError, match="must contain a YAML mapping.*got str"):
-            TestbedGenerator.generate_consolidated_testbed_yaml(
-                [sample_device], base_testbed_path=testbed_path
-            )
-
-    def test_yaml_contains_integer_instead_of_dict(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
-    ) -> None:
-        """Test that YAML containing just a number raises ValueError."""
-        integer_yaml = "42"
-        testbed_path = create_testbed_file(integer_yaml)
-
-        with pytest.raises(ValueError, match="must contain a YAML mapping.*got int"):
-            TestbedGenerator.generate_consolidated_testbed_yaml(
-                [sample_device], base_testbed_path=testbed_path
-            )
-
-    def test_devices_key_is_string_instead_of_dict(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
-    ) -> None:
-        """Test that 'devices' as string raises ValueError."""
-        invalid_devices_yaml = """
-testbed:
-  name: test_testbed
-devices: "this should be a dict"
-"""
-        testbed_path = create_testbed_file(invalid_devices_yaml)
-
-        with pytest.raises(ValueError, match="'devices'.*must be a mapping.*got str"):
-            TestbedGenerator.generate_consolidated_testbed_yaml(
-                [sample_device], base_testbed_path=testbed_path
-            )
-
-    def test_devices_key_is_list_instead_of_dict(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
-    ) -> None:
-        """Test that 'devices' as list raises ValueError."""
-        invalid_devices_yaml = """
-testbed:
-  name: test_testbed
-devices:
-  - router1
-  - router2
-"""
-        testbed_path = create_testbed_file(invalid_devices_yaml)
-
-        with pytest.raises(ValueError, match="'devices'.*must be a mapping.*got list"):
-            TestbedGenerator.generate_consolidated_testbed_yaml(
-                [sample_device], base_testbed_path=testbed_path
-            )
-
-    def test_devices_key_is_integer_instead_of_dict(
-        self, create_testbed_file: Callable[[str], Path], sample_device: dict[str, Any]
-    ) -> None:
-        """Test that 'devices' as integer raises ValueError."""
-        invalid_devices_yaml = """
-testbed:
-  name: test_testbed
-devices: 123
-"""
-        testbed_path = create_testbed_file(invalid_devices_yaml)
-
-        with pytest.raises(ValueError, match="'devices'.*must be a mapping.*got int"):
+        with pytest.raises(
+            ValueError, match=f"'devices'.*must be a mapping.*got {expected_type}"
+        ):
             TestbedGenerator.generate_consolidated_testbed_yaml(
                 [sample_device], base_testbed_path=testbed_path
             )
@@ -562,66 +564,60 @@ devices: 123
         # Verify the file path is in the error message
         assert str(testbed_path) in str(exc_info.value)
 
-    def test_load_user_testbed_guarantees_testbed_key(
-        self, create_testbed_file: Callable[[str], Path]
+    @pytest.mark.parametrize(
+        "yaml_content,check_testbed_key,check_devices_key,extra_assertions",
+        [
+            (
+                YAML_WITH_DEVICES,
+                True,
+                False,
+                {"devices": {"router1": dict}},
+            ),
+            (
+                YAML_WITH_TESTBED,
+                False,
+                True,
+                {"testbed": {"name": "my_testbed"}},
+            ),
+            (
+                YAML_MINIMAL,
+                True,
+                True,
+                {"custom_key": "some_value"},
+            ),
+        ],
+        ids=[
+            "missing-testbed-key",
+            "missing-devices-key",
+            "missing-both-keys",
+        ],
+    )
+    def test_load_user_testbed_guarantees_keys(
+        self,
+        create_testbed_file: Callable[[str], Path],
+        yaml_content: str,
+        check_testbed_key: bool,
+        check_devices_key: bool,
+        extra_assertions: dict[str, Any],
     ) -> None:
-        """Test that _load_user_testbed() creates 'testbed' key if missing."""
-        # YAML without 'testbed' key
-        yaml_without_testbed = """
-devices:
-  router1:
-    os: iosxe
-    connections:
-      cli:
-        protocol: ssh
-        ip: 10.1.1.1
-"""
-        testbed_path = create_testbed_file(yaml_without_testbed)
+        """Test that _load_user_testbed() guarantees 'testbed' and 'devices' keys."""
+        testbed_path = create_testbed_file(yaml_content)
 
         result = TestbedGenerator._load_user_testbed(testbed_path)
 
-        assert "testbed" in result
-        assert isinstance(result["testbed"], dict)
-        assert "devices" in result
-        assert "router1" in result["devices"]
-
-    def test_load_user_testbed_guarantees_devices_key(
-        self, create_testbed_file: Callable[[str], Path]
-    ) -> None:
-        """Test that _load_user_testbed() creates 'devices' key if missing."""
-        # YAML without 'devices' key
-        yaml_without_devices = """
-testbed:
-  name: my_testbed
-  credentials:
-    default:
-      username: admin
-      password: cisco123
-"""
-        testbed_path = create_testbed_file(yaml_without_devices)
-
-        result = TestbedGenerator._load_user_testbed(testbed_path)
-
-        assert "devices" in result
-        assert isinstance(result["devices"], dict)
-        assert "testbed" in result
-        assert result["testbed"]["name"] == "my_testbed"
-
-    def test_load_user_testbed_guarantees_both_keys_minimal_yaml(
-        self, create_testbed_file: Callable[[str], Path]
-    ) -> None:
-        """Test that _load_user_testbed() creates both keys from minimal YAML."""
-        # Minimal valid YAML - just an empty dict effectively
-        minimal_yaml = """
-custom_key: some_value
-"""
-        testbed_path = create_testbed_file(minimal_yaml)
-
-        result = TestbedGenerator._load_user_testbed(testbed_path)
-
+        # Always verify both keys exist
         assert "testbed" in result
         assert isinstance(result["testbed"], dict)
         assert "devices" in result
         assert isinstance(result["devices"], dict)
-        # Original content should be preserved
-        assert result["custom_key"] == "some_value"
+
+        # Verify extra assertions based on test case
+        for key, expected in extra_assertions.items():
+            if isinstance(expected, dict):
+                for subkey, subval in expected.items():
+                    if subval is dict:
+                        assert subkey in result[key]
+                    else:
+                        assert result[key][subkey] == subval
+            else:
+                assert result[key] == expected
