@@ -15,6 +15,7 @@ from typing import Any
 
 import yaml
 
+from nac_test.core.types import PyATSResults, TestResults
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
     DEFAULT_CPU_MULTIPLIER,
@@ -497,19 +498,58 @@ class PyATSOrchestrator:
         # Use the detected controller type
         EnvironmentValidator.validate_controller_env(self.controller_type)
 
-    def run_tests(self) -> None:
-        """Main entry point - triggers the async execution flow."""
+    def _extract_pyats_stats(
+        self, pyats_stats: dict[str, dict[str, Any]]
+    ) -> PyATSResults:
+        """Extract PyATS statistics for API and D2D.
+
+        Args:
+            pyats_stats: Dict from MultiArchiveReportGenerator with API/D2D stats
+                Keys are archive types (e.g., "api", "d2d")
+
+        Returns:
+            PyATSResults with api and d2d results (either can be None if not present)
+        """
+        api_results: TestResults | None = None
+        d2d_results: TestResults | None = None
+
+        for archive_type, stats in pyats_stats.items():
+            results = TestResults(
+                total=stats["total_tests"],
+                passed=stats["passed_tests"],
+                failed=stats["failed_tests"],
+                skipped=stats["skipped_tests"],
+            )
+            if archive_type.upper() == "API":
+                api_results = results
+            elif archive_type.upper() == "D2D":
+                d2d_results = results
+
+        return PyATSResults(api=api_results, d2d=d2d_results)
+
+    def run_tests(self) -> PyATSResults:
+        """Main entry point - triggers the async execution flow.
+
+        Returns:
+            PyATSResults containing api and d2d results (either can be None)
+        """
         # This is the synchronous entry point that kicks off the async orchestration
         try:
-            asyncio.run(self._run_tests_async())
+            return asyncio.run(self._run_tests_async())
         except Exception as e:
             logger.error(
                 f"An unexpected error occurred during test orchestration: {e}",
                 exc_info=True,
             )
+            # Return error in api slot - CombinedOrchestrator will handle appropriately
+            return PyATSResults(api=TestResults.from_error(str(e)))
 
-    async def _run_tests_async(self) -> None:
-        """Main async orchestration logic."""
+    async def _run_tests_async(self) -> PyATSResults:
+        """Main async orchestration logic.
+
+        Returns:
+            PyATSResults containing api and d2d results (either can be None)
+        """
         # Track overall start time for combined summary
         self.overall_start_time = datetime.now()
 
@@ -531,7 +571,7 @@ class PyATSOrchestrator:
 
         if not test_files:
             print("No PyATS test files (*.py) found in test directory")
-            return
+            return PyATSResults()
 
         print(f"Discovered {len(test_files)} PyATS test files")
         print(f"Running with {self.max_workers} parallel workers")
@@ -543,7 +583,7 @@ class PyATSOrchestrator:
             )
         except ValueError as e:
             print(terminal.error(str(e)))
-            sys.exit(1)
+            raise
 
         # Initialize progress reporter for output formatting
         self.progress_reporter = ProgressReporter(
@@ -677,15 +717,12 @@ class PyATSOrchestrator:
             )
 
         # Generate HTML reports after all test types have completed
-        await self._generate_html_reports_async()
+        return await self._generate_html_reports_async()
 
-    async def _generate_html_reports_async(self) -> None:
-        """Generate HTML reports asynchronously from collected archives.
-
-        This method handles multiple archives (API and D2D) using the
-        MultiArchiveReportGenerator for proper report organization and
-        combined summary generation.
-        """
+    async def _generate_html_reports_async(
+        self,
+    ) -> PyATSResults:
+        """Generate HTML reports asynchronously from collected archives."""
 
         # Use ArchiveInspector to find all archives (stored at base level)
         archives = ArchiveInspector.find_archives(self.base_output_dir)
@@ -710,7 +747,7 @@ class PyATSOrchestrator:
 
         if not archive_paths:
             print("No PyATS job archives found to generate reports from.")
-            return
+            return PyATSResults()
 
         print(f"\nGenerating reports from {len(archive_paths)} archive(s)...")
 
@@ -741,25 +778,14 @@ class PyATSOrchestrator:
             print(f"\n{terminal.info('HTML Reports Generated:')}")
             print("=" * 80)
 
-            if result.get("combined_summary"):
-                # Multiple archives - show combined summary
-                print(f"{'Combined Summary:'} {result['combined_summary']}")
+            # Show individual report directories
+            for archive_type, archive_result in result["results"].items():
+                if archive_result.get("status") == "success":
+                    report_dir = Path(archive_result.get("report_dir", ""))
+                    summary_report = report_dir / "summary_report.html"
 
-                # Show individual report directories
-                for archive_type, archive_result in result["results"].items():
-                    if archive_result.get("status") == "success":
-                        report_dir = archive_result.get("report_dir", "")
-                        print(f"{f'{archive_type.upper()} Reports:'}   {report_dir}")
-            else:
-                # Single archive - show its report location
-                for _archive_type, archive_result in result["results"].items():
-                    if archive_result.get("status") == "success":
-                        report_dir = Path(archive_result.get("report_dir", ""))
-                        summary_report = report_dir / "summary_report.html"
-
-                        print(f"{'Summary Report:'} {summary_report}")
-                        print(f"{'All Reports:'}    {report_dir}")
-                        break
+                    print(f"{f'{archive_type.upper()} Summary:'} {summary_report}")
+                    print(f"{f'{archive_type.upper()} Reports:'}  {report_dir}")
 
             # Report any failures
             failed_archives = [
@@ -802,7 +828,14 @@ class PyATSOrchestrator:
                     except Exception as e:
                         logger.debug(f"Could not remove directory {type_dir}: {e}")
 
+            # Extract and return test statistics
+            if result.get("pyats_stats"):
+                return self._extract_pyats_stats(result["pyats_stats"])
+            else:
+                return PyATSResults()
+
         else:
             print(f"\n{terminal.error('Failed to generate reports')}")
             if result.get("error"):
                 print(f"Error: {result['error']}")
+            return PyATSResults()

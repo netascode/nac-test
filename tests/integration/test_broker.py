@@ -22,7 +22,7 @@ import pytest
 from typer.testing import CliRunner
 
 import nac_test.cli.main
-from tests.integration.mocks.mock_server import MockAPIServer
+from tests.e2e.mocks.mock_server import MockAPIServer
 
 logger = logging.getLogger(__name__)
 
@@ -172,7 +172,7 @@ def test_connection_broker_pooling_and_caching(
 
     # Get absolute path to mock_unicon.py
     project_root = Path(__file__).parent.parent.parent.absolute()
-    mock_script = project_root / "tests" / "integration" / "mocks" / "mock_unicon.py"
+    mock_script = project_root / "tests" / "e2e" / "mocks" / "mock_unicon.py"
 
     # Save original method
     original_build_device_dict = BaseDeviceResolver.build_device_dict
