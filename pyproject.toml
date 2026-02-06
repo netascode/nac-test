@@ -37,7 +37,7 @@ dependencies = [
     "robotframework-requests>=0.9.7",
     "ruamel.yaml>=0.18.15",
     "typer>=0.17.4",
-    "setuptools<81", # required for RESTinstance which needs pkg_resources (sic)
+    "setuptools<82", # required for RESTinstance which needs pkg_resources (sic)
     "scrapli-netconf>=2026.1.12",
     "asyncssh>=2.22.0",
 ]
