@@ -45,14 +45,7 @@ class TestbedGenerator:
 
         # Load base testbed if provided, otherwise create minimal structure
         if base_testbed_path and base_testbed_path.exists():
-            with open(base_testbed_path) as f:
-                testbed = yaml.safe_load(f)
-
-            # Ensure required structure exists
-            if "testbed" not in testbed:
-                testbed["testbed"] = {}
-            if "devices" not in testbed:
-                testbed["devices"] = {}
+            testbed = TestbedGenerator._load_user_testbed(base_testbed_path)
 
             # If device already exists in user testbed, preserve it (user wins)
             if hostname in testbed["devices"]:
@@ -116,11 +109,10 @@ class TestbedGenerator:
         # Load base testbed if provided, otherwise create minimal structure
         if base_testbed_path and base_testbed_path.exists():
             logger.info(f"Loading user-provided testbed from: {base_testbed_path}")
-            with open(base_testbed_path) as f:
-                testbed = yaml.safe_load(f)
+            testbed = TestbedGenerator._load_user_testbed(base_testbed_path)
 
-            # Ensure required structure exists
-            if "testbed" not in testbed:
+            # If user didn't provide testbed metadata, add defaults
+            if not testbed["testbed"]:
                 testbed["testbed"] = {
                     "name": "nac_test_consolidated_testbed",
                     "credentials": {
@@ -130,8 +122,6 @@ class TestbedGenerator:
                         }
                     },
                 }
-            if "devices" not in testbed:
-                testbed["devices"] = {}
 
             # Track which devices are from user testbed
             user_device_hostnames = set(testbed["devices"].keys())
@@ -173,6 +163,65 @@ class TestbedGenerator:
         # Convert to YAML
         # Note: User-only devices (not in auto-discovery) remain in testbed
         return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
+
+    @staticmethod
+    def _load_user_testbed(base_testbed_path: Path) -> dict[str, Any]:
+        """Load and validate a user-provided testbed YAML file.
+
+        Performs defensive validation to catch common user errors early with
+        helpful error messages. Guarantees that the returned dictionary contains
+        'testbed' and 'devices' keys as dictionaries.
+
+        Args:
+            base_testbed_path: Path to the user-provided testbed YAML file.
+
+        Returns:
+            Validated testbed dictionary with 'testbed' and 'devices' keys
+            guaranteed to exist as dictionaries.
+
+        Raises:
+            ValueError: If the file contains invalid UTF-8 encoding, invalid YAML,
+                is empty, or has unexpected structure.
+        """
+        # Typer CLI validates: exists=True, file_okay=True, dir_okay=False (readable)
+        try:
+            with open(base_testbed_path, encoding="utf-8") as f:
+                testbed = yaml.safe_load(f)
+        except UnicodeDecodeError as e:
+            raise ValueError(
+                f"Testbed file '{base_testbed_path}' contains invalid UTF-8 encoding. "
+                f"Please ensure the file is saved as UTF-8."
+            ) from e
+        except yaml.YAMLError as e:
+            raise ValueError(
+                f"Invalid YAML syntax in testbed file '{base_testbed_path}': {e}"
+            ) from e
+
+        # Handle empty file (yaml.safe_load returns None)
+        if testbed is None:
+            raise ValueError(f"Testbed file '{base_testbed_path}' is empty")
+
+        # Validate root is a dictionary
+        if not isinstance(testbed, dict):
+            raise ValueError(
+                f"Testbed file '{base_testbed_path}' must contain a YAML mapping (dict), "
+                f"got {type(testbed).__name__}"
+            )
+
+        # Validate 'devices' key structure if present
+        if "devices" in testbed and not isinstance(testbed["devices"], dict):
+            raise ValueError(
+                f"'devices' in testbed file '{base_testbed_path}' must be a mapping (dict), "
+                f"got {type(testbed['devices']).__name__}"
+            )
+
+        # Ensure required keys exist as dicts (avoid duplication in callers)
+        if "testbed" not in testbed:
+            testbed["testbed"] = {}
+        if "devices" not in testbed:
+            testbed["devices"] = {}
+
+        return testbed
 
     @staticmethod
     def _build_device_config(device: dict[str, Any]) -> dict[str, Any]:
