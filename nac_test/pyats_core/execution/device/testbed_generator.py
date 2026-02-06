@@ -180,12 +180,18 @@ class TestbedGenerator:
             guaranteed to exist as dictionaries.
 
         Raises:
-            ValueError: If the file contains invalid YAML, is empty,
-                or has unexpected structure.
+            ValueError: If the file contains invalid UTF-8 encoding, invalid YAML,
+                is empty, or has unexpected structure.
         """
+        # Typer CLI validates: exists=True, file_okay=True, dir_okay=False (readable)
         try:
             with open(base_testbed_path, encoding="utf-8") as f:
                 testbed = yaml.safe_load(f)
+        except UnicodeDecodeError as e:
+            raise ValueError(
+                f"Testbed file '{base_testbed_path}' contains invalid UTF-8 encoding. "
+                f"Please ensure the file is saved as UTF-8."
+            ) from e
         except yaml.YAMLError as e:
             raise ValueError(
                 f"Invalid YAML syntax in testbed file '{base_testbed_path}': {e}"

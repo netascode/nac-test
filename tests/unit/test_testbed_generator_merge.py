@@ -621,3 +621,15 @@ custom_key: some_value
                         assert result[key][subkey] == subval
             else:
                 assert result[key] == expected
+
+    def test_unicode_decode_error(
+        self, tmp_path: Path, sample_device: dict[str, Any]
+    ) -> None:
+        """Test that non-UTF-8 files raise ValueError with encoding message."""
+        testbed_file = tmp_path / "invalid_encoding.yaml"
+        testbed_file.write_bytes(b"testbed:\n  name: \xff\xfe invalid utf-8\n")
+
+        with pytest.raises(ValueError, match="invalid UTF-8 encoding"):
+            TestbedGenerator.generate_consolidated_testbed_yaml(
+                [sample_device], base_testbed_path=testbed_file
+            )
