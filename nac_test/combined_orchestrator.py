@@ -12,7 +12,6 @@ from pathlib import Path
 
 import typer
 
-from nac_test.core.constants import DEBUG_MODE
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
@@ -100,20 +99,26 @@ class CombinedOrchestrator:
         self.dev_pyats_only = dev_pyats_only
         self.dev_robot_only = dev_robot_only
 
-        # Detect controller type early (required for all test types)
-        try:
-            self.controller_type = detect_controller_type()
-            logger.info(f"Controller type detected: {self.controller_type}")
-        except ValueError as e:
-            # Exit gracefully if controller detection fails
-            typer.secho(
-                f"\n❌ Controller detection failed:\n{e}", fg=typer.colors.RED, err=True
-            )
-            # Progressive disclosure: clean output for customers, full context for developers
-            if DEBUG_MODE:
-                raise typer.Exit(1) from e  # Developer: full exception context
-            raise typer.Exit(1) from None  # Customer: clean output
+        # Detect controller type early (unless we are in render-only mode, which doesn't require controller access)
+        self.controller_type: str | None = None
+        if not self.render_only:
+            try:
+                self.controller_type = detect_controller_type()
+                logger.info(f"Controller type detected: {self.controller_type}")
+            except ValueError as e:
+                # Exit gracefully if controller detection fails
+                typer.secho(
+                    f"\n❌ Controller detection failed:\n{e}",
+                    fg=typer.colors.RED,
+                    err=True,
+                )
+                raise typer.Exit(1) from None
 
+    # def _verify_args(self) -> None:
+    #     """Verify that development mode arguments are not used together."""
+    #     if self.dev_pyats_only and self.dev_robot_only:
+    #         typer.secho(
+    #             "\n❌ Invalid argument combination: --pyats and --robot cannot be used together.",
     def run_tests(self) -> None:
         """Main entry point for combined test execution.
 
@@ -122,7 +127,7 @@ class CombinedOrchestrator:
         # Note: Output directory and merged data file created by main.py
 
         # Handle development mode (PyATS only)
-        if self.dev_pyats_only:
+        if self.dev_pyats_only and not self.render_only:
             typer.secho(
                 "\n\n⚠️  WARNING: --pyats flag is for development use only. Production runs should use combined execution.",
                 fg=typer.colors.YELLOW,
@@ -182,7 +187,7 @@ class CombinedOrchestrator:
             return
 
         # Sequential execution - each orchestrator manages its own directory structure
-        if has_pyats:
+        if has_pyats and not self.render_only:
             typer.echo("\n🧪 Running PyATS tests...\n")
             self._check_python_version()
 
