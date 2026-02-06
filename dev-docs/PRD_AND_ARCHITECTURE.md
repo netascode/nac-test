@@ -1841,7 +1841,7 @@ class PyATSOrchestrator:
 def _calculate_workers(self) -> int:
     """Calculate optimal worker count based on CPU, memory, and test type."""
     cpu_workers = SystemResourceCalculator.calculate_worker_capacity(
-        memory_per_worker_gb=MEMORY_PER_WORKER_GB,  # 2GB per worker
+        memory_per_worker_gb=MEMORY_PER_WORKER_GB,  # 0.35GB per worker
         cpu_multiplier=DEFAULT_CPU_MULTIPLIER,       # 2x CPU cores
         max_workers=MAX_WORKERS_HARD_LIMIT,         # 100 workers max
         env_var="PYATS_MAX_WORKERS",                # Override via env var
@@ -2776,7 +2776,7 @@ MAX_WORKERS = 50  # Hardcoded
 ```
 
 **Problems:**
-- ❌ **Low-end systems**: 50 workers × 2GB = 100GB memory (exceeds 8GB laptop)
+- ❌ **Low-end systems**: 50 workers × 0.35GB = 17.5GB memory (exceeds 8GB laptop)
 - ❌ **High-end systems**: 50 workers underutilize 64-core server (128 logical CPUs)
 - ❌ **CI/CD runners**: Fixed count may exceed container resource limits
 - ❌ **No flexibility**: Cannot tune for specific deployments
@@ -2785,17 +2785,17 @@ MAX_WORKERS = 50  # Hardcoded
 ```python
 def _calculate_workers(self) -> int:
     cpu_workers = SystemResourceCalculator.calculate_worker_capacity(
-        memory_per_worker_gb=2.0,        # 2GB per worker
-        cpu_multiplier=2.0,              # 2× CPU cores
-        max_workers=100,                 # Safety limit
-        env_var="PYATS_MAX_WORKERS",     # Override mechanism
+        memory_per_worker_gb=0.35,        # 0.35GB per worker
+        cpu_multiplier=2.0,               # 2× CPU cores
+        max_workers=100,                  # Safety limit
+        env_var="PYATS_MAX_WORKERS",      # Override mechanism
     )
     return cpu_workers
 
 # Example results:
-# 8GB laptop, 4 cores:   min(4, 4) → 4 workers   ✅ Fits in 8GB
-# 64GB server, 32 cores: min(64, 32) → 32 workers ✅ Utilizes 64 cores
-# 128GB server, 64 cores: min(64, 100) → 64 workers ✅ Respects max_workers
+# 8GB laptop, 4 cores:    min(8, 22) → 8 workers    ✅ Fits in 8GB
+# 64GB server, 32 cores:  min(64, 182) → 64 workers ✅ Utilizes 64 cores
+# 128GB server, 64 cores: min(128, 365, 100) → 100 workers ✅ Respects max_workers
 ```
 
 **Benefits:**
@@ -2808,16 +2808,16 @@ def _calculate_workers(self) -> int:
 
 ```
 Developer Laptop (8GB, 4 cores):
-  → Workers: 4
-  → Memory usage: 8GB (fits comfortably)
+  → Workers: 8
+  → Memory usage: 2.8GB (fits comfortably)
 
 CI/CD Runner (16GB, 8 cores):
-  → Workers: 8
-  → Memory usage: 16GB (optimized for CI)
+  → Workers: 16
+  → Memory usage: 5.6GB (optimized for CI)
 
 Production Server (128GB, 64 cores):
-  → Workers: 64
-  → Memory usage: 128GB (maximum throughput)
+  → Workers: 100
+  → Memory usage: 35GB (maximum throughput)
 ```
 
 ---
@@ -9764,7 +9764,7 @@ logging.basicConfig(level=logging.DEBUG)
 **Why Dynamic Worker Calculation:**
 
 Running too many workers causes problems:
-- **Memory exhaustion**: Each PyATS worker uses ~2GB RAM
+- **Memory exhaustion**: Each PyATS worker uses ~0.35GB RAM
 - **CPU thrashing**: Context switching overhead when workers > CPUs
 - **System instability**: Load average spikes, system becomes unresponsive
 
@@ -9793,7 +9793,7 @@ Running too few workers wastes resources:
 MIN_WORKERS = 2                    # Always use at least 2 workers
 MAX_WORKERS = 32                   # Default maximum
 MAX_WORKERS_HARD_LIMIT = 50        # Absolute ceiling (safety limit)
-MEMORY_PER_WORKER_GB = 2           # Each worker needs 2GB RAM
+MEMORY_PER_WORKER_GB = 0.35        # Each worker needs 0.35GB RAM
 DEFAULT_CPU_MULTIPLIER = 2         # 2x CPU count (I/O-bound workload)
 LOAD_AVERAGE_THRESHOLD = 0.8       # Reduce workers if load > 80% CPU count
 ```
@@ -9802,7 +9802,7 @@ LOAD_AVERAGE_THRESHOLD = 0.8       # Reduce workers if load > 80% CPU count
 
 | Constant | Value | Rationale |
 |----------|-------|-----------|
-| `MEMORY_PER_WORKER_GB` | 2 GB | PyATS worker memory profile: ~1.5GB active + 0.5GB headroom |
+| `MEMORY_PER_WORKER_GB` | 0.35 GB | PyATS worker memory profile: measured ~0.08GB average + headroom |
 | `CPU_MULTIPLIER` | 2.0 | I/O-bound work (network waiting), can oversubscribe CPUs 2x |
 | `MAX_WORKERS_HARD_LIMIT` | 50 | Safety ceiling preventing runaway parallelism |
 | `MIN_WORKERS` | 2 | Minimum parallelism even on resource-constrained systems |
@@ -9815,7 +9815,7 @@ LOAD_AVERAGE_THRESHOLD = 0.8       # Reduce workers if load > 80% CPU count
 
 ```python
 def calculate_worker_capacity(
-    memory_per_worker_gb: float = 2.0,
+    memory_per_worker_gb: float = 0.35,
     cpu_multiplier: float = 2.0,
     max_workers: int = 50,
     env_var: str = "PYATS_MAX_WORKERS",
@@ -9897,18 +9897,18 @@ memory_workers = int(memory_info["available"] / memory_per_worker_bytes)
 
 - Query **available** memory (not total, not free)
 - Available = memory usable without swapping
-- Divide by memory per worker (2GB default)
+- Divide by memory per worker (0.35GB default)
 - Result = max workers before memory exhaustion
 
 **Examples:**
 
 | System | Available RAM | Memory Per Worker | Memory Workers |
 |--------|---------------|-------------------|----------------|
-| Low RAM | 8 GB | 2 GB | **4** |
-| Normal | 16 GB | 2 GB | **8** |
-| High RAM | 32 GB | 2 GB | **16** |
-| Server | 64 GB | 2 GB | **32** |
-| Beefy | 128 GB | 2 GB | **64** (but capped at 50) |
+| Low RAM | 8 GB | 0.35 GB | **22** |
+| Normal | 16 GB | 0.35 GB | **45** |
+| High RAM | 32 GB | 0.35 GB | **91** |
+| Server | 64 GB | 0.35 GB | **182** |
+| Beefy | 128 GB | 0.35 GB | **365** (but capped at 50) |
 
 **Memory Info Structure:**
 
@@ -9996,11 +9996,11 @@ CPU count: 8
 Available RAM: 16 GB
 
 cpu_workers = 8 × 2 = 16
-memory_workers = 16 GB ÷ 2 GB = 8
+memory_workers = 16 GB ÷ 0.35 GB = 45
 load_avg = 2.5 (normal)
 
-calculated = min(16, 8, 50) = 8
-RESULT: Memory is the bottleneck, use 8 workers
+calculated = min(16, 45, 50) = 16
+RESULT: CPU is the bottleneck, use 16 workers
 ```
 
 **Example 2: High RAM, Few CPUs**
@@ -10009,10 +10009,10 @@ CPU count: 4
 Available RAM: 64 GB
 
 cpu_workers = 4 × 2 = 8
-memory_workers = 64 GB ÷ 2 GB = 32
+memory_workers = 64 GB ÷ 0.35 GB = 182
 load_avg = 1.2 (normal)
 
-calculated = min(8, 32, 50) = 8
+calculated = min(8, 182, 50) = 8
 RESULT: CPU is the bottleneck, use 8 workers
 ```
 
@@ -10024,9 +10024,9 @@ Load avg: 12.0 (heavily loaded!)
 
 cpu_workers = 8 × 2 = 16
 load_avg > cpu_count → cpu_workers = 16 × 0.5 = 8
-memory_workers = 32 GB ÷ 2 GB = 16
+memory_workers = 32 GB ÷ 0.35 GB = 91
 
-calculated = min(8, 16, 50) = 8
+calculated = min(8, 91, 50) = 8
 RESULT: System load throttled CPU workers to 8
 ```
 
@@ -10036,11 +10036,11 @@ CPU count: 2
 Available RAM: 4 GB
 
 cpu_workers = 2 × 2 = 4
-memory_workers = 4 GB ÷ 2 GB = 2
+memory_workers = 4 GB ÷ 0.35 GB = 11
 load_avg = 0.8 (normal)
 
-calculated = min(4, 2, 50) = 2
-RESULT: Minimal memory, use 2 workers only
+calculated = min(4, 11, 50) = 4
+RESULT: CPU is the bottleneck, use 4 workers
 ```
 
 ---
@@ -10141,7 +10141,7 @@ RESULT: File descriptors are the bottleneck
 def _calculate_workers(self) -> int:
     """Calculate optimal worker count based on CPU, memory, and test type"""
     cpu_workers = SystemResourceCalculator.calculate_worker_capacity(
-        memory_per_worker_gb=MEMORY_PER_WORKER_GB,      # 2 GB
+        memory_per_worker_gb=MEMORY_PER_WORKER_GB,      # 0.35 GB
         cpu_multiplier=DEFAULT_CPU_MULTIPLIER,          # 2.0
         max_workers=MAX_WORKERS_HARD_LIMIT,             # 50
         env_var="PYATS_MAX_WORKERS",
@@ -10185,7 +10185,7 @@ def _calculate_workers(self) -> int:
 from nac_test.utils.system_resources import SystemResourceCalculator
 
 workers = SystemResourceCalculator.calculate_worker_capacity(
-    memory_per_worker_gb=2.0,
+memory_per_worker_gb=0.35,
     cpu_multiplier=2.0,
     max_workers=50,
     env_var="PYATS_MAX_WORKERS"
@@ -10200,7 +10200,7 @@ cpu_count = mp.cpu_count()
 print(f"CPU count: {cpu_count}")
 print(f"Available RAM: {memory_info['available'] / (1024**3):.1f} GB")
 print(f"CPU workers: {cpu_count * 2}")
-print(f"Memory workers: {memory_info['available'] / (2 * 1024**3):.0f}")
+print(f"Memory workers: {memory_info['available'] / (0.35 * 1024**3):.0f}")
 ```
 
 **Force Specific Worker Count:**
@@ -10232,12 +10232,12 @@ return {
 **Result:**
 
 ```
-memory_workers = 8 GB ÷ 2 GB = 4 workers
+memory_workers = 8 GB ÷ 0.35 GB = 22 workers
 cpu_workers = 4 × 2 = 8 workers (assuming 4 CPUs)
-calculated = min(8, 4, 50) = 4 workers
+calculated = min(8, 22, 50) = 8 workers
 ```
 
-Conservative 4-worker default prevents overload even if detection fails.
+Conservative 8-worker default prevents overload even if detection fails.
 
 ---
 
@@ -10247,7 +10247,7 @@ Conservative 4-worker default prevents overload even if detection fails.
 2. **Conservative approach**: Takes minimum of CPU, memory, and hard limits
 3. **I/O-bound optimized**: 2x CPU multiplier for network-waiting workloads
 4. **Load-aware**: Halves workers if system already overloaded
-5. **Memory-safe**: Each worker gets 2GB, prevents OOM kills
+5. **Memory-safe**: Each worker gets 0.35GB, prevents OOM kills
 6. **Override supported**: `PYATS_MAX_WORKERS` env var for manual control
 7. **Fallback protection**: Defaults to 4 workers if detection fails
 8. **Hard ceiling**: Never exceeds 50 workers (safety limit)
@@ -11388,7 +11388,7 @@ self.job_generator = JobGenerator(self.max_workers, self.output_dir)
 # orchestrator.py:111-120
 def _calculate_workers(self) -> int:
     cpu_workers = SystemResourceCalculator.calculate_worker_capacity(
-        memory_per_worker_gb=MEMORY_PER_WORKER_GB,  # 2.0 GB
+memory_per_worker_gb=MEMORY_PER_WORKER_GB,  # 0.35 GB
         cpu_multiplier=DEFAULT_CPU_MULTIPLIER,       # 2.0
         max_workers=MAX_WORKERS_HARD_LIMIT,          # 50
         env_var="PYATS_MAX_WORKERS",
@@ -11419,7 +11419,7 @@ PyATS executes test files in parallel using a worker pool. `max_workers` determi
 
 **Constraint:** max_workers limited by:
 - CPU count (cpu_count × 2 for I/O-bound work)
-- Available memory (memory / 2GB per worker)
+- Available memory (memory / 0.35GB per worker)
 - System load (halved if load_avg > cpu_count)
 - Hard limit (50 workers max)
 
