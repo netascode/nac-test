@@ -1,4 +1,7 @@
 ---
+defaults:
+  apic:
+    version: 6.0
 root:
   attr1: value1
   primitive_list:
