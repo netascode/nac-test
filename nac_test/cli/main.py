@@ -9,11 +9,22 @@ import errorhandler
 import typer
 
 import nac_test
-from nac_test.cli.ui import display_aci_defaults_banner
-from nac_test.cli.validators import validate_aci_defaults
+from nac_test.cli.reporting import generate_auth_failure_report
+from nac_test.cli.ui import (
+    display_aci_defaults_banner,
+    display_auth_failure_banner,
+    display_unreachable_banner,
+)
+from nac_test.cli.validators import (
+    CONTROLLER_REGISTRY,
+    AuthOutcome,
+    preflight_auth_check,
+    validate_aci_defaults,
+)
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import DEBUG_MODE
 from nac_test.data_merger import DataMerger
+from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.logging import VerbosityLevel, configure_logging
 
 # Pretty exceptions are verbose but helpful for debugging.
@@ -298,6 +309,50 @@ def main(
         display_aci_defaults_banner()
         typer.echo("")
         raise typer.Exit(1)
+
+    # Detect controller type from environment variables
+    # This is used for pre-flight auth check and passed to orchestrator
+    try:
+        controller_type = detect_controller_type()
+    except ValueError as e:
+        # No credentials or multiple credentials configured
+        typer.echo(
+            typer.style(f"Error: {e}", fg=typer.colors.RED),
+            err=True,
+        )
+        raise typer.Exit(1) from None
+
+    # Pre-flight auth check: validate credentials before any test execution
+    # Skip for render-only mode since we don't need controller access
+    if not render_only:
+        auth_result = preflight_auth_check(controller_type)
+        if not auth_result.success:
+            typer.echo("")
+            # Display appropriate banner based on failure type
+            if auth_result.reason == AuthOutcome.UNREACHABLE:
+                display_unreachable_banner(
+                    controller_type=auth_result.controller_type,
+                    controller_url=auth_result.controller_url,
+                    detail=auth_result.detail,
+                )
+            else:
+                config = CONTROLLER_REGISTRY.get(auth_result.controller_type)
+                env_var_prefix = (
+                    config.env_var_prefix if config else auth_result.controller_type
+                )
+                display_auth_failure_banner(
+                    controller_type=auth_result.controller_type,
+                    controller_url=auth_result.controller_url,
+                    detail=auth_result.detail,
+                    env_var_prefix=env_var_prefix,
+                )
+            typer.echo("")
+
+            # Generate HTML report for CI/CD artifact collection
+            report_path = generate_auth_failure_report(auth_result, output)
+            typer.echo(f"Auth failure report: {report_path}")
+
+            raise typer.Exit(1)
 
     # Merge data files with timing
     start_time = datetime.now()

@@ -184,3 +184,177 @@ def display_aci_defaults_banner() -> None:
             )
 
         typer.echo(typer.style(bottom_border, fg=border_color))
+
+
+def display_auth_failure_banner(
+    controller_type: str,
+    controller_url: str,
+    detail: str,
+    env_var_prefix: str,
+) -> None:
+    """Display a prominent banner when controller authentication fails.
+
+    This banner is shown when the pre-flight auth check fails due to invalid
+    credentials (HTTP 401/403). It provides remediation steps including the
+    environment variable names to check.
+
+    Args:
+        controller_type: The controller type string (e.g., "ACI", "SDWAN", "CC").
+        controller_url: The URL that was attempted.
+        detail: Human-readable error detail (e.g., "HTTP 401: Unauthorized").
+        env_var_prefix: The environment variable prefix (e.g., "ACI", "SDWAN", "CC").
+
+    Note:
+        Uses the same box style and color handling as display_aci_defaults_banner.
+    """
+    # Import here to avoid circular import
+    from nac_test.cli.validators.controller_auth import CONTROLLER_REGISTRY
+
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    display_name = config.display_name if config else controller_type
+    width = BANNER_CONTENT_WIDTH
+    no_color = TerminalColors.NO_COLOR
+    style = _get_box_style(no_color)
+
+    # Title content differs by mode
+    title = (
+        "!!! CONTROLLER AUTHENTICATION FAILED !!!"
+        if no_color
+        else "⛔ CONTROLLER AUTHENTICATION FAILED"
+    )
+
+    # Build borders
+    h_border = style.horizontal * width
+    top_border = style.top_left + h_border + style.top_right
+    separator = style.mid_left + h_border + style.mid_right
+    bottom_border = style.bottom_left + h_border + style.bottom_right
+    title_line = _build_title_line(title, width, style)
+
+    # Content lines
+    content_lines = [
+        "",
+        f"Could not authenticate to {display_name} at {controller_url}",
+        f"{detail}",
+        "",
+        "Verify your credentials:",
+        f"  export {env_var_prefix}_USERNAME=<username>",
+        f"  export {env_var_prefix}_PASSWORD=<password>",
+        "",
+    ]
+    bordered_content = [
+        _build_bordered_line(line, width, style) for line in content_lines
+    ]
+
+    # Output based on color mode
+    if no_color:
+        typer.echo(top_border)
+        typer.echo(title_line)
+        typer.echo(separator)
+        for line in bordered_content:
+            typer.echo(line)
+        typer.echo(bottom_border)
+    else:
+        border_color = typer.colors.RED
+        text_color = typer.colors.WHITE
+
+        typer.echo(typer.style(top_border, fg=border_color))
+        typer.echo(typer.style(title_line, fg=border_color))
+        typer.echo(typer.style(separator, fg=border_color))
+
+        for line in bordered_content:
+            # Color borders red, content white
+            typer.echo(
+                typer.style(style.vertical, fg=border_color)
+                + typer.style(line[1:-1], fg=text_color)
+                + typer.style(style.vertical, fg=border_color)
+            )
+
+        typer.echo(typer.style(bottom_border, fg=border_color))
+
+
+def display_unreachable_banner(
+    controller_type: str,
+    controller_url: str,
+    detail: str,
+) -> None:
+    """Display a prominent banner when controller is unreachable.
+
+    This banner is shown when the pre-flight auth check fails due to the
+    controller being unreachable (connection timeout, connection refused, etc.).
+    It provides connectivity debugging steps.
+
+    Args:
+        controller_type: The controller type string (e.g., "ACI", "SDWAN", "CC").
+        controller_url: The URL that was attempted.
+        detail: Human-readable error detail (e.g., "Connection timed out").
+
+    Note:
+        Uses the same box style and color handling as display_aci_defaults_banner.
+    """
+    # Import here to avoid circular import
+    from nac_test.cli.validators.controller_auth import (
+        CONTROLLER_REGISTRY,
+        extract_host,
+    )
+
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    display_name = config.display_name if config else controller_type
+    width = BANNER_CONTENT_WIDTH
+    no_color = TerminalColors.NO_COLOR
+    style = _get_box_style(no_color)
+
+    # Extract host from URL for curl example
+    host = extract_host(controller_url)
+
+    # Title content differs by mode
+    title = (
+        "!!! CONTROLLER UNREACHABLE !!!" if no_color else "⛔ CONTROLLER UNREACHABLE"
+    )
+
+    # Build borders
+    h_border = style.horizontal * width
+    top_border = style.top_left + h_border + style.top_right
+    separator = style.mid_left + h_border + style.mid_right
+    bottom_border = style.bottom_left + h_border + style.bottom_right
+    title_line = _build_title_line(title, width, style)
+
+    # Content lines
+    content_lines = [
+        "",
+        f"Could not connect to {display_name} at {controller_url}",
+        f"{detail}",
+        "",
+        "Verify the controller is reachable and the URL is correct:",
+        f"  curl -k {controller_url}",
+        f"  ping {host}",
+        "",
+    ]
+    bordered_content = [
+        _build_bordered_line(line, width, style) for line in content_lines
+    ]
+
+    # Output based on color mode
+    if no_color:
+        typer.echo(top_border)
+        typer.echo(title_line)
+        typer.echo(separator)
+        for line in bordered_content:
+            typer.echo(line)
+        typer.echo(bottom_border)
+    else:
+        border_color = typer.colors.RED
+        text_color = typer.colors.WHITE
+
+        typer.echo(typer.style(top_border, fg=border_color))
+        typer.echo(typer.style(title_line, fg=border_color))
+        typer.echo(typer.style(separator, fg=border_color))
+
+        for line in bordered_content:
+            # Color borders red, content white
+            typer.echo(
+                typer.style(style.vertical, fg=border_color)
+                + typer.style(line[1:-1], fg=text_color)
+                + typer.style(style.vertical, fg=border_color)
+            )
+
+        typer.echo(typer.style(bottom_border, fg=border_color))

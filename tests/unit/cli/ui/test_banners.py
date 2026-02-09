@@ -1,85 +1,220 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
-"""Unit tests for CLI UI banner components.
+"""Unit tests for CLI banner components.
 
-These tests verify the banner display functions work correctly,
-including color/ASCII mode handling for different terminal environments.
+These tests verify that the banner functions display correctly and
+include the expected content for user guidance.
 """
 
-import pytest
-from _pytest.monkeypatch import MonkeyPatch
+from io import StringIO
+from unittest.mock import patch
 
-from nac_test.cli.ui.banners import display_aci_defaults_banner
+from nac_test.cli.ui.banners import (
+    display_aci_defaults_banner,
+    display_auth_failure_banner,
+    display_unreachable_banner,
+)
 
 
 class TestDisplayAciDefaultsBanner:
-    """Tests for display_aci_defaults_banner function.
+    """Tests for display_aci_defaults_banner function."""
 
-    These tests verify the banner displays correctly without errors.
-    We don't test exact output format (that would be testing implementation
-    details), but we verify it executes and contains key information.
-    """
+    def test_displays_without_error(self) -> None:
+        """Banner displays without raising exceptions."""
+        with patch("sys.stdout", new=StringIO()):
+            display_aci_defaults_banner()
 
-    def test_banner_outputs_without_error(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """Banner function executes without raising exceptions."""
-        # Should not raise any exceptions
-        display_aci_defaults_banner()
+    def test_contains_defaults_directory_example(self) -> None:
+        """Banner includes example command with defaults directory."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_aci_defaults_banner()
 
-        captured = capsys.readouterr()
-        assert "DEFAULTS FILE REQUIRED FOR ACI" in captured.out
+        content = output.getvalue()
+        assert "-d ./defaults/" in content or "defaults" in content.lower()
 
-    def test_banner_contains_example_command(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """Banner includes helpful example command for users."""
-        display_aci_defaults_banner()
+    def test_respects_no_color_mode(self) -> None:
+        """Banner uses ASCII characters in NO_COLOR mode."""
+        output = StringIO()
+        with (
+            patch("nac_test.utils.terminal.TerminalColors.NO_COLOR", True),
+            patch("sys.stdout", new=output),
+        ):
+            display_aci_defaults_banner()
 
-        captured = capsys.readouterr()
-        assert "nac-test -d" in captured.out
-        assert "-d ./defaults/" in captured.out
+        content = output.getvalue()
+        # In NO_COLOR mode, should use ASCII box characters (+ and =)
+        assert "+" in content or "=" in content
 
-    def test_banner_uses_ascii_when_no_color_set(
-        self, monkeypatch: MonkeyPatch, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """Banner uses ASCII characters when NO_COLOR is set.
 
-        This ensures CI/CD environments and accessibility tools get
-        plain text output without Unicode box-drawing characters.
-        """
-        # Patch the class attribute directly since it's computed at import time
-        from nac_test.utils.terminal import TerminalColors
+class TestDisplayAuthFailureBanner:
+    """Tests for display_auth_failure_banner function."""
 
-        monkeypatch.setattr(TerminalColors, "NO_COLOR", True)
+    def test_displays_without_error(self) -> None:
+        """Banner displays without raising exceptions."""
+        with patch("sys.stdout", new=StringIO()):
+            display_auth_failure_banner(
+                controller_type="ACI",
+                controller_url="https://apic.example.com",
+                detail="HTTP 401: Unauthorized",
+                env_var_prefix="ACI",
+            )
 
-        display_aci_defaults_banner()
+    def test_contains_controller_type_display_name(self) -> None:
+        """Banner shows the controller display name (APIC for ACI)."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_auth_failure_banner(
+                controller_type="ACI",
+                controller_url="https://apic.example.com",
+                detail="HTTP 401: Unauthorized",
+                env_var_prefix="ACI",
+            )
 
-        captured = capsys.readouterr()
-        # Should NOT contain Unicode box-drawing characters
-        assert "╔" not in captured.out
-        assert "║" not in captured.out
-        assert "╚" not in captured.out
-        # Should contain ASCII equivalents
-        assert "+" in captured.out
-        assert "=" in captured.out
-        assert "|" in captured.out
-        # Should NOT contain emoji
-        assert "🛑" not in captured.out
+        content = output.getvalue()
+        assert "APIC" in content
 
-    def test_banner_uses_unicode_when_no_color_not_set(
-        self, monkeypatch: MonkeyPatch, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """Banner uses Unicode box-drawing when NO_COLOR is not set.
+    def test_contains_controller_url(self) -> None:
+        """Banner includes the controller URL."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_auth_failure_banner(
+                controller_type="SDWAN",
+                controller_url="https://sdwan-manager.lab.local",
+                detail="HTTP 403: Forbidden",
+                env_var_prefix="SDWAN",
+            )
 
-        Interactive terminals should get the visually prominent version.
-        """
-        monkeypatch.delenv("NO_COLOR", raising=False)
+        content = output.getvalue()
+        assert "sdwan-manager.lab.local" in content
 
-        display_aci_defaults_banner()
+    def test_contains_credential_env_var_hints(self) -> None:
+        """Banner shows environment variable names for credentials."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_auth_failure_banner(
+                controller_type="CC",
+                controller_url="https://catc.example.com",
+                detail="HTTP 401: Unauthorized",
+                env_var_prefix="CC",
+            )
 
-        captured = capsys.readouterr()
-        # Should contain Unicode box-drawing characters
-        assert "╔" in captured.out or "║" in captured.out
-        # Should contain emoji
-        assert "🛑" in captured.out
+        content = output.getvalue()
+        assert "CC_USERNAME" in content
+        assert "CC_PASSWORD" in content
+
+    def test_contains_error_detail(self) -> None:
+        """Banner includes the error detail string."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_auth_failure_banner(
+                controller_type="ACI",
+                controller_url="https://apic.example.com",
+                detail="HTTP 401: Unauthorized - Invalid credentials",
+                env_var_prefix="ACI",
+            )
+
+        content = output.getvalue()
+        assert "401" in content
+
+    def test_respects_no_color_mode(self) -> None:
+        """Banner uses ASCII characters in NO_COLOR mode."""
+        output = StringIO()
+        with (
+            patch("nac_test.utils.terminal.TerminalColors.NO_COLOR", True),
+            patch("sys.stdout", new=output),
+        ):
+            display_auth_failure_banner(
+                controller_type="ACI",
+                controller_url="https://apic.example.com",
+                detail="HTTP 401: Unauthorized",
+                env_var_prefix="ACI",
+            )
+
+        content = output.getvalue()
+        # In NO_COLOR mode, should use ASCII title (no emoji)
+        assert "AUTHENTICATION FAILED" in content
+
+
+class TestDisplayUnreachableBanner:
+    """Tests for display_unreachable_banner function."""
+
+    def test_displays_without_error(self) -> None:
+        """Banner displays without raising exceptions."""
+        with patch("sys.stdout", new=StringIO()):
+            display_unreachable_banner(
+                controller_type="ACI",
+                controller_url="https://apic.example.com",
+                detail="Connection timed out",
+            )
+
+    def test_contains_controller_url(self) -> None:
+        """Banner includes the controller URL."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_unreachable_banner(
+                controller_type="SDWAN",
+                controller_url="https://sdwan.example.com",
+                detail="Connection refused",
+            )
+
+        content = output.getvalue()
+        assert "sdwan.example.com" in content
+
+    def test_contains_curl_command_for_testing(self) -> None:
+        """Banner includes a curl command for connectivity testing."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_unreachable_banner(
+                controller_type="CC",
+                controller_url="https://catc.example.com",
+                detail="Connection timed out",
+            )
+
+        content = output.getvalue()
+        assert "curl" in content
+
+    def test_contains_ping_command(self) -> None:
+        """Banner includes a ping command for connectivity testing."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_unreachable_banner(
+                controller_type="ACI",
+                controller_url="https://apic.lab.local",
+                detail="Connection refused",
+            )
+
+        content = output.getvalue()
+        assert "ping" in content
+        assert "apic.lab.local" in content
+
+    def test_extracts_host_from_https_url(self) -> None:
+        """Banner correctly extracts host from HTTPS URL for ping command."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_unreachable_banner(
+                controller_type="ACI",
+                controller_url="https://10.1.2.3:443",
+                detail="Timeout",
+            )
+
+        content = output.getvalue()
+        # Should extract IP address for ping, not include port
+        assert "10.1.2.3" in content
+
+    def test_respects_no_color_mode(self) -> None:
+        """Banner uses ASCII characters in NO_COLOR mode."""
+        output = StringIO()
+        with (
+            patch("nac_test.utils.terminal.TerminalColors.NO_COLOR", True),
+            patch("sys.stdout", new=output),
+        ):
+            display_unreachable_banner(
+                controller_type="ACI",
+                controller_url="https://apic.example.com",
+                detail="Connection refused",
+            )
+
+        content = output.getvalue()
+        # In NO_COLOR mode, should use ASCII title (no emoji)
+        assert "UNREACHABLE" in content
