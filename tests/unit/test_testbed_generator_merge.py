@@ -154,6 +154,18 @@ devices:
         # Routers from auto-discovery
         assert testbed["devices"]["router1"]["connections"]["cli"]["ip"] == "10.1.1.1"
         assert testbed["devices"]["router2"]["connections"]["cli"]["ip"] == "10.1.1.2"
+        assert (
+            testbed["devices"]["router1"]["connections"]["cli"]["settings"][
+                "POST_DISCONNECT_WAIT_SEC"
+            ]
+            == 0
+        )
+        assert (
+            testbed["devices"]["router2"]["connections"]["cli"]["settings"][
+                "POST_DISCONNECT_WAIT_SEC"
+            ]
+            == 0
+        )
 
     def test_preserve_pyats_env_variables(
         self, create_testbed_file: Callable[[str], Path]
@@ -365,3 +377,9 @@ devices:
 
         assert "router1" in testbed["devices"]
         assert testbed["devices"]["router1"]["connections"]["cli"]["ip"] == "10.1.1.1"
+        assert (
+            testbed["devices"]["router1"]["connections"]["cli"]["settings"][
+                "POST_DISCONNECT_WAIT_SEC"
+            ]
+            == 0
+        )

@@ -236,6 +236,9 @@ class TestbedGenerator:
             "custom": {"abstraction": {"order": ["os"]}},
         }
 
+        connection_args.setdefault("settings", {})
+        connection_args["settings"].setdefault("POST_DISCONNECT_WAIT_SEC", 0)
+
         if "platform" in device:
             device_config["platform"] = device["platform"]
             if "model" in device:

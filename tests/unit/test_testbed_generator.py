@@ -54,6 +54,7 @@ class TestGenerateTestbedYaml:
         assert "arguments" in connection_args
         assert connection_args["arguments"]["init_config_commands"] == []
         assert connection_args["arguments"]["operating_mode"] is True
+        assert connection_args["settings"]["POST_DISCONNECT_WAIT_SEC"] == 0
 
     def test_custom_abstraction(self) -> None:
         """Test that custom.abstraction.order is set correctly."""
@@ -256,6 +257,7 @@ class TestGenerateTestbedYaml:
         connection = testbed["devices"]["test-device"]["connections"]["cli"]
         assert connection["protocol"] == "telnet"
         assert connection["port"] == 23
+        assert connection["settings"]["POST_DISCONNECT_WAIT_SEC"] == 0
 
     def test_ssh_options(self) -> None:
         """Test that ssh_options are included when provided."""
@@ -296,6 +298,7 @@ class TestGenerateTestbedYaml:
         assert "ip" not in connection
         assert connection["arguments"]["init_config_commands"] == []
         assert connection["arguments"]["operating_mode"] is True
+        assert connection["settings"]["POST_DISCONNECT_WAIT_SEC"] == 0
 
 
 class TestGenerateConsolidatedTestbedYaml:
@@ -360,6 +363,7 @@ class TestGenerateConsolidatedTestbedYaml:
             connection = device_config["connections"]["cli"]
             assert connection["arguments"]["init_config_commands"] == []
             assert connection["arguments"]["operating_mode"] is True
+            assert connection["settings"]["POST_DISCONNECT_WAIT_SEC"] == 0
             assert device_config["custom"]["abstraction"]["order"] == ["os"]
 
     def test_devices_with_mixed_optional_fields(self) -> None:
