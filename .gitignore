@@ -92,6 +92,8 @@ pabot_results/
 # Claude configuration
 .claude/
 CLAUDE.md
+# Opencode/oh-my-opencode
+.sisyphus/
 
 # bandit security report, if generated
 bandit-security-report.json

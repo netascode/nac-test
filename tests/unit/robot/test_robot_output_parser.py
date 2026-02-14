@@ -10,6 +10,7 @@
 from pathlib import Path
 
 import pytest
+from robot.errors import DataError
 
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 
@@ -234,3 +235,30 @@ def test_collector_empty_results(tmp_path: Path) -> None:
     assert stats["success_rate"] == 0.0
 
     assert len(data["tests"]) == 0
+
+
+def test_parse_corrupted_xml_structure(tmp_path: Path) -> None:
+    """Test parser with valid XML but corrupted structure.
+
+    This test creates XML that is syntactically valid but lacks the expected
+    Robot Framework elements (no root <robot> element). ExecutionResult should
+    raise an exception when it cannot parse the expected structure.
+    """
+    output_xml = tmp_path / "output.xml"
+    # Valid XML but missing the expected <robot> root element
+    # ExecutionResult expects a <robot> element at the root
+    content = """<?xml version="1.0" encoding="UTF-8"?>
+<invalid_root generator="Robot 7.0" generated="2025-02-01T12:00:00.000">
+<suite id="s1" name="Test Suite">
+<test id="s1-t1" name="Test Case 1" line="10">
+<status status="PASS" start="2025-02-01T12:00:01.000" elapsed="0.100"/>
+</test>
+<status status="PASS" start="2025-02-01T12:00:00.000" elapsed="0.100"/>
+</suite>
+</invalid_root>"""
+    output_xml.write_text(content)
+
+    parser = RobotResultParser(output_xml)
+    # ExecutionResult raises DataError when XML structure is invalid
+    with pytest.raises(DataError):
+        parser.parse()

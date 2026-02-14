@@ -150,3 +150,61 @@ def test_combined_report_empty_results(tmp_path: Path) -> None:
     content = result_path.read_text()
     assert "Overall Executive Summary" in content
     assert ">0<" in content  # 0 total tests
+
+
+def test_combined_results_with_robot_error(tmp_path: Path) -> None:
+    """Test CombinedResults when Robot has error but PyATS succeeds."""
+    # Create results: PyATS API succeeds, Robot has framework error
+    results = CombinedResults(
+        api=TestResults(total=5, passed=4, failed=1, skipped=0),
+        robot=TestResults.from_error(error="Pabot execution failed"),
+    )
+
+    # Verify computed properties handle error correctly
+    assert results.has_errors is True
+    assert results.total == 5  # Robot error contributes 0 to total
+    assert results.passed == 4
+    assert results.failed == 1
+    assert results.success_rate == 80.0  # 4/5 * 100
+
+    # Verify report generation still works with error results
+    generator = CombinedReportGenerator(tmp_path)
+    report_path = generator.generate_combined_summary(results)
+
+    assert report_path is not None
+    assert report_path.exists()
+
+    content = report_path.read_text()
+    assert "PyATS API" in content
+    assert "Robot Framework" in content  # with zero stats due to error
+
+
+def test_combined_results_with_partial_failures(tmp_path: Path) -> None:
+    """Test CombinedResults aggregation with mixed pass/fail across frameworks."""
+    # Create mixed results: some pass, some fail in each framework
+    results = CombinedResults(
+        api=TestResults(total=10, passed=7, failed=3, skipped=0),
+        d2d=TestResults(total=8, passed=6, failed=2, skipped=0),
+        robot=TestResults(total=5, passed=3, failed=2, skipped=0),
+    )
+
+    # Verify aggregation
+    assert results.has_errors is False  # No framework errors
+    assert results.total == 23  # 10 + 8 + 5
+    assert results.passed == 16  # 7 + 6 + 3
+    assert results.failed == 7  # 3 + 2 + 2
+    assert results.skipped == 0
+
+    # Success rate: 16/23 = 69.57%
+    expected_rate = (16 / 23) * 100
+    assert abs(results.success_rate - expected_rate) < 0.01
+
+    # Verify report generation with mixed results
+    generator = CombinedReportGenerator(tmp_path)
+    report_path = generator.generate_combined_summary(results)
+
+    assert report_path is not None
+    content = report_path.read_text()
+    assert "PyATS API" in content
+    assert "PyATS Direct-to-Device (D2D)" in content
+    assert "Robot Framework" in content

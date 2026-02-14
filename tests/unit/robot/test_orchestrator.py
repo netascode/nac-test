@@ -409,3 +409,44 @@ class TestRobotOrchestrator:
         # Should raise exception (handled by combined_orchestrator)
         with pytest.raises(ValueError, match="Template error"):
             orchestrator.run_tests()
+
+    def test_create_backward_compat_symlinks_target_is_directory(
+        self, orchestrator, temp_output_dir, caplog
+    ) -> None:
+        """Test symlink creation when target path exists as a directory."""
+        robot_results_dir = temp_output_dir / "robot_results"
+        robot_results_dir.mkdir()
+
+        output_xml = robot_results_dir / "output.xml"
+        output_xml.write_text("<robot></robot>")
+
+        target_dir = temp_output_dir / "output.xml"
+        target_dir.mkdir()
+
+        with pytest.raises((IsADirectoryError, PermissionError)):
+            orchestrator._create_backward_compat_symlinks()
+
+    def test_get_test_statistics_partially_corrupted_xml(
+        self, orchestrator, temp_output_dir, caplog
+    ) -> None:
+        """Test statistics parsing with valid XML but missing statistics element."""
+        robot_results_dir = temp_output_dir / "robot_results"
+        robot_results_dir.mkdir()
+
+        output_xml = robot_results_dir / "output.xml"
+        output_xml.write_text(
+            """<?xml version="1.0" encoding="UTF-8"?>
+<invalid_root>
+    <suite name="Test">
+        <test name="Example">
+            <status status="PASS"></status>
+        </test>
+    </suite>
+</invalid_root>"""
+        )
+
+        with caplog.at_level("ERROR"):
+            result = orchestrator._get_test_statistics()
+
+        assert result == TestResults.empty()
+        assert "Failed to parse Robot output.xml" in caplog.text
