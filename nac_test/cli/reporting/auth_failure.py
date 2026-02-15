@@ -13,12 +13,12 @@ from datetime import datetime
 from pathlib import Path
 
 from nac_test.cli.validators.controller_auth import (
-    CONTROLLER_REGISTRY,
     AuthCheckResult,
     AuthOutcome,
-    extract_host,
 )
 from nac_test.pyats_core.reporting.templates import render_template
+from nac_test.utils.controller import get_display_name, get_env_var_prefix
+from nac_test.utils.url import extract_host
 
 logger = logging.getLogger(__name__)
 
@@ -86,9 +86,8 @@ def generate_auth_failure_report(
     is_403 = "403" in auth_result.detail or "Forbidden" in auth_result.detail
 
     # Get display name and env var prefix
-    config = CONTROLLER_REGISTRY.get(auth_result.controller_type)
-    display_name = config.display_name if config else auth_result.controller_type
-    env_var_prefix = config.env_var_prefix if config else auth_result.controller_type
+    display_name = get_display_name(auth_result.controller_type)
+    env_var_prefix = get_env_var_prefix(auth_result.controller_type)
 
     # Extract host from URL
     host = extract_host(auth_result.controller_url)

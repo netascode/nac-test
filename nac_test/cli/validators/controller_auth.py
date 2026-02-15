@@ -19,20 +19,14 @@ import logging
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any
-from urllib.parse import urlparse
+
+from nac_test.core.error_classification import AuthOutcome, _classify_auth_error
+
+# Import CONTROLLER_REGISTRY from centralized location
+from nac_test.utils.controller import CONTROLLER_REGISTRY, get_display_name
 
 logger = logging.getLogger(__name__)
-
-
-class AuthOutcome(Enum):
-    """Outcome classification for a pre-flight controller authentication check."""
-
-    SUCCESS = "success"
-    BAD_CREDENTIALS = "bad_credentials"
-    UNREACHABLE = "unreachable"
-    UNEXPECTED_ERROR = "unexpected_error"
 
 
 @dataclass(frozen=True)
@@ -52,67 +46,6 @@ class AuthCheckResult:
     controller_type: str
     controller_url: str
     detail: str
-
-
-@dataclass(frozen=True)
-class ControllerConfig:
-    """Configuration metadata for a supported controller type.
-
-    Attributes:
-        display_name: User-facing name (e.g., "APIC", "Catalyst Center").
-        url_env_var: Environment variable name for the controller URL.
-        env_var_prefix: Prefix for credential env vars (e.g., "ACI" → ACI_USERNAME).
-    """
-
-    display_name: str
-    url_env_var: str
-    env_var_prefix: str
-
-
-CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
-    "ACI": ControllerConfig(
-        display_name="APIC", url_env_var="ACI_URL", env_var_prefix="ACI"
-    ),
-    "SDWAN": ControllerConfig(
-        display_name="SDWAN Manager", url_env_var="SDWAN_URL", env_var_prefix="SDWAN"
-    ),
-    "CC": ControllerConfig(
-        display_name="Catalyst Center", url_env_var="CC_URL", env_var_prefix="CC"
-    ),
-}
-
-
-def extract_host(url: str) -> str:
-    """Extract the host (and optional port) from a URL.
-
-    Uses Python's standard library urlparse for robust parsing.
-    Handles URLs with or without scheme prefixes.
-
-    Args:
-        url: A URL string (e.g., "https://apic.example.com:443/path").
-
-    Returns:
-        The host portion of the URL (e.g., "apic.example.com:443").
-        Returns empty string for empty input.
-
-    Examples:
-        >>> extract_host("https://apic.example.com:443/api/v1")
-        'apic.example.com:443'
-        >>> extract_host("http://10.1.2.3")
-        '10.1.2.3'
-        >>> extract_host("controller.local")
-        'controller.local'
-    """
-    if not url:
-        return ""
-
-    parsed = urlparse(url)
-    if parsed.netloc:
-        return parsed.netloc
-
-    # Handle URLs without scheme (urlparse puts them in path)
-    # e.g., "apic.example.com/path" -> path="apic.example.com/path"
-    return parsed.path.split("/")[0]
 
 
 def _get_controller_url(controller_type: str) -> str:
@@ -148,75 +81,21 @@ def _get_auth_callable(controller_type: str) -> Callable[[], Any] | None:
         if controller_type == "ACI":
             from nac_test_pyats_common.aci import APICAuth
 
-            return APICAuth.get_auth  # type: ignore[no-any-return]
+            return APICAuth.get_auth  # type: ignore[no-any-return]  # External adapters return Any
         elif controller_type == "SDWAN":
             from nac_test_pyats_common.sdwan import SDWANManagerAuth
 
-            return SDWANManagerAuth.get_auth  # type: ignore[no-any-return]
+            return SDWANManagerAuth.get_auth  # type: ignore[no-any-return]  # External adapters return Any
         elif controller_type == "CC":
             from nac_test_pyats_common.catc import CatalystCenterAuth
 
-            return CatalystCenterAuth.get_auth  # type: ignore[no-any-return]
+            return CatalystCenterAuth.get_auth  # type: ignore[no-any-return]  # External adapters return Any
     except ImportError:
         logger.debug(
             "nac-test-pyats-common not installed, skipping pre-flight auth check"
         )
         return None
     return None
-
-
-def _classify_auth_error(error: Exception) -> tuple[AuthOutcome, str]:
-    """Classify an authentication error into a failure reason.
-
-    Parses the error message to determine if the failure was due to bad credentials,
-    unreachable controller, or an unexpected error.
-
-    Args:
-        error: The exception raised during authentication.
-
-    Returns:
-        A tuple of (AuthOutcome, detail_string).
-    """
-    error_msg = str(error).lower()
-
-    # Check for bad credentials indicators
-    bad_creds_indicators = [
-        "401",
-        "403",
-        "unauthorized",
-        "forbidden",
-        "invalid credentials",
-        "authentication failed",
-        "login failed",
-    ]
-    if any(indicator in error_msg for indicator in bad_creds_indicators):
-        # Extract the HTTP status code for the detail message
-        if "401" in error_msg:
-            return AuthOutcome.BAD_CREDENTIALS, "HTTP 401: Unauthorized"
-        elif "403" in error_msg:
-            return AuthOutcome.BAD_CREDENTIALS, "HTTP 403: Forbidden"
-        else:
-            return AuthOutcome.BAD_CREDENTIALS, str(error)
-
-    # Check for unreachable indicators
-    unreachable_indicators = [
-        "timed out",
-        "timeout",
-        "connection refused",
-        "unreachable",
-        "connect error",
-        "could not connect",
-        "network is unreachable",
-        "no route to host",
-        "name or service not known",
-        "getaddrinfo failed",
-        "temporary failure in name resolution",
-    ]
-    if any(indicator in error_msg for indicator in unreachable_indicators):
-        return AuthOutcome.UNREACHABLE, str(error)
-
-    # Unexpected error
-    return AuthOutcome.UNEXPECTED_ERROR, str(error)
 
 
 def preflight_auth_check(controller_type: str) -> AuthCheckResult:
@@ -238,8 +117,7 @@ def preflight_auth_check(controller_type: str) -> AuthCheckResult:
         AuthCheckResult with success/failure status and actionable detail.
     """
     controller_url = _get_controller_url(controller_type)
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    display_name = config.display_name if config else controller_type
+    display_name = get_display_name(controller_type)
 
     # Get the auth callable for this controller type
     auth_callable = _get_auth_callable(controller_type)
