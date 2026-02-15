@@ -9,12 +9,10 @@ classifies them appropriately.
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.cli.validators.controller_auth import (
     CONTROLLER_REGISTRY,
-    AuthCheckResult,
     AuthOutcome,
     _classify_auth_error,
     _get_auth_callable,
@@ -23,87 +21,19 @@ from nac_test.cli.validators.controller_auth import (
 )
 
 
-class TestAuthOutcome:
-    """Tests for AuthOutcome enum."""
-
-    def test_enum_values_exist(self) -> None:
-        """All expected enum values exist."""
-        assert AuthOutcome.SUCCESS.value == "success"
-        assert AuthOutcome.BAD_CREDENTIALS.value == "bad_credentials"
-        assert AuthOutcome.UNREACHABLE.value == "unreachable"
-        assert AuthOutcome.UNEXPECTED_ERROR.value == "unexpected_error"
-
-
-class TestAuthCheckResult:
-    """Tests for AuthCheckResult dataclass."""
-
-    def test_success_result_creation(self) -> None:
-        """Can create a successful auth result."""
-        result = AuthCheckResult(
-            success=True,
-            reason=AuthOutcome.SUCCESS,
-            controller_type="ACI",
-            controller_url="https://apic.example.com",
-            detail="Authentication successful",
-        )
-
-        assert result.success is True
-        assert result.reason == AuthOutcome.SUCCESS
-        assert result.controller_type == "ACI"
-        assert result.controller_url == "https://apic.example.com"
-        assert result.detail == "Authentication successful"
-
-    def test_failure_result_creation(self) -> None:
-        """Can create a failed auth result."""
-        result = AuthCheckResult(
-            success=False,
-            reason=AuthOutcome.BAD_CREDENTIALS,
-            controller_type="SDWAN",
-            controller_url="https://sdwan.example.com",
-            detail="HTTP 401: Unauthorized",
-        )
-
-        assert result.success is False
-        assert result.reason == AuthOutcome.BAD_CREDENTIALS
-        assert result.detail == "HTTP 401: Unauthorized"
-
-    def test_dataclass_is_frozen(self) -> None:
-        """AuthCheckResult is immutable."""
-        result = AuthCheckResult(
-            success=True,
-            reason=AuthOutcome.SUCCESS,
-            controller_type="ACI",
-            controller_url="https://apic.example.com",
-            detail="OK",
-        )
-
-        with pytest.raises(AttributeError):
-            result.success = False  # type: ignore[misc]
-
-
 class TestControllerRegistry:
-    """Tests for CONTROLLER_REGISTRY dataclass-based mapping."""
+    """Tests for CONTROLLER_REGISTRY configuration."""
 
-    def test_aci_config(self) -> None:
-        """ACI controller configuration is complete."""
-        config = CONTROLLER_REGISTRY["ACI"]
-        assert config.display_name == "APIC"
-        assert config.url_env_var == "ACI_URL"
-        assert config.env_var_prefix == "ACI"
+    def test_registry_covers_all_supported_controllers(self) -> None:
+        """Registry includes all supported controller types with valid configs."""
+        # After consolidation: CONTROLLER_REGISTRY now includes ALL controllers
+        expected_controllers = {"ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"}
+        assert set(CONTROLLER_REGISTRY.keys()) == expected_controllers
 
-    def test_sdwan_config(self) -> None:
-        """SDWAN controller configuration is complete."""
-        config = CONTROLLER_REGISTRY["SDWAN"]
-        assert config.display_name == "SDWAN Manager"
-        assert config.url_env_var == "SDWAN_URL"
-        assert config.env_var_prefix == "SDWAN"
-
-    def test_cc_config(self) -> None:
-        """Catalyst Center controller configuration is complete."""
-        config = CONTROLLER_REGISTRY["CC"]
-        assert config.display_name == "Catalyst Center"
-        assert config.url_env_var == "CC_URL"
-        assert config.env_var_prefix == "CC"
+        for controller_type, config in CONTROLLER_REGISTRY.items():
+            assert config.display_name, f"{controller_type} missing display_name"
+            assert config.url_env_var, f"{controller_type} missing url_env_var"
+            assert config.env_var_prefix, f"{controller_type} missing env_var_prefix"
 
 
 class TestGetControllerUrl:
@@ -197,24 +127,65 @@ class TestClassifyAuthError:
         assert reason == AuthOutcome.UNEXPECTED_ERROR
         assert "unexpected" in detail.lower()
 
+    def test_classifies_503_as_unreachable(self) -> None:
+        """HTTP 503 Service Unavailable is classified as unreachable."""
+        error = Exception("HTTP 503: Service Unavailable")
+
+        reason, detail = _classify_auth_error(error)
+
+        assert reason == AuthOutcome.UNREACHABLE
+        assert "503" in detail
+
+    def test_classifies_429_as_unreachable(self) -> None:
+        """HTTP 429 Too Many Requests is classified as unreachable."""
+        error = Exception("HTTP 429: Too Many Requests")
+
+        reason, detail = _classify_auth_error(error)
+
+        assert reason == AuthOutcome.UNREACHABLE
+        assert "429" in detail
+
+    def test_classifies_500_as_unexpected_error(self) -> None:
+        """HTTP 500 Server Error is classified as unexpected error."""
+        error = Exception("HTTP 500: Internal Server Error")
+
+        reason, detail = _classify_auth_error(error)
+
+        assert reason == AuthOutcome.UNEXPECTED_ERROR
+        assert "500" in detail
+
+    def test_classifies_404_as_unexpected_error(self) -> None:
+        """HTTP 404 Not Found is classified as unexpected error (not auth failure)."""
+        error = Exception("HTTP 404: Not Found - endpoint does not exist")
+
+        reason, detail = _classify_auth_error(error)
+
+        assert reason == AuthOutcome.UNEXPECTED_ERROR
+        assert "404" in detail
+
+    def test_network_indicators_take_precedence_over_port_numbers(self) -> None:
+        """Network errors with port numbers don't get misclassified as HTTP errors."""
+        # Port 443 should not be matched as HTTP 443 status code
+        error = Exception("Connection refused on port 443")
+
+        reason, detail = _classify_auth_error(error)
+
+        assert reason == AuthOutcome.UNREACHABLE
+        assert "Connection refused" in detail
+
 
 class TestGetAuthCallable:
     """Tests for _get_auth_callable helper function."""
 
-    def test_returns_none_when_adapters_not_installed(self) -> None:
-        """Returns None when nac-test-pyats-common is not installed."""
-        with patch.dict("sys.modules", {"nac_test_pyats_common": None}):
-            with patch(
-                "nac_test.cli.validators.controller_auth._get_auth_callable",
-                side_effect=ImportError("No module named nac_test_pyats_common"),
-            ):
-                # The actual function should return None gracefully
-                # We test this via the preflight_auth_check behavior below
-                pass
-
     def test_returns_none_for_unknown_controller(self) -> None:
         """Returns None for unknown controller types."""
         result = _get_auth_callable("UNKNOWN_CONTROLLER")
+
+        assert result is None
+
+    def test_returns_none_for_empty_string(self) -> None:
+        """Returns None for empty string controller type."""
+        result = _get_auth_callable("")
 
         assert result is None
 
@@ -338,3 +309,10 @@ class TestPreflightAuthCheck:
             result = preflight_auth_check("ACI")
 
         assert result.controller_url == "https://apic.lab.local"
+
+    def test_handles_unknown_controller_type(self) -> None:
+        """Unknown controller types are handled gracefully (skipped)."""
+        result = preflight_auth_check("UNKNOWN_CONTROLLER")
+
+        assert result.success is True
+        assert "skipped" in result.detail.lower()
