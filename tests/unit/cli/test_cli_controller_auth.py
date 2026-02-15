@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
-"""CLI integration tests for pre-flight controller authentication.
+"""Unit tests for pre-flight controller authentication CLI behavior.
 
 These tests verify that the pre-flight auth check behaves correctly
 at the CLI level, including proper exit codes, banner display, and
-HTML report generation.
+HTML report generation. Uses mocked auth responses to test CLI flow.
 """
 
 from pathlib import Path
@@ -19,10 +19,8 @@ from nac_test.cli.validators.controller_auth import (
     AuthOutcome,
 )
 
-pytestmark = pytest.mark.integration
 
-
-class TestPreflightAuthCliIntegration:
+class TestPreflightAuthCli:
     """Integration tests for pre-flight auth at the CLI level."""
 
     def test_cli_exits_1_with_auth_failure_banner(
