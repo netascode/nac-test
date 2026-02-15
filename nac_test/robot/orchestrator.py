@@ -176,9 +176,7 @@ class RobotOrchestrator:
             )
             # Handle special exit codes
             if exit_code == 252:
-                error_msg = (
-                    "Invalid Robot Framework arguments provided via --extra-args"
-                )
+                error_msg = "Invalid Robot Framework arguments passed to nac-test"
                 logger.error(error_msg)
                 typer.echo(
                     typer.style(
