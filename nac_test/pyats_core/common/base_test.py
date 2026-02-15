@@ -1,11 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-
-# -*- coding: utf-8 -*-
-
-# -*- coding: utf-8 -*-
-
 """Generic base test class for all architectures."""
 
 import asyncio
