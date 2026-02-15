@@ -254,15 +254,24 @@ Test DEF
 As well as the test results and reports:
 
 ```shell
-$ tree -L 1 tests
+$ tree -L 2 tests
 tests
-├── log.html
-├── output.xml
-├── pabot_results
-├── report.html
-├── test1.robot
-└── xunit.xml
+├── combined_summary.html
+├── robot_results/
+│   ├── log.html
+│   ├── output.xml
+│   ├── report.html
+│   ├── summary_report.html
+│   └── xunit.xml
+├── log.html -> robot_results/log.html
+├── output.xml -> robot_results/output.xml
+├── report.html -> robot_results/report.html
+├── xunit.xml -> robot_results/xunit.xml
+├── pabot_results/
+└── test1.robot
 ```
+
+Note: Root-level `log.html`, `output.xml`, `report.html`, and `xunit.xml` are symlinks to the corresponding files in `robot_results/` for backward compatibility.
 
 ## PyATS Testing
 
@@ -326,15 +335,17 @@ PyATS tests generate:
 Example output structure:
 
 ```shell
-$ tree -L 2 results/pyats_results
-results/pyats_results
-├── api/
-│   ├── html_reports/
-│   └── results.json
-├── d2d/
-│   ├── html_reports/
-│   └── results.json
-└── combined_summary.html
+$ tree -L 3 results
+results
+├── combined_summary.html
+├── robot_results/
+└── pyats_results/
+    ├── api/
+    │   ├── html_reports/
+    │   └── results.json
+    └── d2d/
+        ├── html_reports/
+        └── results.json
 ```
 
 ## Merged Data Model
