@@ -89,6 +89,17 @@ class TestResults:
         """Concise string representation: total/passed/failed/skipped."""
         return f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
 
+    @classmethod
+    def from_counts(
+        cls,
+        total: int = 0,
+        passed: int = 0,
+        failed: int = 0,
+        skipped: int = 0,
+    ) -> "TestResults":
+        """Create TestResults from individual counts."""
+        return cls(total=total, passed=passed, failed=failed, skipped=skipped)
+
 
 @dataclass
 class PyATSResults:

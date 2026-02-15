@@ -73,11 +73,11 @@ def extract_summary_stats_from_combined(html_content: str) -> SummaryStats:
 
         <div class="summary-item total">
             <p>Total Tests</p>
-            <h3>{{ overall_stats.total_tests }}</h3>
+            <h3>{{ overall_stats.total }}</h3>
         </div>
         <div class="summary-item passed">
             <p>Passed</p>
-            <h3>{{ overall_stats.passed_tests }}</h3>
+            <h3>{{ overall_stats.passed }}</h3>
         </div>
         ...
 
@@ -129,7 +129,7 @@ def extract_summary_stats_from_report(html_content: str) -> SummaryStats:
 
         <div class="summary-item total">
             <p>Total Tests</p>
-            <h3>{{ total_tests }}</h3>
+            <h3>{{ stats.total }}</h3>
         </div>
         ...
 
@@ -153,9 +153,9 @@ def extract_test_type_sections(html_content: str) -> list[TestTypeStats]:
 
         <div class="test-type-section">
             <span class="test-type-badge {{ test_type.lower() }}-badge">{{ test_type }}</span>
-            <h2>{{ stats.title }} Test Results</h2>
+            <h2>{{ framework_data.title }} Test Results</h2>
             ...
-            <div class="mini-stat-value total-value">{{ stats.total_tests }}</div>
+            <div class="mini-stat-value total-value">{{ framework_data.stats.total }}</div>
             ...
         </div>
 

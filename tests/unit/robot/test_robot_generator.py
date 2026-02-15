@@ -63,11 +63,11 @@ def test_get_aggregated_stats_success(temp_output_dir, mock_robot_output_xml) ->
     stats = generator.get_aggregated_stats()
 
     assert stats is not None
-    assert stats["total_tests"] == 2
-    assert stats["passed_tests"] == 1
-    assert stats["failed_tests"] == 1
-    assert stats["skipped_tests"] == 0
-    assert 0 <= stats["success_rate"] <= 100
+    assert stats.total == 2
+    assert stats.passed == 1
+    assert stats.failed == 1
+    assert stats.skipped == 0
+    assert 0 <= stats.success_rate <= 100
 
 
 def test_get_aggregated_stats_missing_output_xml(temp_output_dir) -> None:
@@ -76,11 +76,11 @@ def test_get_aggregated_stats_missing_output_xml(temp_output_dir) -> None:
     stats = generator.get_aggregated_stats()
 
     # Should return empty stats
-    assert stats["total_tests"] == 0
-    assert stats["passed_tests"] == 0
-    assert stats["failed_tests"] == 0
-    assert stats["skipped_tests"] == 0
-    assert stats["success_rate"] == 0.0
+    assert stats.total == 0
+    assert stats.passed == 0
+    assert stats.failed == 0
+    assert stats.skipped == 0
+    assert stats.success_rate == 0.0
 
 
 def test_generate_summary_report_success(
@@ -151,7 +151,67 @@ def test_status_mapping(temp_output_dir) -> None:
     generator = RobotReportGenerator(temp_output_dir)
     stats = generator.get_aggregated_stats()
 
-    assert stats["total_tests"] == 3
-    assert stats["passed_tests"] == 1
-    assert stats["failed_tests"] == 1
-    assert stats["skipped_tests"] == 1
+    assert stats.total == 3
+    assert stats.passed == 1
+    assert stats.failed == 1
+    assert stats.skipped == 1
+
+
+def test_generate_summary_report_no_tests(temp_output_dir) -> None:
+    """Test that generate_summary_report returns None when output.xml has zero tests."""
+    output_xml = temp_output_dir / "robot_results" / "output.xml"
+    output_xml.write_text("""<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.1.1" generated="2025-02-01T12:00:00.000000">
+  <suite name="Empty Suite" id="s1">
+    <status status="PASS" start="2025-02-01T12:00:00.000000" elapsed="0.0"/>
+  </suite>
+  <statistics>
+    <total>
+      <stat pass="0" fail="0" skip="0">All Tests</stat>
+    </total>
+  </statistics>
+</robot>
+""")
+
+    generator = RobotReportGenerator(temp_output_dir)
+    report_path = generator.generate_summary_report()
+
+    assert report_path is None
+
+
+def test_generate_summary_report_exception_handling(temp_output_dir) -> None:
+    """Test that generate_summary_report handles exceptions gracefully."""
+    output_xml = temp_output_dir / "robot_results" / "output.xml"
+    output_xml.write_text("invalid xml content that will cause parsing error")
+
+    generator = RobotReportGenerator(temp_output_dir)
+    report_path = generator.generate_summary_report()
+
+    assert report_path is None
+
+
+def test_get_aggregated_stats_exception_handling(temp_output_dir) -> None:
+    """Test that get_aggregated_stats handles exceptions gracefully."""
+    output_xml = temp_output_dir / "robot_results" / "output.xml"
+    output_xml.write_text("invalid xml content that will cause parsing error")
+
+    generator = RobotReportGenerator(temp_output_dir)
+    stats = generator.get_aggregated_stats()
+
+    assert stats.total == 0
+    assert stats.passed == 0
+    assert stats.failed == 0
+    assert stats.skipped == 0
+
+
+def test_template_receives_stats_object(temp_output_dir, mock_robot_output_xml) -> None:
+    """Test that template receives TestResults object and renders stats correctly."""
+    generator = RobotReportGenerator(temp_output_dir)
+    report_path = generator.generate_summary_report()
+
+    assert report_path is not None
+    content = report_path.read_text()
+
+    assert "<h3>2</h3>" in content
+    assert "<h3>1</h3>" in content
+    assert "50.0%" in content

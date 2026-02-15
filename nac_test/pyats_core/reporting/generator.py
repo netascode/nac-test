@@ -27,6 +27,7 @@ from typing import Any
 
 import aiofiles  # type: ignore[import-untyped]
 
+from nac_test.core.types import TestResults
 from nac_test.pyats_core.reporting.templates import get_jinja_environment
 from nac_test.pyats_core.reporting.types import ResultStatus
 
@@ -411,12 +412,11 @@ class ReportGenerator:
                 1 for r in all_results if r["status"] == ResultStatus.SKIPPED.value
             )
 
-            # Success rate excludes skipped tests from the calculation
-            tests_with_results = total_tests - skipped_tests
-            success_rate = (
-                (passed_tests / tests_with_results * 100)
-                if tests_with_results > 0
-                else 0
+            stats = TestResults.from_counts(
+                total=total_tests,
+                passed=passed_tests,
+                failed=failed_tests,
+                skipped=skipped_tests,
             )
 
             # Determine report type title based on archive type
@@ -430,11 +430,7 @@ class ReportGenerator:
             template = self.env.get_template("summary/report.html.j2")
             html_content = template.render(
                 generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                total_tests=total_tests,
-                passed_tests=passed_tests,
-                failed_tests=failed_tests,
-                skipped_tests=skipped_tests,
-                success_rate=success_rate,
+                stats=stats,
                 results=all_results,
                 breadcrumb_link="../../../combined_summary.html",  # 3 levels up from pyats_results/{type}/html_reports/
                 report_type=report_type,

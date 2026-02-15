@@ -15,6 +15,8 @@ from typing import Any
 from robot.api import ExecutionResult
 from robot.result import ResultVisitor
 
+from nac_test.core.types import TestResults
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,19 +28,16 @@ class TestDataCollector(ResultVisitor):
 
     Attributes:
         tests: List of test result dictionaries
-        stats: Dictionary with aggregated statistics
+        stats: TestResults instance with aggregated statistics
     """
 
     def __init__(self) -> None:
         """Initialize the collector with empty data structures."""
         self.tests: list[dict[str, Any]] = []
-        self.stats = {
-            "total_tests": 0,
-            "passed_tests": 0,
-            "failed_tests": 0,
-            "skipped_tests": 0,
-            "success_rate": 0.0,
-        }
+        self._total = 0
+        self._passed = 0
+        self._failed = 0
+        self._skipped = 0
 
     def visit_test(self, test: Any) -> None:
         """Called for each test case in the result tree.
@@ -77,40 +76,41 @@ class TestDataCollector(ResultVisitor):
         self.tests.append(test_data)
 
         # Update statistics
-        self.stats["total_tests"] += 1
+        self._total += 1
         if status == "PASS":
-            self.stats["passed_tests"] += 1
+            self._passed += 1
         elif status == "FAIL":
-            self.stats["failed_tests"] += 1
+            self._failed += 1
         elif status == "SKIP":
-            self.stats["skipped_tests"] += 1
+            self._skipped += 1
 
     def end_suite(self, suite: Any) -> None:
-        """Called when suite ends - calculate final statistics.
+        """Called when suite ends - finalize statistics and sort tests.
 
-        We calculate success rate at the root suite level (when parent is None).
+        We finalize at the root suite level (when parent is None).
         Also sort tests to put failed tests first.
 
         Args:
             suite: Robot Framework suite object
         """
         if suite.parent is None:
-            # This is the root suite - finalize statistics
-            total = self.stats["total_tests"]
-            skipped = self.stats["skipped_tests"]
-            passed = self.stats["passed_tests"]
-
-            tests_with_results = total - skipped
-            if tests_with_results > 0:
-                self.stats["success_rate"] = (passed / tests_with_results) * 100
-
-            # Sort tests: failed first, then by name
+            # This is the root suite - sort tests: failed first, then by name
             self.tests.sort(key=lambda t: (t["status"] != "FAIL", t["name"]))
 
             logger.debug(
-                f"Collected {total} tests: {passed} passed, "
-                f"{self.stats['failed_tests']} failed, {skipped} skipped"
+                f"Collected {self._total} tests: {self._passed} passed, "
+                f"{self._failed} failed, {self._skipped} skipped"
             )
+
+    @property
+    def stats(self) -> TestResults:
+        """Get aggregated statistics as TestResults."""
+        return TestResults.from_counts(
+            total=self._total,
+            passed=self._passed,
+            failed=self._failed,
+            skipped=self._skipped,
+        )
 
     @staticmethod
     def _parse_timestamp(timestamp_str: str) -> datetime | None:
@@ -147,8 +147,8 @@ class RobotResultParser:
     Example:
         >>> parser = RobotResultParser(Path("output.xml"))
         >>> data = parser.parse()
-        >>> print(data["aggregated_stats"])
-        {'total_tests': 100, 'passed_tests': 97, 'failed_tests': 3, ...}
+        >>> print(data["aggregated_stats"].total)
+        100
     """
 
     def __init__(self, output_xml_path: Path):
@@ -164,8 +164,8 @@ class RobotResultParser:
 
         Returns:
             Dictionary containing:
-                - aggregated_stats: Overall statistics dict with keys:
-                    - total_tests, passed_tests, failed_tests, skipped_tests, success_rate
+                - aggregated_stats: TestResults instance with total, passed, failed,
+                    skipped, and success_rate properties
                 - tests: List of individual test result dicts with keys:
                     - name, status, duration, start_time, message, test_id, suite_name
 
@@ -186,10 +186,10 @@ class RobotResultParser:
             result.visit(collector)
 
             logger.info(
-                f"Parsed {collector.stats['total_tests']} tests "
-                f"({collector.stats['passed_tests']} passed, "
-                f"{collector.stats['failed_tests']} failed, "
-                f"{collector.stats['skipped_tests']} skipped)"
+                f"Parsed {collector.stats.total} tests "
+                f"({collector.stats.passed} passed, "
+                f"{collector.stats.failed} failed, "
+                f"{collector.stats.skipped} skipped)"
             )
 
             return {

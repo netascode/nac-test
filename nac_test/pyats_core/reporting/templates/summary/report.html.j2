@@ -216,7 +216,7 @@
             border-radius: 10px;
             height: 10px;
             background: linear-gradient(to right, var(--success), var(--accent));
-            width: {{ success_rate }}%;
+            width: {{ stats.success_rate }}%;
         }
 
         /* Result table styles */
@@ -455,7 +455,7 @@
             <div class="summary-grid">
                 <div class="summary-item total">
                     <p>Total Tests</p>
-                    <h3>{{ total_tests }}</h3>
+                    <h3>{{ stats.total }}</h3>
                 </div>
                 <div class="summary-item passed"
                      role="button"
@@ -463,7 +463,7 @@
                      aria-label="Filter by passed tests"
                      data-filter="passed">
                     <p>Passed</p>
-                    <h3>{{ passed_tests }}</h3>
+                    <h3>{{ stats.passed }}</h3>
                 </div>
                 <div class="summary-item failed"
                      role="button"
@@ -471,7 +471,7 @@
                      aria-label="Filter by failed tests"
                      data-filter="failed">
                     <p>Failed</p>
-                    <h3>{{ failed_tests }}</h3>
+                    <h3>{{ stats.failed }}</h3>
                 </div>
                 <div class="summary-item skipped"
                      role="button"
@@ -479,11 +479,11 @@
                      aria-label="Filter by skipped tests"
                      data-filter="skipped">
                     <p>Skipped</p>
-                    <h3>{{ skipped_tests }}</h3>
+                    <h3>{{ stats.skipped }}</h3>
                 </div>
                 <div class="summary-item rate">
                     <p>Success Rate</p>
-                    <h3>{{ "%.1f"|format(success_rate) }}%</h3>
+                    <h3>{{ "%.1f"|format(stats.success_rate) }}%</h3>
                     <div class="progress-container">
                         <div class="progress-bar"></div>
                     </div>

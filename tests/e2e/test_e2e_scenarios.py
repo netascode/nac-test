@@ -169,13 +169,13 @@ class E2ECombinedTestBase:
         stats = data["aggregated_stats"]
         scenario = results.scenario
 
-        assert stats["passed_tests"] == scenario.expected_robot_passed, (
+        assert stats.passed == scenario.expected_robot_passed, (
             f"Robot passed: expected {scenario.expected_robot_passed}, "
-            f"got {stats['passed_tests']}"
+            f"got {stats.passed}"
         )
-        assert stats["failed_tests"] == scenario.expected_robot_failed, (
+        assert stats.failed == scenario.expected_robot_failed, (
             f"Robot failed: expected {scenario.expected_robot_failed}, "
-            f"got {stats['failed_tests']}"
+            f"got {stats.failed}"
         )
 
     # -------------------------------------------------------------------------

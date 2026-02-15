@@ -89,22 +89,11 @@ class CombinedReportGenerator:
                     metadata = FRAMEWORK_METADATA.get(framework_key, {})
                     test_type_stats[framework_key] = {
                         "title": metadata.get("title", framework_key),
-                        "total_tests": test_results.total,
-                        "passed_tests": test_results.passed,
-                        "failed_tests": test_results.failed,
-                        "skipped_tests": test_results.skipped,
-                        "success_rate": test_results.success_rate,
+                        "stats": test_results,
                         "report_path": metadata.get("report_path", "#"),
                     }
 
-            # Use CombinedResults computed properties for overall stats
-            overall_stats = {
-                "total_tests": results.total if results else 0,
-                "passed_tests": results.passed if results else 0,
-                "failed_tests": results.failed if results else 0,
-                "skipped_tests": results.skipped if results else 0,
-                "success_rate": results.success_rate if results else 0.0,
-            }
+            overall_stats = results if results is not None else CombinedResults()
 
             # Render combined summary template
             template = self.env.get_template("summary/combined_report.html.j2")
@@ -120,9 +109,7 @@ class CombinedReportGenerator:
 
             frameworks_included = ", ".join(test_type_stats.keys())
             logger.info(f"Generated combined dashboard: {combined_summary_path}")
-            logger.info(
-                f"  Total tests across all frameworks: {overall_stats['total_tests']}"
-            )
+            logger.info(f"  Total tests across all frameworks: {overall_stats.total}")
             logger.info(f"  Frameworks included: {frameworks_included or 'none'}")
 
             return combined_summary_path

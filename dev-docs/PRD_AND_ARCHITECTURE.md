@@ -20737,7 +20737,7 @@ async def _generate_summary_report(
             )
         )
 
-        # Calculate statistics
+        # Calculate statistics using TestResults dataclass
         total_tests = len(all_results)
         passed_tests = sum(
             1 for r in all_results if r["status"] == ResultStatus.PASSED.value
@@ -20752,23 +20752,19 @@ async def _generate_summary_report(
             1 for r in all_results if r["status"] == ResultStatus.SKIPPED.value
         )
 
-        # Success rate excludes skipped tests from the calculation
-        tests_with_results = total_tests - skipped_tests
-        success_rate = (
-            (passed_tests / tests_with_results * 100)
-            if tests_with_results > 0
-            else 0
+        # Create TestResults object (success_rate computed automatically)
+        stats = TestResults.from_counts(
+            total=total_tests,
+            passed=passed_tests,
+            failed=failed_tests,
+            skipped=skipped_tests,
         )
 
-        # Render summary
+        # Render summary - template accesses stats.total, stats.passed, etc.
         template = self.env.get_template("summary/report.html.j2")
         html_content = template.render(
             generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            total_tests=total_tests,
-            passed_tests=passed_tests,
-            failed_tests=failed_tests,
-            skipped_tests=skipped_tests,
-            success_rate=success_rate,
+            stats=stats,
             results=all_results,
         )
 

@@ -208,3 +208,38 @@ def test_combined_results_with_partial_failures(tmp_path: Path) -> None:
     assert "PyATS API" in content
     assert "PyATS Direct-to-Device (D2D)" in content
     assert "Robot Framework" in content
+
+
+def test_combined_report_exception_handling(tmp_path: Path, monkeypatch) -> None:
+    """Test that generate_combined_summary handles exceptions gracefully."""
+    generator = CombinedReportGenerator(tmp_path)
+
+    def raise_error(*args, **kwargs):
+        raise RuntimeError("Template rendering failed")
+
+    monkeypatch.setattr(generator.env, "get_template", raise_error)
+
+    results = CombinedResults(robot=TestResults(total=5, passed=5, failed=0, skipped=0))
+    report_path = generator.generate_combined_summary(results)
+
+    assert report_path is None
+
+
+def test_combined_report_template_receives_stats_objects(tmp_path: Path) -> None:
+    """Test that template receives TestResults/CombinedResults objects correctly."""
+    generator = CombinedReportGenerator(tmp_path)
+
+    results = CombinedResults(
+        api=TestResults(total=10, passed=8, failed=2, skipped=0),
+        robot=TestResults(total=5, passed=4, failed=1, skipped=0),
+    )
+
+    report_path = generator.generate_combined_summary(results)
+    assert report_path is not None
+
+    content = report_path.read_text()
+
+    assert "<h3>15</h3>" in content
+    assert "<h3>12</h3>" in content
+    assert "<h3>3</h3>" in content
+    assert "80.0%" in content

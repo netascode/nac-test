@@ -379,19 +379,19 @@
             <div class="summary-grid">
                 <div class="summary-item total">
                     <p>Total Tests</p>
-                    <h3>{{ overall_stats.total_tests }}</h3>
+                    <h3>{{ overall_stats.total }}</h3>
                 </div>
                 <div class="summary-item passed">
                     <p>Passed</p>
-                    <h3>{{ overall_stats.passed_tests }}</h3>
+                    <h3>{{ overall_stats.passed }}</h3>
                 </div>
                 <div class="summary-item failed">
                     <p>Failed</p>
-                    <h3>{{ overall_stats.failed_tests }}</h3>
+                    <h3>{{ overall_stats.failed }}</h3>
                 </div>
                 <div class="summary-item skipped">
                     <p>Skipped</p>
-                    <h3>{{ overall_stats.skipped_tests }}</h3>
+                    <h3>{{ overall_stats.skipped }}</h3>
                 </div>
                 <div class="summary-item rate">
                     <p>Success Rate</p>
@@ -404,37 +404,37 @@
         </div>
 
         <!-- Individual Test Type Sections -->
-        {% for test_type, stats in test_type_stats.items() %}
+        {% for test_type, framework_data in test_type_stats.items() %}
         <div class="test-type-section">
             <div class="section-header">
                 <div class="section-title">
                     <span class="test-type-badge {{ test_type.lower() }}-badge">{{ test_type }}</span>
-                    <h2>{{ stats.title }} Test Results</h2>
+                    <h2>{{ framework_data.title }} Test Results</h2>
                 </div>
-                <a href="{{ stats.report_path }}" class="view-report-btn">
+                <a href="{{ framework_data.report_path }}" class="view-report-btn">
                     View Detailed Report →
                 </a>
             </div>
             
             <div class="mini-stats">
                 <div class="mini-stat">
-                    <div class="mini-stat-value total-value">{{ stats.total_tests }}</div>
+                    <div class="mini-stat-value total-value">{{ framework_data.stats.total }}</div>
                     <div class="mini-stat-label">Total Tests</div>
                 </div>
                 <div class="mini-stat">
-                    <div class="mini-stat-value passed-value">{{ stats.passed_tests }}</div>
+                    <div class="mini-stat-value passed-value">{{ framework_data.stats.passed }}</div>
                     <div class="mini-stat-label">Passed</div>
                 </div>
                 <div class="mini-stat">
-                    <div class="mini-stat-value failed-value">{{ stats.failed_tests }}</div>
+                    <div class="mini-stat-value failed-value">{{ framework_data.stats.failed }}</div>
                     <div class="mini-stat-label">Failed</div>
                 </div>
                 <div class="mini-stat">
-                    <div class="mini-stat-value skipped-value">{{ stats.skipped_tests }}</div>
+                    <div class="mini-stat-value skipped-value">{{ framework_data.stats.skipped }}</div>
                     <div class="mini-stat-label">Skipped</div>
                 </div>
                 <div class="mini-stat">
-                    <div class="mini-stat-value">{{ "%.1f"|format(stats.success_rate) }}%</div>
+                    <div class="mini-stat-value">{{ "%.1f"|format(framework_data.stats.success_rate) }}%</div>
                     <div class="mini-stat-label">Success Rate</div>
                 </div>
             </div>

@@ -92,12 +92,12 @@ def test_parser_basic_stats(sample_output_xml: Path) -> None:
     data = parser.parse()
 
     stats = data["aggregated_stats"]
-    assert stats["total_tests"] == 4
-    assert stats["passed_tests"] == 2
-    assert stats["failed_tests"] == 1
-    assert stats["skipped_tests"] == 1
+    assert stats.total == 4
+    assert stats.passed == 2
+    assert stats.failed == 1
+    assert stats.skipped == 1
     # Success rate = passed / (total - skipped) = 2 / 3 = 66.67%
-    assert abs(stats["success_rate"] - 66.67) < 0.1
+    assert abs(stats.success_rate - 66.67) < 0.1
 
 
 def test_parser_test_list(sample_output_xml: Path) -> None:
@@ -174,11 +174,11 @@ def test_parser_all_passed(tmp_path: Path) -> None:
     data = parser.parse()
 
     stats = data["aggregated_stats"]
-    assert stats["total_tests"] == 2
-    assert stats["passed_tests"] == 2
-    assert stats["failed_tests"] == 0
-    assert stats["skipped_tests"] == 0
-    assert stats["success_rate"] == 100.0
+    assert stats.total == 2
+    assert stats.passed == 2
+    assert stats.failed == 0
+    assert stats.skipped == 0
+    assert stats.success_rate == 100.0
 
 
 def test_parser_suite_name_extraction(sample_output_xml: Path) -> None:
@@ -228,11 +228,11 @@ def test_collector_empty_results(tmp_path: Path) -> None:
     data = parser.parse()
 
     stats = data["aggregated_stats"]
-    assert stats["total_tests"] == 0
-    assert stats["passed_tests"] == 0
-    assert stats["failed_tests"] == 0
-    assert stats["skipped_tests"] == 0
-    assert stats["success_rate"] == 0.0
+    assert stats.total == 0
+    assert stats.passed == 0
+    assert stats.failed == 0
+    assert stats.skipped == 0
+    assert stats.success_rate == 0.0
 
     assert len(data["tests"]) == 0
 

@@ -9,8 +9,8 @@ Generates summary report following PyATS dashboard pattern for visual consistenc
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
 
+from nac_test.core.types import TestResults
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 
@@ -72,11 +72,11 @@ class RobotReportGenerator:
             parser = RobotResultParser(self.output_xml_path)
             data = parser.parse()
 
-            # Get aggregated stats
-            stats = data["aggregated_stats"]
+            # Get aggregated stats (TestResults object)
+            stats: TestResults = data["aggregated_stats"]
 
             # If no tests, don't generate report
-            if stats["total_tests"] == 0:
+            if stats.total == 0:
                 logger.info("No Robot tests found, skipping summary report")
                 return None
 
@@ -104,11 +104,7 @@ class RobotReportGenerator:
             template = self.env.get_template("summary/report.html.j2")
             html_content = template.render(
                 generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                total_tests=stats["total_tests"],
-                passed_tests=stats["passed_tests"],
-                failed_tests=stats["failed_tests"],
-                skipped_tests=stats["skipped_tests"],
-                success_rate=stats["success_rate"],
+                stats=stats,
                 results=results,
                 breadcrumb_link="../combined_summary.html",  # 1 level up from robot_results/
                 report_type="Robot Framework",
@@ -120,8 +116,8 @@ class RobotReportGenerator:
 
             logger.info(f"Generated Robot summary report: {summary_path}")
             logger.info(
-                f"  Tests: {stats['total_tests']} total, "
-                f"{stats['passed_tests']} passed, {stats['failed_tests']} failed"
+                f"  Tests: {stats.total} total, "
+                f"{stats.passed} passed, {stats.failed} failed"
             )
 
             return summary_path
@@ -130,38 +126,26 @@ class RobotReportGenerator:
             logger.error(f"Failed to generate Robot summary report: {e}")
             return None
 
-    def get_aggregated_stats(self) -> dict[str, Any]:
+    def get_aggregated_stats(self) -> TestResults:
         """Get aggregated statistics without generating full report.
 
         Used by combined dashboard to show Robot block stats.
         This is more efficient than generating the full HTML report.
 
         Returns:
-            Dictionary with aggregated statistics:
-                - total_tests, passed_tests, failed_tests, skipped_tests, success_rate
-            Returns zeros if output.xml doesn't exist or parsing fails.
+            TestResults with aggregated statistics.
+            Returns empty TestResults if output.xml doesn't exist or parsing fails.
         """
         try:
             if not self.output_xml_path.exists():
                 logger.debug(f"No Robot results found at {self.output_xml_path}")
-                return {
-                    "total_tests": 0,
-                    "passed_tests": 0,
-                    "failed_tests": 0,
-                    "skipped_tests": 0,
-                    "success_rate": 0.0,
-                }
+                return TestResults.empty()
 
             parser = RobotResultParser(self.output_xml_path)
             data = parser.parse()
-            return cast(dict[str, Any], data["aggregated_stats"])
+            stats: TestResults = data["aggregated_stats"]
+            return stats
 
         except Exception as e:
             logger.warning(f"Failed to get Robot stats: {e}")
-            return {
-                "total_tests": 0,
-                "passed_tests": 0,
-                "failed_tests": 0,
-                "skipped_tests": 0,
-                "success_rate": 0.0,
-            }
+            return TestResults.empty()
