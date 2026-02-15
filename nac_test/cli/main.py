@@ -16,7 +16,6 @@ from nac_test.cli.ui import (
     display_unreachable_banner,
 )
 from nac_test.cli.validators import (
-    CONTROLLER_REGISTRY,
     AuthOutcome,
     preflight_auth_check,
     validate_aci_defaults,
@@ -24,7 +23,7 @@ from nac_test.cli.validators import (
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import DEBUG_MODE
 from nac_test.data_merger import DataMerger
-from nac_test.utils.controller import detect_controller_type
+from nac_test.utils.controller import detect_controller_type, get_env_var_prefix
 from nac_test.utils.logging import VerbosityLevel, configure_logging
 
 # Pretty exceptions are verbose but helpful for debugging.
@@ -336,10 +335,7 @@ def main(
                     detail=auth_result.detail,
                 )
             else:
-                config = CONTROLLER_REGISTRY.get(auth_result.controller_type)
-                env_var_prefix = (
-                    config.env_var_prefix if config else auth_result.controller_type
-                )
+                env_var_prefix = get_env_var_prefix(auth_result.controller_type)
                 display_auth_failure_banner(
                     controller_type=auth_result.controller_type,
                     controller_url=auth_result.controller_url,
