@@ -19,11 +19,6 @@ from nac_test.cli.ui.banners import (
 class TestDisplayAciDefaultsBanner:
     """Tests for display_aci_defaults_banner function."""
 
-    def test_displays_without_error(self) -> None:
-        """Banner displays without raising exceptions."""
-        with patch("sys.stdout", new=StringIO()):
-            display_aci_defaults_banner()
-
     def test_contains_defaults_directory_example(self) -> None:
         """Banner includes example command with defaults directory."""
         output = StringIO()
@@ -34,7 +29,7 @@ class TestDisplayAciDefaultsBanner:
         assert "-d ./defaults/" in content or "defaults" in content.lower()
 
     def test_respects_no_color_mode(self) -> None:
-        """Banner uses ASCII characters in NO_COLOR mode."""
+        """Banner uses ASCII characters in NO_COLOR mode and excludes Unicode."""
         output = StringIO()
         with (
             patch("nac_test.utils.terminal.TerminalColors.NO_COLOR", True),
@@ -43,22 +38,24 @@ class TestDisplayAciDefaultsBanner:
             display_aci_defaults_banner()
 
         content = output.getvalue()
-        # In NO_COLOR mode, should use ASCII box characters (+ and =)
-        assert "+" in content or "=" in content
+        # Assert presence of ASCII box characters
+        assert "+" in content, "ASCII box character '+' not found"
+        assert "=" in content, "ASCII box character '=' not found"
+
+        # Assert ABSENCE of Unicode box characters
+        unicode_chars = ["╔", "╗", "╚", "╝", "═", "║", "╠", "╣"]
+        for char in unicode_chars:
+            assert char not in content, (
+                f"Unicode character '{char}' found in NO_COLOR mode"
+            )
+
+        # Assert title without emoji
+        assert "!!!" in content, "ASCII title markers '!!!' not found"
+        assert "🛑" not in content, "Emoji '🛑' found in NO_COLOR mode"
 
 
 class TestDisplayAuthFailureBanner:
     """Tests for display_auth_failure_banner function."""
-
-    def test_displays_without_error(self) -> None:
-        """Banner displays without raising exceptions."""
-        with patch("sys.stdout", new=StringIO()):
-            display_auth_failure_banner(
-                controller_type="ACI",
-                controller_url="https://apic.example.com",
-                detail="HTTP 401: Unauthorized",
-                env_var_prefix="ACI",
-            )
 
     def test_contains_controller_type_display_name(self) -> None:
         """Banner shows the controller display name (APIC for ACI)."""
@@ -118,7 +115,7 @@ class TestDisplayAuthFailureBanner:
         assert "401" in content
 
     def test_respects_no_color_mode(self) -> None:
-        """Banner uses ASCII characters in NO_COLOR mode."""
+        """Banner uses ASCII characters in NO_COLOR mode and excludes Unicode."""
         output = StringIO()
         with (
             patch("nac_test.utils.terminal.TerminalColors.NO_COLOR", True),
@@ -132,21 +129,25 @@ class TestDisplayAuthFailureBanner:
             )
 
         content = output.getvalue()
-        # In NO_COLOR mode, should use ASCII title (no emoji)
+        # Assert presence of ASCII box characters
+        assert "+" in content, "ASCII box character '+' not found"
+        assert "=" in content, "ASCII box character '=' not found"
+
+        # Assert ABSENCE of Unicode box characters
+        unicode_chars = ["╔", "╗", "╚", "╝", "═", "║", "╠", "╣"]
+        for char in unicode_chars:
+            assert char not in content, (
+                f"Unicode character '{char}' found in NO_COLOR mode"
+            )
+
+        # Assert title without emoji
+        assert "!!!" in content, "ASCII title markers '!!!' not found"
         assert "AUTHENTICATION FAILED" in content
+        assert "⛔" not in content, "Emoji '⛔' found in NO_COLOR mode"
 
 
 class TestDisplayUnreachableBanner:
     """Tests for display_unreachable_banner function."""
-
-    def test_displays_without_error(self) -> None:
-        """Banner displays without raising exceptions."""
-        with patch("sys.stdout", new=StringIO()):
-            display_unreachable_banner(
-                controller_type="ACI",
-                controller_url="https://apic.example.com",
-                detail="Connection timed out",
-            )
 
     def test_contains_controller_url(self) -> None:
         """Banner includes the controller URL."""
@@ -203,7 +204,7 @@ class TestDisplayUnreachableBanner:
         assert "10.1.2.3" in content
 
     def test_respects_no_color_mode(self) -> None:
-        """Banner uses ASCII characters in NO_COLOR mode."""
+        """Banner uses ASCII characters in NO_COLOR mode and excludes Unicode."""
         output = StringIO()
         with (
             patch("nac_test.utils.terminal.TerminalColors.NO_COLOR", True),
@@ -216,5 +217,18 @@ class TestDisplayUnreachableBanner:
             )
 
         content = output.getvalue()
-        # In NO_COLOR mode, should use ASCII title (no emoji)
+        # Assert presence of ASCII box characters
+        assert "+" in content, "ASCII box character '+' not found"
+        assert "=" in content, "ASCII box character '=' not found"
+
+        # Assert ABSENCE of Unicode box characters
+        unicode_chars = ["╔", "╗", "╚", "╝", "═", "║", "╠", "╣"]
+        for char in unicode_chars:
+            assert char not in content, (
+                f"Unicode character '{char}' found in NO_COLOR mode"
+            )
+
+        # Assert title without emoji
+        assert "!!!" in content, "ASCII title markers '!!!' not found"
         assert "UNREACHABLE" in content
+        assert "⛔" not in content, "Emoji '⛔' found in NO_COLOR mode"
