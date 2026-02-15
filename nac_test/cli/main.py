@@ -369,6 +369,14 @@ def main(
             err=True,
         )
         raise typer.Exit(1)
+    elif stats.has_errors:
+        # Framework execution errors (not test failures)
+        error_list = "; ".join(stats.errors)
+        typer.echo(
+            f"\n❌ Execution errors occurred: {error_list}",
+            err=True,
+        )
+        raise typer.Exit(1)
     elif stats.is_empty:
         typer.echo("\n⚠️  No tests were executed", err=True)
         raise typer.Exit(1)
