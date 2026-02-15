@@ -13,11 +13,9 @@ from nac_test.cli.reporting.auth_failure import (
     _get_curl_example,
     generate_auth_failure_report,
 )
-from nac_test.cli.validators.controller_auth import (
-    AuthCheckResult,
-    AuthOutcome,
-    extract_host,
-)
+from nac_test.cli.validators.controller_auth import AuthCheckResult
+from nac_test.core.error_classification import AuthOutcome
+from nac_test.utils.url import extract_host
 
 
 class TestExtractHost:
@@ -47,6 +45,21 @@ class TestExtractHost:
         """Handles URL with trailing slash."""
         host = extract_host("https://apic.example.com/")
         assert host == "apic.example.com"
+
+    def test_handles_url_without_scheme(self) -> None:
+        """Handles URL without scheme prefix."""
+        host = extract_host("apic.example.com")
+        assert host == "apic.example.com"
+
+    def test_handles_url_with_path(self) -> None:
+        """Extracts host from URL with path, ignoring the path."""
+        host = extract_host("https://apic.example.com/api/v1")
+        assert host == "apic.example.com"
+
+    def test_handles_empty_string(self) -> None:
+        """Returns empty string for empty input."""
+        host = extract_host("")
+        assert host == ""
 
 
 class TestGetCurlExample:
