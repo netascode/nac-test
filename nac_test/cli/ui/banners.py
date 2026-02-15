@@ -11,7 +11,12 @@ from dataclasses import dataclass
 
 import typer
 
+from nac_test.utils.controller import get_display_name
 from nac_test.utils.terminal import TerminalColors
+from nac_test.utils.url import extract_host
+
+# Type alias for typer color values
+ColorValue = str | int | tuple[int, int, int]
 
 # Banner display settings
 BANNER_CONTENT_WIDTH: int = (
@@ -114,6 +119,58 @@ def _build_title_line(title: str, width: int, style: BoxStyle) -> str:
     )
 
 
+def _render_banner(
+    title: str,
+    content_lines: list[str],
+    border_color: ColorValue = typer.colors.RED,
+    text_color: ColorValue = typer.colors.WHITE,
+) -> None:
+    """Render a styled terminal banner with box borders.
+
+    Handles both Unicode (colored) and ASCII (NO_COLOR) rendering modes.
+    All public banner functions should delegate to this to avoid duplication.
+
+    Args:
+        title: The banner title text. For Unicode mode, can include emoji.
+        content_lines: List of content strings (one per line inside the box).
+        border_color: Typer color for borders in color mode.
+        text_color: Typer color for content text in color mode.
+    """
+    width = BANNER_CONTENT_WIDTH
+    no_color = TerminalColors.NO_COLOR
+    style = _get_box_style(no_color)
+
+    # Build borders
+    h_border = style.horizontal * width
+    top_border = style.top_left + h_border + style.top_right
+    separator = style.mid_left + h_border + style.mid_right
+    bottom_border = style.bottom_left + h_border + style.bottom_right
+    title_line = _build_title_line(title, width, style)
+
+    bordered_content = [
+        _build_bordered_line(line, width, style) for line in content_lines
+    ]
+
+    if no_color:
+        typer.echo(top_border)
+        typer.echo(title_line)
+        typer.echo(separator)
+        for line in bordered_content:
+            typer.echo(line)
+        typer.echo(bottom_border)
+    else:
+        typer.echo(typer.style(top_border, fg=border_color))
+        typer.echo(typer.style(title_line, fg=border_color))
+        typer.echo(typer.style(separator, fg=border_color))
+        for line in bordered_content:
+            typer.echo(
+                typer.style(style.vertical, fg=border_color)
+                + typer.style(line[1:-1], fg=text_color)
+                + typer.style(style.vertical, fg=border_color)
+            )
+        typer.echo(typer.style(bottom_border, fg=border_color))
+
+
 def display_aci_defaults_banner() -> None:
     """Display a prominent banner when ACI defaults file is missing.
 
@@ -126,25 +183,12 @@ def display_aci_defaults_banner() -> None:
         Requires UTF-8 terminal support for Unicode box-drawing characters.
         Set NO_COLOR=1 environment variable to use ASCII fallback.
     """
-    width = BANNER_CONTENT_WIDTH
     no_color = TerminalColors.NO_COLOR
-    style = _get_box_style(no_color)
-
-    # Title content differs by mode
     title = (
         "!!! DEFAULTS FILE REQUIRED FOR ACI !!!"
         if no_color
         else "🛑 DEFAULTS FILE REQUIRED FOR ACI 🛑"
     )
-
-    # Build borders
-    h_border = style.horizontal * width
-    top_border = style.top_left + h_border + style.top_right
-    separator = style.mid_left + h_border + style.mid_right
-    bottom_border = style.bottom_left + h_border + style.bottom_right
-    title_line = _build_title_line(title, width, style)
-
-    # Content lines
     content_lines = [
         "",
         "Cisco's ACI as Code (AaC) requires the defaults file for proper test",
@@ -155,35 +199,7 @@ def display_aci_defaults_banner() -> None:
         "  nac-test -d ./data -d ./defaults/ -t ./tests/ -o ./output",
         "",
     ]
-    bordered_content = [
-        _build_bordered_line(line, width, style) for line in content_lines
-    ]
-
-    # Output based on color mode
-    if no_color:
-        typer.echo(top_border)
-        typer.echo(title_line)
-        typer.echo(separator)
-        for line in bordered_content:
-            typer.echo(line)
-        typer.echo(bottom_border)
-    else:
-        border_color = typer.colors.RED
-        text_color = typer.colors.WHITE
-
-        typer.echo(typer.style(top_border, fg=border_color))
-        typer.echo(typer.style(title_line, fg=border_color))
-        typer.echo(typer.style(separator, fg=border_color))
-
-        for line in bordered_content:
-            # Color borders red, content white
-            typer.echo(
-                typer.style(style.vertical, fg=border_color)
-                + typer.style(line[1:-1], fg=text_color)
-                + typer.style(style.vertical, fg=border_color)
-            )
-
-        typer.echo(typer.style(bottom_border, fg=border_color))
+    _render_banner(title, content_lines)
 
 
 def display_auth_failure_banner(
@@ -207,30 +223,13 @@ def display_auth_failure_banner(
     Note:
         Uses the same box style and color handling as display_aci_defaults_banner.
     """
-    # Import here to avoid circular import
-    from nac_test.cli.validators.controller_auth import CONTROLLER_REGISTRY
-
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    display_name = config.display_name if config else controller_type
-    width = BANNER_CONTENT_WIDTH
+    display_name = get_display_name(controller_type)
     no_color = TerminalColors.NO_COLOR
-    style = _get_box_style(no_color)
-
-    # Title content differs by mode
     title = (
         "!!! CONTROLLER AUTHENTICATION FAILED !!!"
         if no_color
         else "⛔ CONTROLLER AUTHENTICATION FAILED"
     )
-
-    # Build borders
-    h_border = style.horizontal * width
-    top_border = style.top_left + h_border + style.top_right
-    separator = style.mid_left + h_border + style.mid_right
-    bottom_border = style.bottom_left + h_border + style.bottom_right
-    title_line = _build_title_line(title, width, style)
-
-    # Content lines
     content_lines = [
         "",
         f"Could not authenticate to {display_name} at {controller_url}",
@@ -241,35 +240,7 @@ def display_auth_failure_banner(
         f"  export {env_var_prefix}_PASSWORD=<password>",
         "",
     ]
-    bordered_content = [
-        _build_bordered_line(line, width, style) for line in content_lines
-    ]
-
-    # Output based on color mode
-    if no_color:
-        typer.echo(top_border)
-        typer.echo(title_line)
-        typer.echo(separator)
-        for line in bordered_content:
-            typer.echo(line)
-        typer.echo(bottom_border)
-    else:
-        border_color = typer.colors.RED
-        text_color = typer.colors.WHITE
-
-        typer.echo(typer.style(top_border, fg=border_color))
-        typer.echo(typer.style(title_line, fg=border_color))
-        typer.echo(typer.style(separator, fg=border_color))
-
-        for line in bordered_content:
-            # Color borders red, content white
-            typer.echo(
-                typer.style(style.vertical, fg=border_color)
-                + typer.style(line[1:-1], fg=text_color)
-                + typer.style(style.vertical, fg=border_color)
-            )
-
-        typer.echo(typer.style(bottom_border, fg=border_color))
+    _render_banner(title, content_lines)
 
 
 def display_unreachable_banner(
@@ -291,34 +262,12 @@ def display_unreachable_banner(
     Note:
         Uses the same box style and color handling as display_aci_defaults_banner.
     """
-    # Import here to avoid circular import
-    from nac_test.cli.validators.controller_auth import (
-        CONTROLLER_REGISTRY,
-        extract_host,
-    )
-
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    display_name = config.display_name if config else controller_type
-    width = BANNER_CONTENT_WIDTH
-    no_color = TerminalColors.NO_COLOR
-    style = _get_box_style(no_color)
-
-    # Extract host from URL for curl example
+    display_name = get_display_name(controller_type)
     host = extract_host(controller_url)
-
-    # Title content differs by mode
+    no_color = TerminalColors.NO_COLOR
     title = (
         "!!! CONTROLLER UNREACHABLE !!!" if no_color else "⛔ CONTROLLER UNREACHABLE"
     )
-
-    # Build borders
-    h_border = style.horizontal * width
-    top_border = style.top_left + h_border + style.top_right
-    separator = style.mid_left + h_border + style.mid_right
-    bottom_border = style.bottom_left + h_border + style.bottom_right
-    title_line = _build_title_line(title, width, style)
-
-    # Content lines
     content_lines = [
         "",
         f"Could not connect to {display_name} at {controller_url}",
@@ -329,32 +278,4 @@ def display_unreachable_banner(
         f"  ping {host}",
         "",
     ]
-    bordered_content = [
-        _build_bordered_line(line, width, style) for line in content_lines
-    ]
-
-    # Output based on color mode
-    if no_color:
-        typer.echo(top_border)
-        typer.echo(title_line)
-        typer.echo(separator)
-        for line in bordered_content:
-            typer.echo(line)
-        typer.echo(bottom_border)
-    else:
-        border_color = typer.colors.RED
-        text_color = typer.colors.WHITE
-
-        typer.echo(typer.style(top_border, fg=border_color))
-        typer.echo(typer.style(title_line, fg=border_color))
-        typer.echo(typer.style(separator, fg=border_color))
-
-        for line in bordered_content:
-            # Color borders red, content white
-            typer.echo(
-                typer.style(style.vertical, fg=border_color)
-                + typer.style(line[1:-1], fg=text_color)
-                + typer.style(style.vertical, fg=border_color)
-            )
-
-        typer.echo(typer.style(bottom_border, fg=border_color))
+    _render_banner(title, content_lines)
