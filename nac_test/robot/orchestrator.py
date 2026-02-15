@@ -304,7 +304,12 @@ class RobotOrchestrator:
                 continue
 
             # Remove existing symlink or file if it exists
-            if target.exists() or target.is_symlink():
+            if target.is_symlink():
+                target.unlink()
+            elif target.is_dir():
+                logger.warning(f"Skipping symlink creation: {target} is a directory")
+                continue
+            elif target.exists():
                 target.unlink()
 
             # Create relative symlink
