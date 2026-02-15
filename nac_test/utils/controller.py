@@ -13,18 +13,81 @@ ambiguous test execution contexts.
 
 import logging
 import os
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
-# Define supported controller types and their required environment variables
+
+@dataclass(frozen=True)
+class ControllerConfig:
+    """Configuration metadata for a supported controller type.
+
+    Attributes:
+        display_name: User-facing name (e.g., "APIC", "Catalyst Center").
+        url_env_var: Environment variable name for the controller URL.
+        env_var_prefix: Prefix for credential env vars (e.g., "ACI" → ACI_USERNAME).
+        required_env_vars: List of environment variables required for this controller.
+    """
+
+    display_name: str
+    url_env_var: str
+    env_var_prefix: str
+    required_env_vars: list[str]
+
+
+# Single source of truth for all controller configurations
+# Replaces both CREDENTIAL_PATTERNS and the registry from controller_auth.py
+CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
+    "ACI": ControllerConfig(
+        display_name="APIC",
+        url_env_var="ACI_URL",
+        env_var_prefix="ACI",
+        required_env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
+    ),
+    "SDWAN": ControllerConfig(
+        display_name="SDWAN Manager",
+        url_env_var="SDWAN_URL",
+        env_var_prefix="SDWAN",
+        required_env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
+    ),
+    "CC": ControllerConfig(
+        display_name="Catalyst Center",
+        url_env_var="CC_URL",
+        env_var_prefix="CC",
+        required_env_vars=["CC_URL", "CC_USERNAME", "CC_PASSWORD"],
+    ),
+    "MERAKI": ControllerConfig(
+        display_name="Meraki",
+        url_env_var="MERAKI_URL",
+        env_var_prefix="MERAKI",
+        required_env_vars=["MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"],
+    ),
+    "FMC": ControllerConfig(
+        display_name="Firepower Management Center",
+        url_env_var="FMC_URL",
+        env_var_prefix="FMC",
+        required_env_vars=["FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"],
+    ),
+    "ISE": ControllerConfig(
+        display_name="ISE",
+        url_env_var="ISE_URL",
+        env_var_prefix="ISE",
+        required_env_vars=["ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"],
+    ),
+    "IOSXE": ControllerConfig(
+        display_name="IOS XE",
+        url_env_var="IOSXE_URL",
+        env_var_prefix="IOSXE",
+        required_env_vars=[
+            "IOSXE_URL"
+        ],  # Direct device access, no controller credentials
+    ),
+}
+
+# Backward compatibility - remove in future version
 CREDENTIAL_PATTERNS: dict[str, list[str]] = {
-    "ACI": ["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
-    "SDWAN": ["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
-    "CC": ["CC_URL", "CC_USERNAME", "CC_PASSWORD"],
-    "MERAKI": ["MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"],
-    "FMC": ["FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"],
-    "ISE": ["ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"],
-    "IOSXE": ["IOSXE_URL"],  # Direct device access, no controller credentials needed
+    controller_type: config.required_env_vars
+    for controller_type, config in CONTROLLER_REGISTRY.items()
 }
 
 
@@ -116,7 +179,8 @@ def _find_credential_sets() -> tuple[list[str], dict[str, dict[str, list[str]]]]
     complete_sets: list[str] = []
     partial_sets: dict[str, dict[str, list[str]]] = {}
 
-    for controller_type, required_vars in CREDENTIAL_PATTERNS.items():
+    for controller_type, config in CONTROLLER_REGISTRY.items():
+        required_vars = config.required_env_vars
         present_vars = []
         missing_vars = []
 
@@ -239,3 +303,39 @@ def _format_no_credentials_error(
     )
 
     return message
+
+
+def get_display_name(controller_type: str) -> str:
+    """Get the user-facing display name for a controller type.
+
+    Looks up the display name from CONTROLLER_REGISTRY. If the controller type
+    is not registered, returns the controller_type string as-is for graceful
+    degradation.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
+
+    Returns:
+        The user-facing display name (e.g., "APIC", "SDWAN Manager", "Catalyst Center"),
+        or the controller_type string if not found in registry.
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    return config.display_name if config else controller_type
+
+
+def get_env_var_prefix(controller_type: str) -> str:
+    """Get the environment variable prefix for a controller type.
+
+    Looks up the env_var_prefix from CONTROLLER_REGISTRY. If the controller type
+    is not registered, returns the controller_type string as-is for graceful
+    degradation.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
+
+    Returns:
+        The environment variable prefix (e.g., "ACI", "SDWAN", "CC"),
+        or the controller_type string if not found in registry.
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    return config.env_var_prefix if config else controller_type
