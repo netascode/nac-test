@@ -423,8 +423,10 @@ class TestRobotOrchestrator:
         target_dir = temp_output_dir / "output.xml"
         target_dir.mkdir()
 
-        with pytest.raises((IsADirectoryError, PermissionError)):
-            orchestrator._create_backward_compat_symlinks()
+        # Should not raise, but log a warning and skip that symlink
+        orchestrator._create_backward_compat_symlinks()
+
+        assert "is a directory" in caplog.text
 
     def test_get_test_statistics_partially_corrupted_xml(
         self, orchestrator, temp_output_dir, caplog
