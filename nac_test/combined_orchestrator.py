@@ -30,8 +30,16 @@ class CombinedOrchestrator:
     This class discovers test types and delegates execution to existing orchestrators,
     following DRY and SRP principles by reusing proven orchestration logic.
 
-    Note: Robot Framework results are placed at the root output directory for backward
-    compatibility, while PyATS results use a subdirectory for organization.
+    Output structure:
+        output_dir/
+        ├── combined_summary.html     # Unified dashboard (all frameworks)
+        ├── robot_results/            # Robot Framework artifacts
+        │   ├── output.xml, log.html, report.html, xunit.xml
+        │   └── summary_report.html
+        ├── output.xml, log.html...   # Symlinks to robot_results/ (backward compat)
+        └── pyats_results/            # PyATS artifacts
+            ├── api/html_reports/summary_report.html
+            └── d2d/html_reports/summary_report.html
     """
 
     def __init__(
