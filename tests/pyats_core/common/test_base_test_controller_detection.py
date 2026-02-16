@@ -3,6 +3,7 @@
 
 """Test base_test.py controller detection integration."""
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -15,7 +16,7 @@ class TestBaseTestControllerDetection:
     """Test controller detection integration in NACTestBase."""
 
     def test_base_test_detects_controller_on_setup(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """Test that NACTestBase detects controller type during setup."""
         # Set up ACI environment variables
@@ -23,10 +24,10 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("ACI_USERNAME", "admin")
         monkeypatch.setenv("ACI_PASSWORD", "password")
 
-        # Mock the data model file
-        monkeypatch.setenv(
-            "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", "/tmp/test.yaml"
-        )
+        # Create actual temp file to avoid artifacts in cwd
+        temp_file = tmp_path / "test.yaml"
+        temp_file.write_text("test: data")
+        monkeypatch.setenv("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", str(temp_file))
 
         # Create a mock test class
         class TestClass(NACTestBase):
@@ -50,7 +51,7 @@ class TestBaseTestControllerDetection:
         assert test_instance.password == "password"
 
     def test_base_test_fails_setup_on_detection_error(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """Test that NACTestBase fails setup when controller detection fails."""
         # Clear all controller environment variables
@@ -67,10 +68,10 @@ class TestBaseTestControllerDetection:
         ]:
             monkeypatch.delenv(env_var, raising=False)
 
-        # Mock the data model file
-        monkeypatch.setenv(
-            "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", "/tmp/test.yaml"
-        )
+        # Create actual temp file to avoid artifacts in cwd
+        temp_file = tmp_path / "test.yaml"
+        temp_file.write_text("test: data")
+        monkeypatch.setenv("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", str(temp_file))
 
         # Create a mock test class
         class TestClass(NACTestBase):
@@ -93,7 +94,7 @@ class TestBaseTestControllerDetection:
             assert "No controller credentials found" in str(exc_info.value)
 
     def test_base_test_no_longer_uses_controller_type_env_var(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """Test that NACTestBase ignores CONTROLLER_TYPE environment variable."""
         # Set up SDWAN credentials
@@ -104,10 +105,10 @@ class TestBaseTestControllerDetection:
         # Also set CONTROLLER_TYPE to a different value (should be ignored)
         monkeypatch.setenv("CONTROLLER_TYPE", "ACI")
 
-        # Mock the data model file
-        monkeypatch.setenv(
-            "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", "/tmp/test.yaml"
-        )
+        # Create actual temp file to avoid artifacts in cwd
+        temp_file = tmp_path / "test.yaml"
+        temp_file.write_text("test: data")
+        monkeypatch.setenv("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", str(temp_file))
 
         # Create a mock test class
         class TestClass(NACTestBase):
@@ -129,7 +130,7 @@ class TestBaseTestControllerDetection:
         assert test_instance.controller_url == "https://vmanage.example.com"
 
     def test_base_test_handles_multiple_controllers_error(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """Test that NACTestBase handles multiple controller credentials error during setup."""
         # Set up both ACI and CC environment variables
@@ -140,10 +141,10 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("CC_USERNAME", "admin")
         monkeypatch.setenv("CC_PASSWORD", "password")
 
-        # Mock the data model file
-        monkeypatch.setenv(
-            "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", "/tmp/test.yaml"
-        )
+        # Create actual temp file to avoid artifacts in cwd
+        temp_file = tmp_path / "test.yaml"
+        temp_file.write_text("test: data")
+        monkeypatch.setenv("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", str(temp_file))
 
         # Create a mock test class
         class TestClass(NACTestBase):
