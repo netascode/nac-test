@@ -2,10 +2,18 @@
 
 <!-- Provide a brief summary of the changes in this PR -->
 
-## Related Issue(s)
+## Closes
+
+<!-- List issues that will be automatically closed when this PR is merged -->
+<!-- Use GitHub closing keywords: Fixes #123, Closes #456 -->
 
 - Fixes #
-- Related to #
+
+## Related Issue(s)
+
+<!-- List issues that are related but should NOT be automatically closed -->
+
+-
 
 ## Type of Change
 
