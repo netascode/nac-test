@@ -48,7 +48,7 @@ class RobotReportGenerator:
         # Initialize Jinja2 environment (reuse PyATS templates)
         self.env = get_jinja_environment(TEMPLATES_DIR)
 
-    def generate_summary_report(self) -> Path | None:
+    def generate_summary_report(self) -> tuple[Path | None, TestResults]:
         """Generate Robot summary report.
 
         Creates robot_results/summary_report.html with:
@@ -59,13 +59,14 @@ class RobotReportGenerator:
         - Same styling as PyATS summaries for consistency
 
         Returns:
-            Path to generated summary report, or None if generation fails or no tests found
+            Tuple of (path to generated summary report, TestResults with stats).
+            Returns (None, empty TestResults) if generation fails or no tests found.
         """
         try:
             # Check if output.xml exists
             if not self.output_xml_path.exists():
                 logger.warning(f"No Robot results found at {self.output_xml_path}")
-                return None
+                return None, TestResults.empty()
 
             # Parse output.xml using ResultVisitor
             logger.info(f"Parsing Robot results from {self.output_xml_path}")
@@ -78,7 +79,7 @@ class RobotReportGenerator:
             # If no tests, don't generate report
             if stats.total == 0:
                 logger.info("No Robot tests found, skipping summary report")
-                return None
+                return None, TestResults.empty()
 
             # Prepare results for template (match PyATS format)
             results = []
@@ -120,32 +121,8 @@ class RobotReportGenerator:
                 f"{stats.passed} passed, {stats.failed} failed"
             )
 
-            return summary_path
+            return summary_path, stats
 
         except Exception as e:
             logger.error(f"Failed to generate Robot summary report: {e}")
-            return None
-
-    def get_aggregated_stats(self) -> TestResults:
-        """Get aggregated statistics without generating full report.
-
-        Used by combined dashboard to show Robot block stats.
-        This is more efficient than generating the full HTML report.
-
-        Returns:
-            TestResults with aggregated statistics.
-            Returns empty TestResults if output.xml doesn't exist or parsing fails.
-        """
-        try:
-            if not self.output_xml_path.exists():
-                logger.debug(f"No Robot results found at {self.output_xml_path}")
-                return TestResults.empty()
-
-            parser = RobotResultParser(self.output_xml_path)
-            data = parser.parse()
-            stats: TestResults = data["aggregated_stats"]
-            return stats
-
-        except Exception as e:
-            logger.warning(f"Failed to get Robot stats: {e}")
-            return TestResults.empty()
+            return None, TestResults.from_error(f"Failed to parse output.xml: {e}")

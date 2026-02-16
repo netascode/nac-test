@@ -57,43 +57,23 @@ def test_generator_initialization(temp_output_dir) -> None:
     assert generator.env is not None
 
 
-def test_get_aggregated_stats_success(temp_output_dir, mock_robot_output_xml) -> None:
-    """Test getting aggregated statistics from Robot output.xml."""
-    generator = RobotReportGenerator(temp_output_dir)
-    stats = generator.get_aggregated_stats()
-
-    assert stats is not None
-    assert stats.total == 2
-    assert stats.passed == 1
-    assert stats.failed == 1
-    assert stats.skipped == 0
-    assert 0 <= stats.success_rate <= 100
-
-
-def test_get_aggregated_stats_missing_output_xml(temp_output_dir) -> None:
-    """Test getting stats when output.xml doesn't exist."""
-    generator = RobotReportGenerator(temp_output_dir)
-    stats = generator.get_aggregated_stats()
-
-    # Should return empty stats
-    assert stats.total == 0
-    assert stats.passed == 0
-    assert stats.failed == 0
-    assert stats.skipped == 0
-    assert stats.success_rate == 0.0
-
-
 def test_generate_summary_report_success(
     temp_output_dir, mock_robot_output_xml
 ) -> None:
     """Test generating summary report HTML."""
     generator = RobotReportGenerator(temp_output_dir)
-    report_path = generator.generate_summary_report()
+    report_path, stats = generator.generate_summary_report()
 
     assert report_path is not None
     assert report_path.exists()
     assert report_path.name == "summary_report.html"
     assert report_path.parent == temp_output_dir / "robot_results"
+
+    # Verify stats are returned correctly
+    assert stats.total == 2
+    assert stats.passed == 1
+    assert stats.failed == 1
+    assert stats.skipped == 0
 
     # Verify HTML content contains expected elements
     content = report_path.read_text()
@@ -105,10 +85,14 @@ def test_generate_summary_report_success(
 def test_generate_summary_report_missing_output_xml(temp_output_dir) -> None:
     """Test generating summary report when output.xml is missing."""
     generator = RobotReportGenerator(temp_output_dir)
-    report_path = generator.generate_summary_report()
+    report_path, stats = generator.generate_summary_report()
 
-    # Should return None when no output.xml exists
+    # Should return None path and empty stats when no output.xml exists
     assert report_path is None
+    assert stats.total == 0
+    assert stats.passed == 0
+    assert stats.failed == 0
+    assert stats.skipped == 0
 
 
 def test_deep_link_generation(
@@ -116,7 +100,7 @@ def test_deep_link_generation(
 ) -> None:
     """Test that deep links to Robot log.html are generated correctly."""
     generator = RobotReportGenerator(temp_output_dir)
-    report_path = generator.generate_summary_report()
+    report_path, _ = generator.generate_summary_report()
     assert report_path is not None
     content = report_path.read_text()
     # Deep links should point to log.html with test IDs
@@ -149,7 +133,7 @@ def test_status_mapping(temp_output_dir) -> None:
 """)
 
     generator = RobotReportGenerator(temp_output_dir)
-    stats = generator.get_aggregated_stats()
+    _, stats = generator.generate_summary_report()
 
     assert stats.total == 3
     assert stats.passed == 1
@@ -174,40 +158,31 @@ def test_generate_summary_report_no_tests(temp_output_dir) -> None:
 """)
 
     generator = RobotReportGenerator(temp_output_dir)
-    report_path = generator.generate_summary_report()
+    report_path, stats = generator.generate_summary_report()
 
     assert report_path is None
+    assert stats.total == 0
 
 
 def test_generate_summary_report_exception_handling(temp_output_dir) -> None:
-    """Test that generate_summary_report handles exceptions gracefully."""
+    """Test that generate_summary_report captures errors in TestResults."""
     output_xml = temp_output_dir / "robot_results" / "output.xml"
     output_xml.write_text("invalid xml content that will cause parsing error")
 
     generator = RobotReportGenerator(temp_output_dir)
-    report_path = generator.generate_summary_report()
+    report_path, stats = generator.generate_summary_report()
 
     assert report_path is None
-
-
-def test_get_aggregated_stats_exception_handling(temp_output_dir) -> None:
-    """Test that get_aggregated_stats handles exceptions gracefully."""
-    output_xml = temp_output_dir / "robot_results" / "output.xml"
-    output_xml.write_text("invalid xml content that will cause parsing error")
-
-    generator = RobotReportGenerator(temp_output_dir)
-    stats = generator.get_aggregated_stats()
-
     assert stats.total == 0
-    assert stats.passed == 0
-    assert stats.failed == 0
-    assert stats.skipped == 0
+    assert stats.has_errors is True
+    assert len(stats.errors) == 1
+    assert "Failed to parse output.xml" in stats.errors[0]
 
 
 def test_template_receives_stats_object(temp_output_dir, mock_robot_output_xml) -> None:
     """Test that template receives TestResults object and renders stats correctly."""
     generator = RobotReportGenerator(temp_output_dir)
-    report_path = generator.generate_summary_report()
+    report_path, _ = generator.generate_summary_report()
 
     assert report_path is not None
     content = report_path.read_text()

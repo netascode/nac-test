@@ -1,13 +1,9 @@
-# SPDX-License-Identifier: MPL-2.0
-# Copyright (c) 2025 Daniel Schmidt
-
 # mypy: disable-error-code="no-untyped-def,method-assign"
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
 """Unit tests for Robot Framework orchestrator."""
 
-import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -210,74 +206,6 @@ class TestRobotOrchestrator:
         # Verify warning was logged
         assert "Source file not found for symlink" in caplog.text
 
-    def test_get_test_statistics_success(self, orchestrator, temp_output_dir) -> None:
-        """Test _get_test_statistics extracts stats from output.xml."""
-        # Create robot_results directory
-        robot_results_dir = temp_output_dir / "robot_results"
-        robot_results_dir.mkdir()
-
-        # Create a minimal valid Robot output.xml
-        output_xml = robot_results_dir / "output.xml"
-        output_xml.write_text("""<?xml version="1.0" encoding="UTF-8"?>
-<robot generator="Robot 7.0" generated="2025-02-01T12:00:00.000000">
-<suite id="s1" name="Test Suite">
-    <test id="s1-t1" name="Test Case 1">
-        <status status="PASS" start="2025-02-01T12:00:00.000000" elapsed="1.0"/>
-    </test>
-    <test id="s1-t2" name="Test Case 2">
-        <status status="FAIL" start="2025-02-01T12:00:01.000000" elapsed="1.0">Error message</status>
-    </test>
-    <test id="s1-t3" name="Test Case 3">
-        <status status="SKIP" start="2025-02-01T12:00:02.000000" elapsed="0.0">Skipped</status>
-    </test>
-    <status status="FAIL" start="2025-02-01T12:00:00.000000" elapsed="3.0"/>
-</suite>
-<statistics>
-    <total>
-        <stat pass="1" fail="1" skip="1">All Tests</stat>
-    </total>
-</statistics>
-</robot>""")
-
-        # Get statistics
-        stats = orchestrator._get_test_statistics()
-
-        # Verify statistics
-        assert stats.total == 3
-        assert stats.passed == 1
-        assert stats.failed == 1
-        assert stats.skipped == 1
-
-    def test_get_test_statistics_missing_output_xml(
-        self, orchestrator, temp_output_dir, caplog
-    ) -> None:
-        """Test _get_test_statistics handles missing output.xml."""
-        # Don't create output.xml
-
-        stats = orchestrator._get_test_statistics()
-
-        # Should return zeros (TestResults object)
-        assert stats == TestResults.empty()
-        assert "Robot output.xml not found" in caplog.text
-
-    def test_get_test_statistics_invalid_xml(
-        self, orchestrator: RobotOrchestrator, temp_output_dir, caplog
-    ) -> None:
-        """Test _get_test_statistics handles invalid XML."""
-        # Create robot_results directory
-        robot_results_dir = temp_output_dir / "robot_results"
-        robot_results_dir.mkdir()
-
-        # Create invalid XML
-        output_xml = robot_results_dir / "output.xml"
-        output_xml.write_text("invalid xml content")
-
-        stats = orchestrator._get_test_statistics()
-
-        # Should return zeros and log error (TestResults object)
-        assert stats == TestResults.empty()
-        assert "Failed to parse Robot output.xml" in caplog.text
-
     @patch("nac_test.robot.orchestrator.run_pabot")
     def test_run_tests_render_only_mode(
         self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
@@ -314,37 +242,22 @@ class TestRobotOrchestrator:
         # Mock pabot success
         mock_pabot.return_value = 0
 
-        # Mock report generator
+        # Mock report generator - now returns tuple (path, stats)
         mock_generator_instance = MagicMock()
+        mock_stats = TestResults(total=1, passed=1, failed=0, skipped=0)
         mock_generator_instance.generate_summary_report.return_value = (
-            temp_output_dir / "robot_results" / "summary_report.html"
+            temp_output_dir / "robot_results" / "summary_report.html",
+            mock_stats,
         )
         mock_generator.return_value = mock_generator_instance
 
         # Create mock Robot output files
         robot_results_dir = temp_output_dir / "robot_results"
         robot_results_dir.mkdir()
-        output_xml = robot_results_dir / "output.xml"
-        output_xml.write_text("""<?xml version="1.0" encoding="UTF-8"?>
-<robot generator="Robot 7.0">
-<suite id="s1" name="Test">
-    <test id="s1-t1" name="Test 1">
-        <status status="PASS" start="2025-02-01T12:00:00.000000" elapsed="1.0"/>
-    </test>
-    <status status="PASS" start="2025-02-01T12:00:00.000000" elapsed="1.0"/>
-</suite>
-<statistics>
-    <total>
-        <stat pass="1" fail="0" skip="0">All Tests</stat>
-    </total>
-</statistics>
-</robot>""")
 
         # Create files at root that need to be moved
-        for filename in ["log.html", "report.html", "xunit.xml"]:
+        for filename in ["output.xml", "log.html", "report.html", "xunit.xml"]:
             (temp_output_dir / filename).write_text(f"Mock {filename}")
-        # Copy output.xml to root for moving test
-        shutil.copy(output_xml, temp_output_dir / "output.xml")
 
         stats = orchestrator.run_tests()
 
@@ -427,28 +340,3 @@ class TestRobotOrchestrator:
         orchestrator._create_backward_compat_symlinks()
 
         assert "is a directory" in caplog.text
-
-    def test_get_test_statistics_partially_corrupted_xml(
-        self, orchestrator, temp_output_dir, caplog
-    ) -> None:
-        """Test statistics parsing with valid XML but missing statistics element."""
-        robot_results_dir = temp_output_dir / "robot_results"
-        robot_results_dir.mkdir()
-
-        output_xml = robot_results_dir / "output.xml"
-        output_xml.write_text(
-            """<?xml version="1.0" encoding="UTF-8"?>
-<invalid_root>
-    <suite name="Test">
-        <test name="Example">
-            <status status="PASS"></status>
-        </test>
-    </suite>
-</invalid_root>"""
-        )
-
-        with caplog.at_level("ERROR"):
-            result = orchestrator._get_test_statistics()
-
-        assert result == TestResults.empty()
-        assert "Failed to parse Robot output.xml" in caplog.text

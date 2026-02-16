@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any
 
 import typer
-from robot.api import ExecutionResult
 
 from nac_test.core.types import TestResults
 from nac_test.robot.pabot import run_pabot
@@ -212,10 +211,10 @@ class RobotOrchestrator:
             # Phase 5: Create backward compatibility symlinks
             self._create_backward_compat_symlinks()
 
-            # Phase 5.5: Generate Robot summary report
+            # Phase 5.5: Generate Robot summary report and get stats
             typer.echo("📊 Generating Robot summary report...")
             generator = RobotReportGenerator(self.base_output_dir)
-            summary_path = generator.generate_summary_report()
+            summary_path, stats = generator.generate_summary_report()
             if summary_path:
                 logger.info(f"Robot summary report: {summary_path}")
             else:
@@ -223,8 +222,7 @@ class RobotOrchestrator:
                     "Robot summary report generation skipped (no tests or error)"
                 )
 
-            # Phase 6: Extract and return test statistics
-            return self._get_test_statistics()
+            return stats
         else:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
             return TestResults.empty()
@@ -308,29 +306,3 @@ class RobotOrchestrator:
             # Create relative symlink
             target.symlink_to(source.relative_to(self.base_output_dir))
             logger.debug(f"Created symlink: {target} -> {source}")
-
-    def _get_test_statistics(self) -> TestResults:
-        """Extract test statistics from Robot Framework output.xml.
-
-        Returns:
-            TestResults with Robot Framework test statistics.
-        """
-        output_xml = self.base_output_dir / "robot_results" / "output.xml"
-
-        if not output_xml.exists():
-            logger.warning(f"Robot output.xml not found at {output_xml}")
-            return TestResults.empty()
-
-        try:
-            result = ExecutionResult(str(output_xml))
-            stats = result.statistics.total
-
-            return TestResults(
-                total=stats.total,
-                passed=stats.passed,
-                failed=stats.failed,
-                skipped=stats.skipped,
-            )
-        except Exception as e:
-            logger.error(f"Failed to parse Robot output.xml: {e}")
-            return TestResults.empty()
