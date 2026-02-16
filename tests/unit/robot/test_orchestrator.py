@@ -94,19 +94,6 @@ class TestRobotOrchestrator:
         assert orchestrator.extra_args == ["--exitonfailure"]
         assert orchestrator.verbosity == VerbosityLevel.DEBUG
 
-    def test_get_output_summary(
-        self, orchestrator, temp_output_dir, mock_templates_dir
-    ) -> None:
-        """Test get_output_summary returns correct information."""
-        summary = orchestrator.get_output_summary()
-
-        assert summary["type"] == "robot"
-        assert summary["base_output_dir"] == str(temp_output_dir)
-        assert summary["working_dir"] == str(temp_output_dir)
-        assert summary["templates_dir"] == str(mock_templates_dir)
-        assert summary["merged_data_file"] == str(temp_output_dir / "merged_data.yaml")
-        assert summary["render_only"] is False
-
     def test_move_robot_results_to_subdirectory(
         self, orchestrator, temp_output_dir
     ) -> None:

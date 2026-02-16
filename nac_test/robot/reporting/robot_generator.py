@@ -30,7 +30,6 @@ class RobotReportGenerator:
         output_dir: Base output directory
         robot_results_dir: robot_results subdirectory
         output_xml_path: Path to output.xml
-        log_html_path: Path to log.html
         env: Jinja2 environment (shared with PyATS)
     """
 
@@ -43,7 +42,6 @@ class RobotReportGenerator:
         self.output_dir = output_dir
         self.robot_results_dir = output_dir / "robot_results"
         self.output_xml_path = self.robot_results_dir / "output.xml"
-        self.log_html_path = self.robot_results_dir / "log.html"
 
         # Initialize Jinja2 environment (reuse PyATS templates)
         self.env = get_jinja_environment(TEMPLATES_DIR)

@@ -13,7 +13,6 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import typer
 
@@ -226,21 +225,6 @@ class RobotOrchestrator:
         else:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
             return TestResults.empty()
-
-    def get_output_summary(self) -> dict[str, Any]:
-        """Get summary information about Robot Framework outputs.
-
-        Returns:
-            Dictionary containing output directory and key files information
-        """
-        return {
-            "type": "robot",
-            "base_output_dir": str(self.base_output_dir),
-            "working_dir": str(self.output_dir),
-            "templates_dir": str(self.templates_dir),
-            "merged_data_file": str(self.output_dir / self.merged_data_filename),
-            "render_only": self.render_only,
-        }
 
     def _move_robot_results_to_subdirectory(self) -> None:
         """Move Robot output files from root to robot_results/ subdirectory.
