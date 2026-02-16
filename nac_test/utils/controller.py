@@ -27,12 +27,15 @@ class ControllerConfig:
         url_env_var: Environment variable name for the controller URL.
         env_var_prefix: Prefix for credential env vars (e.g., "ACI" → ACI_USERNAME).
         required_env_vars: List of environment variables required for this controller.
+        cache_key: The controller_type string passed to AuthCache by the auth adapter.
+            None for controllers that don't have an auth adapter in nac-test-pyats-common.
     """
 
     display_name: str
     url_env_var: str
     env_var_prefix: str
     required_env_vars: list[str]
+    cache_key: str | None = None
 
 
 # Single source of truth for all controller configurations
@@ -43,18 +46,21 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="ACI_URL",
         env_var_prefix="ACI",
         required_env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
+        cache_key="ACI",
     ),
     "SDWAN": ControllerConfig(
         display_name="SDWAN Manager",
         url_env_var="SDWAN_URL",
         env_var_prefix="SDWAN",
         required_env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
+        cache_key="SDWAN_MANAGER",
     ),
     "CC": ControllerConfig(
         display_name="Catalyst Center",
         url_env_var="CC_URL",
         env_var_prefix="CC",
         required_env_vars=["CC_URL", "CC_USERNAME", "CC_PASSWORD"],
+        cache_key="CC",
     ),
     "MERAKI": ControllerConfig(
         display_name="Meraki",
