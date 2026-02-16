@@ -174,9 +174,9 @@ def test_generate_summary_report_exception_handling(temp_output_dir) -> None:
 
     assert report_path is None
     assert stats.total == 0
-    assert stats.has_errors is True
-    assert len(stats.errors) == 1
-    assert "Failed to parse output.xml" in stats.errors[0]
+    assert stats.has_error is True
+    assert stats.reason is not None
+    assert "Failed to parse output.xml" in stats.reason
 
 
 def test_template_receives_stats_object(temp_output_dir, mock_robot_output_xml) -> None:

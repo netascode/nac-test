@@ -55,8 +55,13 @@ All orchestrators return typed dataclasses from `nac_test.core.types`:
 from nac_test.core.types import TestResults
 
 # Returns TestResults (Robot doesn't distinguish test types)
-TestResults(total=100, passed=97, failed=3, skipped=0, errors=[])
+TestResults(total=100, passed=97, failed=3, skipped=0)
 # str(): "100/97/3/0" (total/passed/failed/skipped)
+
+# For errors, use factory methods:
+TestResults.from_error("Pabot execution failed")  # reason="...", state=ERROR
+TestResults.empty()                                # state=EMPTY (no tests found)
+TestResults.not_run("render-only mode")           # reason="...", state=SKIPPED
 ```
 
 **PyATSOrchestrator.run_tests() returns:**
@@ -65,8 +70,8 @@ from nac_test.core.types import PyATSResults, TestResults
 
 # Returns PyATSResults grouping API and D2D results
 PyATSResults(
-    api=TestResults(total=30, passed=28, failed=2, skipped=0, errors=[]),
-    d2d=TestResults(total=20, passed=20, failed=0, skipped=0, errors=[])
+    api=TestResults(total=30, passed=28, failed=2, skipped=0),
+    d2d=TestResults(total=20, passed=20, failed=0, skipped=0)
 )
 # str(): "PyATSResults(API: 30/28/2/0, D2D: 20/20/0/0)"
 ```
@@ -77,9 +82,9 @@ from nac_test.core.types import CombinedResults, TestResults
 
 # CombinedResults aggregates all frameworks with explicit attributes
 CombinedResults(
-    api=TestResults(total=30, passed=28, failed=2, skipped=0, errors=[]),
-    d2d=TestResults(total=20, passed=20, failed=0, skipped=0, errors=[]),
-    robot=TestResults(total=100, passed=97, failed=3, skipped=0, errors=[])
+    api=TestResults(total=30, passed=28, failed=2, skipped=0),
+    d2d=TestResults(total=20, passed=20, failed=0, skipped=0),
+    robot=TestResults(total=100, passed=97, failed=3, skipped=0)
 )
 # str(): "CombinedResults(API: 30/28/2/0, D2D: 20/20/0/0, Robot: 100/97/3/0)"
 
@@ -90,6 +95,8 @@ combined.failed   # 5
 combined.skipped  # 0
 combined.success_rate  # 96.67%
 combined.has_failures  # True
+combined.has_errors    # True if any framework has error
+combined.errors        # list[str] - collects error from each framework
 combined.exit_code     # 5 (min of failed count, 250)
 ```
 

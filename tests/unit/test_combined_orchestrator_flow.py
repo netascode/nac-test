@@ -573,7 +573,7 @@ class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
 
         # Robot should be set with error
         assert result.robot is not None
-        assert result.robot.has_errors is True
+        assert result.robot.has_error is True
 
         # Dashboard should still be generated
         mock_generator.assert_called_once()

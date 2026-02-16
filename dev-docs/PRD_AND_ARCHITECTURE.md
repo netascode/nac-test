@@ -3727,6 +3727,20 @@ graph LR
 Results are represented using typed dataclasses from `nac_test.core.types`:
 
 ```python
+class ExecutionState(str, Enum):
+    """Execution state for test results.
+
+    Distinguishes between different outcomes:
+        SUCCESS: Tests ran (may have test failures, but execution succeeded)
+        EMPTY: No tests found/executed (expected outcome, not an error)
+        SKIPPED: Tests intentionally skipped (e.g., render-only mode)
+        ERROR: Execution failed with an error (e.g., framework crash)
+    """
+    SUCCESS = "success"
+    EMPTY = "empty"
+    SKIPPED = "skipped"
+    ERROR = "error"
+
 @dataclass
 class TestResults:
     """Results from a single test framework/type."""
@@ -3734,10 +3748,28 @@ class TestResults:
     passed: int = 0
     failed: int = 0
     skipped: int = 0
-    errors: list[str] = field(default_factory=list)
-    
-    # Computed properties: success_rate, has_failures, has_errors, is_empty, exit_code
-    
+    reason: str | None = None  # Context for non-SUCCESS states
+    state: ExecutionState = ExecutionState.SUCCESS
+
+    # Factory methods for common scenarios:
+    @classmethod
+    def empty(cls) -> "TestResults":
+        """No tests found/executed (expected outcome)."""
+        return cls(state=ExecutionState.EMPTY)
+
+    @classmethod
+    def not_run(cls, reason: str | None = None) -> "TestResults":
+        """Tests intentionally skipped (e.g., render-only mode)."""
+        return cls(state=ExecutionState.SKIPPED, reason=reason)
+
+    @classmethod
+    def from_error(cls, reason: str) -> "TestResults":
+        """Execution failed with an error."""
+        return cls(reason=reason, state=ExecutionState.ERROR)
+
+    # Computed properties: success_rate, has_failures, has_error, is_empty,
+    #                      is_error, was_not_run, exit_code
+
     def __str__(self) -> str:
         return f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
 
@@ -3755,8 +3787,25 @@ class CombinedResults:
     robot: TestResults | None = None # From RobotOrchestrator
     
     # Computed properties aggregate across all non-None results:
-    # .total, .passed, .failed, .skipped, .success_rate, .has_failures, .exit_code
+    # .total, .passed, .failed, .skipped, .errors (list[str]), .success_rate,
+    # .has_failures, .has_errors, .is_empty, .exit_code
 ```
+
+**ExecutionState Usage:**
+
+The `ExecutionState` enum enables clear distinction between different outcomes:
+
+| State | When to Use | Properties |
+|-------|-------------|------------|
+| `SUCCESS` | Tests ran (may have failures) | Default state, `is_error=False` |
+| `EMPTY` | No tests found/matched filters | `is_empty=True`, `is_error=False` |
+| `SKIPPED` | Intentionally not run (render-only) | `was_not_run=True`, reason in `reason` field |
+| `ERROR` | Framework/execution failure | `is_error=True`, `has_error=True` |
+
+This allows callers to distinguish between:
+- **Empty execution** (no tests found) - expected, not an error
+- **Skipped execution** (render-only mode) - intentional, with reason
+- **Error execution** (framework crash) - unexpected failure
 
 **Orchestrator Return Types:**
 

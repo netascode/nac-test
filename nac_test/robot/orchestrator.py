@@ -224,7 +224,7 @@ class RobotOrchestrator:
             return stats
         else:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
-            return TestResults.empty()
+            return TestResults.not_run("render-only mode")
 
     def _move_robot_results_to_subdirectory(self) -> None:
         """Move Robot output files from root to robot_results/ subdirectory.

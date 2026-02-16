@@ -213,8 +213,9 @@ class TestRobotOrchestrator:
         # Verify pabot was NOT called
         mock_pabot.assert_not_called()
 
-        # Verify empty statistics returned (TestResults object)
-        assert stats == TestResults.empty()
+        # Verify render-only mode returns not_run() result with SKIPPED state
+        assert stats.was_not_run is True
+        assert stats.reason == "render-only mode"
 
     @patch("nac_test.robot.orchestrator.run_pabot")
     @patch("nac_test.robot.orchestrator.RobotReportGenerator")

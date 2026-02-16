@@ -157,7 +157,7 @@ def test_combined_results_with_robot_error(tmp_path: Path) -> None:
     # Create results: PyATS API succeeds, Robot has framework error
     results = CombinedResults(
         api=TestResults(total=5, passed=4, failed=1, skipped=0),
-        robot=TestResults.from_error(error="Pabot execution failed"),
+        robot=TestResults.from_error("Pabot execution failed"),
     )
 
     # Verify computed properties handle error correctly

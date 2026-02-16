@@ -64,7 +64,9 @@ class RobotReportGenerator:
             # Check if output.xml exists
             if not self.output_xml_path.exists():
                 logger.warning(f"No Robot results found at {self.output_xml_path}")
-                return None, TestResults.empty()
+                return None, TestResults.from_error(
+                    f"Robot output.xml not found at {self.output_xml_path}"
+                )
 
             # Parse output.xml using ResultVisitor
             logger.info(f"Parsing Robot results from {self.output_xml_path}")

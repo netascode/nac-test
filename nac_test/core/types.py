@@ -3,7 +3,24 @@
 
 """Core types for nac-test orchestration."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from enum import Enum
+
+
+class ExecutionState(str, Enum):
+    """Execution state for test results.
+
+    Distinguishes between different outcomes:
+        SUCCESS: Tests ran (may have test failures, but execution succeeded)
+        EMPTY: No tests found/executed (expected outcome, not an error)
+        SKIPPED: Tests intentionally skipped (e.g., render-only mode)
+        ERROR: Execution failed with an error (e.g., framework crash)
+    """
+
+    SUCCESS = "success"
+    EMPTY = "empty"
+    SKIPPED = "skipped"
+    ERROR = "error"
 
 
 @dataclass
@@ -19,31 +36,51 @@ class TestResults:
         passed: Number of tests that passed
         failed: Number of tests that failed
         skipped: Number of tests that were skipped
-        errors: List of execution error messages (not test failures)
+        reason: Context for non-SUCCESS states (error message or skip reason)
+        state: Execution state indicating the outcome type
     """
 
     total: int = 0
     passed: int = 0
     failed: int = 0
     skipped: int = 0
-    errors: list[str] = field(default_factory=list)
+    reason: str | None = None
+    state: ExecutionState = ExecutionState.SUCCESS
 
     @classmethod
     def empty(cls) -> "TestResults":
-        """Create empty results (all zeros, no errors)."""
-        return cls()
+        """Create empty results (no tests found/executed).
+
+        Use when no tests were discovered or matched filters.
+        This is an expected outcome, not an error.
+        """
+        return cls(state=ExecutionState.EMPTY)
 
     @classmethod
-    def from_error(cls, error: str) -> "TestResults":
-        """Create TestResults representing an execution error.
+    def not_run(cls, reason: str | None = None) -> "TestResults":
+        """Create results for intentionally skipped execution.
+
+        Use when tests were intentionally not run (e.g., render-only mode).
 
         Args:
-            error: Error message describing what went wrong
+            reason: Optional explanation for why tests were skipped
+        """
+        return cls(state=ExecutionState.SKIPPED, reason=reason)
+
+    @classmethod
+    def from_error(cls, reason: str) -> "TestResults":
+        """Create TestResults representing an execution error.
+
+        Use when test execution failed due to a framework or infrastructure error
+        (not test failures).
+
+        Args:
+            reason: Error message describing what went wrong
 
         Returns:
-            TestResults with zero counts and the error recorded
+            TestResults with zero counts, reason recorded, and ERROR state
         """
-        return cls(errors=[error])
+        return cls(reason=reason, state=ExecutionState.ERROR)
 
     @property
     def success_rate(self) -> float:
@@ -59,14 +96,24 @@ class TestResults:
         return self.failed > 0
 
     @property
-    def has_errors(self) -> bool:
-        """Check if any execution errors occurred (not test failures)."""
-        return len(self.errors) > 0
+    def has_error(self) -> bool:
+        """Check if an execution error occurred (not test failures)."""
+        return self.state == ExecutionState.ERROR
 
     @property
     def is_empty(self) -> bool:
         """Check if no tests were executed."""
         return self.total == 0
+
+    @property
+    def is_error(self) -> bool:
+        """Check if execution failed with an error."""
+        return self.state == ExecutionState.ERROR
+
+    @property
+    def was_not_run(self) -> bool:
+        """Check if tests were intentionally not run."""
+        return self.state == ExecutionState.SKIPPED
 
     @property
     def exit_code(self) -> int:
@@ -75,11 +122,11 @@ class TestResults:
         Exit codes:
             0: All tests passed, no errors
             1-250: Number of test failures (capped at 250)
-            255: Execution errors occurred (has_errors is True)
+            255: Execution errors occurred (has_error is True)
 
         This is not yet used, will be refined with #469
         """
-        if self.has_errors:
+        if self.has_error:
             return 255
         if self.has_failures:
             return min(self.failed, 250)
@@ -181,11 +228,8 @@ class CombinedResults:
 
     @property
     def errors(self) -> list[str]:
-        """All execution errors across all frameworks."""
-        all_errors: list[str] = []
-        for r in self._iter_results():
-            all_errors.extend(r.errors)
-        return all_errors
+        """All execution errors/reasons across all frameworks."""
+        return [r.reason for r in self._iter_results() if r.reason is not None]
 
     @property
     def success_rate(self) -> float:
@@ -203,7 +247,7 @@ class CombinedResults:
     @property
     def has_errors(self) -> bool:
         """Check if any execution errors occurred across all frameworks."""
-        return len(self.errors) > 0
+        return any(r.state == ExecutionState.ERROR for r in self._iter_results())
 
     @property
     def is_empty(self) -> bool:
