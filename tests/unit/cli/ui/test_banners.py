@@ -32,7 +32,7 @@ class TestDisplayAciDefaultsBanner:
         """Banner uses ASCII characters in NO_COLOR mode and excludes Unicode."""
         output = StringIO()
         with (
-            patch("nac_test.utils.terminal.TerminalColors.NO_COLOR", True),
+            patch("nac_test.cli.ui.banners.TerminalColors.NO_COLOR", True),
             patch("sys.stdout", new=output),
         ):
             display_aci_defaults_banner()
@@ -118,7 +118,7 @@ class TestDisplayAuthFailureBanner:
         """Banner uses ASCII characters in NO_COLOR mode and excludes Unicode."""
         output = StringIO()
         with (
-            patch("nac_test.utils.terminal.TerminalColors.NO_COLOR", True),
+            patch("nac_test.cli.ui.banners.TerminalColors.NO_COLOR", True),
             patch("sys.stdout", new=output),
         ):
             display_auth_failure_banner(
@@ -207,7 +207,7 @@ class TestDisplayUnreachableBanner:
         """Banner uses ASCII characters in NO_COLOR mode and excludes Unicode."""
         output = StringIO()
         with (
-            patch("nac_test.utils.terminal.TerminalColors.NO_COLOR", True),
+            patch("nac_test.cli.ui.banners.TerminalColors.NO_COLOR", True),
             patch("sys.stdout", new=output),
         ):
             display_unreachable_banner(
