@@ -7,7 +7,7 @@ import asyncio
 import json
 import logging
 import os
-import sys
+import sysconfig
 import tempfile
 import textwrap
 import time
@@ -44,6 +44,14 @@ class SubprocessRunner:
         self.output_dir = output_dir
         self.output_handler = output_handler
         self.plugin_config_path = plugin_config_path
+
+        # Ensure pyats is in the same environment as nac-test
+        pyats_path = Path(sysconfig.get_path("scripts")) / "pyats"
+        if not pyats_path.exists():
+            raise RuntimeError(
+                "pyats executable not found - ensure pyats is installed in the same environment as nac-test"
+            )
+        self.pyats_executable = str(pyats_path)
 
     async def execute_job(
         self, job_file_path: Path, env: dict[str, str]
@@ -86,14 +94,8 @@ class SubprocessRunner:
         job_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
         archive_name = f"nac_test_job_{job_timestamp}.zip"
 
-        # Use pyats script from the same directory as the current Python interpreter
-        # to ensure we use the correct virtual environment rather than whatever
-        # 'pyats' is found in PATH (which may be from a different environment)
-        python_dir = Path(sys.executable).parent
-        pyats_script = python_dir / "pyats"
-
         cmd = [
-            str(pyats_script),
+            self.pyats_executable,
             "run",
             "job",
             str(job_file_path),
@@ -205,14 +207,8 @@ class SubprocessRunner:
         hostname = env.get("HOSTNAME", "unknown")
         archive_name = f"pyats_archive_device_{hostname}"
 
-        # Use pyats script from the same directory as the current Python interpreter
-        # to ensure we use the correct virtual environment rather than whatever
-        # 'pyats' is found in PATH (which may be from a different environment)
-        python_dir = Path(sys.executable).parent
-        pyats_script = python_dir / "pyats"
-
         cmd = [
-            str(pyats_script),
+            self.pyats_executable,
             "run",
             "job",
             str(job_file_path),
