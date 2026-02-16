@@ -22,8 +22,6 @@ logger = logging.getLogger(__name__)
 
 error_handler = errorhandler.ErrorHandler()
 
-ORDERING_FILE = "ordering.txt"
-
 
 def version_callback(value: bool) -> None:
     if value:
