@@ -34,6 +34,9 @@ LOAD_AVERAGE_THRESHOLD = 0.8
 # PyATS-specific file paths
 AUTH_CACHE_DIR = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
 
+# pushed to pyats device connection settings to speed up disconnects (default is 10s)
+PYATS_POST_DISCONNECT_WAIT_SEC: int = 0
+
 # Multi-job execution configuration (to avoid reporter crashes)
 TESTS_PER_JOB = 15  # Reduced from 20 for safety margin - each test ~1500 steps
 MAX_PARALLEL_JOBS = 2  # Conservative parallelism to avoid resource exhaustion
@@ -90,6 +93,7 @@ __all__ = [
     "DEFAULT_CPU_MULTIPLIER",
     "LOAD_AVERAGE_THRESHOLD",
     "AUTH_CACHE_DIR",
+    "PYATS_POST_DISCONNECT_WAIT_SEC",
     # Multi-job execution
     "TESTS_PER_JOB",
     "MAX_PARALLEL_JOBS",

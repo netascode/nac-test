@@ -9,6 +9,8 @@ from typing import Any
 
 import yaml
 
+from nac_test.pyats_core.constants import PYATS_POST_DISCONNECT_WAIT_SEC
+
 logger = logging.getLogger(__name__)
 
 
@@ -237,7 +239,9 @@ class TestbedGenerator:
         }
 
         connection_args.setdefault("settings", {})
-        connection_args["settings"].setdefault("POST_DISCONNECT_WAIT_SEC", 0)
+        connection_args["settings"].setdefault(
+            "POST_DISCONNECT_WAIT_SEC", PYATS_POST_DISCONNECT_WAIT_SEC
+        )
 
         if "platform" in device:
             device_config["platform"] = device["platform"]
