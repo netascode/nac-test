@@ -398,7 +398,6 @@ class ReportGenerator:
             )
 
             # Calculate statistics
-            total_tests = len(all_results)
             passed_tests = sum(
                 1 for r in all_results if r["status"] == ResultStatus.PASSED.value
             )
@@ -411,9 +410,7 @@ class ReportGenerator:
             skipped_tests = sum(
                 1 for r in all_results if r["status"] == ResultStatus.SKIPPED.value
             )
-
-            stats = TestResults.from_counts(
-                total=total_tests,
+            stats = TestResults(
                 passed=passed_tests,
                 failed=failed_tests,
                 skipped=skipped_tests,

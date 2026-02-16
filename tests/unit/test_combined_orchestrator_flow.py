@@ -59,14 +59,14 @@ class TestCombinedOrchestratorFlow:
     @pytest.fixture
     def pyats_results(self) -> PyATSResults:
         """Create sample PyATS test results."""
-        api_results = TestResults(total=5, passed=4, failed=1, skipped=0)
-        d2d_results = TestResults(total=5, passed=4, failed=0, skipped=1)
+        api_results = TestResults(passed=4, failed=1, skipped=0)
+        d2d_results = TestResults(passed=4, failed=0, skipped=1)
         return PyATSResults(api=api_results, d2d=d2d_results)
 
     @pytest.fixture
     def robot_results(self) -> TestResults:
         """Create sample Robot test results."""
-        return TestResults(total=5, passed=4, failed=1, skipped=0)
+        return TestResults(passed=4, failed=1, skipped=0)
 
 
 class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):

@@ -235,7 +235,7 @@ class TestRobotOrchestrator:
 
         # Mock report generator - now returns tuple (path, stats)
         mock_generator_instance = MagicMock()
-        mock_stats = TestResults(total=1, passed=1, failed=0, skipped=0)
+        mock_stats = TestResults(passed=1, failed=0, skipped=0)
         mock_generator_instance.generate_summary_report.return_value = (
             temp_output_dir / "robot_results" / "summary_report.html",
             mock_stats,

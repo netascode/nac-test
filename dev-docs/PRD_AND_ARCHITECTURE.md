@@ -3744,12 +3744,17 @@ class ExecutionState(str, Enum):
 @dataclass
 class TestResults:
     """Results from a single test framework/type."""
-    total: int = 0
     passed: int = 0
     failed: int = 0
     skipped: int = 0
+    other: int = 0  # Tests with other statuses (blocked, aborted, passx, info)
     reason: str | None = None  # Context for non-SUCCESS states
     state: ExecutionState = ExecutionState.SUCCESS
+
+    @property
+    def total(self) -> int:
+        """Total tests (always computed from counts)."""
+        return self.passed + self.failed + self.skipped + self.other
 
     # Factory methods for common scenarios:
     @classmethod
@@ -3771,7 +3776,8 @@ class TestResults:
     #                      is_error, was_not_run, exit_code
 
     def __str__(self) -> str:
-        return f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
+        base = f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
+        return f"{base}/{self.other}" if self.other > 0 else base
 
 @dataclass
 class PyATSResults:
@@ -20812,8 +20818,7 @@ async def _generate_summary_report(
         )
 
         # Create TestResults object (success_rate computed automatically)
-        stats = TestResults.from_counts(
-            total=total_tests,
+        stats = TestResults(
             passed=passed_tests,
             failed=failed_tests,
             skipped=skipped_tests,

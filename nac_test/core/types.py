@@ -32,20 +32,40 @@ class TestResults:
     frameworks - use CombinedResults for that.
 
     Attributes:
-        total: Total number of tests executed
         passed: Number of tests that passed
-        failed: Number of tests that failed
+        failed: Number of tests that failed (includes errored tests)
         skipped: Number of tests that were skipped
+        other: Number of tests with other statuses (blocked, aborted, passx, info)
         reason: Context for non-SUCCESS states (error message or skip reason)
         state: Execution state indicating the outcome type
+
+    Properties:
+        total: Total number of tests (computed as passed + failed + skipped + other)
+
+    Note: Robot Framework only has three test statuses (PASS/FAIL/SKIP), so
+    `other` will always be 0 for Robot results. PyATS has additional statuses
+    (blocked, passx, aborted, info) which are tracked in `other`.
+
+    The total is always computed correctly:
+        total = passed + failed + skipped + other
+
+    For success rate calculation, skipped tests are excluded from the denominator
+    since they weren't executed. Tests in `other` (blocked, aborted, etc.) ARE
+    included in the denominator as they represent tests that were attempted but
+    did not pass.
     """
 
-    total: int = 0
     passed: int = 0
     failed: int = 0
     skipped: int = 0
+    other: int = 0
     reason: str | None = None
     state: ExecutionState = ExecutionState.SUCCESS
+
+    @property
+    def total(self) -> int:
+        """Total number of tests (always computed from counts)."""
+        return self.passed + self.failed + self.skipped + self.other
 
     @classmethod
     def empty(cls) -> "TestResults":
@@ -133,19 +153,11 @@ class TestResults:
         return 0
 
     def __str__(self) -> str:
-        """Concise string representation: total/passed/failed/skipped."""
-        return f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
-
-    @classmethod
-    def from_counts(
-        cls,
-        total: int = 0,
-        passed: int = 0,
-        failed: int = 0,
-        skipped: int = 0,
-    ) -> "TestResults":
-        """Create TestResults from individual counts."""
-        return cls(total=total, passed=passed, failed=failed, skipped=skipped)
+        """Concise string representation: total/passed/failed/skipped[/other]."""
+        base = f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
+        if self.other > 0:
+            return f"{base}/{self.other}"
+        return base
 
 
 @dataclass
@@ -225,6 +237,11 @@ class CombinedResults:
     def skipped(self) -> int:
         """Total skipped tests across all frameworks."""
         return sum(r.skipped for r in self._iter_results())
+
+    @property
+    def other(self) -> int:
+        """Total tests with other statuses across all frameworks."""
+        return sum(r.other for r in self._iter_results())
 
     @property
     def errors(self) -> list[str]:

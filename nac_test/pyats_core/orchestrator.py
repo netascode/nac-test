@@ -515,7 +515,6 @@ class PyATSOrchestrator:
 
         for archive_type, stats in pyats_stats.items():
             results = TestResults(
-                total=stats["total_tests"],
                 passed=stats["passed_tests"],
                 failed=stats["failed_tests"],
                 skipped=stats["skipped_tests"],

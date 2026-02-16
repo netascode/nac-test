@@ -15,7 +15,6 @@ from nac_test.core.types import CombinedResults, TestResults
 def robot_results() -> TestResults:
     """Create Robot Framework TestResults for testing."""
     return TestResults(
-        total=2,
         passed=2,
         failed=0,
         skipped=0,
@@ -50,8 +49,8 @@ def test_combined_report_with_pyats_and_robot(
 
     # Combine PyATS and Robot stats using CombinedResults
     results = CombinedResults(
-        api=TestResults(total=3, passed=2, failed=1, skipped=0),
-        d2d=TestResults(total=5, passed=5, failed=0, skipped=0),
+        api=TestResults(passed=2, failed=1, skipped=0),
+        d2d=TestResults(passed=5, failed=0, skipped=0),
         robot=robot_results,
     )
 
@@ -79,7 +78,7 @@ def test_combined_report_pyats_only(tmp_path: Path) -> None:
 
     # PyATS stats only
     results = CombinedResults(
-        api=TestResults(total=10, passed=8, failed=2, skipped=0),
+        api=TestResults(passed=8, failed=2, skipped=0),
     )
 
     # Generate combined summary (no Robot stats passed)
@@ -104,7 +103,7 @@ def test_combined_report_success_rate_calculation(
     # Combine PyATS stats (3 passed, 1 failed = 75% success) with Robot stats (2 passed, 0 failed = 100%)
     # Overall: (3 + 2) passed / (4 + 2) total = 5/6 = 83.3%
     results = CombinedResults(
-        api=TestResults(total=4, passed=3, failed=1, skipped=0),
+        api=TestResults(passed=3, failed=1, skipped=0),
         robot=robot_results,
     )
 
@@ -156,7 +155,7 @@ def test_combined_results_with_robot_error(tmp_path: Path) -> None:
     """Test CombinedResults when Robot has error but PyATS succeeds."""
     # Create results: PyATS API succeeds, Robot has framework error
     results = CombinedResults(
-        api=TestResults(total=5, passed=4, failed=1, skipped=0),
+        api=TestResults(passed=4, failed=1, skipped=0),
         robot=TestResults.from_error("Pabot execution failed"),
     )
 
@@ -183,9 +182,9 @@ def test_combined_results_with_partial_failures(tmp_path: Path) -> None:
     """Test CombinedResults aggregation with mixed pass/fail across frameworks."""
     # Create mixed results: some pass, some fail in each framework
     results = CombinedResults(
-        api=TestResults(total=10, passed=7, failed=3, skipped=0),
-        d2d=TestResults(total=8, passed=6, failed=2, skipped=0),
-        robot=TestResults(total=5, passed=3, failed=2, skipped=0),
+        api=TestResults(passed=7, failed=3, skipped=0),
+        d2d=TestResults(passed=6, failed=2, skipped=0),
+        robot=TestResults(passed=3, failed=2, skipped=0),
     )
 
     # Verify aggregation
@@ -221,7 +220,7 @@ def test_combined_report_exception_handling(
 
     monkeypatch.setattr(generator.env, "get_template", raise_error)
 
-    results = CombinedResults(robot=TestResults(total=5, passed=5, failed=0, skipped=0))
+    results = CombinedResults(robot=TestResults(passed=5, failed=0, skipped=0))
     report_path = generator.generate_combined_summary(results)
 
     assert report_path is None
@@ -232,8 +231,8 @@ def test_combined_report_template_receives_stats_objects(tmp_path: Path) -> None
     generator = CombinedReportGenerator(tmp_path)
 
     results = CombinedResults(
-        api=TestResults(total=10, passed=8, failed=2, skipped=0),
-        robot=TestResults(total=5, passed=4, failed=1, skipped=0),
+        api=TestResults(passed=8, failed=2, skipped=0),
+        robot=TestResults(passed=4, failed=1, skipped=0),
     )
 
     report_path = generator.generate_combined_summary(results)

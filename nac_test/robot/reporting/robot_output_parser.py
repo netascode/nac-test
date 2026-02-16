@@ -105,8 +105,7 @@ class TestDataCollector(ResultVisitor):
     @property
     def stats(self) -> TestResults:
         """Get aggregated statistics as TestResults."""
-        return TestResults.from_counts(
-            total=self._total,
+        return TestResults(
             passed=self._passed,
             failed=self._failed,
             skipped=self._skipped,

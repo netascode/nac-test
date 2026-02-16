@@ -69,16 +69,27 @@ class TestTestResultsFactoryMethods:
         assert result.failed == 0
         assert result.skipped == 0
 
-    def test_from_counts_creates_success_state(self) -> None:
-        """from_counts() creates results with SUCCESS state (default)."""
-        result = TestResults.from_counts(total=10, passed=8, failed=1, skipped=1)
+    def test_constructor_calculates_total(self) -> None:
+        """Constructor auto-calculates total from counts."""
+        result = TestResults(passed=8, failed=1, skipped=1)
 
         assert result.state == ExecutionState.SUCCESS
         assert result.total == 10
         assert result.passed == 8
         assert result.failed == 1
         assert result.skipped == 1
+        assert result.other == 0
         assert result.reason is None
+
+    def test_constructor_with_other(self) -> None:
+        """Constructor includes 'other' status tests in total."""
+        result = TestResults(passed=80, failed=5, skipped=10, other=5)
+
+        assert result.total == 100
+        assert result.passed == 80
+        assert result.failed == 5
+        assert result.skipped == 10
+        assert result.other == 5
 
     def test_default_constructor_creates_success_state(self) -> None:
         """Default constructor creates SUCCESS state."""
@@ -93,18 +104,18 @@ class TestTestResultsProperties:
 
     def test_success_rate_all_passed(self) -> None:
         """100% success rate when all tests pass."""
-        result = TestResults(total=10, passed=10, failed=0, skipped=0)
+        result = TestResults(passed=10, failed=0, skipped=0)
         assert result.success_rate == 100.0
 
     def test_success_rate_some_failed(self) -> None:
         """Correct success rate calculation with failures."""
-        result = TestResults(total=10, passed=8, failed=2, skipped=0)
+        result = TestResults(passed=8, failed=2, skipped=0)
         assert result.success_rate == 80.0
 
     def test_success_rate_excludes_skipped(self) -> None:
         """Success rate excludes skipped tests from calculation."""
         # 8 passed out of 9 non-skipped = 88.89%
-        result = TestResults(total=10, passed=8, failed=1, skipped=1)
+        result = TestResults(passed=8, failed=1, skipped=1)
         assert result.success_rate == pytest.approx(88.888, rel=0.01)
 
     def test_success_rate_zero_when_no_tests(self) -> None:
@@ -114,17 +125,22 @@ class TestTestResultsProperties:
 
     def test_success_rate_zero_when_all_skipped(self) -> None:
         """Zero success rate when all tests are skipped."""
-        result = TestResults(total=5, passed=0, failed=0, skipped=5)
+        result = TestResults(passed=0, failed=0, skipped=5)
         assert result.success_rate == 0.0
+
+    def test_success_rate_with_other_statuses(self) -> None:
+        """Success rate calculation includes 'other' tests in denominator."""
+        result = TestResults(passed=80, failed=5, skipped=10, other=5)
+        assert result.success_rate == pytest.approx(88.888, rel=0.01)
 
     def test_has_failures_true(self) -> None:
         """has_failures is True when failed > 0."""
-        result = TestResults(total=10, passed=9, failed=1, skipped=0)
+        result = TestResults(passed=9, failed=1, skipped=0)
         assert result.has_failures is True
 
     def test_has_failures_false(self) -> None:
         """has_failures is False when failed == 0."""
-        result = TestResults(total=10, passed=10, failed=0, skipped=0)
+        result = TestResults(passed=10, failed=0, skipped=0)
         assert result.has_failures is False
 
     def test_has_error_true(self) -> None:
@@ -134,7 +150,7 @@ class TestTestResultsProperties:
 
     def test_has_error_false(self) -> None:
         """has_error is False when no error."""
-        result = TestResults(total=10, passed=10)
+        result = TestResults(passed=10)
         assert result.has_error is False
 
     def test_is_empty_true(self) -> None:
@@ -144,7 +160,7 @@ class TestTestResultsProperties:
 
     def test_is_empty_false(self) -> None:
         """is_empty is False when total > 0."""
-        result = TestResults(total=1, passed=1)
+        result = TestResults(passed=1)
         assert result.is_empty is False
 
     def test_is_error_true(self) -> None:
@@ -159,7 +175,7 @@ class TestTestResultsProperties:
 
     def test_is_error_false_for_success(self) -> None:
         """is_error is False for SUCCESS state."""
-        result = TestResults(total=10, passed=10)
+        result = TestResults(passed=10)
         assert result.is_error is False
 
     def test_was_not_run_true(self) -> None:
@@ -183,17 +199,17 @@ class TestTestResultsExitCode:
 
     def test_exit_code_zero_all_passed(self) -> None:
         """Exit code 0 when all tests pass."""
-        result = TestResults(total=10, passed=10)
+        result = TestResults(passed=10)
         assert result.exit_code == 0
 
     def test_exit_code_equals_failed_count(self) -> None:
         """Exit code equals number of failures."""
-        result = TestResults(total=10, passed=7, failed=3)
+        result = TestResults(passed=7, failed=3)
         assert result.exit_code == 3
 
     def test_exit_code_capped_at_250(self) -> None:
         """Exit code is capped at 250 for many failures."""
-        result = TestResults(total=300, passed=0, failed=300)
+        result = TestResults(passed=0, failed=300)
         assert result.exit_code == 250
 
     def test_exit_code_255_for_error(self) -> None:
@@ -204,7 +220,6 @@ class TestTestResultsExitCode:
     def test_exit_code_error_takes_precedence(self) -> None:
         """Error exit code takes precedence over failure count."""
         result = TestResults(
-            total=10,
             passed=5,
             failed=5,
             reason="also crashed",
@@ -218,13 +233,18 @@ class TestTestResultsStringRepresentation:
 
     def test_str_format(self) -> None:
         """String format is total/passed/failed/skipped."""
-        result = TestResults(total=10, passed=8, failed=1, skipped=1)
+        result = TestResults(passed=8, failed=1, skipped=1)
         assert str(result) == "10/8/1/1"
 
     def test_str_empty(self) -> None:
         """String for empty results."""
         result = TestResults.empty()
         assert str(result) == "0/0/0/0"
+
+    def test_str_with_other(self) -> None:
+        """String includes other count when non-zero."""
+        result = TestResults(passed=80, failed=5, skipped=10, other=5)
+        assert str(result) == "100/80/5/10/5"
 
 
 class TestPyATSResults:
@@ -238,22 +258,22 @@ class TestPyATSResults:
 
     def test_with_api_only(self) -> None:
         """PyATSResults with only API results."""
-        api = TestResults(total=5, passed=5)
+        api = TestResults(passed=5)
         result = PyATSResults(api=api)
         assert result.api is api
         assert result.d2d is None
 
     def test_with_d2d_only(self) -> None:
         """PyATSResults with only D2D results."""
-        d2d = TestResults(total=3, passed=3)
+        d2d = TestResults(passed=3)
         result = PyATSResults(d2d=d2d)
         assert result.api is None
         assert result.d2d is d2d
 
     def test_with_both(self) -> None:
         """PyATSResults with both API and D2D."""
-        api = TestResults(total=5, passed=5)
-        d2d = TestResults(total=3, passed=3)
+        api = TestResults(passed=5)
+        d2d = TestResults(passed=3)
         result = PyATSResults(api=api, d2d=d2d)
         assert result.api is api
         assert result.d2d is d2d
@@ -265,14 +285,14 @@ class TestPyATSResults:
 
     def test_str_api_only(self) -> None:
         """String representation with API only."""
-        result = PyATSResults(api=TestResults(total=5, passed=4, failed=1, skipped=0))
+        result = PyATSResults(api=TestResults(passed=4, failed=1, skipped=0))
         assert str(result) == "PyATSResults(API: 5/4/1/0)"
 
     def test_str_both(self) -> None:
         """String representation with both."""
         result = PyATSResults(
-            api=TestResults(total=5, passed=5, failed=0, skipped=0),
-            d2d=TestResults(total=3, passed=2, failed=1, skipped=0),
+            api=TestResults(passed=5, failed=0, skipped=0),
+            d2d=TestResults(passed=2, failed=1, skipped=0),
         )
         assert str(result) == "PyATSResults(API: 5/5/0/0, D2D: 3/2/1/0)"
 
@@ -290,50 +310,58 @@ class TestCombinedResults:
     def test_total_aggregates_all(self) -> None:
         """total property sums across all frameworks."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5),
-            d2d=TestResults(total=3, passed=3),
-            robot=TestResults(total=10, passed=10),
+            api=TestResults(passed=5),
+            d2d=TestResults(passed=3),
+            robot=TestResults(passed=10),
         )
         assert result.total == 18
 
     def test_total_ignores_none(self) -> None:
         """total property ignores None results."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5),
+            api=TestResults(passed=5),
             d2d=None,
-            robot=TestResults(total=10, passed=10),
+            robot=TestResults(passed=10),
         )
         assert result.total == 15
 
     def test_passed_aggregates_all(self) -> None:
         """passed property sums across all frameworks."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=4, failed=1),
-            robot=TestResults(total=10, passed=8, failed=2),
+            api=TestResults(passed=4, failed=1),
+            robot=TestResults(passed=8, failed=2),
         )
         assert result.passed == 12
 
     def test_failed_aggregates_all(self) -> None:
         """failed property sums across all frameworks."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=4, failed=1),
-            robot=TestResults(total=10, passed=8, failed=2),
+            api=TestResults(passed=4, failed=1),
+            robot=TestResults(passed=8, failed=2),
         )
         assert result.failed == 3
 
     def test_skipped_aggregates_all(self) -> None:
         """skipped property sums across all frameworks."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=4, failed=0, skipped=1),
-            robot=TestResults(total=10, passed=8, failed=0, skipped=2),
+            api=TestResults(passed=4, failed=0, skipped=1),
+            robot=TestResults(passed=8, failed=0, skipped=2),
         )
         assert result.skipped == 3
+
+    def test_other_aggregates_all(self) -> None:
+        """other property sums across all frameworks."""
+        result = CombinedResults(
+            api=TestResults(passed=4, failed=1, skipped=2, other=3),
+            robot=TestResults(passed=3, failed=1, skipped=0, other=1),
+        )
+        assert result.other == 4
 
     def test_errors_collects_from_all(self) -> None:
         """errors property collects errors from all frameworks."""
         result = CombinedResults(
             api=TestResults.from_error("API error"),
-            d2d=TestResults(total=5, passed=5),  # no error
+            d2d=TestResults(passed=5),  # no error
             robot=TestResults.from_error("Robot error"),
         )
         assert result.errors == ["API error", "Robot error"]
@@ -341,15 +369,15 @@ class TestCombinedResults:
     def test_errors_empty_when_no_errors(self) -> None:
         """errors property returns empty list when no errors."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5),
-            robot=TestResults(total=10, passed=10),
+            api=TestResults(passed=5),
+            robot=TestResults(passed=10),
         )
         assert result.errors == []
 
     def test_errors_includes_not_run_reason(self) -> None:
         """errors includes reason from not_run() results."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5),
+            api=TestResults(passed=5),
             robot=TestResults.not_run("render-only mode"),
         )
         assert result.errors == ["render-only mode"]
@@ -357,8 +385,8 @@ class TestCombinedResults:
     def test_success_rate_combined(self) -> None:
         """success_rate calculated across all frameworks."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=4, failed=1),
-            robot=TestResults(total=5, passed=4, failed=1),
+            api=TestResults(passed=4, failed=1),
+            robot=TestResults(passed=4, failed=1),
         )
         assert result.success_rate == 80.0
 
@@ -370,23 +398,23 @@ class TestCombinedResults:
     def test_has_failures_true(self) -> None:
         """has_failures is True when any framework has failures."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5),
-            robot=TestResults(total=10, passed=9, failed=1),
+            api=TestResults(passed=5),
+            robot=TestResults(passed=9, failed=1),
         )
         assert result.has_failures is True
 
     def test_has_failures_false(self) -> None:
         """has_failures is False when no failures."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5),
-            robot=TestResults(total=10, passed=10),
+            api=TestResults(passed=5),
+            robot=TestResults(passed=10),
         )
         assert result.has_failures is False
 
     def test_has_errors_true(self) -> None:
         """has_errors is True when any framework has error."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5),
+            api=TestResults(passed=5),
             robot=TestResults.from_error("crash"),
         )
         assert result.has_errors is True
@@ -394,8 +422,8 @@ class TestCombinedResults:
     def test_has_errors_false(self) -> None:
         """has_errors is False when no errors."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5),
-            robot=TestResults(total=10, passed=10),
+            api=TestResults(passed=5),
+            robot=TestResults(passed=10),
         )
         assert result.has_errors is False
 
@@ -411,30 +439,30 @@ class TestCombinedResults:
         """is_empty is False when any tests ran."""
         result = CombinedResults(
             api=TestResults.empty(),
-            robot=TestResults(total=1, passed=1),
+            robot=TestResults(passed=1),
         )
         assert result.is_empty is False
 
     def test_exit_code_zero_all_passed(self) -> None:
         """Exit code 0 when all pass."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5),
-            robot=TestResults(total=10, passed=10),
+            api=TestResults(passed=5),
+            robot=TestResults(passed=10),
         )
         assert result.exit_code == 0
 
     def test_exit_code_equals_total_failures(self) -> None:
         """Exit code equals total failures across frameworks."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=4, failed=1),
-            robot=TestResults(total=10, passed=8, failed=2),
+            api=TestResults(passed=4, failed=1),
+            robot=TestResults(passed=8, failed=2),
         )
         assert result.exit_code == 3
 
     def test_exit_code_255_for_errors(self) -> None:
         """Exit code 255 when any framework has error."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5),
+            api=TestResults(passed=5),
             robot=TestResults.from_error("crash"),
         )
         assert result.exit_code == 255
@@ -447,9 +475,9 @@ class TestCombinedResults:
     def test_str_all_present(self) -> None:
         """String representation with all frameworks."""
         result = CombinedResults(
-            api=TestResults(total=5, passed=5, failed=0, skipped=0),
-            d2d=TestResults(total=3, passed=2, failed=1, skipped=0),
-            robot=TestResults(total=10, passed=8, failed=1, skipped=1),
+            api=TestResults(passed=5, failed=0, skipped=0),
+            d2d=TestResults(passed=2, failed=1, skipped=0),
+            robot=TestResults(passed=8, failed=1, skipped=1),
         )
         expected = "CombinedResults(API: 5/5/0/0, D2D: 3/2/1/0, Robot: 10/8/1/1)"
         assert str(result) == expected
