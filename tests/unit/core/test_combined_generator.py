@@ -210,11 +210,13 @@ def test_combined_results_with_partial_failures(tmp_path: Path) -> None:
     assert "Robot Framework" in content
 
 
-def test_combined_report_exception_handling(tmp_path: Path, monkeypatch) -> None:
+def test_combined_report_exception_handling(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test that generate_combined_summary handles exceptions gracefully."""
     generator = CombinedReportGenerator(tmp_path)
 
-    def raise_error(*args, **kwargs):
+    def raise_error(*args: object, **kwargs: object) -> None:
         raise RuntimeError("Template rendering failed")
 
     monkeypatch.setattr(generator.env, "get_template", raise_error)

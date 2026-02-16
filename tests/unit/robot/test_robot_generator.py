@@ -15,7 +15,7 @@ from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 
 
 @pytest.fixture
-def temp_output_dir(tmp_path) -> None:
+def temp_output_dir(tmp_path: Path) -> Path:
     """Create a temporary output directory."""
     output_dir = tmp_path / "output"
     output_dir.mkdir()
@@ -25,7 +25,7 @@ def temp_output_dir(tmp_path) -> None:
 
 
 @pytest.fixture
-def mock_robot_output_xml(temp_output_dir) -> None:
+def mock_robot_output_xml(temp_output_dir: Path) -> Path:
     """Create a minimal mock Robot output.xml file."""
     output_xml = temp_output_dir / "robot_results" / "output.xml"
     output_xml.write_text("""<?xml version="1.0" encoding="UTF-8"?>
