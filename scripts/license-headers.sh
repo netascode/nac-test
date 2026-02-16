@@ -1,10 +1,15 @@
 #!/bin/bash
-# Script to check or fix SPDX license identifier and copyright notice in all Python files
+# Script to check or fix SPDX license identifier and copyright notice in Python files
 #
 # Usage:
-#   ./scripts/license-headers.sh          # Check mode (default)
-#   ./scripts/license-headers.sh --fix    # Fix mode (add missing headers)
-#   ./scripts/license-headers.sh --help   # Show help
+#   ./scripts/license-headers.sh                    # Check all git-tracked Python files
+#   ./scripts/license-headers.sh --fix              # Fix mode (add missing headers)
+#   ./scripts/license-headers.sh [FILES...]         # Check specific files
+#   ./scripts/license-headers.sh --fix [FILES...]   # Fix specific files
+#   ./scripts/license-headers.sh --help             # Show help
+#
+# When called without file arguments, uses 'git ls-files' to find all tracked Python files.
+# When called with file arguments (e.g., from pre-commit), only checks those files.
 
 set -e
 
@@ -19,25 +24,43 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Mode selection
+# Parse arguments
 MODE="check"
-if [[ "$1" == "--fix" ]]; then
-    MODE="fix"
-elif [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
-    echo "Usage: $0 [OPTIONS]"
-    echo ""
-    echo "Check or fix SPDX license headers in Python files."
-    echo ""
-    echo "Options:"
-    echo "  (none)      Check mode - verify headers are present and correct (exit 1 if issues found)"
-    echo "  --fix       Fix mode - add missing headers to files"
-    echo "  --help, -h  Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  $0              # Check all Python files"
-    echo "  $0 --fix        # Add headers to files missing them"
-    exit 0
-fi
+FILES=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --fix)
+            MODE="fix"
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: $0 [OPTIONS] [FILES...]"
+            echo ""
+            echo "Check or fix SPDX license headers in Python files."
+            echo ""
+            echo "Options:"
+            echo "  (none)      Check mode - verify headers are present and correct (exit 1 if issues found)"
+            echo "  --fix       Fix mode - add missing headers to files"
+            echo "  --help, -h  Show this help message"
+            echo ""
+            echo "Arguments:"
+            echo "  FILES       Optional list of files to check. If not provided, checks all"
+            echo "              git-tracked Python files (via 'git ls-files')."
+            echo ""
+            echo "Examples:"
+            echo "  $0                        # Check all git-tracked Python files"
+            echo "  $0 --fix                  # Add headers to all files missing them"
+            echo "  $0 src/main.py src/util.py   # Check specific files"
+            echo "  $0 --fix src/main.py      # Fix specific file"
+            exit 0
+            ;;
+        *)
+            FILES+=("$1")
+            shift
+            ;;
+    esac
+done
 
 # Counters
 files_checked=0
@@ -47,28 +70,6 @@ files_fixed=0
 
 # Array to store files with issues (check mode only)
 declare -a failed_files
-
-# Common exclusion patterns
-EXCLUDE_PATTERNS=(
-    "./venv/*"
-    "./.venv/*"
-    "*/__pycache__/*"
-    "./.tox/*"
-    "./.eggs/*"
-    "./build/*"
-    "./dist/*"
-    "./.pytest_cache/*"
-    "./.mypy_cache/*"
-)
-
-# Build find command with exclusions
-build_find_command() {
-    local cmd="find . -name '*.py' -type f"
-    for pattern in "${EXCLUDE_PATTERNS[@]}"; do
-        cmd="$cmd -not -path '$pattern'"
-    done
-    echo "$cmd"
-}
 
 # Check if file has correct headers
 check_headers() {
@@ -125,12 +126,20 @@ else
 fi
 echo ""
 
-# Find all Python files and store in temp file
-temp_file=$(mktemp)
-eval "$(build_find_command)" > "$temp_file"
+# Get list of files to process
+if [[ ${#FILES[@]} -gt 0 ]]; then
+    # Files passed as arguments (e.g., from pre-commit)
+    file_list=("${FILES[@]}")
+else
+    # No files specified, get all git-tracked Python files
+    file_list=()
+    while IFS= read -r f; do
+        file_list+=("$f")
+    done < <(git ls-files '*.py')
+fi
 
 # Process each file
-while IFS= read -r file; do
+for file in "${file_list[@]}"; do
     # Skip empty files or files with only whitespace
     if [ ! -s "$file" ] || ! grep -q '[^[:space:]]' "$file"; then
         echo -e "${YELLOW}⊘${NC} $file (empty file, skipped)"
@@ -158,10 +167,7 @@ while IFS= read -r file; do
             files_fixed=$((files_fixed + 1))
         fi
     fi
-done < "$temp_file"
-
-# Cleanup temp file
-rm -f "$temp_file"
+done
 
 # Print summary
 echo ""
