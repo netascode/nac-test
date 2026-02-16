@@ -5,6 +5,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
+from functools import cached_property
 
 
 class ExecutionState(str, Enum):
@@ -214,39 +215,44 @@ class CombinedResults:
             parts.append(f"Robot: {self.robot}")
         return f"CombinedResults({', '.join(parts) if parts else 'empty'})"
 
-    def _iter_results(self) -> list[TestResults]:
-        """Get list of non-None results for aggregation."""
+    @cached_property
+    def _results(self) -> list["TestResults"]:
+        """Cached list of non-None results for aggregation.
+
+        Note: Safe to cache because CombinedResults fields are set at construction
+        and not mutated. Do not mutate api/d2d/robot after creation.
+        """
         return [r for r in (self.api, self.d2d, self.robot) if r is not None]
 
     @property
     def total(self) -> int:
         """Total tests across all frameworks."""
-        return sum(r.total for r in self._iter_results())
+        return sum(r.total for r in self._results)
 
     @property
     def passed(self) -> int:
         """Total passed tests across all frameworks."""
-        return sum(r.passed for r in self._iter_results())
+        return sum(r.passed for r in self._results)
 
     @property
     def failed(self) -> int:
         """Total failed tests across all frameworks."""
-        return sum(r.failed for r in self._iter_results())
+        return sum(r.failed for r in self._results)
 
     @property
     def skipped(self) -> int:
         """Total skipped tests across all frameworks."""
-        return sum(r.skipped for r in self._iter_results())
+        return sum(r.skipped for r in self._results)
 
     @property
     def other(self) -> int:
         """Total tests with other statuses across all frameworks."""
-        return sum(r.other for r in self._iter_results())
+        return sum(r.other for r in self._results)
 
     @property
     def errors(self) -> list[str]:
         """All execution errors/reasons across all frameworks."""
-        return [r.reason for r in self._iter_results() if r.reason is not None]
+        return [r.reason for r in self._results if r.reason is not None]
 
     @property
     def success_rate(self) -> float:
@@ -264,7 +270,7 @@ class CombinedResults:
     @property
     def has_errors(self) -> bool:
         """Check if any execution errors occurred across all frameworks."""
-        return any(r.state == ExecutionState.ERROR for r in self._iter_results())
+        return any(r.state == ExecutionState.ERROR for r in self._results)
 
     @property
     def is_empty(self) -> bool:
