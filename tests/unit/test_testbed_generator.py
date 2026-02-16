@@ -3,10 +3,26 @@
 
 """Unit tests for PyATS testbed generator."""
 
+from typing import Any
+
 import pytest
 import yaml
 
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
+
+
+def assert_connection_has_optimizations(connection: dict[str, Any]) -> None:
+    """Verify connection includes expected optimization settings.
+
+    This helper consolidates assertions for connection optimization settings,
+    making it easier to maintain tests when new optimizations are added.
+
+    Args:
+        connection: The connection dict from testbed["devices"][hostname]["connections"]["cli"]
+    """
+    assert connection["arguments"]["init_config_commands"] == []
+    assert connection["arguments"]["operating_mode"] is True
+    assert connection["settings"]["POST_DISCONNECT_WAIT_SEC"] == 0
 
 
 class TestGenerateTestbedYaml:
@@ -50,11 +66,9 @@ class TestGenerateTestbedYaml:
         yaml_output = TestbedGenerator.generate_testbed_yaml(device)
         testbed = yaml.safe_load(yaml_output)
 
-        connection_args = testbed["devices"]["test-device"]["connections"]["cli"]
-        assert "arguments" in connection_args
-        assert connection_args["arguments"]["init_config_commands"] == []
-        assert connection_args["arguments"]["operating_mode"] is True
-        assert connection_args["settings"]["POST_DISCONNECT_WAIT_SEC"] == 0
+        connection = testbed["devices"]["test-device"]["connections"]["cli"]
+        assert "arguments" in connection
+        assert_connection_has_optimizations(connection)
 
     def test_custom_abstraction(self) -> None:
         """Test that custom.abstraction.order is set correctly."""
@@ -257,7 +271,7 @@ class TestGenerateTestbedYaml:
         connection = testbed["devices"]["test-device"]["connections"]["cli"]
         assert connection["protocol"] == "telnet"
         assert connection["port"] == 23
-        assert connection["settings"]["POST_DISCONNECT_WAIT_SEC"] == 0
+        assert_connection_has_optimizations(connection)
 
     def test_ssh_options(self) -> None:
         """Test that ssh_options are included when provided."""
@@ -296,9 +310,7 @@ class TestGenerateTestbedYaml:
             == "/path/to/mock_script.py --hostname mock-device iosxe"
         )
         assert "ip" not in connection
-        assert connection["arguments"]["init_config_commands"] == []
-        assert connection["arguments"]["operating_mode"] is True
-        assert connection["settings"]["POST_DISCONNECT_WAIT_SEC"] == 0
+        assert_connection_has_optimizations(connection)
 
 
 class TestGenerateConsolidatedTestbedYaml:
@@ -361,9 +373,7 @@ class TestGenerateConsolidatedTestbedYaml:
         for hostname in ["router1", "router2"]:
             device_config = testbed["devices"][hostname]
             connection = device_config["connections"]["cli"]
-            assert connection["arguments"]["init_config_commands"] == []
-            assert connection["arguments"]["operating_mode"] is True
-            assert connection["settings"]["POST_DISCONNECT_WAIT_SEC"] == 0
+            assert_connection_has_optimizations(connection)
             assert device_config["custom"]["abstraction"]["order"] == ["os"]
 
     def test_devices_with_mixed_optional_fields(self) -> None:

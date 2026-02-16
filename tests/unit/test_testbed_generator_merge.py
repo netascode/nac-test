@@ -11,6 +11,8 @@ import yaml
 
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
 
+from .test_testbed_generator import assert_connection_has_optimizations
+
 
 @pytest.fixture
 def create_testbed_file(tmp_path: Path) -> Callable[[str], Path]:
@@ -154,17 +156,11 @@ devices:
         # Routers from auto-discovery
         assert testbed["devices"]["router1"]["connections"]["cli"]["ip"] == "10.1.1.1"
         assert testbed["devices"]["router2"]["connections"]["cli"]["ip"] == "10.1.1.2"
-        assert (
-            testbed["devices"]["router1"]["connections"]["cli"]["settings"][
-                "POST_DISCONNECT_WAIT_SEC"
-            ]
-            == 0
+        assert_connection_has_optimizations(
+            testbed["devices"]["router1"]["connections"]["cli"]
         )
-        assert (
-            testbed["devices"]["router2"]["connections"]["cli"]["settings"][
-                "POST_DISCONNECT_WAIT_SEC"
-            ]
-            == 0
+        assert_connection_has_optimizations(
+            testbed["devices"]["router2"]["connections"]["cli"]
         )
 
     def test_preserve_pyats_env_variables(
@@ -377,9 +373,6 @@ devices:
 
         assert "router1" in testbed["devices"]
         assert testbed["devices"]["router1"]["connections"]["cli"]["ip"] == "10.1.1.1"
-        assert (
-            testbed["devices"]["router1"]["connections"]["cli"]["settings"][
-                "POST_DISCONNECT_WAIT_SEC"
-            ]
-            == 0
+        assert_connection_has_optimizations(
+            testbed["devices"]["router1"]["connections"]["cli"]
         )
