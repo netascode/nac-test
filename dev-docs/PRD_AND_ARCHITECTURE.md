@@ -3211,6 +3211,8 @@ class JobGenerator:
 ```python
 """Auto-generated PyATS job file by nac-test"""
 
+from pyats.easypy import run
+
 TEST_FILES = [
     "/path/to/test1.py",
     "/path/to/test2.py"
@@ -3220,7 +3222,7 @@ def main(runtime):
     runtime.max_workers = {max_workers}
     for test_file in TEST_FILES:
         test_name = Path(test_file).stem
-        runtime.tasks.run(
+        run(
             testscript=test_file,
             taskid=test_name,
             max_runtime={timeout}
@@ -3235,6 +3237,8 @@ def main(runtime):
 import os
 import json
 
+from pyats.easypy import run
+
 HOSTNAME = "{hostname}"
 DEVICE_INFO = {device_json}
 TEST_FILES = [...]
@@ -3245,7 +3249,7 @@ def main(runtime):
 
     for test_file in TEST_FILES:
         test_name = Path(test_file).stem
-        runtime.tasks.run(
+        run(
             testscript=test_file,
             taskid=f"{HOSTNAME}_{test_name}",
             max_runtime={timeout}
@@ -11276,7 +11280,7 @@ PyATS requires a "job file" - Python code that defines what tests to run and how
 **What is a PyATS job file?**
 
 A PyATS job file is a Python script with a `main(runtime)` function that:
-- Registers test files to execute via `runtime.tasks.run()`
+- Registers test files to execute via `pyats.easypy.run()`
 - Configures parallel worker count via `runtime.max_workers`
 - Sets per-test timeouts via `max_runtime` parameter
 - Optionally sets up shared resources (connection managers, testbeds)
@@ -11294,6 +11298,8 @@ def generate_job_file_content(self, test_files: List[Path]) -> str:
     job_content = textwrap.dedent(f'''
     """Auto-generated PyATS job file by nac-test"""
 
+    from pyats.easypy import run
+
     # Test files to execute
     TEST_FILES = [{test_files_str}]
 
@@ -11302,7 +11308,7 @@ def generate_job_file_content(self, test_files: List[Path]) -> str:
 
         for idx, test_file in enumerate(TEST_FILES):
             test_name = Path(test_file).stem
-            runtime.tasks.run(
+            run(
                 testscript=test_file,
                 taskid=test_name,
                 max_runtime={DEFAULT_TEST_TIMEOUT}
@@ -11341,6 +11347,7 @@ pyats run job {job_file} --archive-name {name}
 
 import os
 from pathlib import Path
+from pyats.easypy import run
 
 # Test files to execute (absolute paths)
 TEST_FILES = [
@@ -11362,7 +11369,7 @@ def main(runtime):
         # Create meaningful task ID from test file name
         # e.g., "epg_attributes.py" -> "epg_attributes"
         test_name = Path(test_file).stem
-        runtime.tasks.run(
+        run(
             testscript=test_file,
             taskid=test_name,
             max_runtime=21600  # 6 hours per test
@@ -11432,8 +11439,9 @@ pyats run job {job_file} --testbed-file {testbed} --archive-name device_{hostnam
 
 import os
 import json
-from pathlib import Path
-from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
+    from pathlib import Path
+    from pyats.easypy import run
+    from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
 
 # Device being tested (using hostname)
 HOSTNAME = "apic1"
@@ -11466,7 +11474,7 @@ def main(runtime):
         # Create meaningful task ID from test file name and hostname
         # e.g., "apic1_fabric_health_ssh"
         test_name = Path(test_file).stem
-        runtime.tasks.run(
+        run(
             testscript=test_file,
             taskid=f"{HOSTNAME}_{test_name}",
             max_runtime=21600  # 6 hours per test
@@ -11734,11 +11742,11 @@ PyATS executes test files in parallel using a worker pool. `max_workers` determi
 DEFAULT_TEST_TIMEOUT = 21600  # 6 hours per test
 ```
 
-**Injected into every `runtime.tasks.run()` call:**
+**Injected into every `pyats.easypy.run()` call:**
 
 ```python
 # job_generator.py:67
-runtime.tasks.run(
+run(
     testscript=test_file,
     taskid=test_name,
     max_runtime={DEFAULT_TEST_TIMEOUT}  # 21600 seconds = 6 hours
@@ -11815,8 +11823,9 @@ cat /tmp/tmpXYZ_api_job.py
 ```python
 """Auto-generated PyATS job file by nac-test"""
 
-import os
-from pathlib import Path
+    import os
+    from pathlib import Path
+    from pyats.easypy import run
 
 # Test files to execute
 TEST_FILES = [
@@ -11830,7 +11839,7 @@ def main(runtime):
 
     for idx, test_file in enumerate(TEST_FILES):
         test_name = Path(test_file).stem
-        runtime.tasks.run(
+        run(
             testscript=test_file,
             taskid=test_name,
             max_runtime=21600
@@ -11844,7 +11853,8 @@ def main(runtime):
 
 # Step 1: Generate job file manually using Python
 python3 << 'EOF'
-from pathlib import Path
+    from pathlib import Path
+    from pyats.easypy import run
 from nac_test.pyats_core.execution.job_generator import JobGenerator
 
 generator = JobGenerator(max_workers=8, output_dir=Path("output/pyats_results"))
@@ -11892,7 +11902,7 @@ def main(runtime):
     runtime.max_workers = 2
 
     # Run only the failing test
-    runtime.tasks.run(
+    run(
         testscript="/home/user/tests/api/verify_aci_bridge_domains.py",
         taskid="debug_bridge_domains",
         max_runtime=3600  # 1 hour timeout for debugging
@@ -11942,8 +11952,8 @@ def main(runtime):
     runtime.max_workers = 16  # Hardcoded!
 
     # Hardcoded test list - requires manual updates
-    runtime.tasks.run(testscript="test1.py", taskid="test1")
-    runtime.tasks.run(testscript="test2.py", taskid="test2")
+    run(testscript="test1.py", taskid="test1")
+    run(testscript="test2.py", taskid="test2")
 ```
 
 **Problems:**
@@ -17506,7 +17516,7 @@ def main(runtime):
 
     for idx, test_file in enumerate(TEST_FILES):
         test_name = Path(test_file).stem
-        runtime.tasks.run(
+        run(
             testscript=test_file,
             taskid=test_name,
             max_runtime=21600  # 6 hours
