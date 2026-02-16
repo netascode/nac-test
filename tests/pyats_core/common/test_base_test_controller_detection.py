@@ -14,7 +14,7 @@ from nac_test.pyats_core.common.base_test import NACTestBase
 
 
 @pytest.fixture
-def mock_data_file(
+def setup_test_data_file_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> Generator[Path, None, None]:
     """Create temp data file and set MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH."""
@@ -28,7 +28,7 @@ class TestBaseTestControllerDetection:
     """Test controller detection integration in NACTestBase."""
 
     def test_base_test_detects_controller_on_setup(
-        self, monkeypatch: pytest.MonkeyPatch, mock_data_file: Path
+        self, monkeypatch: pytest.MonkeyPatch, setup_test_data_file_env: Path
     ) -> None:
         """Test that NACTestBase detects controller type during setup."""
         monkeypatch.setenv("ACI_URL", "https://apic.example.com")
@@ -53,7 +53,7 @@ class TestBaseTestControllerDetection:
         assert test_instance.password == "password"
 
     def test_base_test_fails_setup_on_detection_error(
-        self, monkeypatch: pytest.MonkeyPatch, mock_data_file: Path
+        self, monkeypatch: pytest.MonkeyPatch, setup_test_data_file_env: Path
     ) -> None:
         """Test that NACTestBase fails setup when controller detection fails."""
         for env_var in [
@@ -85,7 +85,7 @@ class TestBaseTestControllerDetection:
             assert "No controller credentials found" in str(exc_info.value)
 
     def test_base_test_no_longer_uses_controller_type_env_var(
-        self, monkeypatch: pytest.MonkeyPatch, mock_data_file: Path
+        self, monkeypatch: pytest.MonkeyPatch, setup_test_data_file_env: Path
     ) -> None:
         """Test that NACTestBase ignores CONTROLLER_TYPE environment variable."""
         monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
@@ -109,7 +109,7 @@ class TestBaseTestControllerDetection:
         assert test_instance.controller_url == "https://vmanage.example.com"
 
     def test_base_test_handles_multiple_controllers_error(
-        self, monkeypatch: pytest.MonkeyPatch, mock_data_file: Path
+        self, monkeypatch: pytest.MonkeyPatch, setup_test_data_file_env: Path
     ) -> None:
         """Test that NACTestBase handles multiple controller credentials error during setup."""
         monkeypatch.setenv("ACI_URL", "https://apic.example.com")
