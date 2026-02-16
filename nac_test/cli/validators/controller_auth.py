@@ -17,6 +17,7 @@ invoked, providing immediate feedback for credential and connectivity issues.
 
 import logging
 import os
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -77,7 +78,14 @@ def _get_auth_callable(controller_type: str) -> Callable[[], Any] | None:
     Returns:
         The get_auth() callable for the controller, or None if not available.
     """
+    # PyATS configuration module parses sys.argv at import time looking for
+    # --pyats-configuration. Our --pyats flag prefix-matches that argument,
+    # causing argparse to error with "expected one argument". Strip it from
+    # sys.argv during the import, same pattern as device_inventory.py.
+    original_argv = sys.argv.copy()
     try:
+        sys.argv = [arg for arg in sys.argv if arg != "--pyats"]
+
         if controller_type == "ACI":
             from nac_test_pyats_common.aci import APICAuth
 
@@ -95,6 +103,8 @@ def _get_auth_callable(controller_type: str) -> Callable[[], Any] | None:
             "nac-test-pyats-common not installed, skipping pre-flight auth check"
         )
         return None
+    finally:
+        sys.argv = original_argv
     return None
 
 
