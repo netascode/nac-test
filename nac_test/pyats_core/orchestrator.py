@@ -39,7 +39,6 @@ from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspect
 from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.environment import EnvironmentValidator
-from nac_test.utils.path_setup import get_pythonpath_for_tests
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
 
@@ -292,8 +291,6 @@ class PyATSOrchestrator:
             # Set NAC_TEST_TYPE to differentiate API vs D2D test types for separate temp directories
             # This prevents race conditions where both test types write JSONL files to the same location
             env["NAC_TEST_TYPE"] = "api"
-            nac_test_dir = str(Path(__file__).parent.parent.parent)
-            env["PYTHONPATH"] = get_pythonpath_for_tests(self.test_dir, [nac_test_dir])
 
             # Execute and return the archive path
             assert self.subprocess_runner is not None  # Should be initialized by now
