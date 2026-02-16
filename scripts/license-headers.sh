@@ -11,7 +11,18 @@
 # When called without file arguments, uses 'git ls-files' to find all tracked Python files.
 # When called with file arguments (e.g., from pre-commit), only checks those files.
 
-set -e
+set -euo pipefail
+
+# Temporary file management with cleanup trap
+TEMP_FILE=""
+cleanup() {
+    local exit_code=$?
+    if [[ -n "${TEMP_FILE:-}" && -f "$TEMP_FILE" ]]; then
+        rm -f "$TEMP_FILE"
+    fi
+    exit "$exit_code"
+}
+trap cleanup EXIT INT TERM
 
 # Configuration
 EXPECTED_SPDX="# SPDX-License-Identifier: MPL-2.0"
@@ -71,6 +82,16 @@ files_fixed=0
 # Array to store files with issues (check mode only)
 declare -a failed_files
 
+# Validate file before processing
+validate_file() {
+    local file="$1"
+    [[ -f "$file" ]] || { echo "ERROR: Not a regular file: $file" >&2; return 1; }
+    [[ -r "$file" ]] || { echo "ERROR: File not readable: $file" >&2; return 1; }
+    [[ ! -L "$file" ]] || { echo "ERROR: Refusing symlink: $file" >&2; return 1; }
+    [[ -w "$file" ]] || { echo "ERROR: File not writable: $file" >&2; return 1; }
+    return 0
+}
+
 # Check if file has correct headers
 check_headers() {
     local file="$1"
@@ -97,25 +118,26 @@ check_headers() {
 # Add headers to file
 add_headers() {
     local file="$1"
-    local temp_file=$(mktemp)
+    TEMP_FILE=$(mktemp)
     local first_line=$(head -n 1 "$file")
 
     if [[ "$first_line" == "#!"* ]]; then
         # Preserve shebang, add headers after it
-        echo "$first_line" > "$temp_file"
-        echo "$EXPECTED_SPDX" >> "$temp_file"
-        echo "$EXPECTED_COPYRIGHT" >> "$temp_file"
-        echo "" >> "$temp_file"
-        tail -n +2 "$file" >> "$temp_file"
+        echo "$first_line" > "$TEMP_FILE"
+        echo "$EXPECTED_SPDX" >> "$TEMP_FILE"
+        echo "$EXPECTED_COPYRIGHT" >> "$TEMP_FILE"
+        echo "" >> "$TEMP_FILE"
+        tail -n +2 "$file" >> "$TEMP_FILE"
     else
         # No shebang, add headers at the top
-        echo "$EXPECTED_SPDX" > "$temp_file"
-        echo "$EXPECTED_COPYRIGHT" >> "$temp_file"
-        echo "" >> "$temp_file"
-        cat "$file" >> "$temp_file"
+        echo "$EXPECTED_SPDX" > "$TEMP_FILE"
+        echo "$EXPECTED_COPYRIGHT" >> "$TEMP_FILE"
+        echo "" >> "$TEMP_FILE"
+        cat "$file" >> "$TEMP_FILE"
     fi
 
-    mv "$temp_file" "$file"
+    mv "$TEMP_FILE" "$file"
+    TEMP_FILE=""
 }
 
 # Print header based on mode
@@ -140,6 +162,13 @@ fi
 
 # Process each file
 for file in "${file_list[@]}"; do
+    # Validate file first
+    if ! validate_file "$file"; then
+        files_failed=$((files_failed + 1))
+        failed_files+=("$file")
+        continue
+    fi
+
     # Skip empty files or files with only whitespace
     if [ ! -s "$file" ] || ! grep -q '[^[:space:]]' "$file"; then
         echo -e "${YELLOW}⊘${NC} $file (empty file, skipped)"
@@ -162,9 +191,14 @@ for file in "${file_list[@]}"; do
             failed_files+=("$file")
         else
             # Fix mode - add headers
-            add_headers "$file"
-            echo -e "${GREEN}✓${NC} $file (header added)"
-            files_fixed=$((files_fixed + 1))
+            if add_headers "$file"; then
+                echo -e "${GREEN}✓${NC} $file (header added)"
+                files_fixed=$((files_fixed + 1))
+            else
+                echo -e "${RED}✗${NC} $file (FAILED to add header)" >&2
+                files_failed=$((files_failed + 1))
+                failed_files+=("$file")
+            fi
         fi
     fi
 done
@@ -194,8 +228,17 @@ if [[ "$MODE" == "check" ]]; then
 else
     # Fix mode
     echo "Files fixed: $files_fixed"
+    if [ $files_failed -gt 0 ]; then
+        echo -e "${RED}Files failed: $files_failed${NC}"
+    fi
     echo ""
-    if [ $files_fixed -eq 0 ]; then
+    if [ $files_failed -gt 0 ]; then
+        echo -e "${RED}✗ Some files could not be processed:${NC}"
+        for file in "${failed_files[@]}"; do
+            echo "  - $file"
+        done
+        exit 1
+    elif [ $files_fixed -eq 0 ]; then
         echo -e "${GREEN}✓ All files already had correct headers!${NC}"
     else
         echo -e "${GREEN}✓ Header addition complete!${NC}"
