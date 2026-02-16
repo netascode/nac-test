@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from nac_test.core.error_classification import AuthOutcome, _classify_auth_error
+from nac_test.pyats_core.common.auth_cache import AuthCache
 
 # Import CONTROLLER_REGISTRY from centralized location
 from nac_test.utils.controller import CONTROLLER_REGISTRY, get_display_name
@@ -145,6 +146,19 @@ def preflight_auth_check(controller_type: str) -> AuthCheckResult:
             controller_url=controller_url,
             detail="Pre-flight check skipped (no auth adapter available)",
         )
+
+    # Invalidate any stale cached token so we validate the current credentials.
+    # Best-effort: a failure here must never block test execution.
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    if config is not None and config.cache_key is not None and controller_url:
+        try:
+            logger.debug(
+                "Invalidating auth cache for %s before pre-flight check",
+                config.cache_key,
+            )
+            AuthCache.invalidate(config.cache_key, controller_url)
+        except Exception as e:
+            logger.debug("Cache invalidation failed (non-fatal): %s", e)
 
     # Attempt authentication
     logger.info(
