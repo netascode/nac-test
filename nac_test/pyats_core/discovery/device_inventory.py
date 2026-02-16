@@ -15,8 +15,6 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-from nac_test.utils.path_setup import add_tests_parent_to_syspath
-
 logger = logging.getLogger(__name__)
 
 
@@ -98,35 +96,6 @@ class DeviceInventoryDiscovery:
             try:
                 # Remove --pyats from argv temporarily
                 sys.argv = [arg for arg in sys.argv if arg != "--pyats"]
-
-                # Here we need to set up sys.path to enable test module imports
-                # D2D test files contain imports like "from tests.pyats_common.base import ..."
-                # but Python doesn't know where to find the 'tests' package when `nac-test` is run.
-                #
-                # In the API test flow, the orchestrator sets up PYTHONPATH before discovery,
-                # but for D2D tests, DeviceInventoryDiscovery runs BEFORE any path setup.
-                # So we get into a bit of a pickle.
-                # We need to handle this here to maintain the architecture-agnostic contract.
-                #
-                # How this works:
-                # 1. Find the 'tests' directory in the test file's path hierarchy
-                # 2. Add its parent directory to sys.path
-                # 3. This allows Python to resolve "from tests.something import ..."
-                #
-                # Example:
-                # - Test file: /home/user/nac-sdwan-terraform/tests/d2d/bgp_peers.py
-                # - Find 'tests' dir: /home/user/nac-sdwan-terraform/tests
-                # - Add to sys.path: /home/user/nac-sdwan-terraform
-                # - Now "from tests.pyats_common..." resolves correctly
-
-                # DEBUG: Log sys.path before adding
-                logger.info(f"sys.path before add_tests_parent_to_syspath: {sys.path}")
-
-                add_tests_parent_to_syspath(test_file)
-
-                # DEBUG: Log sys.path after adding
-                logger.info(f"sys.path after add_tests_parent_to_syspath: {sys.path}")
-                logger.info(f"Attempting to import test file: {test_file}")
 
                 # Dynamically import the test module
                 spec = importlib.util.spec_from_file_location(

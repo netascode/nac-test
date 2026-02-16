@@ -6,6 +6,7 @@
 """Combined orchestrator for sequential PyATS and Robot Framework test execution."""
 
 import logging
+import os
 import platform
 import sys
 from pathlib import Path
@@ -242,23 +243,36 @@ class CombinedOrchestrator:
         Returns:
             Tuple of (has_pyats, has_robot)
         """
-        # PyATS discovery - needed because we pass specific files to orchestrator
+        # Build list of directories to exclude from PyATS discovery
+        exclude_paths: list[Path] = []
+        if self.filters_path:
+            exclude_paths.append(self.filters_path)
+        if self.tests_path:
+            exclude_paths.append(self.tests_path)
+
+        # PyATS discovery - use has_pyats_tests() for efficient early exit
         has_pyats = False
         try:
-            test_discovery = TestDiscovery(self.templates_dir)
-            pyats_files, _ = test_discovery.discover_pyats_tests()
-            has_pyats = bool(pyats_files)
+            test_discovery = TestDiscovery(
+                self.templates_dir, exclude_paths=exclude_paths
+            )
+            has_pyats = test_discovery.has_pyats_tests()
             if has_pyats:
-                logger.debug(f"Found {len(pyats_files)} PyATS test files")
+                logger.debug("Found PyATS test files")
         except Exception as e:
             logger.debug(f"\nPyATS discovery failed (no PyATS tests found): {e}\n")
 
         # Robot discovery - simple existence check (RobotWriter handles the rest)
-        has_robot = any(
-            f.suffix in [".robot", ".resource", ".j2"]
-            for f in self.templates_dir.rglob("*")
-            if f.is_file()
-        )
+        # Local helper with early exit for efficiency - stops directory traversal on first match
+        def has_robot_files() -> bool:
+            robot_extensions = {".robot", ".resource", ".j2"}
+            for _, _, filenames in os.walk(self.templates_dir):
+                for f in filenames:
+                    if os.path.splitext(f)[1] in robot_extensions:
+                        return True
+            return False
+
+        has_robot = has_robot_files()
         if has_robot:
             logger.debug("Found Robot template files")
 
