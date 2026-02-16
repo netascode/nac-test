@@ -14,6 +14,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+from nac_test.core.constants import HTML_REPORTS_DIRNAME
 from nac_test.pyats_core.reporting.utils.archive_security import validate_archive_paths
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class ArchiveExtractor:
         extract_dir = output_dir / target_subdir
 
         # If extraction directory already exists with HTML reports, update the previous archive
-        if extract_dir.exists() and (extract_dir / "html_reports").exists():
+        if extract_dir.exists() and (extract_dir / HTML_REPORTS_DIRNAME).exists():
             ArchiveExtractor.update_previous_archive_with_html_reports(
                 extract_dir, current_archive=archive_path, output_dir=output_dir
             )
@@ -125,9 +126,9 @@ class ArchiveExtractor:
                 zip_ref.extractall(temp_path)
 
             # Copy HTML reports into the extracted content
-            html_reports_src = pyats_results_dir / "html_reports"
+            html_reports_src = pyats_results_dir / HTML_REPORTS_DIRNAME
             if html_reports_src.exists():
-                html_reports_dst = temp_path / "html_reports"
+                html_reports_dst = temp_path / HTML_REPORTS_DIRNAME
                 if html_reports_dst.exists():
                     shutil.rmtree(html_reports_dst)
                 shutil.copytree(html_reports_src, html_reports_dst)

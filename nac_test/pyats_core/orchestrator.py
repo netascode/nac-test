@@ -15,6 +15,10 @@ from typing import Any
 
 import yaml
 
+from nac_test.core.constants import (
+    PYATS_RESULTS_DIRNAME,
+    SUMMARY_REPORT_FILENAME,
+)
 from nac_test.core.types import PyATSResults, TestResults
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
@@ -78,7 +82,7 @@ class PyATSOrchestrator:
             output_dir
         ).resolve()  # Store base directory for merged data file access (absolute)
         self.output_dir = (
-            self.base_output_dir / "pyats_results"
+            self.base_output_dir / PYATS_RESULTS_DIRNAME
         )  # PyATS works in its own subdirectory
         self.merged_data_filename = merged_data_filename
         self.minimal_reports = minimal_reports
@@ -781,7 +785,7 @@ class PyATSOrchestrator:
             for archive_type, archive_result in result["results"].items():
                 if archive_result.get("status") == "success":
                     report_dir = Path(archive_result.get("report_dir", ""))
-                    summary_report = report_dir / "summary_report.html"
+                    summary_report = report_dir / SUMMARY_REPORT_FILENAME
 
                     print(f"{f'{archive_type.upper()} Summary:'} {summary_report}")
                     print(f"{f'{archive_type.upper()} Reports:'}  {report_dir}")

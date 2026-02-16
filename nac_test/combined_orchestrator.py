@@ -10,7 +10,14 @@ from pathlib import Path
 
 import typer
 
-from nac_test.core.constants import DEBUG_MODE
+from nac_test.core.constants import (
+    COMBINED_SUMMARY_FILENAME,
+    DEBUG_MODE,
+    HTML_REPORTS_DIRNAME,
+    PYATS_RESULTS_DIRNAME,
+    ROBOT_RESULTS_DIRNAME,
+    SUMMARY_REPORT_FILENAME,
+)
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
 from nac_test.core.types import CombinedResults, TestResults
 from nac_test.pyats_core.discovery import TestDiscovery
@@ -300,14 +307,14 @@ class CombinedOrchestrator:
             # Combined dashboard is the main entry point
             if not self.render_only:
                 typer.echo("\n🎯 Combined Dashboard:")
-                combined_dashboard = self.output_dir / "combined_summary.html"
+                combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME
                 if combined_dashboard.exists():
                     typer.echo(f"   📊 {combined_dashboard}")
                     typer.echo("   (Aggregated results from all test frameworks)")
 
         if has_robot:
             typer.echo("\n✅ Robot Framework tests: Completed")
-            typer.echo(f"   📁 Results: {self.output_dir}/robot_results/")
+            typer.echo(f"   📁 Results: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/")
             if results and results.robot is not None:
                 robot_stats = results.robot
                 typer.echo(
@@ -316,26 +323,28 @@ class CombinedOrchestrator:
                 )
             if not self.render_only:
                 typer.echo(
-                    f"   📊 Summary: {self.output_dir}/robot_results/summary_report.html"
+                    f"   📊 Summary: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}"
                 )
-                typer.echo(f"   📊 Detailed: {self.output_dir}/robot_results/log.html")
+                typer.echo(
+                    f"   📊 Detailed: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/log.html"
+                )
 
         if has_pyats:
             typer.echo("\n✅ PyATS tests: Completed")
-            typer.echo(f"   📁 Results: {self.output_dir}/pyats_results/")
+            typer.echo(f"   📁 Results: {self.output_dir}/{PYATS_RESULTS_DIRNAME}/")
             api_summary = (
                 self.output_dir
-                / "pyats_results"
+                / PYATS_RESULTS_DIRNAME
                 / "api"
-                / "html_reports"
-                / "summary_report.html"
+                / HTML_REPORTS_DIRNAME
+                / SUMMARY_REPORT_FILENAME
             )
             d2d_summary = (
                 self.output_dir
-                / "pyats_results"
+                / PYATS_RESULTS_DIRNAME
                 / "d2d"
-                / "html_reports"
-                / "summary_report.html"
+                / HTML_REPORTS_DIRNAME
+                / SUMMARY_REPORT_FILENAME
             )
             if api_summary.exists():
                 typer.echo(f"   📊 API Summary: {api_summary}")

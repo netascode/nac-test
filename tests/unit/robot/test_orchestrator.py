@@ -12,6 +12,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from nac_test.core.constants import (
+    ROBOT_RESULTS_DIRNAME,
+    SUMMARY_REPORT_FILENAME,
+)
 from nac_test.core.types import TestResults
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import VerbosityLevel
@@ -110,7 +114,7 @@ class TestRobotOrchestrator:
         orchestrator._move_robot_results_to_subdirectory()
 
         # Verify files were moved to robot_results/
-        robot_results_dir = temp_output_dir / "robot_results"
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         assert robot_results_dir.exists()
 
         for filename in files_to_create:
@@ -134,7 +138,7 @@ class TestRobotOrchestrator:
         orchestrator._move_robot_results_to_subdirectory()
 
         # Verify existing files were moved
-        robot_results_dir = temp_output_dir / "robot_results"
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         assert (robot_results_dir / "output.xml").exists()
         assert (robot_results_dir / "log.html").exists()
         assert not (robot_results_dir / "report.html").exists()
@@ -145,7 +149,7 @@ class TestRobotOrchestrator:
     ) -> None:
         """Test _create_backward_compat_symlinks creates correct symlinks."""
         # Create robot_results directory with files
-        robot_results_dir = temp_output_dir / "robot_results"
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
         files_to_create = ["output.xml", "log.html", "report.html", "xunit.xml"]
@@ -167,7 +171,7 @@ class TestRobotOrchestrator:
     ) -> None:
         """Test _create_backward_compat_symlinks replaces existing symlinks/files."""
         # Create robot_results directory
-        robot_results_dir = temp_output_dir / "robot_results"
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
         (robot_results_dir / "output.xml").write_text("new content")
 
@@ -187,7 +191,7 @@ class TestRobotOrchestrator:
     ) -> None:
         """Test _create_backward_compat_symlinks handles missing source files."""
         # Create robot_results directory but no files
-        robot_results_dir = temp_output_dir / "robot_results"
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
         # Should not raise an error
@@ -237,13 +241,13 @@ class TestRobotOrchestrator:
         mock_generator_instance = MagicMock()
         mock_stats = TestResults(passed=1, failed=0, skipped=0)
         mock_generator_instance.generate_summary_report.return_value = (
-            temp_output_dir / "robot_results" / "summary_report.html",
+            temp_output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME,
             mock_stats,
         )
         mock_generator.return_value = mock_generator_instance
 
         # Create mock Robot output files
-        robot_results_dir = temp_output_dir / "robot_results"
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
         # Create files at root that need to be moved
@@ -318,7 +322,7 @@ class TestRobotOrchestrator:
         self, orchestrator, temp_output_dir, caplog
     ) -> None:
         """Test symlink creation when target path exists as a directory."""
-        robot_results_dir = temp_output_dir / "robot_results"
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
         output_xml = robot_results_dir / "output.xml"

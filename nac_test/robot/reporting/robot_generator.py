@@ -10,6 +10,11 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from nac_test.core.constants import (
+    COMBINED_SUMMARY_FILENAME,
+    ROBOT_RESULTS_DIRNAME,
+    SUMMARY_REPORT_FILENAME,
+)
 from nac_test.core.types import TestResults
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
@@ -40,7 +45,7 @@ class RobotReportGenerator:
             output_dir: Base output directory where robot_results/ exists
         """
         self.output_dir = output_dir
-        self.robot_results_dir = output_dir / "robot_results"
+        self.robot_results_dir = output_dir / ROBOT_RESULTS_DIRNAME
         self.output_xml_path = self.robot_results_dir / "output.xml"
 
         # Initialize Jinja2 environment (reuse PyATS templates)
@@ -107,12 +112,12 @@ class RobotReportGenerator:
                 generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 stats=stats,
                 results=results,
-                breadcrumb_link="../combined_summary.html",  # 1 level up from robot_results/
+                breadcrumb_link=f"../{COMBINED_SUMMARY_FILENAME}",  # 1 level up from robot_results/
                 report_type="Robot Framework",
             )
 
             # Write summary report
-            summary_path = self.robot_results_dir / "summary_report.html"
+            summary_path = self.robot_results_dir / SUMMARY_REPORT_FILENAME
             summary_path.write_text(html_content)
 
             logger.info(f"Generated Robot summary report: {summary_path}")

@@ -27,6 +27,11 @@ from typing import Any
 
 import aiofiles  # type: ignore[import-untyped]
 
+from nac_test.core.constants import (
+    COMBINED_SUMMARY_FILENAME,
+    HTML_REPORTS_DIRNAME,
+    SUMMARY_REPORT_FILENAME,
+)
 from nac_test.core.types import TestResults
 from nac_test.pyats_core.reporting.templates import get_jinja_environment
 from nac_test.pyats_core.reporting.types import ResultStatus
@@ -70,7 +75,7 @@ class ReportGenerator:
         """
         self.output_dir = output_dir
         self.pyats_results_dir = pyats_results_dir
-        self.report_dir = pyats_results_dir / "html_reports"
+        self.report_dir = pyats_results_dir / HTML_REPORTS_DIRNAME
         self.report_dir.mkdir(exist_ok=True)
         self.html_report_data_dir = self.report_dir / "html_report_data"
         self.html_report_data_dir.mkdir(exist_ok=True)
@@ -429,11 +434,11 @@ class ReportGenerator:
                 generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 stats=stats,
                 results=all_results,
-                breadcrumb_link="../../../combined_summary.html",  # 3 levels up from pyats_results/{type}/html_reports/
+                breadcrumb_link=f"../../../{COMBINED_SUMMARY_FILENAME}",  # 3 levels up from pyats_results/{type}/html_reports/
                 report_type=report_type,
             )
 
-            summary_file = self.report_dir / "summary_report.html"
+            summary_file = self.report_dir / SUMMARY_REPORT_FILENAME
             async with aiofiles.open(summary_file, "w") as f:
                 await f.write(html_content)
 

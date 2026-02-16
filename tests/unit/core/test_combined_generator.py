@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from nac_test.core.constants import COMBINED_SUMMARY_FILENAME
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
 from nac_test.core.types import CombinedResults, TestResults
 
@@ -32,7 +33,7 @@ def test_combined_report_robot_only(tmp_path: Path, robot_results: TestResults) 
     # Verify file was created
     assert result_path is not None
     assert result_path.exists()
-    assert result_path.name == "combined_summary.html"
+    assert result_path.name == COMBINED_SUMMARY_FILENAME
 
     # Verify content
     content = result_path.read_text()

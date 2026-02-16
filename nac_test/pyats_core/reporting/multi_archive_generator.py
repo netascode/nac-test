@@ -18,6 +18,11 @@ from typing import Any, cast
 
 import aiofiles  # type: ignore[import-untyped]
 
+from nac_test.core.constants import (
+    HTML_REPORTS_DIRNAME,
+    PYATS_RESULTS_DIRNAME,
+    SUMMARY_REPORT_FILENAME,
+)
 from nac_test.pyats_core.reporting.generator import ReportGenerator
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
 from nac_test.pyats_core.reporting.types import ResultStatus
@@ -49,7 +54,7 @@ class MultiArchiveReportGenerator:
             minimal_reports: Only include command outputs for failed/errored tests
         """
         self.output_dir = output_dir
-        self.pyats_results_dir = output_dir / "pyats_results"
+        self.pyats_results_dir = output_dir / PYATS_RESULTS_DIRNAME
         self.minimal_reports = minimal_reports
 
         # Initialize Jinja2 environment for combined summary
@@ -216,7 +221,7 @@ class MultiArchiveReportGenerator:
             # Add archive info to result
             result["archive_path"] = str(archive_path)
             result["archive_type"] = archive_type
-            result["report_dir"] = str(extract_dir / "html_reports")
+            result["report_dir"] = str(extract_dir / HTML_REPORTS_DIRNAME)
 
             return result
 
@@ -340,7 +345,7 @@ class MultiArchiveReportGenerator:
 
                 # Read JSONL files from the archive's html_report_data directory
                 archive_dir = self.pyats_results_dir / archive_type
-                json_dir = archive_dir / "html_reports" / "html_report_data"
+                json_dir = archive_dir / HTML_REPORTS_DIRNAME / "html_report_data"
 
                 stats = {
                     "title": "PyATS API"
@@ -351,7 +356,7 @@ class MultiArchiveReportGenerator:
                     "failed_tests": 0,
                     "skipped_tests": 0,
                     "success_rate": 0.0,
-                    "report_path": f"pyats_results/{archive_type}/html_reports/summary_report.html",
+                    "report_path": f"{PYATS_RESULTS_DIRNAME}/{archive_type}/{HTML_REPORTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}",
                 }
 
                 # Read all JSONL files to calculate statistics
@@ -423,7 +428,7 @@ class MultiArchiveReportGenerator:
                     continue
 
                 # Look for html_report_data directory
-                json_dir = archive_dir / "html_reports" / "html_report_data"
+                json_dir = archive_dir / HTML_REPORTS_DIRNAME / "html_report_data"
                 if not json_dir.exists():
                     continue
 

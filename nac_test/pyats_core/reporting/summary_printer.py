@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from nac_test.core.constants import PYATS_RESULTS_DIRNAME
 from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
 from nac_test.utils.terminal import terminal
 
@@ -343,7 +344,7 @@ class SummaryPrinter:
         # Display API results if available
         if archives["api"]:
             archive_path = archives["api"][0]
-            results_dir = output_dir / "pyats_results" / "api"
+            results_dir = output_dir / PYATS_RESULTS_DIRNAME / "api"
 
             # Print standard PyATS output files
             results_json = results_dir / "results.json"
@@ -371,7 +372,7 @@ class SummaryPrinter:
                 print()  # Add spacing between sections
 
             archive_path = archives["d2d"][0]
-            results_dir = output_dir / "pyats_results" / "d2d"
+            results_dir = output_dir / PYATS_RESULTS_DIRNAME / "d2d"
 
             # Print standard PyATS output files
             results_json = results_dir / "results.json"
@@ -396,7 +397,7 @@ class SummaryPrinter:
         # Display legacy results if no typed archives
         if archives["legacy"] and not (archives["api"] or archives["d2d"]):
             archive_path = archives["legacy"][0]
-            results_dir = output_dir / "pyats_results"
+            results_dir = output_dir / PYATS_RESULTS_DIRNAME
 
             # Print standard PyATS output files
             results_json = results_dir / "results.json"

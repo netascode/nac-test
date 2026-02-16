@@ -14,6 +14,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from nac_test.core.constants import (
+    COMBINED_SUMMARY_FILENAME,
+    HTML_REPORTS_DIRNAME,
+    PYATS_RESULTS_DIRNAME,
+    ROBOT_RESULTS_DIRNAME,
+    SUMMARY_REPORT_FILENAME,
+)
 from nac_test.core.types import CombinedResults
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
 
@@ -23,15 +30,15 @@ logger = logging.getLogger(__name__)
 FRAMEWORK_METADATA: dict[str, dict[str, str]] = {
     "API": {
         "title": "PyATS API",
-        "report_path": "pyats_results/api/html_reports/summary_report.html",
+        "report_path": f"{PYATS_RESULTS_DIRNAME}/api/{HTML_REPORTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}",
     },
     "D2D": {
         "title": "PyATS Direct-to-Device (D2D)",
-        "report_path": "pyats_results/d2d/html_reports/summary_report.html",
+        "report_path": f"{PYATS_RESULTS_DIRNAME}/d2d/{HTML_REPORTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}",
     },
     "ROBOT": {
         "title": "Robot Framework",
-        "report_path": "robot_results/summary_report.html",
+        "report_path": f"{ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}",
     },
 }
 
@@ -104,7 +111,7 @@ class CombinedReportGenerator:
             )
 
             # Write to root-level combined_summary.html
-            combined_summary_path = self.output_dir / "combined_summary.html"
+            combined_summary_path = self.output_dir / COMBINED_SUMMARY_FILENAME
             combined_summary_path.write_text(html_content)
 
             frameworks_included = ", ".join(test_type_stats.keys())

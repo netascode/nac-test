@@ -16,6 +16,7 @@ from pathlib import Path
 
 import typer
 
+from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
 from nac_test.core.types import TestResults
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
@@ -238,7 +239,7 @@ class RobotOrchestrator:
         This is done after pabot completes to organize outputs while maintaining
         pabot's expected behavior.
         """
-        robot_results_dir = self.base_output_dir / "robot_results"
+        robot_results_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir(parents=True, exist_ok=True)
 
         files_to_move = ["output.xml", "log.html", "report.html", "xunit.xml"]
@@ -266,7 +267,7 @@ class RobotOrchestrator:
 
         This ensures existing tools/scripts that expect these files at root continue to work.
         """
-        robot_results_dir = self.base_output_dir / "robot_results"
+        robot_results_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
         files_to_link = ["output.xml", "log.html", "report.html", "xunit.xml"]
 
         for filename in files_to_link:

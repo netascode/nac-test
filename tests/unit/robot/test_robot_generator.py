@@ -11,6 +11,10 @@ from pathlib import Path
 
 import pytest
 
+from nac_test.core.constants import (
+    ROBOT_RESULTS_DIRNAME,
+    SUMMARY_REPORT_FILENAME,
+)
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 
 
@@ -19,7 +23,7 @@ def temp_output_dir(tmp_path: Path) -> Path:
     """Create a temporary output directory."""
     output_dir = tmp_path / "output"
     output_dir.mkdir()
-    robot_results = output_dir / "robot_results"
+    robot_results = output_dir / ROBOT_RESULTS_DIRNAME
     robot_results.mkdir()
     return output_dir
 
@@ -27,7 +31,7 @@ def temp_output_dir(tmp_path: Path) -> Path:
 @pytest.fixture
 def mock_robot_output_xml(temp_output_dir: Path) -> Path:
     """Create a minimal mock Robot output.xml file."""
-    output_xml = temp_output_dir / "robot_results" / "output.xml"
+    output_xml = temp_output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
     output_xml.write_text("""<?xml version="1.0" encoding="UTF-8"?>
 <robot generator="Robot 7.1.1 (Python 3.12.10 on darwin)" generated="2025-02-01T12:00:00.000000">
   <suite name="Test Suite" id="s1">
@@ -53,7 +57,7 @@ def test_generator_initialization(temp_output_dir) -> None:
     """Test generator initialization."""
     generator = RobotReportGenerator(temp_output_dir)
     assert generator.output_dir == temp_output_dir
-    assert generator.robot_results_dir == temp_output_dir / "robot_results"
+    assert generator.robot_results_dir == temp_output_dir / ROBOT_RESULTS_DIRNAME
     assert generator.env is not None
 
 
@@ -66,8 +70,8 @@ def test_generate_summary_report_success(
 
     assert report_path is not None
     assert report_path.exists()
-    assert report_path.name == "summary_report.html"
-    assert report_path.parent == temp_output_dir / "robot_results"
+    assert report_path.name == SUMMARY_REPORT_FILENAME
+    assert report_path.parent == temp_output_dir / ROBOT_RESULTS_DIRNAME
 
     # Verify stats are returned correctly
     assert stats.total == 2
@@ -109,7 +113,7 @@ def test_deep_link_generation(
 
 def test_status_mapping(temp_output_dir) -> None:
     """Test that Robot statuses (PASS/FAIL/SKIP) map correctly to display."""
-    output_xml = temp_output_dir / "robot_results" / "output.xml"
+    output_xml = temp_output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
     output_xml.write_text("""<?xml version="1.0" encoding="UTF-8"?>
 <robot generator="Robot 7.1.1" generated="2025-02-01T12:00:00.000000">
   <suite name="Suite" id="s1">
@@ -143,7 +147,7 @@ def test_status_mapping(temp_output_dir) -> None:
 
 def test_generate_summary_report_no_tests(temp_output_dir) -> None:
     """Test that generate_summary_report returns None when output.xml has zero tests."""
-    output_xml = temp_output_dir / "robot_results" / "output.xml"
+    output_xml = temp_output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
     output_xml.write_text("""<?xml version="1.0" encoding="UTF-8"?>
 <robot generator="Robot 7.1.1" generated="2025-02-01T12:00:00.000000">
   <suite name="Empty Suite" id="s1">
@@ -166,7 +170,7 @@ def test_generate_summary_report_no_tests(temp_output_dir) -> None:
 
 def test_generate_summary_report_exception_handling(temp_output_dir) -> None:
     """Test that generate_summary_report captures errors in TestResults."""
-    output_xml = temp_output_dir / "robot_results" / "output.xml"
+    output_xml = temp_output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
     output_xml.write_text("invalid xml content that will cause parsing error")
 
     generator = RobotReportGenerator(temp_output_dir)
