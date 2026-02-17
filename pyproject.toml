@@ -84,6 +84,7 @@ dev = [
     "pre-commit>=4.3.0",
     "pytest>=8.4.2",
     "pytest-cov~=4.1",  # Genie dependency does not support pytest-cov 6.x yet
+    "pytest-httpserver>=1.1.5",
     "pytest-mock>=3.15.0",
     "ruff>=0.12.12",
     "types-aiofiles>=24.1.0.20250822",
@@ -158,7 +159,7 @@ show_error_context = true
 exclude = ["^tests/fixtures/", "^tests/integration/fixtures/"]
 
 [tool.pytest.ini_options]
-markers = ["unit", "integration"]
+markers = ["unit", "integration", "slow"]
 # Exclude fixture files from test collection - they are sample files for testing the resolver
 norecursedirs = ["tests/fixtures"]
 
