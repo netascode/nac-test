@@ -53,6 +53,8 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_MAX_PARALLEL...]  │
 │    --minimal-reports                    Reduce HTML report size (80-95%).    │
 │                                         [env var: NAC_TEST_MINIMAL_REPORTS]  │
+│    --diagnostic                         Wrap execution with diagnostic       │
+│                                         collection script for troubleshooting│
 │    --merged-data-file… -m   TEXT        Filename for merged data model.      │
 │                                         [default: merged_data_model_test...] │
 │    --verbosity         -v   [DEBUG|...] Verbosity level. [default: WARNING]  │
@@ -634,17 +636,19 @@ See the [Robot Framework User Guide](https://robotframework.org/robotframework/l
 
 ## Troubleshooting
 
-If you're experiencing issues with nac-test (crashes, unexpected errors, test failures), we provide a diagnostic collection script to help with troubleshooting.
+If you're experiencing issues with nac-test (crashes, unexpected errors, test failures), use the `--diagnostic` flag to collect comprehensive diagnostic information.
 
-**[Diagnostic Collection Guide](support/README.md)**
+**[Diagnostic Collection Guide](nac_test/support/README.md)**
 
-The diagnostic script:
+The diagnostic flag:
 - Collects system information, Python environment, and package versions
 - Captures error logs and crash reports (especially useful for macOS issues)
 - Automatically masks credentials before generating output
-- Produces a single `.zip` file you can safely attach to GitHub issues
+- Produces a single `.tar.gz` file you can safely attach to GitHub issues
 
 ### Quick Start
+
+Simply add `--diagnostic` to your existing nac-test command:
 
 ```bash
 # 1. Activate your virtual environment
@@ -656,10 +660,8 @@ export SDWAN_URL=https://your-sdwan-manager.example.com
 export SDWAN_USERNAME=admin
 export SDWAN_PASSWORD=your-password
 
-# 3. Download and run the diagnostic script
-curl -O https://raw.githubusercontent.com/netascode/nac-test/main/support/nac-test-diagnostic.sh
-chmod +x nac-test-diagnostic.sh
-./nac-test-diagnostic.sh -o ./results "nac-test -d ./data -t ./tests -o ./results --pyats"
+# 3. Run nac-test with the --diagnostic flag
+nac-test -d ./data -t ./tests -o ./results --pyats --diagnostic
 ```
 
-The script will generate a `nac-test-diagnostics-YYYYMMDD_HHMMSS.zip` file containing all diagnostic information with sensitive data automatically masked.
+The diagnostic flag will wrap your nac-test execution and generate a `nac-test-diagnostics-XXXXXX.tar.gz` file containing all diagnostic information with sensitive data automatically masked.
