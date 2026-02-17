@@ -9,6 +9,7 @@ import errorhandler
 import typer
 
 import nac_test
+from nac_test.cli.diagnostic import diagnostic_callback
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import DEBUG_MODE
 from nac_test.data_merger import DataMerger
@@ -227,6 +228,17 @@ Version = Annotated[
 ]
 
 
+Diagnostic = Annotated[
+    bool,
+    typer.Option(
+        "--diagnostic",
+        callback=diagnostic_callback,
+        is_eager=True,
+        help="Wrap execution with diagnostic collection. Produces a zip with system info, logs, and artifacts.",
+    ),
+]
+
+
 Testbed = Annotated[
     Path | None,
     typer.Option(
@@ -262,6 +274,7 @@ def main(
     testbed: Testbed = None,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,  # noqa: ARG001
+    diagnostic: Diagnostic = False,  # noqa: ARG001
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
