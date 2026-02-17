@@ -216,18 +216,6 @@ class TestFileContainsDefaultsStructure:
 
         assert result is False
 
-    def test_returns_false_for_symlink(self, tmp_path: Path) -> None:
-        """Symlink is rejected for security reasons."""
-        # Create a real file and a symlink to it
-        real_file = tmp_path / "real.yaml"
-        real_file.write_text("defaults:\n  apic:\n    version: 5.2\n")
-        symlink = tmp_path / "link.yaml"
-        symlink.symlink_to(real_file)
-
-        result = _file_contains_defaults_structure(symlink)
-
-        assert result is False
-
     def test_returns_false_for_oversized_file(self, tmp_path: Path) -> None:
         """File larger than 3MB is skipped to prevent memory exhaustion."""
         large_file = tmp_path / "large.yaml"

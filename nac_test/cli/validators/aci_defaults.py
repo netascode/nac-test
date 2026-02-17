@@ -133,9 +133,6 @@ def _file_contains_defaults_structure(file_path: Path) -> bool:
     Uses YAML parsing to verify actual document structure, avoiding false
     positives from string matching (e.g., comments, string values).
 
-    Security:
-        - Rejects symlinks to prevent reading outside intended directories
-
     Performance:
         - Skips files larger than 3MB to prevent memory exhaustion when loading YAML
 
@@ -146,14 +143,6 @@ def _file_contains_defaults_structure(file_path: Path) -> bool:
         True if the file contains a 'defaults' key with an 'apic' sub-key.
     """
     try:
-        # Security: Reject symlinks to prevent reading outside intended directories
-        if file_path.is_symlink():
-            logger.warning(
-                "Security: Skipping symlink file during ACI defaults scan: %s",
-                file_path,
-            )
-            return False
-
         # Performance: Skip oversized files to prevent memory exhaustion
         # ACI YAML files can be large (2-3MB), but anything beyond that risks hanging the CLI
         file_size = file_path.stat().st_size
