@@ -9,6 +9,7 @@ import errorhandler
 import typer
 
 import nac_test
+from nac_test.cli.diagnostic import diagnostic_callback
 from nac_test.cli.reporting import generate_auth_failure_report
 from nac_test.cli.ui import (
     display_aci_defaults_banner,
@@ -33,8 +34,6 @@ app = typer.Typer(add_completion=False, pretty_exceptions_enable=DEBUG_MODE)
 logger = logging.getLogger(__name__)
 
 error_handler = errorhandler.ErrorHandler()
-
-ORDERING_FILE = "ordering.txt"
 
 
 def version_callback(value: bool) -> None:
@@ -239,6 +238,17 @@ Version = Annotated[
 ]
 
 
+Diagnostic = Annotated[
+    bool,
+    typer.Option(
+        "--diagnostic",
+        callback=diagnostic_callback,
+        is_eager=True,
+        help="Wrap execution with diagnostic collection. Produces a zip with system info, logs, and artifacts.",
+    ),
+]
+
+
 Testbed = Annotated[
     Path | None,
     typer.Option(
@@ -274,6 +284,7 @@ def main(
     testbed: Testbed = None,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,  # noqa: ARG001
+    diagnostic: Diagnostic = False,  # noqa: ARG001
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
