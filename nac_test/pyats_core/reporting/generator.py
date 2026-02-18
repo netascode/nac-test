@@ -21,13 +21,18 @@ Environment Variables:
 import asyncio
 import json
 import logging
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import aiofiles  # type: ignore[import-untyped]
 
+from nac_test.core.constants import (
+    COMBINED_SUMMARY_FILENAME,
+    HTML_REPORTS_DIRNAME,
+    SUMMARY_REPORT_FILENAME,
+)
+from nac_test.core.types import TestResults
 from nac_test.pyats_core.reporting.templates import get_jinja_environment
 from nac_test.pyats_core.reporting.types import ResultStatus
 
@@ -56,6 +61,7 @@ class ReportGenerator:
         pyats_results_dir: Path,
         max_concurrent: int = 10,
         minimal_reports: bool = False,
+        archive_type: str | None = None,
     ) -> None:
         """Initialize the report generator.
 
@@ -65,10 +71,11 @@ class ReportGenerator:
             max_concurrent: Maximum number of concurrent report generations.
                            Defaults to 10.
             minimal_reports: Only include command outputs for failed/errored tests
+            archive_type: Type of archive being processed ("api" or "d2d")
         """
         self.output_dir = output_dir
         self.pyats_results_dir = pyats_results_dir
-        self.report_dir = pyats_results_dir / "html_reports"
+        self.report_dir = pyats_results_dir / HTML_REPORTS_DIRNAME
         self.report_dir.mkdir(exist_ok=True)
         self.html_report_data_dir = self.report_dir / "html_report_data"
         self.html_report_data_dir.mkdir(exist_ok=True)
@@ -76,6 +83,7 @@ class ReportGenerator:
         self.temp_data_dir = output_dir / "html_report_data_temp"
         self.max_concurrent = max_concurrent
         self.minimal_reports = minimal_reports
+        self.archive_type = archive_type
         self.failed_reports: list[str] = []
 
         # Initialize Jinja2 environment using our templates module
@@ -137,14 +145,8 @@ class ReportGenerator:
             successful_reports, result_files
         )
 
-        # Clean up JSONL files (unless in debug mode or KEEP_HTML_REPORT_DATA is set)
-        if os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA"):
-            if os.environ.get("KEEP_HTML_REPORT_DATA"):
-                logger.info("Keeping JSONL result files (KEEP_HTML_REPORT_DATA is set)")
-            else:
-                logger.info("Debug mode enabled - keeping JSONL result files")
-        else:
-            await self._cleanup_jsonl_files(result_files)
+        # Note: JSONL cleanup is handled by the caller (MultiArchiveReportGenerator)
+        # after stats collection to ensure data is available for metrics.
 
         duration = (datetime.now() - start_time).total_seconds()
 
@@ -327,21 +329,6 @@ class ReportGenerator:
             + f"\n\n... truncated ({len(lines) - max_lines} lines omitted) ..."
         )
 
-    async def _cleanup_jsonl_files(self, files: list[Path]) -> None:
-        """Clean up JSONL files after successful report generation.
-
-        Removes the intermediate JSONL files to save disk space. This is
-        skipped if PYATS_DEBUG environment variable is set.
-
-        Args:
-            files: List of JSONL file paths to delete
-        """
-        for file in files:
-            try:
-                file.unlink()
-            except Exception as e:
-                logger.warning(f"Failed to delete {file}: {e}")
-
     async def _generate_summary_report(
         self, report_paths: list[Path], result_files: list[Path]
     ) -> Path | None:
@@ -416,7 +403,6 @@ class ReportGenerator:
             )
 
             # Calculate statistics
-            total_tests = len(all_results)
             passed_tests = sum(
                 1 for r in all_results if r["status"] == ResultStatus.PASSED.value
             )
@@ -429,28 +415,30 @@ class ReportGenerator:
             skipped_tests = sum(
                 1 for r in all_results if r["status"] == ResultStatus.SKIPPED.value
             )
-
-            # Success rate excludes skipped tests from the calculation
-            tests_with_results = total_tests - skipped_tests
-            success_rate = (
-                (passed_tests / tests_with_results * 100)
-                if tests_with_results > 0
-                else 0
+            stats = TestResults(
+                passed=passed_tests,
+                failed=failed_tests,
+                skipped=skipped_tests,
             )
+
+            # Determine report type title based on archive type
+            report_type = None
+            if self.archive_type == "api":
+                report_type = "PyATS API"
+            elif self.archive_type == "d2d":
+                report_type = "PyATS Direct-to-Device (D2D)"
 
             # Render summary
             template = self.env.get_template("summary/report.html.j2")
             html_content = template.render(
                 generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                total_tests=total_tests,
-                passed_tests=passed_tests,
-                failed_tests=failed_tests,
-                skipped_tests=skipped_tests,
-                success_rate=success_rate,
+                stats=stats,
                 results=all_results,
+                breadcrumb_link=f"../../../{COMBINED_SUMMARY_FILENAME}",  # 3 levels up from pyats_results/{type}/html_reports/
+                report_type=report_type,
             )
 
-            summary_file = self.report_dir / "summary_report.html"
+            summary_file = self.report_dir / SUMMARY_REPORT_FILENAME
             async with aiofiles.open(summary_file, "w") as f:
                 await f.write(html_content)
 
