@@ -6,7 +6,6 @@
 import asyncio
 import logging
 import os
-import sys
 import tempfile
 import zipfile
 from datetime import datetime
@@ -92,18 +91,24 @@ class PyATSOrchestrator:
         self.d2d_test_status: dict[str, dict[str, Any]] = {}
         self.overall_start_time: datetime | None = None
 
+        # Track test status (initialized to None, populated during test execution)
+        self.test_status: dict[str, Any] | None = None
+
         # Use provided controller type or detect it
         if controller_type:
+            # Controller type provided by caller (e.g., CombinedOrchestrator)
             self.controller_type = controller_type
             logger.info(f"Using provided controller type: {self.controller_type}")
         else:
+            # Fallback to auto-detection for standalone usage
             try:
                 self.controller_type = detect_controller_type()
                 logger.info(f"Controller type detected: {self.controller_type}")
             except ValueError as e:
+                # Exit gracefully if controller detection fails
                 logger.error(f"Controller detection failed: {e}")
                 print(terminal.error(f"Controller detection failed:\n{e}"))
-                sys.exit(1)
+                raise RuntimeError("Controller detection failed") from e
 
         # Calculate max workers based on system resources
         self.max_workers = self._calculate_workers()
