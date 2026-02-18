@@ -7,7 +7,7 @@ import asyncio
 import json
 import logging
 import os
-import sys
+import sysconfig
 import tempfile
 import textwrap
 import time
@@ -45,6 +45,14 @@ class SubprocessRunner:
         self.output_handler = output_handler
         self.plugin_config_path = plugin_config_path
 
+        # Ensure pyats is in the same environment as nac-test
+        pyats_path = Path(sysconfig.get_path("scripts")) / "pyats"
+        if not pyats_path.exists():
+            raise RuntimeError(
+                "pyats executable not found - ensure pyats is installed in the same environment as nac-test"
+            )
+        self.pyats_executable = str(pyats_path)
+
     async def execute_job(
         self, job_file_path: Path, env: dict[str, str]
     ) -> Path | None:
@@ -59,6 +67,7 @@ class SubprocessRunner:
         """
         # Create plugin configuration for progress reporting
         plugin_config_file = None
+        pyats_config_file = None
         try:
             plugin_config = textwrap.dedent("""
             plugins:
@@ -77,28 +86,35 @@ class SubprocessRunner:
                 f"Created plugin_config {plugin_config_file} with content\n{plugin_config}"
             )
 
+            # Create PyATS configuration to disable git_info collection
+            # This prevents fork() crashes on macOS with Python 3.12+ caused by
+            # CoreFoundation lock corruption in get_git_info()
+            pyats_config = "[report]\ngit_info = false\n"
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix="_pyats_config.conf", delete=False
+            ) as f:
+                f.write(pyats_config)
+                pyats_config_file = f.name
+            logger.debug(f"Created pyats_config {pyats_config_file}")
+
         except Exception as e:
-            logger.warning(f"Failed to create plugin config: {e}")
-            # If we can't create plugin config, we should probably fail
+            logger.warning(f"Failed to create config files: {e}")
+            # If we can't create config files, we should probably fail
             return None
 
         # Generate archive name with timestamp
         job_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
         archive_name = f"nac_test_job_{job_timestamp}.zip"
 
-        # Use pyats script from the same directory as the current Python interpreter
-        # to ensure we use the correct virtual environment rather than whatever
-        # 'pyats' is found in PATH (which may be from a different environment)
-        python_dir = Path(sys.executable).parent
-        pyats_script = python_dir / "pyats"
-
         cmd = [
-            str(pyats_script),
+            self.pyats_executable,
             "run",
             "job",
             str(job_file_path),
             "--configuration",
             plugin_config_file,
+            "--pyats-configuration",
+            pyats_config_file,
             "--archive-dir",
             str(self.output_dir),
             "--archive-name",
@@ -182,6 +198,7 @@ class SubprocessRunner:
         """
         # Create plugin configuration for progress reporting
         plugin_config_file = None
+        pyats_config_file = None
         try:
             plugin_config = textwrap.dedent("""
             plugins:
@@ -196,23 +213,28 @@ class SubprocessRunner:
             ) as f:
                 f.write(plugin_config)
                 plugin_config_file = f.name
+
+            # Create PyATS configuration to disable git_info collection
+            # This prevents fork() crashes on macOS with Python 3.12+ caused by
+            # CoreFoundation lock corruption in get_git_info()
+            pyats_config = "[report]\ngit_info = false\n"
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix="_pyats_config.conf", delete=False
+            ) as f:
+                f.write(pyats_config)
+                pyats_config_file = f.name
+
         except Exception as e:
-            logger.warning(f"Failed to create plugin config: {e}")
-            # If we can't create plugin config, we should probably fail
+            logger.warning(f"Failed to create config files: {e}")
+            # If we can't create config files, we should probably fail
             return None
 
         # Get device ID from environment for archive naming
         hostname = env.get("HOSTNAME", "unknown")
         archive_name = f"pyats_archive_device_{hostname}"
 
-        # Use pyats script from the same directory as the current Python interpreter
-        # to ensure we use the correct virtual environment rather than whatever
-        # 'pyats' is found in PATH (which may be from a different environment)
-        python_dir = Path(sys.executable).parent
-        pyats_script = python_dir / "pyats"
-
         cmd = [
-            str(pyats_script),
+            self.pyats_executable,
             "run",
             "job",
             str(job_file_path),
@@ -224,6 +246,8 @@ class SubprocessRunner:
             [
                 "--configuration",
                 plugin_config_file,
+                "--pyats-configuration",
+                pyats_config_file,
                 "--archive-dir",
                 str(self.output_dir),
                 "--archive-name",
