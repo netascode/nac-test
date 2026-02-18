@@ -565,10 +565,13 @@ graph LR
 
 **Key Responsibilities:**
 
-- **Data Merging**: Combines multiple YAML files with variable substitution
-- **Test Orchestration**: Coordinates API and D2D test flows
-- **Result Aggregation**: Combines results from both test types
-- **Summary Generation**: Produces final execution summary
+- **Test Type Discovery**: Detects presence of PyATS and Robot Framework tests
+- **Development Mode Routing**: Handles `--pyats` and `--robot` flags for fast iteration
+- **Sequential Execution**: Runs PyATS first, then Robot Framework (production mode)
+- **Result Aggregation**: Combines results into typed `CombinedResults` dataclass
+- **Combined Dashboard**: Triggers generation of unified `combined_summary.html`
+
+**Note**: Data merging happens in CLI (`main.py`) before orchestrator initialization, establishing a Single Source of Truth shared across frameworks.
 
 ##### 3. **Data Merger** (`data_merger.py`)
 
@@ -1720,8 +1723,13 @@ class CombinedOrchestrator:
         self.dev_robot_only = dev_robot_only
         # ... initialization ...
 
-    def run_tests(self) -> None:
-        """Main entry point for combined test execution."""
+    def run_tests(self) -> CombinedResults:
+        """Main entry point for combined test execution.
+
+        Returns:
+            CombinedResults: Aggregated results with api, d2d, and robot TestResults.
+        """
+        results = CombinedResults()
 
         # DEVELOPMENT MODE: PyATS only
         if self.dev_pyats_only:
@@ -1730,8 +1738,10 @@ class CombinedOrchestrator:
                 fg=typer.colors.YELLOW
             )
             orchestrator = PyATSOrchestrator(...)
-            orchestrator.run_tests()
-            return
+            pyats_results = orchestrator.run_tests()  # Returns PyATSResults
+            results.api = pyats_results.api
+            results.d2d = pyats_results.d2d
+            return results
 
         # DEVELOPMENT MODE: Robot only
         if self.dev_robot_only:
@@ -1740,8 +1750,8 @@ class CombinedOrchestrator:
                 fg=typer.colors.YELLOW
             )
             robot_orchestrator = RobotOrchestrator(...)
-            robot_orchestrator.run_tests()
-            return
+            results.robot = robot_orchestrator.run_tests()  # Returns TestResults
+            return results
 
         # PRODUCTION MODE: Combined execution
         has_pyats, has_robot = self._discover_test_types()
@@ -1749,14 +1759,17 @@ class CombinedOrchestrator:
         if has_pyats:
             typer.echo("\n🧪 Running PyATS tests...\n")
             orchestrator = PyATSOrchestrator(...)
-            orchestrator.run_tests()
+            pyats_results = orchestrator.run_tests()  # Returns PyATSResults
+            results.api = pyats_results.api
+            results.d2d = pyats_results.d2d
 
         if has_robot:
             typer.echo("\n🤖 Running Robot Framework tests...\n")
             robot_orchestrator = RobotOrchestrator(...)
-            robot_orchestrator.run_tests()
+            results.robot = robot_orchestrator.run_tests()  # Returns TestResults
 
-        self._print_execution_summary(has_pyats, has_robot)
+        self._print_execution_summary(results)
+        return results
 ```
 
 **Key Design Decision**: CombinedOrchestrator does NOT merge data files or create merged data model. The CLI (`main.py`) creates the merged data model **once** before orchestrator initialization, establishing a Single Source of Truth shared across both PyATS and Robot frameworks. This eliminates redundant merging and ensures consistency.
@@ -1869,8 +1882,13 @@ PyATSOrchestrator separates tests into two execution strategies:
 **Core run_tests() Orchestration:**
 
 ```python
-async def run_tests(self) -> None:
-    """Main orchestration entry point."""
+def run_tests(self) -> PyATSResults:
+    """Main orchestration entry point.
+
+    Returns:
+        PyATSResults: Contains api and d2d TestResults (may be None if not executed).
+    """
+    results = PyATSResults()
 
     # PHASE 1: Pre-flight checks
     EnvironmentValidator.validate_controller_environment()
@@ -1900,9 +1918,11 @@ async def run_tests(self) -> None:
 
     if api_test_files:
         api_archive = await self._execute_api_tests_standard(api_test_files)
+        results.api = self._extract_stats_from_archive(api_archive)  # Returns TestResults
 
     if d2d_test_files and devices:
         d2d_archive = await self._execute_ssh_tests_device_centric(d2d_test_files, devices)
+        results.d2d = self._extract_stats_from_archive(d2d_archive)  # Returns TestResults
 
     # PHASE 6: Generate HTML reports
     archives = [a for a in [api_archive, d2d_archive] if a is not None]
@@ -1916,8 +1936,9 @@ async def run_tests(self) -> None:
     cleanup_pyats_runtime()
     cleanup_old_test_outputs(self.output_dir)
 
-    # PHASE 8: Summary
-    self.summary_printer.print_summary(...)
+    # PHASE 8: Summary and return results
+    self.summary_printer.print_summary(results)
+    return results
 ```
 
 ---
@@ -2737,21 +2758,26 @@ class MonolithicOrchestrator:
 **Alternative 2: Lightweight Coordinator (Current)**
 ```python
 class CombinedOrchestrator:
-    def run_tests(self):
-        # Simple delegation (40 lines)
+    def run_tests(self) -> CombinedResults:
+        # Simple delegation with typed results (40 lines)
+        results = CombinedResults()
+
         if dev_pyats_only:
-            PyATSOrchestrator(...).run_tests()
-            return
+            pyats_results = PyATSOrchestrator(...).run_tests()  # Returns PyATSResults
+            results.api, results.d2d = pyats_results.api, pyats_results.d2d
+            return results
 
         if dev_robot_only:
-            RobotOrchestrator(...).run_tests()
-            return
+            results.robot = RobotOrchestrator(...).run_tests()  # Returns TestResults
+            return results
 
         # Production: sequential execution
         if has_pyats:
-            PyATSOrchestrator(...).run_tests()
+            pyats_results = PyATSOrchestrator(...).run_tests()  # Returns PyATSResults
+            results.api, results.d2d = pyats_results.api, pyats_results.d2d
         if has_robot:
-            RobotOrchestrator(...).run_tests()
+            results.robot = RobotOrchestrator(...).run_tests()  # Returns TestResults
+        return results
 ```
 
 **Benefits:**
@@ -3505,6 +3531,337 @@ class ResultStatus(str, Enum):
     BLOCKED = "blocked"
     INFO = "info"
 ```
+
+---
+
+### Combined Reporting Dashboard
+
+The combined reporting dashboard provides a unified view of test results across Robot Framework, PyATS API, and PyATS D2D tests in a single root-level `combined_summary.html` file.
+
+#### Architecture
+
+```
+nac_test/
+├── core/
+│   └── reporting/
+│       └── combined_generator.py         # Orchestrates combined dashboard
+├── pyats_core/
+│   └── reporting/
+│       ├── generator.py                  # Single archive report generation
+│       ├── multi_archive_generator.py    # Provides PyATS stats to combined dashboard
+│       └── templates/
+│           └── summary/
+│               ├── report.html.j2        # PyATS summary with breadcrumb
+│               └── combined_report.html.j2 # Combined dashboard template
+└── robot/
+    └── reporting/
+        ├── robot_output_parser.py        # Parses output.xml via ResultVisitor
+        └── robot_generator.py            # Generates Robot summary report
+```
+
+#### Report Structure
+
+```
+{output_dir}/
+├── combined_summary.html                  # Root-level combined dashboard ✨
+├── robot_results/                         # Robot Framework results
+│   ├── output.xml                        # Robot results XML
+│   ├── log.html                          # Robot log
+│   ├── report.html                       # Robot report
+│   ├── xunit.xml                         # Robot xUnit XML
+│   └── summary_report.html               # Robot summary (PyATS style)
+├── output.xml → robot_results/output.xml  # Backward-compat symlink
+├── log.html → robot_results/log.html      # Backward-compat symlink
+├── report.html → robot_results/report.html # Backward-compat symlink
+├── xunit.xml → robot_results/xunit.xml    # Backward-compat symlink
+└── pyats_results/                         # PyATS results
+    ├── api/
+    │   └── html_reports/
+    │       └── summary_report.html        # API summary with breadcrumb
+    └── d2d/
+        └── html_reports/
+            └── summary_report.html        # D2D summary with breadcrumb
+```
+
+#### Combined Report Generator (`core/reporting/combined_generator.py`)
+
+Orchestrates the unified dashboard generation:
+
+```python
+class CombinedReportGenerator:
+    """Generates combined dashboard across all test frameworks.
+    
+    This is a pure renderer - it takes CombinedResults from the orchestrator
+    and generates HTML. It does not discover or parse test results itself.
+    """
+    
+    def generate_combined_summary(
+        self,
+        results: CombinedResults | None = None
+    ) -> Path | None:
+        """Generate combined summary dashboard.
+        
+        Args:
+            results: CombinedResults with .api, .d2d, .robot attributes.
+                Each attribute is a TestResults dataclass or None if that
+                framework wasn't executed.
+                    
+        Returns:
+            Path to combined_summary.html at root level, or None if generation fails
+        """
+```
+
+**Features:**
+
+- **Unified Statistics**: Aggregates test counts using CombinedResults computed properties (`.total`, `.passed`, etc.)
+- **Framework Badges**: Visual indicators for Robot, API, and D2D tests
+- **Deep Linking**: Links to framework-specific summary reports
+- **Success Rate Calculation**: Overall and per-framework success rates via `.success_rate` property
+- **Automatic Generation**: Called by CombinedOrchestrator after all tests complete
+- **Pure Renderer**: Takes typed CombinedResults, no internal result discovery
+
+#### Robot Output Parser (`robot/reporting/robot_output_parser.py`)
+
+Parses Robot Framework `output.xml` using the ResultVisitor pattern:
+
+```python
+class RobotResultParser:
+    def parse_output_xml(self, output_xml_path: Path) -> Dict[str, Any]:
+        """Parse Robot output.xml and extract test results.
+        
+        Returns:
+            {
+                "tests": [
+                    {
+                        "name": "Test Case Name",
+                        "status": "PASS",
+                        "elapsed_time": "1.234 s",
+                        "start_time": "2025-02-01 12:00:00",
+                        "message": "Optional message",
+                        "suite_name": "Suite Name",
+                        "test_id": "s1-t1"  # For deep linking
+                    },
+                    ...
+                ],
+                "statistics": {
+                    "total": 10,
+                    "passed": 8,
+                    "failed": 2,
+                    "skipped": 0
+                },
+                "suite_name": "Root Suite"
+            }
+        """
+```
+
+**Implementation:**
+
+- Uses Robot Framework's `ResultVisitor` API
+- Extracts test metadata including timestamps and status
+- Generates test IDs for deep linking to `log.html`
+- Sorts tests (failed first, then passed)
+
+#### Robot Report Generator (`robot/reporting/robot_generator.py`)
+
+Generates PyATS-style summary report for Robot tests:
+
+```python
+class RobotReportGenerator:
+    def generate_summary_report(self) -> Path | None:
+        """Generate Robot summary report in robot_results/.
+        
+        Returns:
+            Path to generated summary_report.html, or None if no tests
+        """
+    
+    def get_aggregated_stats(self) -> Dict[str, int]:
+        """Get aggregated Robot test statistics.
+        
+        Returns:
+            {"total": 10, "passed": 8, "failed": 2, "skipped": 0}
+        """
+```
+
+**Features:**
+
+- Reuses PyATS Jinja2 templates for consistency
+- Generates deep links to Robot log.html
+- Provides statistics for combined dashboard
+- Handles missing output.xml gracefully
+
+#### Statistics Flow
+
+```mermaid
+graph LR
+    subgraph "Test Execution"
+        Robot[RobotOrchestrator] --> |TestResults| RobotStats[robot: TestResults]
+        PyATS[PyATSOrchestrator] --> |PyATSResults| PyATSStats[api/d2d: TestResults]
+    end
+    
+    subgraph "Result Aggregation"
+        RobotStats --> Combined[CombinedResults]
+        PyATSStats --> Combined
+    end
+    
+    subgraph "Report Generation"
+        Combined --> |results.robot| RobotGen[RobotReportGenerator]
+        Combined --> |results.api/d2d| MultiGen[MultiArchiveReportGenerator]
+        
+        RobotGen --> RobotReport[robot_results/summary_report.html]
+        MultiGen --> APIReport[api/html_reports/summary_report.html]
+        MultiGen --> D2DReport[d2d/html_reports/summary_report.html]
+    end
+    
+    subgraph "Combined Dashboard"
+        Combined --> |CombinedResults| CombinedGen[CombinedReportGenerator]
+        CombinedGen --> Dashboard[combined_summary.html]
+    end
+    
+    subgraph "CLI"
+        Combined --> |.exit_code| CLI[Exit Code]
+    end
+```
+
+**Type System:**
+
+Results are represented using typed dataclasses from `nac_test.core.types`:
+
+```python
+class ExecutionState(str, Enum):
+    """Execution state for test results.
+
+    Distinguishes between different outcomes:
+        SUCCESS: Tests ran (may have test failures, but execution succeeded)
+        EMPTY: No tests found/executed (expected outcome, not an error)
+        SKIPPED: Tests intentionally skipped (e.g., render-only mode)
+        ERROR: Execution failed with an error (e.g., framework crash)
+    """
+    SUCCESS = "success"
+    EMPTY = "empty"
+    SKIPPED = "skipped"
+    ERROR = "error"
+
+@dataclass
+class TestResults:
+    """Results from a single test framework/type."""
+    passed: int = 0
+    failed: int = 0
+    skipped: int = 0
+    other: int = 0  # Tests with other statuses (blocked, aborted, passx, info)
+    reason: str | None = None  # Context for non-SUCCESS states
+    state: ExecutionState = ExecutionState.SUCCESS
+
+    @property
+    def total(self) -> int:
+        """Total tests (always computed from counts)."""
+        return self.passed + self.failed + self.skipped + self.other
+
+    # Factory methods for common scenarios:
+    @classmethod
+    def empty(cls) -> "TestResults":
+        """No tests found/executed (expected outcome)."""
+        return cls(state=ExecutionState.EMPTY)
+
+    @classmethod
+    def not_run(cls, reason: str | None = None) -> "TestResults":
+        """Tests intentionally skipped (e.g., render-only mode)."""
+        return cls(state=ExecutionState.SKIPPED, reason=reason)
+
+    @classmethod
+    def from_error(cls, reason: str) -> "TestResults":
+        """Execution failed with an error."""
+        return cls(reason=reason, state=ExecutionState.ERROR)
+
+    # Computed properties: success_rate, has_failures, has_error, is_empty,
+    #                      is_error, was_not_run, exit_code
+
+    def __str__(self) -> str:
+        base = f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
+        return f"{base}/{self.other}" if self.other > 0 else base
+
+@dataclass
+class PyATSResults:
+    """Groups API and D2D results from PyATS."""
+    api: TestResults | None = None
+    d2d: TestResults | None = None
+
+@dataclass
+class CombinedResults:
+    """Aggregates results across all frameworks."""
+    api: TestResults | None = None   # From PyATSResults.api
+    d2d: TestResults | None = None   # From PyATSResults.d2d
+    robot: TestResults | None = None # From RobotOrchestrator
+    
+    # Computed properties aggregate across all non-None results:
+    # .total, .passed, .failed, .skipped, .errors (list[str]), .success_rate,
+    # .has_failures, .has_errors, .is_empty, .exit_code
+```
+
+**ExecutionState Usage:**
+
+The `ExecutionState` enum enables clear distinction between different outcomes:
+
+| State | When to Use | Properties |
+|-------|-------------|------------|
+| `SUCCESS` | Tests ran (may have failures) | Default state, `is_error=False` |
+| `EMPTY` | No tests found/matched filters | `is_empty=True`, `is_error=False` |
+| `SKIPPED` | Intentionally not run (render-only) | `was_not_run=True`, reason in `reason` field |
+| `ERROR` | Framework/execution failure | `is_error=True`, `has_error=True` |
+
+This allows callers to distinguish between:
+- **Empty execution** (no tests found) - expected, not an error
+- **Skipped execution** (render-only mode) - intentional, with reason
+- **Error execution** (framework crash) - unexpected failure
+
+**Orchestrator Return Types:**
+
+- `RobotOrchestrator.run_tests()` → `TestResults`
+- `PyATSOrchestrator.run_tests()` → `PyATSResults` (contains `.api` and `.d2d`)
+- `CombinedOrchestrator.run_tests()` → `CombinedResults` (flat structure with all three)
+
+**Example Usage:**
+
+```python
+# CombinedOrchestrator aggregates results
+results = CombinedResults()
+if has_pyats:
+    pyats_results = PyATSOrchestrator(...).run_tests()  # Returns PyATSResults
+    results.api = pyats_results.api
+    results.d2d = pyats_results.d2d
+if has_robot:
+    results.robot = RobotOrchestrator(...).run_tests()  # Returns TestResults
+
+# CombinedReportGenerator receives typed results
+CombinedReportGenerator(output_dir).generate_combined_summary(results)
+
+# Access aggregated stats via computed properties
+print(f"Total: {results.total}, Passed: {results.passed}")
+print(f"Success Rate: {results.success_rate:.1f}%")
+print(f"Exit Code: {results.exit_code}")
+```
+
+#### Backward Compatibility
+
+Robot results are output to `robot_results/` subdirectory, with symlinks at root for backward compatibility:
+
+- `output.xml` → `robot_results/output.xml`
+- `log.html` → `robot_results/log.html`
+- `report.html` → `robot_results/report.html`
+- `xunit.xml` → `robot_results/xunit.xml`
+
+This ensures existing tools and scripts that expect Robot files at root continue to work.
+
+#### Breadcrumb Navigation
+
+All framework-specific summary reports include breadcrumb navigation:
+
+```html
+<div class="breadcrumb">
+    <a href="../../combined_summary.html">← Back to Combined Dashboard</a>
+</div>
+```
+
+This allows users to easily navigate from any report back to the unified dashboard.
 
 ---
 
@@ -20445,7 +20802,7 @@ async def _generate_summary_report(
             )
         )
 
-        # Calculate statistics
+        # Calculate statistics using TestResults dataclass
         total_tests = len(all_results)
         passed_tests = sum(
             1 for r in all_results if r["status"] == ResultStatus.PASSED.value
@@ -20460,23 +20817,18 @@ async def _generate_summary_report(
             1 for r in all_results if r["status"] == ResultStatus.SKIPPED.value
         )
 
-        # Success rate excludes skipped tests from the calculation
-        tests_with_results = total_tests - skipped_tests
-        success_rate = (
-            (passed_tests / tests_with_results * 100)
-            if tests_with_results > 0
-            else 0
+        # Create TestResults object (success_rate computed automatically)
+        stats = TestResults(
+            passed=passed_tests,
+            failed=failed_tests,
+            skipped=skipped_tests,
         )
 
-        # Render summary
+        # Render summary - template accesses stats.total, stats.passed, etc.
         template = self.env.get_template("summary/report.html.j2")
         html_content = template.render(
             generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            total_tests=total_tests,
-            passed_tests=passed_tests,
-            failed_tests=failed_tests,
-            skipped_tests=skipped_tests,
-            success_rate=success_rate,
+            stats=stats,
             results=all_results,
         )
 
@@ -24493,8 +24845,9 @@ if self.dev_pyats_only:
     )
     if self.max_parallel_devices is not None:
         orchestrator.max_parallel_devices = self.max_parallel_devices
-    orchestrator.run_tests()
-    return  # Exit immediately - skip Robot Framework entirely
+    pyats_results = orchestrator.run_tests()  # Returns PyATSResults
+    # Results available: pyats_results.api, pyats_results.d2d (each is TestResults or None)
+    return CombinedResults(api=pyats_results.api, d2d=pyats_results.d2d)
 ```
 
 **What Gets Skipped**:
@@ -24621,8 +24974,9 @@ if self.dev_robot_only:
         dry_run=self.dry_run,
         verbosity=self.verbosity,
     )
-    robot_orchestrator.run_tests()
-    return  # Exit immediately - skip PyATS entirely
+    robot_results = robot_orchestrator.run_tests()  # Returns TestResults
+    # Results available: robot_results.total, .passed, .failed, .skipped
+    return CombinedResults(robot=robot_results)
 ```
 
 **What Gets Skipped**:
@@ -24711,11 +25065,12 @@ Speedup primarily from skipping PyATS overhead (broker startup, parallel executi
 # Production mode: Combined execution
 # Discover test types (simple existence checks)
 has_pyats, has_robot = self._discover_test_types()
+results = CombinedResults()
 
 # Handle empty scenarios
 if not has_pyats and not has_robot:
     typer.echo("No test files found (no *.py PyATS tests or *.robot templates)")
-    return
+    return results  # Empty CombinedResults
 
 # Sequential execution - each orchestrator manages its own directory structure
 if has_pyats:
@@ -24731,7 +25086,9 @@ if has_pyats:
     )
     if self.max_parallel_devices is not None:
         orchestrator.max_parallel_devices = self.max_parallel_devices
-    orchestrator.run_tests()
+    pyats_results = orchestrator.run_tests()  # Returns PyATSResults
+    results.api = pyats_results.api
+    results.d2d = pyats_results.d2d
 
 if has_robot:
     typer.echo("\n🤖 Running Robot Framework tests...\n")
@@ -24750,10 +25107,11 @@ if has_robot:
         dry_run=self.dry_run,
         verbosity=self.verbosity,
     )
-    robot_orchestrator2.run_tests()
+    results.robot = robot_orchestrator2.run_tests()  # Returns TestResults
 
-# Summary
-self._print_execution_summary(has_pyats, has_robot)
+# Summary - now uses CombinedResults with computed properties
+self._print_execution_summary(results)
+return results
 ```
 
 **Test Discovery Mechanism** (from `combined_orchestrator.py:186-213`):
