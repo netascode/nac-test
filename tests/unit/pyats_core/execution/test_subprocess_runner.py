@@ -1,16 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Unit tests for SubprocessRunner error handling and edge cases.
+"""Unit tests for SubprocessRunner.
 
-This module tests error scenarios in the SubprocessRunner class, focusing on:
+This module tests the SubprocessRunner class, covering:
 - Subprocess crash handling (non-zero return codes)
 - File operation failures (missing archives, spawn failures)
 - Malformed data recovery (invalid JSON progress events)
 - Resource limit handling (LimitOverrunError, buffer timeouts)
-
-These tests complement integration tests by covering error paths not exercised
-during normal (happy path) execution.
+- Initialization: pyats executable resolution via sysconfig
 
 Note:
     All tests mock asyncio.create_subprocess_exec to avoid spawning actual
@@ -21,7 +19,7 @@ Note:
 import asyncio
 import logging
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -208,3 +206,59 @@ def test_drain_remaining_buffer_timeout(
     asyncio.run(runner._drain_remaining_buffer_safe(stdout))
 
     assert "Timeout" in caplog.text
+
+
+# --- Initialization tests (pyats executable resolution) ---
+
+
+def test_init_resolves_pyats_using_sysconfig(
+    tmp_path: Path, temp_output_dir: Path, mock_output_handler: Mock
+) -> None:
+    """Test that pyats executable is resolved using sysconfig.get_path('scripts')."""
+    fake_scripts_dir = tmp_path / "scripts"
+    fake_scripts_dir.mkdir()
+    fake_pyats_executable = fake_scripts_dir / "pyats"
+    fake_pyats_executable.touch()
+
+    with patch("sysconfig.get_path", return_value=str(fake_scripts_dir)):
+        runner = SubprocessRunner(
+            output_dir=temp_output_dir,
+            output_handler=mock_output_handler,
+        )
+
+    assert runner.pyats_executable == str(fake_pyats_executable)
+
+
+def test_init_raises_runtime_error_when_pyats_not_found(
+    tmp_path: Path, temp_output_dir: Path, mock_output_handler: Mock
+) -> None:
+    """Test that RuntimeError is raised when pyats executable does not exist."""
+    fake_scripts_dir = tmp_path / "scripts"
+    fake_scripts_dir.mkdir()
+
+    with patch("sysconfig.get_path", return_value=str(fake_scripts_dir)):
+        with pytest.raises(RuntimeError, match="pyats executable not found"):
+            SubprocessRunner(
+                output_dir=temp_output_dir,
+                output_handler=mock_output_handler,
+            )
+
+
+def test_init_does_not_use_sys_executable(
+    tmp_path: Path, temp_output_dir: Path, mock_output_handler: Mock
+) -> None:
+    """Test that sys.executable is NOT accessed (regression prevention)."""
+    fake_scripts_dir = tmp_path / "scripts"
+    fake_scripts_dir.mkdir()
+    fake_pyats_executable = fake_scripts_dir / "pyats"
+    fake_pyats_executable.touch()
+
+    with patch("sysconfig.get_path", return_value=str(fake_scripts_dir)):
+        with patch("sys.executable", new=MagicMock()) as mock_sys_executable:
+            runner = SubprocessRunner(
+                output_dir=temp_output_dir,
+                output_handler=mock_output_handler,
+            )
+
+    mock_sys_executable.assert_not_called()
+    assert runner.pyats_executable == str(fake_pyats_executable)

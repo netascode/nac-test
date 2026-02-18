@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Unit tests for SubprocessRunner.
+"""Unit tests for SubprocessRunner execution logic.
 
 Tests the subprocess execution logic:
 1. Config file content verification (git_info = false for macOS fork() safety)
@@ -9,6 +9,10 @@ Tests the subprocess execution logic:
 3. Error handling when config file creation fails
 4. Return code interpretation (0 = success, 1 = test failures, >1 = error)
 5. Output processing and progress event parsing
+
+See tests/unit/pyats_core/execution/test_subprocess_runner.py for
+additional unit tests covering subprocess crash handling,
+malformed data recovery, resource limit handling, initialization and more
 """
 
 import asyncio
