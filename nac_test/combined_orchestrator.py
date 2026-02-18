@@ -173,7 +173,7 @@ class CombinedOrchestrator:
         # Build combined results from individual orchestrators
         combined_results = CombinedResults()
 
-        if has_pyats:
+        if has_pyats and not self.render_only:
             typer.echo("\n🧪 Running PyATS tests...\n")
             self._check_python_version()
 
