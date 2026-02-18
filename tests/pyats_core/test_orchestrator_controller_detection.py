@@ -72,8 +72,8 @@ class TestOrchestratorControllerDetection:
         merged_file = output_dir / "merged_data.yaml"
         merged_file.write_text("dummy: data")
 
-        # Attempt to initialize orchestrator should fail
-        with pytest.raises(RuntimeError) as exc_info:
+        # Attempt to initialize orchestrator should exit
+        with pytest.raises(SystemExit) as exc_info:
             PyATSOrchestrator(
                 data_paths=[tmp_path / "data.yaml"],
                 test_dir=test_dir,
@@ -82,7 +82,7 @@ class TestOrchestratorControllerDetection:
             )
 
         # Verify it exits with code 1
-        assert str(exc_info.value) == "Controller detection failed"
+        assert exc_info.value.code == 1
 
     def test_orchestrator_handles_multiple_controllers_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -106,8 +106,8 @@ class TestOrchestratorControllerDetection:
         merged_file = output_dir / "merged_data.yaml"
         merged_file.write_text("dummy: data")
 
-        # Attempt to initialize orchestrator should fail
-        with pytest.raises(RuntimeError) as exc_info:
+        # Attempt to initialize orchestrator should exit
+        with pytest.raises(SystemExit) as exc_info:
             PyATSOrchestrator(
                 data_paths=[tmp_path / "data.yaml"],
                 test_dir=test_dir,
@@ -116,7 +116,7 @@ class TestOrchestratorControllerDetection:
             )
 
         # Verify it exits with code 1
-        assert str(exc_info.value) == "Controller detection failed"
+        assert exc_info.value.code == 1
 
     def test_validate_environment_uses_detected_controller(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

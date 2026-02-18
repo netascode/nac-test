@@ -6,6 +6,7 @@
 import asyncio
 import logging
 import os
+import sys
 import tempfile
 import zipfile
 from datetime import datetime
@@ -108,7 +109,7 @@ class PyATSOrchestrator:
                 # Exit gracefully if controller detection fails
                 logger.error(f"Controller detection failed: {e}")
                 print(terminal.error(f"Controller detection failed:\n{e}"))
-                raise RuntimeError("Controller detection failed") from e
+                sys.exit(1)
 
         # Calculate max workers based on system resources
         self.max_workers = self._calculate_workers()
