@@ -22,7 +22,8 @@ import pytest
 from typer.testing import CliRunner
 
 import nac_test.cli.main
-from tests.integration.mocks.mock_server import MockAPIServer
+from nac_test.core.constants import PYATS_RESULTS_DIRNAME
+from tests.e2e.mocks.mock_server import MockAPIServer
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def _validate_broker_connection_pooling(
         AssertionError: If connection pooling validation fails
     """
     output_path = Path(output_dir)
-    d2d_results = output_path / "pyats_results" / "d2d"
+    d2d_results = output_path / PYATS_RESULTS_DIRNAME / "d2d"
 
     assert d2d_results.exists(), f"D2D results directory not found: {d2d_results}"
 
@@ -172,7 +173,7 @@ def test_connection_broker_pooling_and_caching(
 
     # Get absolute path to mock_unicon.py
     project_root = Path(__file__).parent.parent.parent.absolute()
-    mock_script = project_root / "tests" / "integration" / "mocks" / "mock_unicon.py"
+    mock_script = project_root / "tests" / "e2e" / "mocks" / "mock_unicon.py"
 
     # Save original method
     original_build_device_dict = BaseDeviceResolver.build_device_dict
@@ -262,7 +263,7 @@ def test_broker_validation_detects_non_broker_connections(tmpdir: str) -> None:
 
     # Create fake directory structure with CLI logs (as if broker wasn't used)
     output_dir = Path(tmpdir)
-    d2d_results = output_dir / "pyats_results" / "d2d"
+    d2d_results = output_dir / PYATS_RESULTS_DIRNAME / "d2d"
     device_dir = d2d_results / "device-01"
     device_dir.mkdir(parents=True, exist_ok=True)
 

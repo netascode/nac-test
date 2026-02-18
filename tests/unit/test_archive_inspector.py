@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from nac_test.core.constants import PYATS_RESULTS_DIRNAME
 from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
 
 
@@ -348,7 +349,7 @@ class TestZipSlipProtection:
         output_dir.mkdir()
 
         result = ArchiveExtractor.extract_archive_to_directory(
-            archive_path, output_dir, "pyats_results/api"
+            archive_path, output_dir, f"{PYATS_RESULTS_DIRNAME}/api"
         )
 
         # Should return None due to security error
