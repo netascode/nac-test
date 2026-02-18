@@ -67,6 +67,9 @@ class E2EScenario:
     expected_pyats_d2d_failed: int = 0
     expected_pyats_d2d_skipped: int = 0
 
+    # Expected device hostnames for D2D tests (for hostname display validation)
+    expected_d2d_hostnames: list[str] | None = None
+
     @property
     def expected_robot_total(self) -> int:
         """Total number of Robot tests."""
@@ -214,6 +217,7 @@ SUCCESS_SCENARIO = E2EScenario(
     # PyATS D2D: verify_iosxe_control.py (IOSXETestBase) - 1 pass
     expected_pyats_d2d_passed=1,
     expected_pyats_d2d_failed=0,
+    expected_d2d_hostnames=["sd-dc-c8kv-01"],
 )
 
 ALL_FAIL_SCENARIO = E2EScenario(
@@ -231,6 +235,7 @@ ALL_FAIL_SCENARIO = E2EScenario(
     # PyATS D2D: verify_iosxe_control_fail.py (IOSXETestBase) - 1 fail
     expected_pyats_d2d_passed=0,
     expected_pyats_d2d_failed=1,
+    expected_d2d_hostnames=["sd-dc-c8kv-01"],
 )
 
 MIXED_SCENARIO = E2EScenario(
@@ -248,6 +253,7 @@ MIXED_SCENARIO = E2EScenario(
     # PyATS D2D: verify_iosxe_control.py (IOSXETestBase) - 1 pass
     expected_pyats_d2d_passed=1,
     expected_pyats_d2d_failed=0,
+    expected_d2d_hostnames=["sd-dc-c8kv-01"],
 )
 
 ROBOT_ONLY_SCENARIO = E2EScenario(
@@ -303,6 +309,7 @@ PYATS_D2D_ONLY_SCENARIO = E2EScenario(
     # PyATS D2D: verify_iosxe_control.py (IOSXETestBase) - 1 pass
     expected_pyats_d2d_passed=1,
     expected_pyats_d2d_failed=0,
+    expected_d2d_hostnames=["sd-dc-c8kv-01"],
 )
 
 PYATS_CC_SCENARIO = E2EScenario(
@@ -322,6 +329,7 @@ PYATS_CC_SCENARIO = E2EScenario(
     # PyATS D2D: verify_iosxe_no_critical_errors_in_system_logs.py - 2 pass (2 devices)
     expected_pyats_d2d_passed=2,
     expected_pyats_d2d_failed=0,
+    expected_d2d_hostnames=["sd-dc-c8kv-01", "sd-dc-c8kv-02"],
 )
 
 

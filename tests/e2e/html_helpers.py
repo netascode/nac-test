@@ -435,3 +435,331 @@ def verify_view_details_links_resolve(html_path: Path) -> list[str]:
         )
 
     return verified_links
+
+
+# =============================================================================
+# Hostname display validation helpers
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class HostnameDisplayInfo:
+    """Information about hostname display in HTML reports.
+
+    Attributes:
+        test_name: The test name (without hostname).
+        hostname: The hostname extracted from display.
+        display_text: The full display text as it appears in HTML.
+    """
+
+    test_name: str
+    hostname: str | None
+    display_text: str
+
+
+def extract_hostname_from_display_text(display_text: str) -> HostnameDisplayInfo:
+    """Extract hostname from test display text.
+
+    Parses display text in format "Test Name (hostname)" or just "Test Name".
+
+    Args:
+        display_text: The text as displayed in HTML (e.g., "Verify Config (EDGE01)").
+
+    Returns:
+        HostnameDisplayInfo with parsed components.
+    """
+    # Pattern to match "Test Name (hostname)" format
+    pattern = r"^(.+?)\s*\(([^)]+)\)$"
+    match = re.match(pattern, display_text.strip())
+
+    if match:
+        test_name = match.group(1).strip()
+        hostname = match.group(2).strip()
+        return HostnameDisplayInfo(
+            test_name=test_name, hostname=hostname, display_text=display_text
+        )
+    else:
+        # No hostname in parentheses
+        return HostnameDisplayInfo(
+            test_name=display_text.strip(), hostname=None, display_text=display_text
+        )
+
+
+def extract_hostnames_from_summary_table(
+    html_content: str,
+) -> list[HostnameDisplayInfo]:
+    """Extract hostname display information from summary table.
+
+    Parses the test name column in the summary table to extract hostnames.
+
+    Args:
+        html_content: The HTML content of a summary report.
+
+    Returns:
+        List of HostnameDisplayInfo for each test in the table.
+    """
+    results = []
+
+    # Pattern to find test name cells in the table
+    # Look for <td data-label="Test Name"> or similar
+    pattern = r'<td[^>]*data-label="Test Name"[^>]*>([^<]+(?:<[^>]*>[^<]*</[^>]*>[^<]*)*)</td>'
+    matches = re.findall(pattern, html_content, re.IGNORECASE | re.DOTALL)
+
+    for match in matches:
+        # Clean up HTML tags and get plain text
+        clean_text = re.sub(r"<[^>]*>", "", match).strip()
+        if clean_text:
+            results.append(extract_hostname_from_display_text(clean_text))
+
+    return results
+
+
+def extract_hostname_from_detail_page_header(
+    html_content: str,
+) -> HostnameDisplayInfo | None:
+    """Extract hostname from detail page header.
+
+    Parses the main <h1> tag in a test detail page to extract hostname.
+
+    Args:
+        html_content: The HTML content of a test detail page.
+
+    Returns:
+        HostnameDisplayInfo for the header, or None if no header found.
+    """
+    # Look for the main header - could be in various formats
+    patterns = [
+        r"<h1[^>]*>([^<]+(?:<[^>]*>[^<]*</[^>]*>[^<]*)*)</h1>",
+        r"<h1>([^<]+(?:<[^>]*>[^<]*</[^>]*>[^<]*)*)</h1>",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, html_content, re.IGNORECASE | re.DOTALL)
+        if match:
+            # Clean up HTML tags and get plain text
+            clean_text = re.sub(r"<[^>]*>", "", match.group(1)).strip()
+            if clean_text:
+                return extract_hostname_from_display_text(clean_text)
+
+    return None
+
+
+def extract_hostnames_from_filenames(
+    file_paths: list[Path],
+) -> list[tuple[Path, str | None]]:
+    """Extract hostnames from HTML report filenames.
+
+    Parses filenames in format "classname_hostname_timestamp.html" to extract hostnames.
+    Note: Hostnames are sanitized in filenames (special chars become underscores).
+
+    Format: classname_hostname_YYYYMMDD_HHMMSS_mmm
+    Example: verifytest_sd_dc_c8kv_01_20260218_155904_733.html
+
+    Args:
+        file_paths: List of HTML file paths to analyze.
+
+    Returns:
+        List of tuples (file_path, hostname) where hostname is None for API tests.
+    """
+    results = []
+
+    for file_path in file_paths:
+        filename = file_path.stem  # Remove .html extension
+        parts = filename.split("_")
+
+        if len(parts) >= 4:
+            # Look for the date part (8 digits) which should be third from last
+            # Format: classname_hostname_YYYYMMDD_HHMMSS_mmm
+            date_index = -3  # Third from the end
+            if (
+                len(parts) >= 3
+                and len(parts[date_index]) == 8
+                and parts[date_index].isdigit()
+            ):
+                # Found date at expected position
+                if len(parts) > 4:  # More than minimum parts means there's a hostname
+                    hostname_parts = parts[
+                        1:date_index
+                    ]  # Everything between classname and date
+                    hostname = "_".join(hostname_parts) if hostname_parts else None
+                else:
+                    # Format: classname_YYYYMMDD_HHMMSS_mmm (no hostname)
+                    hostname = None
+            else:
+                # Try to find date anywhere in the later parts
+                date_found = False
+                for i in range(2, len(parts)):
+                    if len(parts[i]) == 8 and parts[i].isdigit():
+                        # Found a date part
+                        if (
+                            i > 1
+                        ):  # There are parts before the date (excluding classname)
+                            hostname_parts = parts[1:i]
+                            hostname = (
+                                "_".join(hostname_parts) if hostname_parts else None
+                            )
+                        else:
+                            hostname = None
+                        date_found = True
+                        break
+
+                if not date_found:
+                    # No clear date pattern, assume no hostname
+                    hostname = None
+        else:
+            hostname = None
+
+        results.append((file_path, hostname))
+
+    return results
+
+
+def verify_hostname_in_console_output(
+    console_output: str, expected_hostnames: list[str]
+) -> list[str]:
+    """Verify hostnames appear in console output with correct format.
+
+    Uses simple string matching to find hostnames in console output.
+
+    Args:
+        console_output: The CLI stdout/stderr output.
+        expected_hostnames: List of hostnames that should appear.
+
+    Returns:
+        List of hostnames found in the console output.
+
+    Raises:
+        AssertionError: If expected hostnames are missing from console output.
+    """
+    found_hostnames = []
+
+    for hostname in expected_hostnames:
+        # Look for hostname in parentheses format: (hostname)
+        if f"({hostname})" in console_output:
+            found_hostnames.append(hostname)
+
+    # Verify all expected hostnames were found
+    missing_hostnames = set(expected_hostnames) - set(found_hostnames)
+    if missing_hostnames:
+        raise AssertionError(
+            f"Missing hostnames in console output: {sorted(missing_hostnames)}\n"
+            f"Found hostnames: {sorted(set(found_hostnames))}\n"
+            f"Console output:\n{console_output}"
+        )
+
+    return found_hostnames
+
+
+def assert_hostname_display_in_summary(
+    html_path: Path, expected_hostnames: list[str]
+) -> list[str]:
+    """Assert that hostnames are correctly displayed in summary table.
+
+    Uses simple string matching to find hostnames in HTML content.
+
+    Args:
+        html_path: Path to the summary_report.html file.
+        expected_hostnames: List of hostnames that should appear.
+
+    Returns:
+        List of hostnames found in the summary.
+
+    Raises:
+        AssertionError: If expected hostnames are missing.
+    """
+    html_content = load_html_file(html_path)
+    found_hostnames = []
+
+    for hostname in expected_hostnames:
+        # Look for hostname in parentheses format in HTML content
+        if f"({hostname})" in html_content:
+            found_hostnames.append(hostname)
+
+    # Verify all expected hostnames were found
+    missing_hostnames = set(expected_hostnames) - set(found_hostnames)
+    if missing_hostnames:
+        raise AssertionError(
+            f"Missing hostnames in summary table of {html_path}: {sorted(missing_hostnames)}\n"
+            f"Found hostnames: {sorted(set(found_hostnames))}"
+        )
+
+    return found_hostnames
+
+
+def assert_hostname_display_in_detail_pages(
+    detail_file_paths: list[Path], expected_hostnames: list[str]
+) -> list[str]:
+    """Assert that hostnames are correctly displayed in detail page headers.
+
+    Uses simple string matching to find hostnames in HTML content.
+
+    Args:
+        detail_file_paths: List of paths to test detail HTML files.
+        expected_hostnames: List of hostnames that should appear.
+
+    Returns:
+        List of hostnames found in the detail pages.
+
+    Raises:
+        AssertionError: If expected hostnames are missing.
+    """
+    found_hostnames = []
+
+    for hostname in expected_hostnames:
+        # Look for hostname in parentheses format across all detail files
+        for file_path in detail_file_paths:
+            html_content = load_html_file(file_path)
+            if f"({hostname})" in html_content:
+                found_hostnames.append(hostname)
+                break  # Found this hostname, move to next
+
+    # Verify all expected hostnames were found
+    missing_hostnames = set(expected_hostnames) - set(found_hostnames)
+    if missing_hostnames:
+        raise AssertionError(
+            f"Missing hostnames in detail page headers: {sorted(missing_hostnames)}\n"
+            f"Found hostnames: {sorted(set(found_hostnames))}\n"
+            f"Checked files: {[str(p) for p in detail_file_paths]}"
+        )
+
+    return found_hostnames
+
+
+def assert_hostname_in_filenames(
+    html_files: list[Path], expected_hostnames: list[str]
+) -> list[tuple[Path, str | None]]:
+    """Assert that hostnames are correctly included in HTML filenames.
+
+    Uses simple string matching to find sanitized hostnames in filenames.
+
+    Args:
+        html_files: List of HTML file paths to check.
+        expected_hostnames: List of hostnames that should appear in filenames.
+                          Note: These should be sanitized versions (dashes → underscores).
+
+    Returns:
+        List of tuples (file_path, hostname) found in filenames.
+
+    Raises:
+        AssertionError: If expected hostnames are missing from filenames.
+    """
+    found_hostnames = []
+
+    for hostname in expected_hostnames:
+        # Simply check if the sanitized hostname appears anywhere in any filename
+        for file_path in html_files:
+            if hostname in str(file_path):
+                found_hostnames.append(hostname)
+                break  # Found this hostname, move to next
+
+    # Verify all expected hostnames were found
+    missing_hostnames = set(expected_hostnames) - set(found_hostnames)
+    if missing_hostnames:
+        raise AssertionError(
+            f"Missing hostnames in HTML filenames: {sorted(missing_hostnames)}\n"
+            f"Found hostnames: {sorted(set(found_hostnames))}\n"
+            f"Checked files: {[f.name for f in html_files]}"
+        )
+
+    # Return the original format for compatibility
+    return [(f, None) for f in html_files]
