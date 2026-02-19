@@ -217,25 +217,8 @@ class CombinedOrchestrator:
                 robot_results = robot_orchestrator.run_tests()
                 combined_results.robot = robot_results
             except Exception as e:
-                # Convert all Robot orchestrator failures to proper TestResults objects
-                # This provides better error reporting and consistent exit code handling
-                error_msg = f"Robot Framework execution failed: {e}"
-                logger.error(error_msg, exc_info=True)
-
-                # In render-only mode, provide specific context about template rendering
-                if self.render_only:
-                    # For render-only mode, store the raw error for main.py to format
-                    logger.error(f"Template rendering failed: {e}")
-                    combined_results.robot = TestResults.from_error(str(e))
-                else:
-                    typer.echo(
-                        typer.style(
-                            f"⚠️  Robot Framework tests skipped due to error: {e}",
-                            fg=typer.colors.YELLOW,
-                        )
-                    )
-                    # Always create proper TestResults object instead of propagating exceptions
-                    combined_results.robot = TestResults.from_error(error_msg)
+                logger.error(f"Robot Framework execution failed: {e}", exc_info=True)
+                combined_results.robot = TestResults.from_error(str(e))
 
         # Generate combined dashboard and print summary (unless render_only mode)
         if not self.render_only:

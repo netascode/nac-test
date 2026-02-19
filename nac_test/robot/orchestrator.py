@@ -178,36 +178,19 @@ class RobotOrchestrator:
                 ordering_file=self.ordering_file,
                 extra_args=self.extra_args,
             )
-            # Handle special exit codes
+            # Handle special exit codes - just log and return appropriate TestResults
+            # User-facing error messages are handled centrally in main.py
             if exit_code == EXIT_INVALID_ROBOT_ARGS:
                 error_msg = "Invalid Robot Framework arguments passed to nac-test"
                 logger.error(error_msg)
-                typer.echo(
-                    typer.style(
-                        f"Error: {error_msg}",
-                        fg=typer.colors.RED,
-                    )
-                )
                 return TestResults.from_error(error_msg, ErrorType.INVALID_ROBOT_ARGS)
             elif exit_code == EXIT_INTERRUPTED:
                 error_msg = "Robot Framework execution was interrupted"
                 logger.error(error_msg)
-                typer.echo(
-                    typer.style(
-                        f"⚠️  {error_msg}",
-                        fg=typer.colors.YELLOW,
-                    )
-                )
                 return TestResults.from_error(error_msg, ErrorType.INTERRUPTED)
             elif exit_code == EXIT_ERROR:
                 error_msg = "Robot Framework execution failed (fatal error, see logs)"
                 logger.error(error_msg)
-                typer.echo(
-                    typer.style(
-                        f"Error: {error_msg}",
-                        fg=typer.colors.RED,
-                    )
-                )
                 return TestResults.from_error(error_msg)
             typer.echo("✅ Robot Framework tests completed")
 

@@ -379,37 +379,31 @@ def main(
 
     typer.echo(f"\nTotal runtime: {runtime_str}")
 
-    # Handle render-only mode: check for template rendering errors
     if render_only:
         if stats.has_errors:
-            # Template rendering failed - show error and exit with error code
-            if stats.robot and stats.robot.has_error:
-                typer.echo(f"\n❌ Template rendering failed: {stats.robot.reason}")
+            reason = stats.robot.reason if stats.robot and stats.robot.reason else None
+            if reason:
+                typer.echo(f"\n❌ Template rendering failed: {reason}", err=True)
             else:
-                typer.echo("\n❌ Template rendering failed")
-            raise typer.Exit(EXIT_ERROR)
-        else:
-            typer.echo("\n✅ Templates rendered successfully (render-only mode)")
-            raise typer.Exit(0)
+                typer.echo("\n❌ Template rendering failed", err=True)
+            raise typer.Exit(stats.exit_code)
+        typer.echo("\n✅ Templates rendered successfully (render-only mode)")
+        raise typer.Exit(0)
 
-    # Use test statistics for exit code (CombinedResults.exit_code handles all cases)
     if stats.has_errors:
-        # Framework execution errors (not test failures) - prioritize over failures
         error_list = "; ".join(stats.errors)
+        typer.echo(f"\n❌ Execution errors: {error_list}", err=True)
+        raise typer.Exit(stats.exit_code)
+
+    if stats.has_failures:
         typer.echo(
-            f"\n❌ Execution errors occurred: {error_list}",
-            err=True,
+            f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests", err=True
         )
         raise typer.Exit(stats.exit_code)
-    elif stats.has_failures:
-        typer.echo(
-            f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests",
-            err=True,
-        )
-        raise typer.Exit(stats.exit_code)
-    elif stats.is_empty:
+
+    if stats.is_empty:
         typer.echo("\n⚠️  No tests were executed", err=True)
         raise typer.Exit(stats.exit_code)
-    else:
-        typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
-        raise typer.Exit(0)
+
+    typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
+    raise typer.Exit(0)
