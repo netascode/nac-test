@@ -185,6 +185,7 @@ class CombinedOrchestrator:
                 minimal_reports=self.minimal_reports,
                 custom_testbed_path=self.custom_testbed_path,
                 controller_type=self.controller_type,
+                dry_run=self.dry_run,
             )
             if self.max_parallel_devices is not None:
                 pyats_orchestrator.max_parallel_devices = self.max_parallel_devices

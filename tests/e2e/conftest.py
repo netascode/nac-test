@@ -114,6 +114,7 @@ def _run_e2e_scenario(
     sdwan_user_testbed: str | None,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
+    extra_cli_args: list[str] | None = None,
 ) -> E2EResults:
     """Execute an E2E scenario and return results.
 
@@ -125,6 +126,7 @@ def _run_e2e_scenario(
         sdwan_user_testbed: Path to the testbed YAML (None if not required).
         tmp_path_factory: Pytest temp path factory.
         class_mocker: Class-scoped monkeypatch.
+        extra_cli_args: Additional CLI arguments to pass (e.g., ["--dry-run"]).
 
     Returns:
         E2EResults containing all execution results.
@@ -156,6 +158,10 @@ def _run_e2e_scenario(
     # Add testbed argument only if scenario requires it (D2D tests)
     if scenario.requires_testbed and sdwan_user_testbed:
         cli_args.extend(["--testbed", sdwan_user_testbed])
+
+    # Add extra CLI arguments (e.g., --dry-run)
+    if extra_cli_args:
+        cli_args.extend(extra_cli_args)
 
     # Execute CLI
     runner = CliRunner()
@@ -310,4 +316,24 @@ def e2e_pyats_cc_results(
         sdwan_user_testbed,  # D2D tests need testbed
         tmp_path_factory,
         class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_dry_run_results(
+    mock_api_server: MockAPIServer,
+    sdwan_user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the dry-run scenario (mixed fixtures with --dry-run flag)."""
+    from tests.e2e.config import DRY_RUN_SCENARIO
+
+    return _run_e2e_scenario(
+        DRY_RUN_SCENARIO,
+        mock_api_server,
+        sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--dry-run"],
     )

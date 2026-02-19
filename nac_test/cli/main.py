@@ -157,7 +157,7 @@ DryRun = Annotated[
     bool,
     typer.Option(
         "--dry-run",
-        help="Dry run flag. See robot dry run mode.",
+        help="Dry run mode: validates test structure without execution.",
         envvar="NAC_TEST_DRY_RUN",
     ),
 ]

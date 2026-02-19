@@ -697,3 +697,120 @@ class TestE2EPyatsCc(E2ECombinedTestBase):
     def results(self, e2e_pyats_cc_results: E2EResults) -> E2EResults:
         """Provide PyATS Catalyst Center scenario results."""
         return e2e_pyats_cc_results
+
+
+# =============================================================================
+# DRY-RUN SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EDryRun:
+    """E2E tests for dry-run mode with mixed Robot + PyATS tests.
+
+    Dry-run mode validates test structure without executing tests:
+    - Robot: Uses Robot's --dryrun flag (validates syntax, reports as skipped)
+    - PyATS: Discovers and categorizes tests, prints what would run, exits early
+
+    Expected: CLI exits with code 0, no tests actually executed
+    """
+
+    @pytest.fixture
+    def results(self, e2e_dry_run_results: E2EResults) -> E2EResults:
+        """Provide dry-run scenario results."""
+        return e2e_dry_run_results
+
+    def test_cli_exit_code_is_zero(self, results: E2EResults) -> None:
+        """Dry-run should always exit 0 (no tests executed = no failures)."""
+        assert results.exit_code == 0, (
+            f"Expected exit code 0 for dry-run, got {results.exit_code}\n"
+            f"stdout: {results.stdout}"
+        )
+
+    def test_cli_has_no_exception(self, results: E2EResults) -> None:
+        """Verify CLI execution completed without unexpected exceptions."""
+        exception = results.cli_result.exception
+        if exception is not None:
+            assert isinstance(exception, SystemExit) and exception.code == 0, (
+                f"CLI raised unexpected exception: {type(exception).__name__}: {exception}"
+            )
+
+    def test_pyats_dry_run_header_in_output(self, results: E2EResults) -> None:
+        """Verify PyATS dry-run mode header is printed."""
+        assert "DRY-RUN MODE" in results.stdout, (
+            "Expected 'DRY-RUN MODE' header in stdout for PyATS dry-run"
+        )
+
+    def test_pyats_api_tests_listed(self, results: E2EResults) -> None:
+        """Verify PyATS API tests are listed in dry-run output."""
+        assert "API Tests" in results.stdout, (
+            "Expected 'API Tests' section in dry-run output"
+        )
+        assert "verify_sdwan_sync_fail.py" in results.stdout, (
+            "Expected API test file to be listed in dry-run output"
+        )
+
+    def test_pyats_d2d_tests_listed(self, results: E2EResults) -> None:
+        """Verify PyATS D2D tests are listed in dry-run output."""
+        assert "D2D/SSH Tests" in results.stdout, (
+            "Expected 'D2D/SSH Tests' section in dry-run output"
+        )
+        assert "verify_iosxe_control.py" in results.stdout, (
+            "Expected D2D test file to be listed in dry-run output"
+        )
+
+    def test_pyats_dry_run_complete_message(self, results: E2EResults) -> None:
+        """Verify PyATS dry-run completion message is printed."""
+        assert "PyATS dry-run complete" in results.stdout, (
+            "Expected 'PyATS dry-run complete' message in stdout"
+        )
+        assert "no tests executed" in results.stdout, (
+            "Expected 'no tests executed' message in stdout"
+        )
+
+    def test_output_directory_created(self, results: E2EResults) -> None:
+        """Verify output directory was created."""
+        assert results.output_dir.exists()
+        assert results.output_dir.is_dir()
+
+    def test_robot_results_directory_exists(self, results: E2EResults) -> None:
+        """Verify robot_results/ subdirectory was created (for dry-run output)."""
+        robot_dir = results.output_dir / ROBOT_RESULTS_DIRNAME
+        assert robot_dir.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/ directory"
+
+    def test_robot_output_xml_exists(self, results: E2EResults) -> None:
+        """Verify Robot output.xml exists (contains dry-run results)."""
+        output_xml = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
+        assert output_xml.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/output.xml"
+
+    def test_robot_tests_validated_not_executed(self, results: E2EResults) -> None:
+        """Verify Robot tests were validated (dry-run) but keywords not executed.
+
+        In Robot's --dryrun mode, tests pass if the structure is valid.
+        Keywords are not actually executed, but tests report as passed.
+        """
+        xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
+        parser = RobotResultParser(xml_path)
+        data = parser.parse()
+        stats = data["aggregated_stats"]
+
+        assert stats.passed == 2, (
+            f"Expected 2 passed Robot tests (dry-run validates structure), got {stats.passed}"
+        )
+        assert stats.failed == 0, f"Expected 0 failed Robot tests, got {stats.failed}"
+
+    def test_pyats_results_not_created(self, results: E2EResults) -> None:
+        """Verify PyATS results directory has no actual test results (dry-run skips execution)."""
+        pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
+        if pyats_dir.exists():
+            api_results = (
+                pyats_dir / "api" / HTML_REPORTS_DIRNAME / SUMMARY_REPORT_FILENAME
+            )
+            d2d_results = (
+                pyats_dir / "d2d" / HTML_REPORTS_DIRNAME / SUMMARY_REPORT_FILENAME
+            )
+            assert not api_results.exists(), (
+                "PyATS API results should not exist in dry-run mode"
+            )
+            assert not d2d_results.exists(), (
+                "PyATS D2D results should not exist in dry-run mode"
+            )
