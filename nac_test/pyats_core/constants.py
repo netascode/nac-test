@@ -5,6 +5,7 @@
 
 import os
 import platform
+import sys
 import tempfile
 
 from nac_test.core.constants import (
@@ -44,6 +45,9 @@ DEFAULT_BUFFER_LIMIT = 10 * 1024 * 1024  # 10MB - handles large PyATS output lin
 
 # Platform detection for macOS-specific behavior
 IS_MACOS: bool = platform.system() == "Darwin"
+
+# macOS requires Python 3.12+.
+IS_UNSUPPORTED_MACOS_PYTHON: bool = IS_MACOS and sys.version_info < (3, 12)
 
 # Sentinel-based IPC synchronization timeout (seconds)
 # Expected sync time: <100ms under normal conditions
@@ -98,6 +102,7 @@ __all__ = [
     "DEFAULT_BUFFER_LIMIT",
     # Platform detection, sentinel sync, and pipe drain configuration
     "IS_MACOS",
+    "IS_UNSUPPORTED_MACOS_PYTHON",
     "SENTINEL_TIMEOUT_SECONDS",
     "PIPE_DRAIN_DELAY_SECONDS",
     "PIPE_DRAIN_TIMEOUT_SECONDS",
