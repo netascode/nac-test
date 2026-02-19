@@ -36,7 +36,7 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("ACI_PASSWORD", "password")
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[untyped-decorator]
+            @aetest.test  # type: ignore[misc]
             def test_method(self) -> None:
                 pass
 
@@ -70,7 +70,7 @@ class TestBaseTestControllerDetection:
             monkeypatch.delenv(env_var, raising=False)
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[untyped-decorator]
+            @aetest.test  # type: ignore[misc]
             def test_method(self) -> None:
                 pass
 
@@ -94,7 +94,7 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("CONTROLLER_TYPE", "ACI")
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[untyped-decorator]
+            @aetest.test  # type: ignore[misc]
             def test_method(self) -> None:
                 pass
 
@@ -120,7 +120,7 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("CC_PASSWORD", "password")
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[untyped-decorator]
+            @aetest.test  # type: ignore[misc]
             def test_method(self) -> None:
                 pass
 

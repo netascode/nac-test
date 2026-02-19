@@ -29,7 +29,7 @@ class TestResultCollectorInitialization:
         )
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[untyped-decorator]
+            @aetest.test  # type: ignore[misc]
             def test_method(self) -> None:
                 pass
 

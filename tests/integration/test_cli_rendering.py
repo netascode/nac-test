@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 
 import pytest
-import yaml  # type: ignore
+import yaml
 from typer.testing import CliRunner
 
 import nac_test.cli.main

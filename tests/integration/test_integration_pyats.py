@@ -9,8 +9,11 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-import yaml  # type: ignore
-from typer.testing import CliRunner, Result
+import yaml
+from typer.testing import (  # type: ignore[attr-defined]
+    CliRunner,
+    Result,
+)
 
 import nac_test.cli.main
 from tests.integration.mocks.mock_server import MockAPIServer
