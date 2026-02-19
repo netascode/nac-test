@@ -530,7 +530,7 @@ class PyATSOrchestrator:
 
         return PyATSResults(api=api_results, d2d=d2d_results)
 
-    def _print_dry_run_summary_and_return_results(
+    def _print_dry_run_summary(
         self, api_tests: list[Path], d2d_tests: list[Path]
     ) -> PyATSResults:
         """Print dry-run summary showing tests that would be executed.
@@ -625,7 +625,7 @@ class PyATSOrchestrator:
 
         # Dry-run mode: print discovered tests and exit without execution
         if self.dry_run:
-            return self._print_dry_run_summary_and_return_results(api_tests, d2d_tests)
+            return self._print_dry_run_summary(api_tests, d2d_tests)
 
         print(f"Running with {self.max_workers} parallel workers")
 
