@@ -347,7 +347,7 @@ def test_merged_data_model_creates_custom_filename(tmp_path: Path) -> None:
 def test_render_only_without_controller_credentials(tmp_path: Path) -> None:
     """Render-only mode works without controller environment variables.
     All other tests in this module implicitly also test this, but this
-    is import enough that it warrants an explicit test.
+    is important enough that it warrants an explicit test.
     """
     data_file = tmp_path / "data.yaml"
     data_file.write_text("device: Router1\nip: 192.168.1.1")
