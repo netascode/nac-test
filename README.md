@@ -645,6 +645,48 @@ nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --loglevel INFO -
 
 See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#command-line-options) for all available options.
 
+## Exit Codes
+
+nac-test follows Robot Framework exit code conventions to provide meaningful feedback for CI/CD pipelines:
+
+| Exit Code | Meaning | Description |
+|-----------|---------|-------------|
+| **0** | Success | All tests passed, no errors |
+| **1-250** | Test failures | Number of failed tests (capped at 250) |
+| **252** | Invalid arguments or no tests found | Robot Framework invalid arguments or no tests executed |
+| **253** | Execution interrupted | Test execution was interrupted (Ctrl+C, etc.) |
+| **255** | Execution error | Framework crash or infrastructure error |
+
+### Examples
+
+```bash
+# All tests pass
+nac-test -d data/ -t templates/ -o output/
+echo $?  # Returns: 0
+
+# 3 tests fail
+nac-test -d data/ -t templates/ -o output/
+echo $?  # Returns: 3
+
+# Invalid Robot Framework option
+nac-test -d data/ -t templates/ -o output/ -- --invalid-option
+echo $?  # Returns: 252
+
+# User interrupts execution (Ctrl+C)
+nac-test -d data/ -t templates/ -o output/
+# User presses Ctrl+C during execution
+echo $?  # Returns: 253
+
+# Infrastructure error (missing credentials, etc.)
+nac-test -d data/ -t templates/ -o output/
+echo $?  # Returns: 255 (if controller credentials missing)
+```
+
+This graduated exit code system allows CI/CD systems to:
+- Distinguish between test failures and infrastructure problems
+- Get exact failure counts for reporting and alerting
+- Handle different error types appropriately in pipelines
+
 ## Troubleshooting
 
 If you're experiencing issues with nac-test (crashes, unexpected errors, test failures), use the `--diagnostic` flag to collect comprehensive diagnostic information.

@@ -7,8 +7,6 @@ import logging
 import sys
 from enum import Enum
 
-import errorhandler
-
 
 class VerbosityLevel(str, Enum):
     """Supported logging verbosity levels."""
@@ -20,14 +18,11 @@ class VerbosityLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
-def configure_logging(
-    level: str | VerbosityLevel, error_handler: errorhandler.ErrorHandler
-) -> None:
+def configure_logging(level: str | VerbosityLevel) -> None:
     """Configure logging for nac-test framework.
 
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        error_handler: Error handler instance to reset
     """
     # Map string levels to logging constants
     level_map = {
@@ -53,9 +48,6 @@ def configure_logging(
     handler.setFormatter(logging.Formatter("%(levelname)s - %(message)s"))
     logger.addHandler(handler)
     logger.setLevel(log_level)
-
-    # Reset error handler
-    error_handler.reset()
 
     logger.debug(
         "Logging configured with level: %s (numeric: %s)", level_str, log_level

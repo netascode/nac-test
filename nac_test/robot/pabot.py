@@ -33,7 +33,9 @@ def parse_and_validate_extra_args(extra_args: list[str]) -> list[str]:
             extra_args + ["__dummy__.robot"]
         )
     except DataError as e:
-        logger.error(f"Invalid Robot Framework arguments: {e}")
+        logger.warning(
+            f"Invalid Robot Framework arguments: {e}"
+        )  # Changed from error to warning - this is a handled condition
         raise
 
     # Check if datasources were provided in extra_args (excluding our dummy)

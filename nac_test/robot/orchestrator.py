@@ -176,17 +176,26 @@ class RobotOrchestrator:
             # Handle special exit codes
             if exit_code == 252:
                 error_msg = "Invalid Robot Framework arguments passed to nac-test"
-                logger.error(error_msg)
+                logger.error(error_msg)  # Restored to error - errorhandler removed
                 typer.echo(
                     typer.style(
                         f"Error: {error_msg}",
                         fg=typer.colors.RED,
                     )
                 )
-                raise RuntimeError(error_msg)
+                # Return error result with message that will be detected by exit_code()
+                return TestResults.from_error(error_msg)
             elif exit_code == 253:
-                typer.echo("⚠️  No Robot Framework tests found to execute")
-                return TestResults.empty()
+                error_msg = "Robot Framework execution was interrupted"
+                logger.error(error_msg)  # Restored to error - errorhandler removed
+                typer.echo(
+                    typer.style(
+                        f"⚠️  {error_msg}",
+                        fg=typer.colors.YELLOW,
+                    )
+                )
+                # Return error result with message that will be detected by exit_code()
+                return TestResults.from_error(error_msg)
             elif exit_code == 255:
                 error_msg = "Robot Framework execution failed (fatal error, see logs)"
                 logger.error(error_msg)

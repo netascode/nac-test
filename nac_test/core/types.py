@@ -136,23 +136,6 @@ class TestResults:
         """Check if tests were intentionally not run."""
         return self.state == ExecutionState.SKIPPED
 
-    @property
-    def exit_code(self) -> int:
-        """Calculate appropriate exit code per Robot Framework convention.
-
-        Exit codes:
-            0: All tests passed, no errors
-            1-250: Number of test failures (capped at 250)
-            255: Execution errors occurred (has_error is True)
-
-        This is not yet used, will be refined with #469
-        """
-        if self.has_error:
-            return 255
-        if self.has_failures:
-            return min(self.failed, 250)
-        return 0
-
     def __str__(self) -> str:
         """Concise string representation: total/passed/failed/skipped[/other]."""
         base = f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
@@ -255,6 +238,16 @@ class CombinedResults:
         return [r.reason for r in self._results if r.reason is not None]
 
     @property
+    def reasons(self) -> list[str]:
+        """All reasons (errors and other explanatory messages) across all frameworks."""
+        return [r.reason for r in self._results if r.reason is not None]
+
+    @property
+    def was_not_run(self) -> bool:
+        """Check if all frameworks were intentionally not run (e.g., render-only mode)."""
+        return bool(self._results) and all(r.was_not_run for r in self._results)
+
+    @property
     def success_rate(self) -> float:
         """Combined success rate excluding skipped tests (0.0-100.0)."""
         tests_with_results = self.total - self.skipped
@@ -282,14 +275,25 @@ class CombinedResults:
         """Calculate appropriate exit code per Robot Framework convention.
 
         Exit codes:
-            0: All tests passed, no errors
+            0: All tests passed, no errors OR all frameworks intentionally skipped
             1-250: Number of test failures (capped at 250)
+            252: No tests found/executed across any framework OR Robot Framework invalid arguments
+            253: Execution was interrupted (Ctrl+C, etc.)
             255: Execution errors occurred (has_errors is True)
-
-        This is not yet used, will be refined with #469
         """
         if self.has_errors:
+            # Check for Robot Framework specific error conditions (prioritize over other errors)
+            for reason in self.reasons:
+                if "Invalid Robot Framework arguments" in reason:
+                    return 252
+                if "execution was interrupted" in reason:
+                    return 253
             return 255
         if self.has_failures:
             return min(self.failed, 250)
+        # Check if all frameworks were intentionally skipped
+        if self.was_not_run:
+            return 0
+        if self.is_empty:
+            return 252
         return 0

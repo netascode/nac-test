@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-import errorhandler
 import typer
 
 import nac_test
@@ -20,8 +19,6 @@ from nac_test.utils.logging import VerbosityLevel, configure_logging
 app = typer.Typer(add_completion=False, pretty_exceptions_enable=DEBUG_MODE)
 
 logger = logging.getLogger(__name__)
-
-error_handler = errorhandler.ErrorHandler()
 
 
 def version_callback(value: bool) -> None:
@@ -282,7 +279,7 @@ def main(
     These are appended to the pabot invocation. Pabot-specific options and test
     files/directories are not supported and will result in an error.
     """
-    configure_logging(verbosity, error_handler)
+    configure_logging(verbosity)
 
     # Validate development flag combinations
     if pyats and robot:
@@ -345,6 +342,16 @@ def main(
 
     try:
         stats = orchestrator.run_tests()
+    except KeyboardInterrupt:
+        # Handle Ctrl+C interruption gracefully
+        typer.echo(
+            typer.style(
+                "\n⚠️  Test execution was interrupted by user (Ctrl+C)",
+                fg=typer.colors.YELLOW,
+            )
+        )
+        # Exit with code 253 following Robot Framework convention
+        raise typer.Exit(253) from None
     except Exception as e:
         # Ensure runtime is shown even if orchestrator fails
         typer.echo(f"Error during execution: {e}")
@@ -369,28 +376,24 @@ def main(
         typer.echo("\n✅ Templates rendered successfully (render-only mode)")
         raise typer.Exit(0)
 
-    # Use test statistics for exit code
-    # Also check error_handler for non-test errors
-    if error_handler.fired:
-        # Error handler caught a critical error during execution
-        raise typer.Exit(1)
-    elif stats.has_failures:
-        typer.echo(
-            f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests",
-            err=True,
-        )
-        raise typer.Exit(1)
-    elif stats.has_errors:
-        # Framework execution errors (not test failures)
+    # Use test statistics for exit code (CombinedResults.exit_code handles all cases)
+    if stats.has_errors:
+        # Framework execution errors (not test failures) - prioritize over failures
         error_list = "; ".join(stats.errors)
         typer.echo(
             f"\n❌ Execution errors occurred: {error_list}",
             err=True,
         )
-        raise typer.Exit(1)
+        raise typer.Exit(stats.exit_code)
+    elif stats.has_failures:
+        typer.echo(
+            f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests",
+            err=True,
+        )
+        raise typer.Exit(stats.exit_code)
     elif stats.is_empty:
         typer.echo("\n⚠️  No tests were executed", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(stats.exit_code)
     else:
         typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
         raise typer.Exit(0)
