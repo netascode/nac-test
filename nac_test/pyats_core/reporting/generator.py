@@ -26,7 +26,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import aiofiles  # type: ignore[import-untyped]
+import aiofiles
 
 from nac_test.pyats_core.reporting.templates import get_jinja_environment
 from nac_test.pyats_core.reporting.types import ResultStatus

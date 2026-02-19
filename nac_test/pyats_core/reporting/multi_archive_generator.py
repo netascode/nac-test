@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-import aiofiles  # type: ignore[import-untyped]
+import aiofiles
 
 from nac_test.pyats_core.reporting.generator import ReportGenerator
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
