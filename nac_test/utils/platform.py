@@ -27,7 +27,7 @@ def check_and_exit_if_unsupported_macos_python() -> None:
         typer.echo(
             "Please use Python 3.12 or higher on macOS.\n"
             "\n"
-            "You can upgrade using:\n"
+            "Some common ways to install it:\n"
             "  • brew install python@3.12\n"
             "  • uv python install 3.12\n"
             "  • pyenv install 3.12",
