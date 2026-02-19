@@ -3,7 +3,6 @@
 
 """Unit tests for CombinedOrchestrator controller detection integration."""
 
-import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -18,14 +17,8 @@ class TestCombinedOrchestratorController:
     """Tests for CombinedOrchestrator controller detection."""
 
     @pytest.fixture(autouse=True)
-    def clean_controller_env(self, monkeypatch: MonkeyPatch) -> None:
-        """Clear all controller-related environment variables before each test."""
-        for key in list(os.environ.keys()):
-            if any(
-                prefix in key
-                for prefix in ["ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_"]
-            ):
-                monkeypatch.delenv(key, raising=False)
+    def _clean_env(self, clean_controller_env: None) -> None:
+        """Apply shared clean_controller_env fixture to all tests in this class."""
 
     def test_combined_orchestrator_detects_controller_on_init(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
@@ -122,8 +115,12 @@ class TestCombinedOrchestratorController:
             mock_instance = MagicMock()
             mock_pyats.return_value = mock_instance
 
-            # Mock typer functions
-            with patch("typer.secho"), patch("typer.echo"):
+            # Mock typer functions and version check (we're testing controller detection, not version)
+            with (
+                patch("typer.secho"),
+                patch("typer.echo"),
+                patch.object(CombinedOrchestrator, "_check_python_version"),
+            ):
                 # Run tests
                 orchestrator.run_tests()
 
@@ -193,8 +190,11 @@ class TestCombinedOrchestratorController:
                 )
                 mock_discovery.return_value = mock_discovery_instance
 
-                # Mock typer functions
-                with patch("typer.echo"):
+                # Mock typer functions and version check (we're testing controller detection, not version)
+                with (
+                    patch("typer.echo"),
+                    patch.object(CombinedOrchestrator, "_check_python_version"),
+                ):
                     # Run tests
                     orchestrator.run_tests()
 
