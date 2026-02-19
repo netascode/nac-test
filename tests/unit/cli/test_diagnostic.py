@@ -14,7 +14,7 @@ from nac_test.cli.diagnostic import (
     _reconstruct_command,
     diagnostic_callback,
 )
-from nac_test.core.constants import EXIT_ERROR
+from nac_test.core.constants import EXIT_INVALID_ARGS
 
 
 class TestExtractOutputDir:
@@ -120,7 +120,7 @@ class TestDiagnosticCallback:
         with patch("nac_test.cli.diagnostic.sys.argv", ["nac-test", "-d", "./data"]):
             with pytest.raises(typer.Exit) as exc_info:
                 diagnostic_callback(True)
-            assert exc_info.value.exit_code == EXIT_ERROR
+            assert exc_info.value.exit_code == EXIT_INVALID_ARGS
 
     @patch("nac_test.cli.diagnostic.subprocess.run")
     def test_true_with_output_dir_runs_script(self, mock_run: MagicMock) -> None:

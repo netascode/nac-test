@@ -19,7 +19,7 @@ import typer
 from nac_test.core.constants import (
     EXIT_ERROR,
     EXIT_INTERRUPTED,
-    EXIT_INVALID_ARGS,
+    EXIT_INVALID_ROBOT_ARGS,
     ROBOT_RESULTS_DIRNAME,
 )
 from nac_test.core.types import TestResults
@@ -179,7 +179,7 @@ class RobotOrchestrator:
                 extra_args=self.extra_args,
             )
             # Handle special exit codes
-            if exit_code == EXIT_INVALID_ARGS:
+            if exit_code == EXIT_INVALID_ROBOT_ARGS:
                 error_msg = "Invalid Robot Framework arguments passed to nac-test"
                 logger.error(error_msg)  # Restored to error - errorhandler removed
                 typer.echo(

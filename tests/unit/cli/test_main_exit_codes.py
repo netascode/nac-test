@@ -13,6 +13,7 @@ from nac_test.core.constants import (
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
     EXIT_INVALID_ARGS,
+    EXIT_INVALID_ROBOT_ARGS,
 )
 from nac_test.core.types import CombinedResults, TestResults
 
@@ -96,7 +97,7 @@ class TestMainExitCodes:
 
         result = self._run_cli_with_temp_dirs()
 
-        assert result.exit_code == EXIT_INVALID_ARGS
+        assert result.exit_code == EXIT_INVALID_ROBOT_ARGS
 
     @patch("nac_test.cli.main.CombinedOrchestrator")
     def test_exit_code_252_for_empty_results(self, mock_orchestrator_cls: Mock) -> None:
@@ -109,7 +110,7 @@ class TestMainExitCodes:
 
         result = self._run_cli_with_temp_dirs()
 
-        assert result.exit_code == EXIT_INVALID_ARGS
+        assert result.exit_code == EXIT_INVALID_ROBOT_ARGS
 
     @patch("nac_test.cli.main.CombinedOrchestrator")
     def test_priority_errors_over_failures(self, mock_orchestrator_cls: Mock) -> None:
@@ -147,7 +148,7 @@ class TestMainExitCodes:
         result = self._run_cli_with_temp_dirs()
 
         # Should return 252 (Robot invalid args) not 255 (generic error)
-        assert result.exit_code == EXIT_INVALID_ARGS
+        assert result.exit_code == EXIT_INVALID_ROBOT_ARGS
 
     @patch("nac_test.cli.main.CombinedOrchestrator")
     def test_failure_count_capped_at_250(self, mock_orchestrator_cls: Mock) -> None:
@@ -163,8 +164,8 @@ class TestMainExitCodes:
         # Should be capped at EXIT_FAILURE_CAP
         assert result.exit_code == EXIT_FAILURE_CAP
 
-    def test_invalid_flag_combination_exits_1(self) -> None:
-        """Test that invalid flag combinations exit with code 1."""
+    def test_invalid_flag_combination_exits_2(self) -> None:
+        """Test that invalid flag combinations exit with code 2."""
         result = self._run_cli_with_temp_dirs(["--pyats", "--robot"])
 
-        assert result.exit_code == EXIT_ERROR
+        assert result.exit_code == EXIT_INVALID_ARGS

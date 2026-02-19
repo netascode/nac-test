@@ -14,7 +14,7 @@ from nac_test.core.constants import (
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
-    EXIT_INVALID_ARGS,
+    EXIT_INVALID_ROBOT_ARGS,
 )
 from nac_test.core.types import (
     CombinedResults,
@@ -337,7 +337,7 @@ class TestCombinedResultsExitCode:
     def test_exit_code_252_for_empty(self) -> None:
         """Exit code 252 when no results across any framework."""
         result = CombinedResults()
-        assert result.exit_code == EXIT_INVALID_ARGS
+        assert result.exit_code == EXIT_INVALID_ROBOT_ARGS
 
     def test_was_not_run_true_when_all_skipped(self) -> None:
         """was_not_run is True when all frameworks were intentionally skipped."""

@@ -11,7 +11,7 @@ from nac_test.core.constants import (
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
-    EXIT_INVALID_ARGS,
+    EXIT_INVALID_ROBOT_ARGS,
 )
 
 
@@ -292,7 +292,7 @@ class CombinedResults:
             # Check for Robot Framework specific error conditions (prioritize over other errors)
             for reason in self.reasons:
                 if "Invalid Robot Framework arguments" in reason:
-                    return EXIT_INVALID_ARGS
+                    return EXIT_INVALID_ROBOT_ARGS
                 if "execution was interrupted" in reason:
                     return EXIT_INTERRUPTED
             return EXIT_ERROR
@@ -302,5 +302,5 @@ class CombinedResults:
         if self.was_not_run:
             return 0
         if self.is_empty:
-            return EXIT_INVALID_ARGS
+            return EXIT_INVALID_ROBOT_ARGS
         return 0

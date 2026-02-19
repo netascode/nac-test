@@ -14,6 +14,7 @@ from nac_test.core.constants import (
     DEBUG_MODE,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
+    EXIT_INVALID_ARGS,
 )
 from nac_test.data_merger import DataMerger
 from nac_test.utils.logging import VerbosityLevel, configure_logging
@@ -296,7 +297,7 @@ def main(
         typer.echo(
             "Use one development flag at a time, or neither for combined execution."
         )
-        raise typer.Exit(EXIT_ERROR)
+        raise typer.Exit(EXIT_INVALID_ARGS)
 
     # Create output directory and shared merged data file (SOT)
     output.mkdir(parents=True, exist_ok=True)
