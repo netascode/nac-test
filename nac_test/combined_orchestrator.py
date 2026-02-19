@@ -14,6 +14,7 @@ import typer
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     DEBUG_MODE,
+    EXIT_ERROR,
     HTML_REPORTS_DIRNAME,
     PYATS_RESULTS_DIRNAME,
     ROBOT_RESULTS_DIRNAME,
@@ -127,8 +128,8 @@ class CombinedOrchestrator:
             )
             # Progressive disclosure: clean output for customers, full context for developers
             if DEBUG_MODE:
-                raise typer.Exit(1) from e  # Developer: full exception context
-            raise typer.Exit(1) from None  # Customer: clean output
+                raise typer.Exit(EXIT_ERROR) from e  # Developer: full exception context
+            raise typer.Exit(EXIT_ERROR) from None  # Customer: clean output
 
     def run_tests(self) -> CombinedResults:
         """Main entry point for combined test execution.
@@ -216,20 +217,25 @@ class CombinedOrchestrator:
                 robot_results = robot_orchestrator.run_tests()
                 combined_results.robot = robot_results
             except Exception as e:
-                # In render-only mode, propagate exceptions immediately
-                if self.render_only:
-                    raise
+                # Convert all Robot orchestrator failures to proper TestResults objects
+                # This provides better error reporting and consistent exit code handling
+                error_msg = f"Robot Framework execution failed: {e}"
+                logger.error(error_msg, exc_info=True)
 
-                # Robot orchestrator failed (e.g., invalid arguments, execution errors)
-                logger.error(f"Robot Framework execution failed: {e}", exc_info=True)
-                typer.echo(
-                    typer.style(
-                        f"⚠️  Robot Framework tests skipped due to error: {e}",
-                        fg=typer.colors.YELLOW,
+                # In render-only mode, provide specific context about template rendering
+                if self.render_only:
+                    # For render-only mode, store the raw error for main.py to format
+                    logger.error(f"Template rendering failed: {e}")
+                    combined_results.robot = TestResults.from_error(str(e))
+                else:
+                    typer.echo(
+                        typer.style(
+                            f"⚠️  Robot Framework tests skipped due to error: {e}",
+                            fg=typer.colors.YELLOW,
+                        )
                     )
-                )
-                # Record error in robot results
-                combined_results.robot = TestResults.from_error(str(e))
+                    # Always create proper TestResults object instead of propagating exceptions
+                    combined_results.robot = TestResults.from_error(error_msg)
 
         # Generate combined dashboard and print summary (unless render_only mode)
         if not self.render_only:

@@ -12,6 +12,7 @@ import typer
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
+from nac_test.core.constants import EXIT_ERROR
 from nac_test.core.types import PyATSResults
 
 
@@ -79,7 +80,7 @@ class TestCombinedOrchestratorController:
                 )
 
             # Exit code should be 1
-            assert exc_info.value.exit_code == 1
+            assert exc_info.value.exit_code == EXIT_ERROR
 
     def test_combined_orchestrator_passes_controller_to_pyats(
         self, tmp_path: Path, monkeypatch: MonkeyPatch

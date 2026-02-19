@@ -10,6 +10,12 @@ dataclass handles it automatically.
 
 import pytest
 
+from nac_test.core.constants import (
+    EXIT_ERROR,
+    EXIT_FAILURE_CAP,
+    EXIT_INTERRUPTED,
+    EXIT_INVALID_ARGS,
+)
 from nac_test.core.types import (
     CombinedResults,
     ExecutionState,
@@ -318,7 +324,7 @@ class TestCombinedResultsExitCode:
             api=TestResults(passed=0, failed=150),
             robot=TestResults(passed=0, failed=150),
         )
-        assert result.exit_code == 250
+        assert result.exit_code == EXIT_FAILURE_CAP
 
     def test_exit_code_error_priority_over_failures(self) -> None:
         """Exit code 255 when any framework has error, regardless of failures."""
@@ -326,12 +332,12 @@ class TestCombinedResultsExitCode:
             api=TestResults(passed=0, failed=100),
             robot=TestResults.from_error("crash"),
         )
-        assert result.exit_code == 255
+        assert result.exit_code == EXIT_ERROR
 
     def test_exit_code_252_for_empty(self) -> None:
         """Exit code 252 when no results across any framework."""
         result = CombinedResults()
-        assert result.exit_code == 252
+        assert result.exit_code == EXIT_INVALID_ARGS
 
     def test_was_not_run_true_when_all_skipped(self) -> None:
         """was_not_run is True when all frameworks were intentionally skipped."""
@@ -371,7 +377,7 @@ class TestCombinedResultsExitCode:
         result = CombinedResults(
             robot=TestResults.from_error("Robot Framework execution was interrupted")
         )
-        assert result.exit_code == 253
+        assert result.exit_code == EXIT_INTERRUPTED
 
     def test_exit_code_priority_interrupted_over_other_errors(self) -> None:
         """Exit code 253 (interrupted) is prioritized over generic errors (255)."""
@@ -379,7 +385,7 @@ class TestCombinedResultsExitCode:
             robot=TestResults.from_error("Robot Framework execution was interrupted"),
             api=TestResults.from_error("API execution failed"),  # Generic error
         )
-        assert result.exit_code == 253
+        assert result.exit_code == EXIT_INTERRUPTED
 
 
 class TestCombinedResultsStateChecks:

@@ -10,7 +10,11 @@ import typer
 import nac_test
 from nac_test.cli.diagnostic import diagnostic_callback
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.core.constants import DEBUG_MODE
+from nac_test.core.constants import (
+    DEBUG_MODE,
+    EXIT_ERROR,
+    EXIT_INTERRUPTED,
+)
 from nac_test.data_merger import DataMerger
 from nac_test.utils.logging import VerbosityLevel, configure_logging
 
@@ -292,7 +296,7 @@ def main(
         typer.echo(
             "Use one development flag at a time, or neither for combined execution."
         )
-        raise typer.Exit(1)
+        raise typer.Exit(EXIT_ERROR)
 
     # Create output directory and shared merged data file (SOT)
     output.mkdir(parents=True, exist_ok=True)
@@ -351,11 +355,14 @@ def main(
             )
         )
         # Exit with code 253 following Robot Framework convention
-        raise typer.Exit(253) from None
+        raise typer.Exit(EXIT_INTERRUPTED) from None
     except Exception as e:
-        # Ensure runtime is shown even if orchestrator fails
+        # Infrastructure errors (template rendering, controller detection, etc.)
         typer.echo(f"Error during execution: {e}")
-        raise
+        # Progressive disclosure: clean output for customers, full context for developers
+        if DEBUG_MODE:
+            raise typer.Exit(EXIT_ERROR) from e  # Developer: full exception context
+        raise typer.Exit(EXIT_ERROR) from None  # Customer: clean output
 
     # Display total runtime before exit
     runtime_end = datetime.now()
@@ -371,10 +378,18 @@ def main(
 
     typer.echo(f"\nTotal runtime: {runtime_str}")
 
-    # Handle render-only mode: exit 0 if no exceptions occurred
+    # Handle render-only mode: check for template rendering errors
     if render_only:
-        typer.echo("\n✅ Templates rendered successfully (render-only mode)")
-        raise typer.Exit(0)
+        if stats.has_errors:
+            # Template rendering failed - show error and exit with error code
+            if stats.robot and stats.robot.has_error:
+                typer.echo(f"\n❌ Template rendering failed: {stats.robot.reason}")
+            else:
+                typer.echo("\n❌ Template rendering failed")
+            raise typer.Exit(EXIT_ERROR)
+        else:
+            typer.echo("\n✅ Templates rendered successfully (render-only mode)")
+            raise typer.Exit(0)
 
     # Use test statistics for exit code (CombinedResults.exit_code handles all cases)
     if stats.has_errors:

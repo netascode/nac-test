@@ -7,6 +7,13 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import cached_property
 
+from nac_test.core.constants import (
+    EXIT_ERROR,
+    EXIT_FAILURE_CAP,
+    EXIT_INTERRUPTED,
+    EXIT_INVALID_ARGS,
+)
+
 
 class ExecutionState(str, Enum):
     """Execution state for test results.
@@ -285,15 +292,15 @@ class CombinedResults:
             # Check for Robot Framework specific error conditions (prioritize over other errors)
             for reason in self.reasons:
                 if "Invalid Robot Framework arguments" in reason:
-                    return 252
+                    return EXIT_INVALID_ARGS
                 if "execution was interrupted" in reason:
-                    return 253
-            return 255
+                    return EXIT_INTERRUPTED
+            return EXIT_ERROR
         if self.has_failures:
-            return min(self.failed, 250)
+            return min(self.failed, EXIT_FAILURE_CAP)
         # Check if all frameworks were intentionally skipped
         if self.was_not_run:
             return 0
         if self.is_empty:
-            return 252
+            return EXIT_INVALID_ARGS
         return 0

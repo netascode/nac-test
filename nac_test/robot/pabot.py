@@ -8,6 +8,8 @@ import pabot.pabot
 from pabot.arguments import parse_args
 from robot.errors import DataError
 
+from nac_test.core.constants import EXIT_INVALID_ARGS
+
 logger = logging.getLogger(__name__)
 
 
@@ -125,7 +127,7 @@ def run_pabot(
         try:
             validated_extra_args = parse_and_validate_extra_args(extra_args)
         except (ValueError, DataError):
-            return 252
+            return EXIT_INVALID_ARGS
         robot_args.extend(validated_extra_args)
 
     args = pabot_args + robot_args + [str(path)]
