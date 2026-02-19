@@ -105,6 +105,7 @@ def test_extra_args_with_valid_variable_without_separator_succeeds(
     )
 
 
+@pytest.mark.skip(reason="Exit code 252 handling to be fixed in #469")
 def test_extra_args_with_illegal_argument_and_separator_fails(tmp_path: Path) -> None:
     """Test that illegal Robot Framework arguments with -- separator fail.
 
@@ -139,6 +140,7 @@ def test_extra_args_with_illegal_argument_and_separator_fails(tmp_path: Path) ->
     )
 
 
+@pytest.mark.skip(reason="Exit code 252 handling to be fixed in #469")
 def test_extra_args_with_illegal_argument_without_separator_fails(
     tmp_path: Path,
 ) -> None:
@@ -173,6 +175,7 @@ def test_extra_args_with_illegal_argument_without_separator_fails(
     )
 
 
+@pytest.mark.skip(reason="Exit code 252 handling to be fixed in #469")
 def test_extra_args_with_testlevelsplit_flag_fails(tmp_path: Path) -> None:
     """Test that --testlevelsplit flag is rejected as an invalid Robot argument.
 

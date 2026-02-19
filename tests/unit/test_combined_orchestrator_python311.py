@@ -71,6 +71,9 @@ class TestOrchestratorUnsupportedPythonExit:
             patch("nac_test.utils.platform.IS_UNSUPPORTED_MACOS_PYTHON", True),
             patch("nac_test.utils.platform.typer.secho"),
             patch("nac_test.utils.platform.typer.echo"),
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
         ):
             with pytest.raises(typer.Exit) as exc_info:
                 orchestrator.run_tests()

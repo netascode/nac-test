@@ -52,7 +52,63 @@
 
         header h1 {
             color: white;
+            margin-bottom: 5px;
+        }
+
+        /* Report type subtitle styles */
+        .report-type-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 20px;
+            font-weight: 400;
             margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .header-content {
+            position: relative;
+        }
+
+        .nav-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        @media (max-width: 768px) {
+            .nav-button {
+                position: static;
+                margin-bottom: 20px;
+                display: inline-flex;
+            }
+        }
+
+        .date-info {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            margin-top: 10px;
         }
 
         .card {
@@ -160,7 +216,7 @@
             border-radius: 10px;
             height: 10px;
             background: linear-gradient(to right, var(--success), var(--accent));
-            width: {{ success_rate }}%;
+            width: {{ stats.success_rate }}%;
         }
 
         /* Result table styles */
@@ -377,8 +433,19 @@
 <body>
     <header>
         <div class="container">
-            <h1>Network as Code Test Results Summary</h1>
-            <div class="date-info">Generated on {{ generation_time }}</div>
+            <div class="header-content">
+                <a href="{{ breadcrumb_link | default('../../combined_summary.html') }}" class="nav-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                    Back to Combined Dashboard
+                </a>
+                <h1>Network as Code Test Results Summary</h1>
+                {% if report_type %}
+                <div class="report-type-subtitle">{{ report_type }}</div>
+                {% endif %}
+                <div class="date-info">Generated on {{ generation_time }}</div>
+            </div>
         </div>
     </header>
 
@@ -388,7 +455,7 @@
             <div class="summary-grid">
                 <div class="summary-item total">
                     <p>Total Tests</p>
-                    <h3>{{ total_tests }}</h3>
+                    <h3>{{ stats.total }}</h3>
                 </div>
                 <div class="summary-item passed"
                      role="button"
@@ -396,7 +463,7 @@
                      aria-label="Filter by passed tests"
                      data-filter="passed">
                     <p>Passed</p>
-                    <h3>{{ passed_tests }}</h3>
+                    <h3>{{ stats.passed }}</h3>
                 </div>
                 <div class="summary-item failed"
                      role="button"
@@ -404,7 +471,7 @@
                      aria-label="Filter by failed tests"
                      data-filter="failed">
                     <p>Failed</p>
-                    <h3>{{ failed_tests }}</h3>
+                    <h3>{{ stats.failed }}</h3>
                 </div>
                 <div class="summary-item skipped"
                      role="button"
@@ -412,11 +479,11 @@
                      aria-label="Filter by skipped tests"
                      data-filter="skipped">
                     <p>Skipped</p>
-                    <h3>{{ skipped_tests }}</h3>
+                    <h3>{{ stats.skipped }}</h3>
                 </div>
                 <div class="summary-item rate">
                     <p>Success Rate</p>
-                    <h3>{{ "%.1f"|format(success_rate) }}%</h3>
+                    <h3>{{ "%.1f"|format(stats.success_rate) }}%</h3>
                     <div class="progress-container">
                         <div class="progress-bar"></div>
                     </div>
