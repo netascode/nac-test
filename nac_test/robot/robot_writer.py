@@ -13,13 +13,13 @@ import sys
 from pathlib import Path
 from typing import Any, cast
 
-from jinja2 import (  # type: ignore
+from jinja2 import (
     ChainableUndefined,
     Environment,
     FileSystemLoader,
     Undefined,
 )
-from robot.api import SuiteVisitor, TestSuite  # type: ignore
+from robot.api import SuiteVisitor, TestSuite
 from robot.utils import is_truthy
 
 from nac_test.data_merger import DataMerger
@@ -28,13 +28,17 @@ logger = logging.getLogger(__name__)
 
 
 class StrictChainableUndefined(ChainableUndefined):
-    __iter__ = __str__ = __len__ = Undefined._fail_with_undefined_error  # type: ignore
-    __eq__ = __ne__ = __bool__ = __hash__ = Undefined._fail_with_undefined_error  # type: ignore
-    __contains__ = Undefined._fail_with_undefined_error  # type: ignore
+    __iter__ = __str__ = __len__ = Undefined._fail_with_undefined_error
+    __eq__ = __ne__ = __bool__ = __hash__ = Undefined._fail_with_undefined_error
+    __contains__ = Undefined._fail_with_undefined_error
 
 
-class TestCollector(SuiteVisitor):
-    """Visitor to collect test or suite names to construct the pabot ordering file."""
+class TestCollector(SuiteVisitor):  # type: ignore[misc]
+    """Visitor to collect test or suite names to construct the pabot ordering file.
+
+    Note: SuiteVisitor from robot.api has type 'Any' in the type stubs,
+    so we use type: ignore[misc] to allow subclassing it.
+    """
 
     def __init__(self, full_suite_name: str) -> None:
         self.test_names: list[str] = []
