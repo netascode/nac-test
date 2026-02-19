@@ -27,8 +27,8 @@ from typing import (
 )
 
 import httpx
-import markdown  # type: ignore[import-untyped]
-import yaml  # type: ignore[import-untyped]
+import markdown
+import yaml
 from pyats import aetest
 
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
@@ -76,6 +76,13 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         "ERRORED": ResultStatus.ERRORED,
         "INFO": ResultStatus.INFO,
     }
+
+    # Defaults resolution configuration (architectures opt-in by setting DEFAULTS_PREFIX)
+    DEFAULTS_PREFIX: str | None = None  # Subclasses override, e.g., "defaults.apic"
+    DEFAULTS_MISSING_ERROR: str = (
+        "Defaults block not found in data model. "
+        "Ensure the defaults file is passed to nac-test."
+    )
 
     # def __init_subclass__(cls, **kwargs):
     #     """Enforce required class variables in subclasses.
@@ -176,7 +183,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         return html
 
-    @aetest.setup  # type: ignore[untyped-decorator]
+    @aetest.setup  # type: ignore[misc]
     def setup(self) -> None:
         """Common setup for all tests"""
         # Configure test-specific logger
@@ -806,6 +813,73 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         with open(data_file) as f:
             data = yaml.safe_load(f)
             return data if isinstance(data, dict) else {}
+
+    def get_default_value(
+        self,
+        *default_paths: str,
+        required: bool = True,
+    ) -> Any | None:
+        """Read default value(s) from defaults block with cascade/fallback support.
+
+        This method allows test classes to read default configuration values from
+        the merged NAC data model. It supports cascade behavior - when multiple
+        paths are provided, the first non-None value found is returned.
+
+        Note:
+            Architectures must set the DEFAULTS_PREFIX class attribute to enable
+            this feature. If DEFAULTS_PREFIX is None, calling this method raises
+            NotImplementedError.
+
+        Args:
+            *default_paths: One or more JMESPaths relative to DEFAULTS_PREFIX.
+                Single path: self.get_default_value("tenants.l3outs.nodes.pod")
+                Cascade: self.get_default_value("path1", "path2", "path3")
+            required: If True (default), raises ValueError when no value found.
+                If False, returns None when no value found.
+
+        Returns:
+            The first non-None default value found from the provided paths.
+            Returns None only if required=False and no value exists.
+
+        Raises:
+            NotImplementedError: If DEFAULTS_PREFIX is None (architecture doesn't
+                support defaults resolution).
+            TypeError: If no paths are provided.
+            ValueError: If defaults block is missing or required value not found.
+
+        Example:
+            class APICTestBase(NACTestBase):
+                DEFAULTS_PREFIX = "defaults.apic"
+                DEFAULTS_MISSING_ERROR = "ACI defaults file required..."
+
+            class VerifyBGPPeers(APICTestBase):
+                def get_items_to_verify(self):
+                    # Single path lookup
+                    default_pod = self.get_default_value("tenants.l3outs.nodes.pod")
+
+                    # Cascade - returns first found
+                    default_admin_state = self.get_default_value(
+                        "tenants.l3outs.bgp_peers.admin_state",
+                        "tenants.bgp_peers.admin_state",
+                    )
+        """
+        if self.DEFAULTS_PREFIX is None:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} does not support defaults resolution. "
+                f"Set DEFAULTS_PREFIX class attribute to enable this feature."
+            )
+
+        from nac_test.pyats_core.common.defaults_resolver import (
+            get_default_value as _resolve,
+        )
+
+        return _resolve(
+            self.data_model,
+            *default_paths,
+            defaults_prefix=self.DEFAULTS_PREFIX,
+            missing_error=self.DEFAULTS_MISSING_ERROR,
+            required=required,
+        )
 
     # =========================================================================
     # API-SPECIFIC METHODS (for API/HTTP-based tests)
@@ -2413,7 +2487,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             test_context=context.get("api_context"),
         )
 
-    @aetest.cleanup  # type: ignore[untyped-decorator]
+    @aetest.cleanup  # type: ignore[misc]
     def cleanup(self) -> None:
         """Clean up test resources and save test results.
 
