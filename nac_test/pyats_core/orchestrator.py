@@ -532,7 +532,7 @@ class PyATSOrchestrator:
 
     def _print_dry_run_summary(
         self, api_tests: list[Path], d2d_tests: list[Path]
-    ) -> PyATSResults:
+    ) -> None:
         """Print dry-run summary showing tests that would be executed.
 
         Args:
@@ -540,7 +540,7 @@ class PyATSOrchestrator:
             d2d_tests: List of discovered D2D test files
 
         Returns:
-            PyATSResults with not_run status for both API and D2D
+            None
         """
         print("\n" + "=" * 70)
         print("🔍 DRY-RUN MODE: Showing tests that would be executed")
@@ -561,10 +561,6 @@ class PyATSOrchestrator:
         print("\n" + "=" * 70)
         print("✅ PyATS dry-run complete (no tests executed)")
         print("=" * 70 + "\n")
-
-        api_result = TestResults.not_run("dry-run mode") if api_tests else None
-        d2d_result = TestResults.not_run("dry-run mode") if d2d_tests else None
-        return PyATSResults(api=api_result, d2d=d2d_result)
 
     def run_tests(self) -> PyATSResults:
         """Main entry point - triggers the async execution flow.
@@ -623,9 +619,12 @@ class PyATSOrchestrator:
             print(terminal.error(str(e)))
             raise
 
-        # Dry-run mode: print discovered tests and exit without execution
+        # Dry-run mode: print discovered tests and return results without further execution
         if self.dry_run:
-            return self._print_dry_run_summary(api_tests, d2d_tests)
+            self._print_dry_run_summary(api_tests, d2d_tests)
+            api_result = TestResults.not_run("dry-run mode") if api_tests else None
+            d2d_result = TestResults.not_run("dry-run mode") if d2d_tests else None
+            return PyATSResults(api=api_result, d2d=d2d_result)
 
         print(f"Running with {self.max_workers} parallel workers")
 
