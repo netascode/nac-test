@@ -22,7 +22,7 @@ from nac_test.core.constants import (
     EXIT_INVALID_ROBOT_ARGS,
     ROBOT_RESULTS_DIRNAME,
 )
-from nac_test.core.types import TestResults
+from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
@@ -181,26 +181,24 @@ class RobotOrchestrator:
             # Handle special exit codes
             if exit_code == EXIT_INVALID_ROBOT_ARGS:
                 error_msg = "Invalid Robot Framework arguments passed to nac-test"
-                logger.error(error_msg)  # Restored to error - errorhandler removed
+                logger.error(error_msg)
                 typer.echo(
                     typer.style(
                         f"Error: {error_msg}",
                         fg=typer.colors.RED,
                     )
                 )
-                # Return error result with message that will be detected by exit_code()
-                return TestResults.from_error(error_msg)
+                return TestResults.from_error(error_msg, ErrorType.INVALID_ROBOT_ARGS)
             elif exit_code == EXIT_INTERRUPTED:
                 error_msg = "Robot Framework execution was interrupted"
-                logger.error(error_msg)  # Restored to error - errorhandler removed
+                logger.error(error_msg)
                 typer.echo(
                     typer.style(
                         f"⚠️  {error_msg}",
                         fg=typer.colors.YELLOW,
                     )
                 )
-                # Return error result with message that will be detected by exit_code()
-                return TestResults.from_error(error_msg)
+                return TestResults.from_error(error_msg, ErrorType.INTERRUPTED)
             elif exit_code == EXIT_ERROR:
                 error_msg = "Robot Framework execution failed (fatal error, see logs)"
                 logger.error(error_msg)

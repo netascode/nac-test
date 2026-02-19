@@ -31,6 +31,25 @@ class ExecutionState(str, Enum):
     ERROR = "error"
 
 
+class ErrorType(Enum):
+    """Categorized error types for exit code determination.
+
+    Used by TestResults.from_error() to indicate specific error conditions
+    that map to different exit codes in CombinedResults.exit_code.
+    """
+
+    GENERIC = "generic"
+    INVALID_ROBOT_ARGS = "invalid_robot_args"
+    INTERRUPTED = "interrupted"
+
+
+ERROR_TYPE_EXIT_CODES: dict[ErrorType, int] = {
+    ErrorType.INVALID_ROBOT_ARGS: EXIT_INVALID_ROBOT_ARGS,
+    ErrorType.INTERRUPTED: EXIT_INTERRUPTED,
+    ErrorType.GENERIC: EXIT_ERROR,
+}
+
+
 @dataclass
 class TestResults:
     """Test execution results from a single test framework or test type.
@@ -69,6 +88,7 @@ class TestResults:
     other: int = 0
     reason: str | None = None
     state: ExecutionState = ExecutionState.SUCCESS
+    error_type: ErrorType | None = None
 
     @property
     def total(self) -> int:
@@ -96,7 +116,9 @@ class TestResults:
         return cls(state=ExecutionState.SKIPPED, reason=reason)
 
     @classmethod
-    def from_error(cls, reason: str) -> "TestResults":
+    def from_error(
+        cls, reason: str, error_type: ErrorType = ErrorType.GENERIC
+    ) -> "TestResults":
         """Create TestResults representing an execution error.
 
         Use when test execution failed due to a framework or infrastructure error
@@ -104,11 +126,12 @@ class TestResults:
 
         Args:
             reason: Error message describing what went wrong
+            error_type: Category of error for exit code determination
 
         Returns:
             TestResults with zero counts, reason recorded, and ERROR state
         """
-        return cls(reason=reason, state=ExecutionState.ERROR)
+        return cls(reason=reason, state=ExecutionState.ERROR, error_type=error_type)
 
     @property
     def success_rate(self) -> float:
@@ -245,11 +268,6 @@ class CombinedResults:
         return [r.reason for r in self._results if r.reason is not None]
 
     @property
-    def reasons(self) -> list[str]:
-        """All reasons (errors and other explanatory messages) across all frameworks."""
-        return [r.reason for r in self._results if r.reason is not None]
-
-    @property
     def was_not_run(self) -> bool:
         """Check if all frameworks were intentionally not run (e.g., render-only mode)."""
         return bool(self._results) and all(r.was_not_run for r in self._results)
@@ -287,18 +305,20 @@ class CombinedResults:
             252: No tests found/executed across any framework OR Robot Framework invalid arguments
             253: Execution was interrupted (Ctrl+C, etc.)
             255: Execution errors occurred (has_errors is True)
+
+        Priority (highest to lowest): 253 (interrupted) > 252 (invalid args) > 255 (generic)
         """
         if self.has_errors:
-            # Check for Robot Framework specific error conditions (prioritize over other errors)
-            for reason in self.reasons:
-                if "Invalid Robot Framework arguments" in reason:
-                    return EXIT_INVALID_ROBOT_ARGS
-                if "execution was interrupted" in reason:
-                    return EXIT_INTERRUPTED
+            error_types = [
+                r.error_type for r in self._results if r.error_type is not None
+            ]
+            if ErrorType.INTERRUPTED in error_types:
+                return EXIT_INTERRUPTED
+            if ErrorType.INVALID_ROBOT_ARGS in error_types:
+                return EXIT_INVALID_ROBOT_ARGS
             return EXIT_ERROR
         if self.has_failures:
             return min(self.failed, EXIT_FAILURE_CAP)
-        # Check if all frameworks were intentionally skipped
         if self.was_not_run:
             return 0
         if self.is_empty:

@@ -12,10 +12,11 @@ from nac_test.cli.main import app
 from nac_test.core.constants import (
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
+    EXIT_INTERRUPTED,
     EXIT_INVALID_ARGS,
     EXIT_INVALID_ROBOT_ARGS,
 )
-from nac_test.core.types import CombinedResults, TestResults
+from nac_test.core.types import CombinedResults, ErrorType, TestResults
 
 
 class TestMainExitCodes:
@@ -89,7 +90,8 @@ class TestMainExitCodes:
         mock_orchestrator = Mock()
         mock_stats = CombinedResults(
             robot=TestResults.from_error(
-                "Invalid Robot Framework arguments passed to nac-test"
+                "Invalid Robot Framework arguments passed to nac-test",
+                ErrorType.INVALID_ROBOT_ARGS,
             )
         )
         mock_orchestrator.run_tests.return_value = mock_stats
@@ -138,7 +140,8 @@ class TestMainExitCodes:
         mock_orchestrator = Mock()
         mock_stats = CombinedResults(
             robot=TestResults.from_error(
-                "Invalid Robot Framework arguments passed to nac-test"
+                "Invalid arguments passed to nac-test",
+                error_type=ErrorType.INVALID_ROBOT_ARGS,
             ),
             api=TestResults.from_error("API execution failed"),  # Generic error
         )
@@ -169,3 +172,17 @@ class TestMainExitCodes:
         result = self._run_cli_with_temp_dirs(["--pyats", "--robot"])
 
         assert result.exit_code == EXIT_INVALID_ARGS
+
+    @patch("nac_test.cli.main.CombinedOrchestrator")
+    def test_exit_code_253_for_keyboard_interrupt(
+        self, mock_orchestrator_cls: Mock
+    ) -> None:
+        """Test exit code 253 when execution is interrupted by Ctrl+C."""
+        mock_orchestrator = Mock()
+        mock_orchestrator.run_tests.side_effect = KeyboardInterrupt()
+        mock_orchestrator_cls.return_value = mock_orchestrator
+
+        result = self._run_cli_with_temp_dirs()
+
+        assert result.exit_code == EXIT_INTERRUPTED
+        assert "interrupted" in result.output.lower()

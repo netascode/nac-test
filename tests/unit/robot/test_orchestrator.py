@@ -16,7 +16,7 @@ from nac_test.core.constants import (
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
-from nac_test.core.types import TestResults
+from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import VerbosityLevel
 
@@ -285,7 +285,7 @@ class TestRobotOrchestrator:
         assert isinstance(result, TestResults)
         assert result.has_error
         assert result.reason is not None
-        assert "Invalid Robot Framework arguments" in result.reason
+        assert result.error_type == ErrorType.INVALID_ROBOT_ARGS
 
     def test_run_tests_return_type(self, orchestrator: RobotOrchestrator) -> None:
         """Test run_tests returns TestResults with correct attributes."""

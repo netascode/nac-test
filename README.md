@@ -647,7 +647,7 @@ See the [Robot Framework User Guide](https://robotframework.org/robotframework/l
 
 ## Exit Codes
 
-nac-test mostly follows Robot Framework exit code conventions to provide meaningful feedback for CI/CD pipelines:
+nac-test _mostly_ follows Robot Framework exit code conventions to provide meaningful feedback for CI/CD pipelines:
 
 | Exit Code | Meaning | Description |
 |-----------|---------|-------------|
@@ -657,6 +657,8 @@ nac-test mostly follows Robot Framework exit code conventions to provide meaning
 | **252** | Invalid Robot Framework arguments or no tests found | Robot Framework invalid arguments or no tests executed |
 | **253** | Execution interrupted | Test execution was interrupted (Ctrl+C, etc.) |
 | **255** | Execution error | Framework crash or infrastructure error |
+
+(we only follow _mostly_ as we deviate in using `2` for invalid nac-test arguments, and don't use `251`).
 
 ## Troubleshooting
 
