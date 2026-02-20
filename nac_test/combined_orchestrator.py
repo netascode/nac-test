@@ -5,8 +5,6 @@
 
 import logging
 import os
-import platform
-import sys
 from pathlib import Path
 
 import typer
@@ -26,6 +24,7 @@ from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 
 logger = logging.getLogger(__name__)
 
@@ -251,15 +250,8 @@ class CombinedOrchestrator:
 
     @staticmethod
     def _check_python_version() -> None:
-        if platform.system() == "Darwin" and sys.version_info.minor == 11:
-            typer.echo(
-                typer.style(
-                    "Warning: Python 3.11 on macOS has known compatibility issues with PyATS.\n"
-                    "We recommend using Python 3.12 or higher on macOS for optimal reliability.",
-                    fg=typer.colors.YELLOW,
-                )
-            )
-            typer.echo()
+        """Defense-in-depth for programmatic usage that bypasses the CLI."""
+        check_and_exit_if_unsupported_macos_python()
 
     def _discover_test_types(self) -> tuple[bool, bool]:
         """Discover which test types are present in the templates directory.
