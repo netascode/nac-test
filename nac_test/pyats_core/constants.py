@@ -4,8 +4,6 @@
 """PyATS-specific constants and configuration."""
 
 import os
-import platform
-import sys
 import tempfile
 
 from nac_test.core.constants import (
@@ -15,6 +13,9 @@ from nac_test.core.constants import (
     DEFAULT_SSH_CONCURRENCY,
     # Timeouts
     DEFAULT_TEST_TIMEOUT,
+    # Platform detection
+    IS_MACOS,
+    IS_UNSUPPORTED_MACOS_PYTHON,
     # Progress
     PROGRESS_UPDATE_INTERVAL,
     RETRY_EXPONENTIAL_BASE,
@@ -42,12 +43,6 @@ JOB_RETRY_ATTEMPTS = 1  # Retry failed jobs once
 
 # PyATS subprocess output handling
 DEFAULT_BUFFER_LIMIT = 10 * 1024 * 1024  # 10MB - handles large PyATS output lines
-
-# Platform detection for macOS-specific behavior
-IS_MACOS: bool = platform.system() == "Darwin"
-
-# macOS requires Python 3.12+.
-IS_UNSUPPORTED_MACOS_PYTHON: bool = IS_MACOS and sys.version_info < (3, 12)
 
 # Sentinel-based IPC synchronization timeout (seconds)
 # Expected sync time: <100ms under normal conditions

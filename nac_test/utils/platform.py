@@ -7,7 +7,7 @@ import sys
 
 import typer
 
-from nac_test.pyats_core.constants import IS_UNSUPPORTED_MACOS_PYTHON
+from nac_test.core.constants import IS_UNSUPPORTED_MACOS_PYTHON
 
 
 def check_and_exit_if_unsupported_macos_python() -> None:
