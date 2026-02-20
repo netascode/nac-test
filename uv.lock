@@ -2029,7 +2029,7 @@ requires-dist = [
     { name = "robotframework", specifier = ">=7.3.2" },
     { name = "robotframework-jmespath" },
     { name = "robotframework-jsonlibrary", specifier = ">=0.5" },
-    { name = "robotframework-pabot", specifier = ">=4.3.2" },
+    { name = "robotframework-pabot", specifier = ">=5.2.2" },
     { name = "robotframework-requests", specifier = ">=0.9.7" },
     { name = "ruamel-yaml", specifier = ">=0.18.15" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.12" },
@@ -2068,15 +2068,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1c/fa/b3edf92821c676c24be3259acba5d7e7520453cd35da9c73fbd02849b96a/nac_yaml-1.1.1.tar.gz", hash = "sha256:8ecb89439703aa7e55018ead08e7b2ba0515cabbe8b1ff78d717f5ee15b0220e", size = 61000, upload-time = "2025-10-10T15:25:33.162Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/dc/b2/c1ee7971e6e55558ae7cb72acae19f301f06cb8d6c63ec7922eb580d2436/nac_yaml-1.1.1-py3-none-any.whl", hash = "sha256:e5c20642b3a5f745d8620eb41ea5efccc9a62b2a3568f8e08e268f89394a0862", size = 9403, upload-time = "2025-10-10T15:25:32.375Z" },
-]
-
-[[package]]
-name = "natsort"
-version = "8.4.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e2/a9/a0c57aee75f77794adaf35322f8b6404cbd0f89ad45c87197a937764b7d0/natsort-8.4.0.tar.gz", hash = "sha256:45312c4a0e5507593da193dedd04abb1469253b601ecaf63445ad80f0a1ea581", size = 76575, upload-time = "2023-06-20T04:17:19.925Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/82/7a9d0550484a62c6da82858ee9419f3dd1ccc9aa1c26a1e43da3ecd20b0d/natsort-8.4.0-py3-none-any.whl", hash = "sha256:4732914fb471f56b5cce04d7bae6f164a592c7712e1c85f9ef585e197299521c", size = 38268, upload-time = "2023-06-20T04:17:17.522Z" },
 ]
 
 [[package]]
@@ -3267,16 +3258,14 @@ sdist = { url = "https://files.pythonhosted.org/packages/09/e0/0031756305cda8671
 
 [[package]]
 name = "robotframework-pabot"
-version = "5.1.0"
+version = "5.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "natsort" },
     { name = "robotframework" },
-    { name = "robotframework-stacktrace" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ed/e6/5e3cb5126115bff793bbd071fb3f3da2eeb7fba211255c8970ba9682fb44/robotframework_pabot-5.1.0.tar.gz", hash = "sha256:e926970a2e466cc6d9233f4658871040a0d505e8519a670f56ae1fd33ef461c0", size = 85190, upload-time = "2025-09-12T15:52:06.549Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d6/16/285f1737483a93f7ab38456e97bd34d101a4a9713ba01050fecf51096bef/robotframework_pabot-5.2.2.tar.gz", hash = "sha256:497c3d72551c76eda21029df6a28c6b2ed227e63c4a8510e1c6a0690b9e2be91", size = 106974, upload-time = "2026-02-18T21:04:22.827Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/5e/2f3e368b95bdb909c109576143f6653086797bd478206fd0694788ed0e3c/robotframework_pabot-5.1.0-py3-none-any.whl", hash = "sha256:f0b43d6fe8c19c8130e8e354222d6f9141786430f33c46f3535e3958951d975c", size = 61080, upload-time = "2025-09-12T15:52:05.243Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/15/f5da87828441f53f5126dda3dd1fdf1fd73b8f5fdf490659b56dd2dc3a80/robotframework_pabot-5.2.2-py3-none-any.whl", hash = "sha256:e7b95d031e9f04b77312b04a1fd835b9791f022b3436b63b507a720bfec05bb4", size = 71801, upload-time = "2026-02-18T21:04:21.313Z" },
 ]
 
 [[package]]
@@ -3290,18 +3279,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/61/e2/b17b940985e7b35f53767d908897870fcf4e143a2a7c2da76d152e4abc4c/robotframework-requests-0.9.7.tar.gz", hash = "sha256:c2a2839813e1dc6b299e7d336314c9982c225c5b7e001ec893dc3555c6a95740", size = 19404, upload-time = "2024-04-07T22:48:08.471Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cd/18/03ef4d1132f50b55220af5308db91e1cc5481b8b063cac5fafa625b00f64/robotframework_requests-0.9.7-py3-none-any.whl", hash = "sha256:96315066318778cbcf5523cdb6175f5a0b8fec33275030a20dade3a3d98aeca2", size = 21055, upload-time = "2024-04-07T22:48:06.617Z" },
-]
-
-[[package]]
-name = "robotframework-stacktrace"
-version = "0.4.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "robotframework" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f6/cf/6e6934c3d037ef3f5914e88494127ec4d0fea73bd566539e08b9fa2c9324/robotframework-stacktrace-0.4.1.tar.gz", hash = "sha256:e96cb36e7e9ab55104c1f7d3606249a109e0a4c3bb6a0e294bff07d54ee6f6a5", size = 12634, upload-time = "2021-07-12T18:04:24.993Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/f2/be7d680eb8a23e86ea288f6c421e1e8c30c823a8f1521dc6b9f9d7b7692b/robotframework_stacktrace-0.4.1-py3-none-any.whl", hash = "sha256:018d7a55b99733e64e3cc0b134771b61a47de61de23609ed35c7bf0a53e9290e", size = 8543, upload-time = "2021-07-12T18:04:22.85Z" },
 ]
 
 [[package]]

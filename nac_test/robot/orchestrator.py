@@ -10,7 +10,6 @@ pattern as PyATSOrchestrator.
 
 import logging
 import os
-import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -199,14 +198,8 @@ class RobotOrchestrator:
                 return TestResults.from_error(error_msg)
             typer.echo("✅ Robot Framework tests completed")
 
-            # Phase 4: Move Robot files to robot_results/ subdirectory
-            # TODO: pabot 5.2+ will allow specifying *all* output files directly in robot_results/
-            # via --outputdir (earlier versions fail for output.xml). Currently only xunit.xml
-            # is placed there directly (see pabot.py); other artifacts (output.xml, log.html,
-            # report.html) are moved post-execution.
-            self._move_robot_results_to_subdirectory()
-
-            # Phase 5: Create backward compatibility symlinks
+            # Phase 4: Create backward compatibility symlinks
+            # (pabot 5.2+ writes directly to robot_results/, so no file moving needed)
             self._create_backward_compat_symlinks()
 
             # Phase 5.5: Generate Robot summary report and get stats
@@ -224,37 +217,6 @@ class RobotOrchestrator:
         else:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
             return TestResults.not_run("render-only mode")
-
-    def _move_robot_results_to_subdirectory(self) -> None:
-        """Move Robot output files from root to robot_results/ subdirectory.
-
-        Moves the following files:
-        - output.xml
-        - log.html
-        - report.html
-
-        Note: xunit.xml is written directly to robot_results/ by pabot,
-        so it doesn't need to be moved.
-
-        This is done after pabot completes to organize outputs while maintaining
-        pabot's expected behavior.
-        """
-        robot_results_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
-        robot_results_dir.mkdir(parents=True, exist_ok=True)
-
-        files_to_move = ["output.xml", "log.html", "report.html"]
-
-        for filename in files_to_move:
-            source = self.base_output_dir / filename
-            target = robot_results_dir / filename
-
-            if source.exists():
-                # Remove target if it exists (in case of re-runs)
-                if target.exists():
-                    target.unlink()
-                # Move the file
-                shutil.move(str(source), str(target))
-                logger.debug(f"Moved {filename} to robot_results/")
 
     def _create_backward_compat_symlinks(self) -> None:
         """Create backward compatibility symlinks at root pointing to robot_results/.

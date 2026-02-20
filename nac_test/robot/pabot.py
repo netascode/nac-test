@@ -115,9 +115,12 @@ def run_pabot(
             str(path),
             "--skiponfailure",
             "non-critical",
-            # TODO: pabot 5.2+ allows placing all artifacts directly into robot_results_dir
-            # via --outputdir. Currently only xunit.xml is placed there; other artifacts
-            # (output.xml, log.html, report.html) are moved post-execution by orchestrator.
+            "--output",
+            str(robot_results_dir / "output.xml"),
+            "--log",
+            str(robot_results_dir / "log.html"),
+            "--report",
+            str(robot_results_dir / "report.html"),
             "--xunit",
             str(robot_results_dir / "xunit.xml"),
         ]
