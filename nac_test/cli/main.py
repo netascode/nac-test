@@ -14,6 +14,7 @@ from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import DEBUG_MODE
 from nac_test.data_merger import DataMerger
 from nac_test.utils.logging import VerbosityLevel, configure_logging
+from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 
 # Pretty exceptions are verbose but helpful for debugging.
 # Enable them when NAC_TEST_DEBUG=true, disable for cleaner output otherwise.
@@ -283,6 +284,8 @@ def main(
     files/directories are not supported and will result in an error.
     """
     configure_logging(verbosity, error_handler)
+
+    check_and_exit_if_unsupported_macos_python()
 
     # Validate development flag combinations
     if pyats and robot:
