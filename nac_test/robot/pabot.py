@@ -108,17 +108,18 @@ def run_pabot(
         robot_args.extend(["--include", i])
     for e in exclude:
         robot_args.extend(["--exclude", e])
+    robot_results_dir = path / ROBOT_RESULTS_DIRNAME
     robot_args.extend(
         [
             "--outputdir",
             str(path),
             "--skiponfailure",
             "non-critical",
-            # TODO: pabot 5.2+ allows placing all artifacts directly into ROBOT_RESULTS_DIRNAME
+            # TODO: pabot 5.2+ allows placing all artifacts directly into robot_results_dir
             # via --outputdir. Currently only xunit.xml is placed there; other artifacts
             # (output.xml, log.html, report.html) are moved post-execution by orchestrator.
             "--xunit",
-            f"{ROBOT_RESULTS_DIRNAME}/xunit.xml",
+            str(robot_results_dir / "xunit.xml"),
         ]
     )
 
