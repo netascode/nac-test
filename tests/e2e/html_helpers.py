@@ -234,6 +234,30 @@ def verify_html_structure(html_content: str) -> None:
     assert "<body>" in html_content.lower(), "Missing <body> tag"
 
 
+def verify_html_charset(html_content: str) -> None:
+    """Verify HTML has UTF-8 charset declaration for proper character rendering.
+
+    Without an explicit charset meta tag, browsers (especially Safari) may default
+    to a different encoding, causing UTF-8 characters (arrows, checkmarks, etc.)
+    to display as garbled text.
+
+    Args:
+        html_content: The HTML content to verify.
+
+    Raises:
+        AssertionError: If charset declaration is missing.
+
+    See: https://github.com/netascode/nac-test/issues/484
+    """
+    # Check for <meta charset="UTF-8"> (case-insensitive)
+    charset_pattern = r'<meta\s+charset\s*=\s*["\']?UTF-8["\']?\s*/?>'
+    has_charset = re.search(charset_pattern, html_content, re.IGNORECASE)
+    assert has_charset, (
+        "Missing UTF-8 charset declaration. "
+        'Add <meta charset="UTF-8"> to <head> to prevent garbled characters in Safari.'
+    )
+
+
 def verify_breadcrumb_link(html_content: str, expected_target: str) -> None:
     """Verify breadcrumb navigation link exists.
 
