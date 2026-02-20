@@ -233,7 +233,6 @@ def display_auth_failure_banner(
     content_lines = [
         "",
         f"Could not authenticate to {display_name} at {controller_url}",
-        f"{detail}",
         "",
         "Verify your credentials:",
         f"  export {env_var_prefix}_USERNAME=<username>",
@@ -271,7 +270,6 @@ def display_unreachable_banner(
     content_lines = [
         "",
         f"Could not connect to {display_name} at {controller_url}",
-        f"{detail}",
         "",
         "Verify the controller is reachable and the URL is correct:",
         f"  curl -k {controller_url}",

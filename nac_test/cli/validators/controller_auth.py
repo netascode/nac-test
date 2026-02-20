@@ -190,7 +190,7 @@ def preflight_auth_check(controller_type: str) -> AuthCheckResult:
     except Exception as e:
         # Authentication failed - classify the error
         reason, detail = _classify_auth_error(e)
-        logger.warning(
+        logger.debug(
             "Pre-flight auth check failed for %s: %s (%s)",
             display_name,
             detail,
