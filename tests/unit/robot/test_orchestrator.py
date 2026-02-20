@@ -105,8 +105,9 @@ class TestRobotOrchestrator:
         self, orchestrator, temp_output_dir
     ) -> None:
         """Test _move_robot_results_to_subdirectory moves files correctly."""
-        # Create mock Robot output files at root
-        files_to_create = ["output.xml", "log.html", "report.html", "xunit.xml"]
+        # Create mock Robot output files at root (xunit.xml is written directly
+        # to robot_results by pabot, so it's not moved)
+        files_to_create = ["output.xml", "log.html", "report.html"]
         for filename in files_to_create:
             (temp_output_dir / filename).write_text(f"Mock {filename} content")
 
@@ -129,10 +130,10 @@ class TestRobotOrchestrator:
         self, orchestrator, temp_output_dir
     ) -> None:
         """Test _move_robot_results_to_subdirectory handles missing files gracefully."""
-        # Create only some files
+        # Create only some files (xunit.xml is not moved - written directly by pabot)
         (temp_output_dir / "output.xml").write_text("output")
         (temp_output_dir / "log.html").write_text("log")
-        # Don't create report.html and xunit.xml
+        # Don't create report.html
 
         # Should not raise an error
         orchestrator._move_robot_results_to_subdirectory()
@@ -142,7 +143,6 @@ class TestRobotOrchestrator:
         assert (robot_results_dir / "output.xml").exists()
         assert (robot_results_dir / "log.html").exists()
         assert not (robot_results_dir / "report.html").exists()
-        assert not (robot_results_dir / "xunit.xml").exists()
 
     def test_create_backward_compat_symlinks(
         self, orchestrator, temp_output_dir
@@ -152,7 +152,8 @@ class TestRobotOrchestrator:
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
-        files_to_create = ["output.xml", "log.html", "report.html", "xunit.xml"]
+        # xunit.xml is NOT symlinked (merged xunit is created separately)
+        files_to_create = ["output.xml", "log.html", "report.html"]
         for filename in files_to_create:
             (robot_results_dir / filename).write_text(f"Mock {filename}")
 

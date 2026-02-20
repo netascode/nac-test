@@ -8,6 +8,8 @@ import pabot.pabot
 from pabot.arguments import parse_args
 from robot.errors import DataError
 
+from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
+
 logger = logging.getLogger(__name__)
 
 
@@ -112,8 +114,11 @@ def run_pabot(
             str(path),
             "--skiponfailure",
             "non-critical",
+            # TODO: pabot 5.2+ allows placing all artifacts directly into ROBOT_RESULTS_DIRNAME
+            # via --outputdir. Currently only xunit.xml is placed there; other artifacts
+            # (output.xml, log.html, report.html) are moved post-execution by orchestrator.
             "--xunit",
-            "xunit.xml",
+            f"{ROBOT_RESULTS_DIRNAME}/xunit.xml",
         ]
     )
 
