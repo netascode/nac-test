@@ -122,6 +122,7 @@ class SubprocessRunner:
             "--no-archive-subdir",
             "--no-mail",
             "--no-xml-report",
+            "--xunit",
         ]
 
         # Add verbose flag if logging level is DEBUG
@@ -255,6 +256,7 @@ class SubprocessRunner:
                 "--no-archive-subdir",
                 "--no-mail",
                 "--no-xml-report",
+                "--xunit",
             ]
         )
 

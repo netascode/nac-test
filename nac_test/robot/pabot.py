@@ -8,6 +8,8 @@ import pabot.pabot
 from pabot.arguments import parse_args
 from robot.errors import DataError
 
+from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
+
 logger = logging.getLogger(__name__)
 
 
@@ -106,14 +108,21 @@ def run_pabot(
         robot_args.extend(["--include", i])
     for e in exclude:
         robot_args.extend(["--exclude", e])
+    robot_results_dir = path / ROBOT_RESULTS_DIRNAME
     robot_args.extend(
         [
             "--outputdir",
             str(path),
             "--skiponfailure",
             "non-critical",
+            "--output",
+            str(robot_results_dir / "output.xml"),
+            "--log",
+            str(robot_results_dir / "log.html"),
+            "--report",
+            str(robot_results_dir / "report.html"),
             "--xunit",
-            "xunit.xml",
+            str(robot_results_dir / "xunit.xml"),
         ]
     )
 

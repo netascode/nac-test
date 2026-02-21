@@ -101,49 +101,6 @@ class TestRobotOrchestrator:
         assert orchestrator.extra_args == ["--exitonfailure"]
         assert orchestrator.verbosity == VerbosityLevel.DEBUG
 
-    def test_move_robot_results_to_subdirectory(
-        self, orchestrator, temp_output_dir
-    ) -> None:
-        """Test _move_robot_results_to_subdirectory moves files correctly."""
-        # Create mock Robot output files at root
-        files_to_create = ["output.xml", "log.html", "report.html", "xunit.xml"]
-        for filename in files_to_create:
-            (temp_output_dir / filename).write_text(f"Mock {filename} content")
-
-        # Move files to subdirectory
-        orchestrator._move_robot_results_to_subdirectory()
-
-        # Verify files were moved to robot_results/
-        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
-        assert robot_results_dir.exists()
-
-        for filename in files_to_create:
-            target = robot_results_dir / filename
-            assert target.exists()
-            assert target.read_text() == f"Mock {filename} content"
-
-            # Verify files no longer at root
-            assert not (temp_output_dir / filename).exists()
-
-    def test_move_robot_results_handles_missing_files(
-        self, orchestrator, temp_output_dir
-    ) -> None:
-        """Test _move_robot_results_to_subdirectory handles missing files gracefully."""
-        # Create only some files
-        (temp_output_dir / "output.xml").write_text("output")
-        (temp_output_dir / "log.html").write_text("log")
-        # Don't create report.html and xunit.xml
-
-        # Should not raise an error
-        orchestrator._move_robot_results_to_subdirectory()
-
-        # Verify existing files were moved
-        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
-        assert (robot_results_dir / "output.xml").exists()
-        assert (robot_results_dir / "log.html").exists()
-        assert not (robot_results_dir / "report.html").exists()
-        assert not (robot_results_dir / "xunit.xml").exists()
-
     def test_create_backward_compat_symlinks(
         self, orchestrator, temp_output_dir
     ) -> None:
@@ -152,7 +109,8 @@ class TestRobotOrchestrator:
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
-        files_to_create = ["output.xml", "log.html", "report.html", "xunit.xml"]
+        # xunit.xml is NOT symlinked (merged xunit is created separately)
+        files_to_create = ["output.xml", "log.html", "report.html"]
         for filename in files_to_create:
             (robot_results_dir / filename).write_text(f"Mock {filename}")
 
@@ -246,13 +204,11 @@ class TestRobotOrchestrator:
         )
         mock_generator.return_value = mock_generator_instance
 
-        # Create mock Robot output files
+        # Create mock Robot output files in robot_results/ (pabot 5.2+ writes directly there)
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
-
-        # Create files at root that need to be moved
         for filename in ["output.xml", "log.html", "report.html", "xunit.xml"]:
-            (temp_output_dir / filename).write_text(f"Mock {filename}")
+            (robot_results_dir / filename).write_text(f"Mock {filename}")
 
         stats = orchestrator.run_tests()
 
