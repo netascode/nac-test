@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
+
 import logging
 from pathlib import Path
 
@@ -87,7 +88,7 @@ def run_pabot(
     """Run pabot"""
     include = include or []
     exclude = exclude or []
-    robot_args = []
+    robot_args: list[str] = []
     pabot_args = ["--pabotlib", "--pabotlibport", "0"]
 
     if ordering_file and ordering_file.exists():
@@ -128,4 +129,5 @@ def run_pabot(
     args = pabot_args + robot_args + [str(path)]
     logger.info("Running pabot with args: %s", " ".join(args))
     exit_code: int = pabot.pabot.main_program(args)
+    logger.info(f"Pabot execution completed with exit code {exit_code}")
     return exit_code

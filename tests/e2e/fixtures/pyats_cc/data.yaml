@@ -1,0 +1,17 @@
+catalyst_center:
+  inventory:
+    devices:
+      - name: sd-dc-c8kv-01
+        device_ip: 10.100.1.1
+        fqdn_name: sd-dc-c8kv-01.cisco.local
+        pid: C8000V
+        state: PROVISION
+        device_role: ACCESS
+        site: Global/TEST_AREA/TEST_BUILDING
+      - name: sd-dc-c8kv-02
+        device_ip: 10.100.1.2
+        fqdn_name: sd-dc-c8kv-02.cisco.local
+        pid: C8000V
+        state: PROVISION
+        device_role: ACCESS
+        site: Global/TEST_AREA/TEST_BUILDING
