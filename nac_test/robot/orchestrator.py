@@ -200,12 +200,10 @@ class RobotOrchestrator:
             typer.echo("✅ Robot Framework tests completed")
 
             # Phase 4: Move Robot files to robot_results/ subdirectory
-            #
-            # Unfortunately pabot does not allow me to specify the output.xml/etc. to be in a different
-            # directory than the outputdir, so we have to move them after the fact.
-            # pabot 5.2.0 due to be released shortly will have a fix, then we can
-            # change run_pabot to specify the output files to be in robot_results/ directly and
-            # remove this step.
+            # TODO: pabot 5.2+ will allow specifying *all* output files directly in robot_results/
+            # via --outputdir (earlier versions fail for output.xml). Currently only xunit.xml
+            # is placed there directly (see pabot.py); other artifacts (output.xml, log.html,
+            # report.html) are moved post-execution.
             self._move_robot_results_to_subdirectory()
 
             # Phase 5: Create backward compatibility symlinks
@@ -234,7 +232,9 @@ class RobotOrchestrator:
         - output.xml
         - log.html
         - report.html
-        - xunit.xml
+
+        Note: xunit.xml is written directly to robot_results/ by pabot,
+        so it doesn't need to be moved.
 
         This is done after pabot completes to organize outputs while maintaining
         pabot's expected behavior.
@@ -242,7 +242,7 @@ class RobotOrchestrator:
         robot_results_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir(parents=True, exist_ok=True)
 
-        files_to_move = ["output.xml", "log.html", "report.html", "xunit.xml"]
+        files_to_move = ["output.xml", "log.html", "report.html"]
 
         for filename in files_to_move:
             source = self.base_output_dir / filename
@@ -263,12 +263,14 @@ class RobotOrchestrator:
         - output.xml -> robot_results/output.xml
         - log.html -> robot_results/log.html
         - report.html -> robot_results/report.html
-        - xunit.xml -> robot_results/xunit.xml
+
+        Note: xunit.xml is NOT symlinked here. The combined xunit.xml at root
+        is created by the xunit merger (merging Robot + PyATS results).
 
         This ensures existing tools/scripts that expect these files at root continue to work.
         """
         robot_results_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
-        files_to_link = ["output.xml", "log.html", "report.html", "xunit.xml"]
+        files_to_link = ["output.xml", "log.html", "report.html"]
 
         for filename in files_to_link:
             source = robot_results_dir / filename
