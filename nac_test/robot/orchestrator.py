@@ -212,7 +212,7 @@ class RobotOrchestrator:
             self._create_backward_compat_symlinks()
 
             # Phase 5.5: Generate Robot summary report and get stats
-            typer.echo("📊 Generating Robot summary report...")
+            logger.info("Generating Robot summary report...")
             generator = RobotReportGenerator(self.base_output_dir)
             summary_path, stats = generator.generate_summary_report()
             if summary_path:
