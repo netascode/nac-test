@@ -37,6 +37,7 @@ from tests.e2e.html_helpers import (
     extract_summary_stats_from_combined,
     load_html_file,
     verify_breadcrumb_link,
+    verify_html_charset,
     verify_html_structure,
     verify_table_structure,
     verify_view_details_links_resolve,
@@ -224,6 +225,14 @@ class E2ECombinedTestBase:
         html_content = load_html_file(html_path)
         verify_html_structure(html_content)
 
+    def test_robot_summary_has_utf8_charset(self, results: E2EResults) -> None:
+        """Verify Robot summary has UTF-8 charset for Safari compatibility."""
+        if not results.scenario.has_robot_tests:
+            pytest.skip("No Robot tests in this scenario")
+        html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
+        html_content = load_html_file(html_path)
+        verify_html_charset(html_content)
+
     def test_robot_summary_has_table(self, results: E2EResults) -> None:
         """Verify Robot summary has results table."""
         if not results.scenario.has_robot_tests:
@@ -313,6 +322,20 @@ class E2ECombinedTestBase:
         )
         html_content = load_html_file(summary)
         verify_html_structure(html_content)
+
+    def test_pyats_api_summary_has_utf8_charset(self, results: E2EResults) -> None:
+        """Verify PyATS API summary has UTF-8 charset for Safari compatibility."""
+        if not results.scenario.has_pyats_api_tests:
+            pytest.skip("No PyATS API tests in this scenario")
+        summary = (
+            results.output_dir
+            / PYATS_RESULTS_DIRNAME
+            / "api"
+            / HTML_REPORTS_DIRNAME
+            / SUMMARY_REPORT_FILENAME
+        )
+        html_content = load_html_file(summary)
+        verify_html_charset(html_content)
 
     def test_pyats_api_summary_has_breadcrumb(self, results: E2EResults) -> None:
         """Verify PyATS API summary has breadcrumb to combined dashboard."""
@@ -404,6 +427,20 @@ class E2ECombinedTestBase:
         html_content = load_html_file(summary)
         verify_html_structure(html_content)
 
+    def test_pyats_d2d_summary_has_utf8_charset(self, results: E2EResults) -> None:
+        """Verify PyATS D2D summary has UTF-8 charset for Safari compatibility."""
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
+        summary = (
+            results.output_dir
+            / PYATS_RESULTS_DIRNAME
+            / "d2d"
+            / HTML_REPORTS_DIRNAME
+            / SUMMARY_REPORT_FILENAME
+        )
+        html_content = load_html_file(summary)
+        verify_html_charset(html_content)
+
     def test_pyats_d2d_summary_has_breadcrumb(self, results: E2EResults) -> None:
         """Verify PyATS D2D summary has breadcrumb to combined dashboard."""
         if not results.scenario.has_pyats_d2d_tests:
@@ -465,6 +502,12 @@ class E2ECombinedTestBase:
         html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
         html_content = load_html_file(html_path)
         verify_html_structure(html_content)
+
+    def test_combined_dashboard_has_utf8_charset(self, results: E2EResults) -> None:
+        """Verify combined dashboard has UTF-8 charset for Safari compatibility."""
+        html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
+        html_content = load_html_file(html_path)
+        verify_html_charset(html_content)
 
     def test_combined_dashboard_links_to_robot(self, results: E2EResults) -> None:
         """Verify combined dashboard links to Robot summary."""
