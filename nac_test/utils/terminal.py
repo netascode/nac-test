@@ -3,10 +3,16 @@
 
 """Centralized terminal formatting utilities for nac-test."""
 
+from __future__ import annotations
+
 import os
 import re
+from typing import TYPE_CHECKING
 
 from colorama import Fore, Style, init
+
+if TYPE_CHECKING:
+    from nac_test.core.types import CombinedResults
 
 # autoreset=True means colors reset after each print
 init(autoreset=True)
@@ -202,6 +208,35 @@ class TerminalColors:
         lines.append(cls.error("=" * 70))
 
         return "\n".join(lines)
+
+    @classmethod
+    def format_test_summary(cls, results: CombinedResults) -> str:
+        """Format test results in Robot-style with colored numbers.
+
+        Numbers are colored only when > 0:
+        - passed: green
+        - failed: red
+        - skipped: yellow
+        """
+        passed_str = (
+            cls.success(str(results.passed))
+            if results.passed > 0
+            else str(results.passed)
+        )
+        failed_str = (
+            cls.error(str(results.failed))
+            if results.failed > 0
+            else str(results.failed)
+        )
+        skipped_str = (
+            cls.warning(str(results.skipped))
+            if results.skipped > 0
+            else str(results.skipped)
+        )
+        return (
+            f"{results.total} tests, {passed_str} passed, "
+            f"{failed_str} failed, {skipped_str} skipped."
+        )
 
 
 # Single instance for use across the codebase

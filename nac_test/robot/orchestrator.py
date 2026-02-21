@@ -221,6 +221,7 @@ class RobotOrchestrator:
                 logger.warning(
                     "Robot summary report generation skipped (no tests or error)"
                 )
+            logger.info(f"Robot results: {stats}")
 
             return stats
         else:

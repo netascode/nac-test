@@ -38,7 +38,6 @@ from nac_test.pyats_core.progress import ProgressReporter
 from nac_test.pyats_core.reporting.multi_archive_generator import (
     MultiArchiveReportGenerator,
 )
-from nac_test.pyats_core.reporting.summary_printer import SummaryPrinter
 from nac_test.pyats_core.reporting.utils.archive_aggregator import ArchiveAggregator
 from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
 from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
@@ -136,9 +135,6 @@ class PyATSOrchestrator:
         self.device_executor: DeviceExecutor | None = (
             None  # Will be initialized when needed
         )
-
-        # Initialize reporting components
-        self.summary_printer = SummaryPrinter()
 
     def _calculate_workers(self) -> int:
         """Calculate optimal worker count based on CPU, memory, and test type"""
@@ -698,26 +694,11 @@ class PyATSOrchestrator:
                 else:
                     self.api_test_status[test_name] = test_info
 
-        # Print summary after all tests complete
-        if self.api_test_status or self.d2d_test_status:
-            # Combine all test statuses for summary
-            combined_status = {}
-            combined_status.update(self.api_test_status)
-            combined_status.update(self.d2d_test_status)
-
-            # Print the summary (archives are at base level)
-            self.summary_printer.print_summary(
-                combined_status,
-                self.start_time,
-                output_dir=self.base_output_dir,
-                archive_path=None,
-                api_test_status=getattr(self, "api_test_status", None),
-                d2d_test_status=getattr(self, "d2d_test_status", None),
-                overall_start_time=self.overall_start_time,
-            )
-
         # Generate HTML reports after all test types have completed
-        return await self._generate_html_reports_async()
+        pyats_results = await self._generate_html_reports_async()
+        logger.info(f"PyATS results: {pyats_results}")
+
+        return pyats_results
 
     async def _generate_html_reports_async(
         self,

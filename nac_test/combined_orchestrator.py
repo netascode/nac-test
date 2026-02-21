@@ -25,6 +25,7 @@ from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.logging import VerbosityLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
+from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
 
@@ -233,6 +234,7 @@ class CombinedOrchestrator:
         # Generate combined dashboard and print summary (unless render_only mode)
         if not self.render_only:
             typer.echo("\n📊 Generating combined dashboard...")
+            logger.info(f"Combined results: {combined_results}")
             logger.debug(
                 f"Calling CombinedReportGenerator with results: {combined_results}"
             )
@@ -299,45 +301,32 @@ class CombinedOrchestrator:
     ) -> None:
         """Print execution summary with statistics."""
         typer.echo("\n" + "=" * 70)
-        typer.echo("📋 Combined Test Execution Summary")
+        typer.echo("Combined Test Execution Summary")
         typer.echo("=" * 70)
 
-        # Show overall stats if available
         if results:
-            typer.echo("\n📊 Overall Results:")
-            typer.echo(f"   Total: {results.total} tests")
-            typer.echo(f"   ✅ Passed: {results.passed}")
-            typer.echo(f"   ❌ Failed: {results.failed}")
-            typer.echo(f"   ⊘ Skipped: {results.skipped}")
+            typer.echo(terminal.format_test_summary(results))
+            typer.echo("=" * 70)
 
             # Combined dashboard is the main entry point
             if not self.render_only:
-                typer.echo("\n🎯 Combined Dashboard:")
+                typer.echo("\nCombined Dashboard:")
                 combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME
                 if combined_dashboard.exists():
-                    typer.echo(f"   📊 {combined_dashboard}")
-                    typer.echo("   (Aggregated results from all test frameworks)")
+                    typer.echo(f"   {combined_dashboard}")
 
         if has_robot:
-            typer.echo("\n✅ Robot Framework tests: Completed")
-            typer.echo(f"   📁 Results: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/")
-            if results and results.robot is not None:
-                robot_stats = results.robot
-                typer.echo(
-                    f"   📊 {robot_stats.total} tests: "
-                    f"{robot_stats.passed} passed, {robot_stats.failed} failed"
-                )
+            typer.echo(f"\nRobot Framework: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/")
             if not self.render_only:
                 typer.echo(
-                    f"   📊 Summary: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}"
+                    f"   Summary: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}"
                 )
                 typer.echo(
-                    f"   📊 Detailed: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/log.html"
+                    f"   Detailed: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/log.html"
                 )
 
         if has_pyats:
-            typer.echo("\n✅ PyATS tests: Completed")
-            typer.echo(f"   📁 Results: {self.output_dir}/{PYATS_RESULTS_DIRNAME}/")
+            typer.echo(f"\nPyATS: {self.output_dir}/{PYATS_RESULTS_DIRNAME}/")
             api_summary = (
                 self.output_dir
                 / PYATS_RESULTS_DIRNAME
@@ -353,11 +342,11 @@ class CombinedOrchestrator:
                 / SUMMARY_REPORT_FILENAME
             )
             if api_summary.exists():
-                typer.echo(f"   📊 API Summary: {api_summary}")
+                typer.echo(f"   API Summary: {api_summary}")
             if d2d_summary.exists():
-                typer.echo(f"   📊 D2D Summary: {d2d_summary}")
+                typer.echo(f"   D2D Summary: {d2d_summary}")
 
         typer.echo(
-            f"\n📄 Merged data model: {self.output_dir}/{self.merged_data_filename}"
+            f"\nMerged data model: {self.output_dir}/{self.merged_data_filename}"
         )
         typer.echo("=" * 70)
