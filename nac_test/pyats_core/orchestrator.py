@@ -569,9 +569,6 @@ class PyATSOrchestrator:
             print("No PyATS test files (*.py) found in test directory")
             return PyATSResults()
 
-        print(f"Discovered {len(test_files)} PyATS test files")
-        print(f"Running with {self.max_workers} parallel workers")
-
         # Categorize tests by type (api/ vs d2d/)
         try:
             api_tests, d2d_tests = self.test_discovery.categorize_tests_by_type(
@@ -580,6 +577,15 @@ class PyATSOrchestrator:
         except ValueError as e:
             print(terminal.error(str(e)))
             raise
+
+        breakdown_parts = []
+        if api_tests:
+            breakdown_parts.append(f"{len(api_tests)} api")
+        if d2d_tests:
+            breakdown_parts.append(f"{len(d2d_tests)} d2d")
+        breakdown = f" ({', '.join(breakdown_parts)})" if breakdown_parts else ""
+        print(f"Discovered {len(test_files)} PyATS test files{breakdown}")
+        print(f"Running with {self.max_workers} parallel workers")
 
         # Initialize progress reporter for output formatting
         self.progress_reporter = ProgressReporter(
@@ -609,7 +615,6 @@ class PyATSOrchestrator:
             tasks = []
 
             if api_tests:
-                print(f"Found {len(api_tests)} API test(s) - using standard execution")
                 tasks.append(self._execute_api_tests_standard(api_tests))
 
             if d2d_tests:
@@ -633,9 +638,6 @@ class PyATSOrchestrator:
                     print()  # Blank line after warnings
 
                 if devices:
-                    print(
-                        f"Found {len(d2d_tests)} D2D test(s) - using device-centric execution"
-                    )
                     tasks.append(
                         self._execute_ssh_tests_device_centric(d2d_tests, devices)
                     )
