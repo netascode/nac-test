@@ -729,27 +729,26 @@ class PyATSOrchestrator:
 
         # Collect the latest archive of each type
         archive_paths = []
-        archive_info = []  # Store archive info for display later
 
         if archives["api"]:
             archive_paths.append(archives["api"][0])
-            archive_info.append(f"Found API archive: {archives['api'][0].name}")
+            logger.info(f"Found API archive: {archives['api'][0].name}")
 
         if archives["d2d"]:
             archive_paths.append(archives["d2d"][0])
-            archive_info.append(f"Found D2D archive: {archives['d2d'][0].name}")
+            logger.info(f"Found D2D archive: {archives['d2d'][0].name}")
 
         if not archive_paths and archives["legacy"]:
             # TODO: No longer need this -- remove
             # Fallback to legacy archives for backward compatibility
             archive_paths.append(archives["legacy"][0])
-            archive_info.append(f"Found legacy archive: {archives['legacy'][0].name}")
+            logger.info(f"Found legacy archive: {archives['legacy'][0].name}")
 
         if not archive_paths:
             print("No PyATS job archives found to generate reports from.")
             return PyATSResults()
 
-        print(f"\nGenerating reports from {len(archive_paths)} archive(s)...")
+        logger.info(f"Generating reports from {len(archive_paths)} archive(s)...")
 
         # Use MultiArchiveReportGenerator for all cases (handles single archive too)
         # Pass base directory to avoid double-nesting of pyats_results directories
@@ -759,7 +758,7 @@ class PyATSOrchestrator:
         result = await generator.generate_reports_from_archives(archive_paths)
 
         if result["status"] in ["success", "partial"]:
-            # Format duration (minutes and seconds)
+            # Log report generation timing (procedural info)
             duration = result["duration"]
             if duration < 60:
                 duration_str = f"{duration:.2f} seconds"
@@ -768,11 +767,7 @@ class PyATSOrchestrator:
                 secs = duration % 60
                 duration_str = f"{minutes} minutes {secs:.2f} seconds"
 
-            print(f"{terminal.info('Total report generation time:')} {duration_str}")
-
-            # Print archive info at the bottom
-            for info in archive_info:
-                print(info)
+            logger.info(f"Total report generation time: {duration_str}")
 
             # Display results based on what was generated
             print(f"\n{terminal.info('HTML Reports Generated:')}")
