@@ -184,9 +184,9 @@ class SummaryPrinter:
         print(self._format_test_line(total, passed, failed, errored, skipped))
         print("=" * 80)
 
-        # Print archive paths if output_dir is provided
+        # Log archive paths if output_dir is provided
         if output_dir:
-            self.print_archive_info(output_dir)
+            self.log_archive_info(output_dir)
 
         # Color the timing information
         print(
@@ -317,9 +317,9 @@ class SummaryPrinter:
 
         print("=" * 80)
 
-        # Print archive info if output_dir provided
+        # Log archive info if output_dir provided
         if output_dir:
-            self.print_archive_info(output_dir)
+            self.log_archive_info(output_dir)
 
         # Print timing information at the end
         print(
@@ -327,97 +327,94 @@ class SummaryPrinter:
         )
         print(f"{terminal.info('Elapsed time:')}  {self.format_duration(wall_time)}")
 
-    def print_archive_info(self, output_dir: Path) -> None:
-        """Print information about generated archives and their contents.
+    def log_archive_info(self, output_dir: Path) -> None:
+        """Log information about generated archives and their contents.
+
+        Logs paths to PyATS output files (archives, results JSON/XML) at INFO level.
+        Use -v INFO to see these paths during execution.
 
         Args:
             output_dir: Directory containing the archives
         """
-        print(f"\n{terminal.info('PyATS Output Files:')}")
-        print("=" * 80)
-
         # Use ArchiveInspector to find all archives
         archives = ArchiveInspector.find_archives(output_dir)
 
-        displayed_any = False
+        logged_any = False
 
-        # Display API results if available
+        # Log API results if available
         if archives["api"]:
             archive_path = archives["api"][0]
             results_dir = output_dir / PYATS_RESULTS_DIRNAME / "api"
 
-            # Print standard PyATS output files
+            # Log standard PyATS output files
             results_json = results_dir / "results.json"
             results_xml = results_dir / "ResultsDetails.xml"
             summary_xml = results_dir / "ResultsSummary.xml"
 
             if results_json.exists():
-                print(f"Results JSON:    {results_json}")
+                logger.info(f"API results JSON: {results_json}")
             if results_xml.exists():
-                print(f"Results XML:     {results_xml}")
+                logger.info(f"API results XML: {results_xml}")
             if summary_xml.exists():
-                print(f"Summary XML:     {summary_xml}")
+                logger.info(f"API summary XML: {summary_xml}")
 
-            # Find and print report file
+            # Find and log report file
             for report_file in results_dir.glob("*.report"):
-                print(f"Report:          {report_file}")
+                logger.info(f"API report: {report_file}")
                 break
 
-            print(f"Archive:         {archive_path}")
-            displayed_any = True
+            logger.info(f"API archive: {archive_path}")
+            logged_any = True
 
-        # Display D2D results if available
+        # Log D2D results if available
         if archives["d2d"]:
-            if displayed_any:
-                print()  # Add spacing between sections
-
             archive_path = archives["d2d"][0]
             results_dir = output_dir / PYATS_RESULTS_DIRNAME / "d2d"
 
-            # Print standard PyATS output files
+            # Log standard PyATS output files
             results_json = results_dir / "results.json"
             results_xml = results_dir / "ResultsDetails.xml"
             summary_xml = results_dir / "ResultsSummary.xml"
 
             if results_json.exists():
-                print(f"Results JSON:    {results_json}")
+                logger.info(f"D2D results JSON: {results_json}")
             if results_xml.exists():
-                print(f"Results XML:     {results_xml}")
+                logger.info(f"D2D results XML: {results_xml}")
             if summary_xml.exists():
-                print(f"Summary XML:     {summary_xml}")
+                logger.info(f"D2D summary XML: {summary_xml}")
 
-            # Find and print report file
+            # Find and log report file
             for report_file in results_dir.glob("*.report"):
-                print(f"Report:          {report_file}")
+                logger.info(f"D2D report: {report_file}")
                 break
 
-            print(f"Archive:         {archive_path}")
-            displayed_any = True
+            logger.info(f"D2D archive: {archive_path}")
+            logged_any = True
 
-        # Display legacy results if no typed archives
+        # Log legacy results if no typed archives
         if archives["legacy"] and not (archives["api"] or archives["d2d"]):
             archive_path = archives["legacy"][0]
             results_dir = output_dir / PYATS_RESULTS_DIRNAME
 
-            # Print standard PyATS output files
+            # Log standard PyATS output files
             results_json = results_dir / "results.json"
             results_xml = results_dir / "ResultsDetails.xml"
             summary_xml = results_dir / "ResultsSummary.xml"
 
             if results_json.exists():
-                print(f"Results JSON:    {results_json}")
+                logger.info(f"Legacy results JSON: {results_json}")
             if results_xml.exists():
-                print(f"Results XML:     {results_xml}")
+                logger.info(f"Legacy results XML: {results_xml}")
             if summary_xml.exists():
-                print(f"Summary XML:     {summary_xml}")
+                logger.info(f"Legacy summary XML: {summary_xml}")
 
-            # Find and print report file
+            # Find and log report file
             for report_file in results_dir.glob("*.report"):
-                print(f"Report:          {report_file}")
+                logger.info(f"Legacy report: {report_file}")
                 break
 
-            print(f"Archive:         {archive_path}")
-            displayed_any = True
+            logger.info(f"Legacy archive: {archive_path}")
+            logged_any = True
 
-        if not displayed_any:
-            print("No PyATS archives found.")
+        if not logged_any:
+            logger.info("No PyATS archives found.")

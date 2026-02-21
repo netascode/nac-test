@@ -769,20 +769,19 @@ class PyATSOrchestrator:
 
             logger.info(f"Total report generation time: {duration_str}")
 
-            # Display results based on what was generated
-            print(f"\n{terminal.info('HTML Reports Generated:')}")
-            print("=" * 80)
-
-            # Show individual report directories
+            # Log generated report paths (visible with -v INFO)
             for archive_type, archive_result in result["results"].items():
                 if archive_result.get("status") == "success":
                     report_dir = Path(archive_result.get("report_dir", ""))
                     summary_report = report_dir / SUMMARY_REPORT_FILENAME
+                    logger.info(
+                        f"{archive_type.upper()} summary report: {summary_report}"
+                    )
+                    logger.info(
+                        f"{archive_type.upper()} report directory: {report_dir}"
+                    )
 
-                    print(f"{f'{archive_type.upper()} Summary:'} {summary_report}")
-                    print(f"{f'{archive_type.upper()} Reports:'}  {report_dir}")
-
-            # Report any failures
+            # Report any failures (keep as print - users need to see this)
             failed_archives = [
                 k for k, v in result["results"].items() if v.get("status") != "success"
             ]
