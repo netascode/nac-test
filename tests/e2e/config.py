@@ -324,8 +324,27 @@ PYATS_CC_SCENARIO = E2EScenario(
     expected_pyats_d2d_failed=0,
 )
 
+DRY_RUN_SCENARIO = E2EScenario(
+    name="dry_run",
+    description="Dry-run mode - Robot (2 validated) + PyATS (discovered, not executed)",
+    data_path=f"{_FIXTURE_BASE}/mixed/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/mixed/templates",
+    requires_testbed=True,
+    architecture="SDWAN",
+    expected_exit_code=0,
+    expected_robot_passed=2,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
 
-# All scenarios for parameterized testing
+
+# All scenarios for parameterized testing (dry-run excluded - it has special execution)
 ALL_SCENARIOS = [
     SUCCESS_SCENARIO,
     ALL_FAIL_SCENARIO,
