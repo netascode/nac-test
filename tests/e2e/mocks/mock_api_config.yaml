@@ -348,7 +348,7 @@ endpoints:
     status_code: 200
     response_data: "mock-xsrf-token-67890"
 
-   # SD-WAN Manager vEdges endpoint
+  # SD-WAN Manager vEdges endpoint
   - name: "SD-WAN Manager vEdges List"
     path_pattern: "/dataservice/system/device/vedges"
     match_type: "exact"
