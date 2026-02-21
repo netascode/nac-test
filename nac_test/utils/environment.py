@@ -7,6 +7,7 @@ import os
 import sys
 from collections.abc import Callable
 
+from nac_test.core.constants import EXIT_ERROR
 from nac_test.utils.terminal import terminal
 
 
@@ -42,7 +43,7 @@ class EnvironmentValidator:
                 error_msg = EnvironmentValidator.format_missing_vars_error(missing)
 
             print(error_msg)
-            sys.exit(1)
+            sys.exit(EXIT_ERROR)
 
         return missing
 

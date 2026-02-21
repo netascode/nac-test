@@ -16,6 +16,7 @@ from typing import Any
 import yaml
 
 from nac_test.core.constants import (
+    EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
@@ -109,7 +110,7 @@ class PyATSOrchestrator:
                 # Exit gracefully if controller detection fails
                 logger.error(f"Controller detection failed: {e}")
                 print(terminal.error(f"Controller detection failed:\n{e}"))
-                sys.exit(1)
+                sys.exit(EXIT_ERROR)
 
         # Calculate max workers based on system resources
         self.max_workers = self._calculate_workers()
