@@ -15,6 +15,9 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from mock_server import MockAPIServer
 
+# Default port for standalone server (different from port 0 used in tests)
+DEFAULT_STANDALONE_PORT = 5555
+
 # PID and log files in system temp directory
 PID_FILE = Path("/tmp/nac-test-mock-server.pid")
 LOG_FILE = Path("/tmp/nac-test-mock-server.log")
@@ -51,7 +54,10 @@ def main() -> None:
     """Main entry point for starting the mock server."""
     parser = argparse.ArgumentParser(description="Start mock API server")
     parser.add_argument(
-        "--port", type=int, default=5555, help="Port to bind (default: 5555)"
+        "--port",
+        type=int,
+        default=DEFAULT_STANDALONE_PORT,
+        help=f"Port to bind (default: {DEFAULT_STANDALONE_PORT})",
     )
     parser.add_argument(
         "--config",

@@ -10,6 +10,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+# Default port for standalone server (same as start_server.py)
+DEFAULT_STANDALONE_PORT = 5555
+
 PID_FILE = Path("/tmp/nac-test-mock-server.pid")
 
 
@@ -35,8 +38,9 @@ def main() -> None:
 
     # Try to connect
     try:
-        # Assume default port 5555 if not specified
-        req = urllib.request.Request("http://127.0.0.1:5555/", method="GET")
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{DEFAULT_STANDALONE_PORT}/", method="GET"
+        )
         with urllib.request.urlopen(req, timeout=1):
             status = "RESPONDING"
     except urllib.error.HTTPError:
@@ -47,7 +51,7 @@ def main() -> None:
 
     print(f"Server: {status}")
     print(f"PID: {pid}")
-    print("URL: http://127.0.0.1:5555")
+    print(f"URL: http://127.0.0.1:{DEFAULT_STANDALONE_PORT}")
     print("Logs: /tmp/nac-test-mock-server.log")
 
 

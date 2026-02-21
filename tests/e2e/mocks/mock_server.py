@@ -55,12 +55,12 @@ for handler in _original_handlers:
 class MockAPIServer:
     """A configurable mock API server for testing."""
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 5555) -> None:
+    def __init__(self, host: str = "127.0.0.1", port: int = 0) -> None:
         """Initialize the mock server.
 
         Args:
             host: Host to bind the server to
-            port: Port to bind the server to
+            port: Port to bind the server to (0 = OS-assigned, for parallel testing)
         """
         self.host = host
         self.port = port
