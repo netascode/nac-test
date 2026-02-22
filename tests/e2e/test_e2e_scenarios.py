@@ -18,6 +18,7 @@ This approach:
 """
 
 import logging
+import re
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -528,6 +529,76 @@ class E2ECombinedTestBase:
 
         assert abs(stats.success_rate - expected_rate) < 0.1, (
             f"Expected {expected_rate:.1f}% success rate, got {stats.success_rate}%"
+        )
+
+    # -------------------------------------------------------------------------
+    # Stdout Output Validation Tests (#540 - Streamlined Output)
+    # -------------------------------------------------------------------------
+
+    def test_stdout_contains_combined_summary_header(self, results: E2EResults) -> None:
+        """Verify stdout contains Combined Test Execution Summary header."""
+        assert "Combined Test Execution Summary" in results.filtered_stdout, (
+            "Missing 'Combined Test Execution Summary' header in stdout"
+        )
+
+    def test_stdout_contains_stats_in_combined_summary(
+        self, results: E2EResults
+    ) -> None:
+        """Verify stats line appears in Combined Summary section."""
+        stdout = results.filtered_stdout
+        summary_start = stdout.find("Combined Test Execution Summary")
+        assert summary_start != -1, "Combined Summary section not found"
+
+        summary_section = stdout[summary_start:]
+        stats_pattern = r"\d+ tests, \d+ passed, \d+ failed, \d+ skipped\."
+        match = re.search(stats_pattern, summary_section)
+        assert match is not None, (
+            f"Stats line not found in Combined Summary section.\n"
+            f"Section content:\n{summary_section[:500]}"
+        )
+
+    def test_stdout_no_individual_framework_completion_messages(
+        self, results: E2EResults
+    ) -> None:
+        """Verify individual frameworks don't print completion messages to stdout.
+
+        The combined summary is the single source of completion status.
+        Individual "completed" or "finished" messages from Robot/PyATS should not appear.
+        """
+        stdout = results.filtered_stdout.lower()
+
+        completion_patterns = [
+            r"robot.*completed",
+            r"robot.*finished",
+            r"pyats.*completed",
+            r"pyats.*finished",
+        ]
+        for pattern in completion_patterns:
+            match = re.search(pattern, stdout)
+            assert match is None, (
+                f"Found individual framework completion message matching '{pattern}'"
+            )
+
+    def test_stdout_no_archive_discovery_messages(self, results: E2EResults) -> None:
+        """Verify archive discovery messages are not in stdout (moved to logger)."""
+        if not results.scenario.has_pyats_tests:
+            pytest.skip("No PyATS tests in this scenario")
+
+        archive_patterns = ["Found API archive:", "Found D2D archive:"]
+        for pattern in archive_patterns:
+            assert pattern not in results.filtered_stdout, (
+                f"Found '{pattern}' in stdout - should be logger.info only"
+            )
+
+    def test_stdout_pyats_discovery_consolidated(self, results: E2EResults) -> None:
+        """Verify PyATS discovery output shows consolidated summary."""
+        if not results.scenario.has_pyats_tests:
+            pytest.skip("No PyATS tests in this scenario")
+
+        discovery_pattern = r"Discovered \d+ PyATS test files"
+        match = re.search(discovery_pattern, results.filtered_stdout)
+        assert match is not None, (
+            "Missing consolidated PyATS discovery message in stdout"
         )
 
 
