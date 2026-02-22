@@ -197,8 +197,6 @@ class RobotOrchestrator:
                     )
                 )
                 return TestResults.from_error(error_msg)
-            typer.echo("✅ Robot Framework tests completed")
-
             # Phase 4: Move Robot files to robot_results/ subdirectory
             #
             # Unfortunately pabot does not allow me to specify the output.xml/etc. to be in a different
