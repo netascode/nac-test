@@ -304,6 +304,8 @@ class CombinedOrchestrator:
         typer.echo(terminal.format_test_summary(results))
         typer.echo("-" * 70)
 
+        # print absolute filenames in our summary to align with robot/rebot output
+        #
         combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME
         if combined_dashboard.exists():
             typer.echo(f"Dashboard:  {combined_dashboard.resolve()}")
