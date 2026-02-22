@@ -129,7 +129,6 @@ class SubprocessRunner:
             cmd.append("--verbose")
 
         logger.info(f"Executing command: {' '.join(cmd)}")
-        print(f"\nExecuting PyATS with command: {' '.join(cmd)}")
 
         try:
             # Get buffer limit from environment or use default
@@ -265,7 +264,6 @@ class SubprocessRunner:
             cmd.append("--quiet")
 
         logger.info(f"Executing command: {' '.join(cmd)}")
-        print(f"\nExecuting PyATS with command: {' '.join(cmd)}")
 
         try:
             # Get buffer limit from environment or use default
