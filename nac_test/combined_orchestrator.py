@@ -306,11 +306,11 @@ class CombinedOrchestrator:
 
         combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME
         if combined_dashboard.exists():
-            typer.echo(f"Dashboard:  {combined_dashboard}")
+            typer.echo(f"Dashboard:  {combined_dashboard.resolve()}")
         if results.robot is not None:
             robot_log = self.output_dir / ROBOT_RESULTS_DIRNAME / "log.html"
             if robot_log.exists():
-                typer.echo(f"Robot:      {robot_log}")
+                typer.echo(f"Robot:      {robot_log.resolve()}")
         if results.api is not None:
             api_summary = (
                 self.output_dir
@@ -320,7 +320,7 @@ class CombinedOrchestrator:
                 / SUMMARY_REPORT_FILENAME
             )
             if api_summary.exists():
-                typer.echo(f"PyATS API:  {api_summary}")
+                typer.echo(f"PyATS API:  {api_summary.resolve()}")
         if results.d2d is not None:
             d2d_summary = (
                 self.output_dir
@@ -330,9 +330,9 @@ class CombinedOrchestrator:
                 / SUMMARY_REPORT_FILENAME
             )
             if d2d_summary.exists():
-                typer.echo(f"PyATS D2D:  {d2d_summary}")
+                typer.echo(f"PyATS D2D:  {d2d_summary.resolve()}")
         xunit_path = self.output_dir / "xunit.xml"
         if xunit_path.exists():
-            typer.echo(f"xUnit:      {xunit_path}")
+            typer.echo(f"xUnit:      {xunit_path.resolve()}")
 
         typer.echo("=" * 70)
