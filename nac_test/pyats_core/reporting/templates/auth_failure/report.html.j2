@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network as Code Test Results — {% if failure_type == 'unreachable' %}Controller Unreachable{% else %}Authentication Failed{% endif %}</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --skip: #95a5a6;
+            --info: #3498db;
+            --neutral: #95a5a6;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+            background-color: #f9f9f9;
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 6px var(--shadow);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h1, h2, h3, h4 {
+            margin-top: 0;
+            line-height: 1.2;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        header h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .failure-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .failure-card .card-header {
+            background: linear-gradient(135deg, {% if failure_type == 'unreachable' %}#b03a2e{% else %}#c0392b{% endif %}, var(--danger));
+            color: white;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .failure-card .card-header .icon {
+            font-size: 1.5rem;
+        }
+
+        .failure-card .card-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .failure-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 160px 1fr;
+            gap: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+
+        .detail-value {
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        .detail-value code {
+            background: var(--light);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.85rem;
+        }
+
+        .detail-value .error-text {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .summary-bar {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-stat {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            padding: 1.25rem 1.5rem;
+            flex: 1;
+            text-align: center;
+        }
+
+        .summary-stat .number {
+            font-size: 2.5rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .summary-stat .label {
+            font-size: 0.85rem;
+            color: var(--skip);
+            margin-top: 0.25rem;
+        }
+
+        .stat-passed .number { color: var(--success); }
+        .stat-failed .number { color: var(--danger); }
+        .stat-total .number { color: var(--primary); }
+
+        .remediation-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .remediation-card .card-header {
+            background: #fef9e7;
+            border-bottom: 2px solid var(--warning);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .remediation-card .card-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #7d6608;
+        }
+
+        .remediation-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .remediation-card ol {
+            padding-left: 1.5rem;
+        }
+
+        .remediation-card li {
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .terminal-block {
+            background: #282c34;
+            color: #abb2bf;
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.85rem;
+            margin: 0.5rem 0;
+            overflow-x: auto;
+        }
+
+        .terminal-block .prompt {
+            color: var(--success);
+        }
+
+        .terminal-block .comment {
+            color: #5c6370;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .info-card p {
+            font-size: 0.9rem;
+            color: var(--secondary);
+            line-height: 1.6;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--skip);
+            font-size: 0.8rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-failed {
+            background: #fdedec;
+            color: var(--danger);
+        }
+
+        .badge-unreachable {
+            background: #fdebd0;
+            color: #a04000;
+        }
+
+        .callout-warning {
+            background: #fef9e7;
+            border-left: 4px solid var(--warning);
+            border-radius: 0 4px 4px 0;
+            padding: 0.75rem 1rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            color: #7d6608;
+        }
+
+        .network-diagram {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 1.25rem;
+            margin: 1rem 0;
+            text-align: center;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.85rem;
+            color: var(--secondary);
+        }
+
+        .network-diagram .arrow-fail {
+            color: var(--danger);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Network as Code Test Results</h1>
+            <div class="date-info">Generated on {{ timestamp }}</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Summary Stats -->
+        <div class="summary-bar">
+            <div class="summary-stat stat-passed">
+                <div class="number">0</div>
+                <div class="label">Passed</div>
+            </div>
+            <div class="summary-stat stat-failed">
+                <div class="number">0</div>
+                <div class="label">Failed</div>
+            </div>
+            <div class="summary-stat stat-total">
+                <div class="number">0</div>
+                <div class="label">Executed</div>
+            </div>
+        </div>
+
+        <!-- Failure Card -->
+        <div class="failure-card">
+            <div class="card-header">
+                <span class="icon">&#9940;</span>
+                <h2>{% if failure_type == 'unreachable' %}Controller Unreachable{% else %}Controller Authentication Failed{% endif %}</h2>
+            </div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value">
+                        {% if failure_type == 'unreachable' %}
+                        <span class="status-badge badge-unreachable">Unreachable</span>
+                        {% else %}
+                        <span class="status-badge badge-failed">Auth Failed</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="detail-label">Controller Type</div>
+                    <div class="detail-value">{{ display_name }}</div>
+
+                    <div class="detail-label">Controller URL</div>
+                    <div class="detail-value"><code>{{ controller_url }}</code></div>
+
+                    <div class="detail-label">Error</div>
+                    <div class="detail-value"><span class="error-text">{{ detail }}</span></div>
+
+                    <div class="detail-label">Timestamp</div>
+                    <div class="detail-value">{{ timestamp }}</div>
+
+                    <div class="detail-label">Tests Executed</div>
+                    <div class="detail-value">0 — aborted before test execution</div>
+                </div>
+
+                {% if failure_type == 'unreachable' %}
+                <div class="network-diagram">
+                    nac-test &nbsp; <span class="arrow-fail">──── ✕ ────</span> &nbsp; {{ display_name }} ({{ host }})
+                    <br>
+                    <small>TCP connection failed</small>
+                </div>
+
+                <p style="font-size: 0.9rem; color: var(--secondary);">
+                    The controller could not be reached during the pre-flight connectivity check.
+                    This usually indicates a network issue, firewall blocking the connection,
+                    or the controller being powered off. No test cases were executed.
+                </p>
+                {% else %}
+                    {% if is_403 %}
+                <div class="callout-warning">
+                    <strong>Note:</strong> HTTP 403 (Forbidden) typically means the credentials were accepted
+                    but the user account does not have sufficient privileges to access the API.
+                    This differs from 401 (Unauthorized) which indicates incorrect credentials.
+                </div>
+                    {% endif %}
+
+                <p style="font-size: 0.9rem; color: var(--secondary);">
+                    Authentication to the controller failed during the pre-flight connectivity check.
+                    No test cases were executed. The credentials provided via environment variables
+                    {% if is_403 %}may lack the required role or permissions for API access.{% else %}were rejected by the controller.{% endif %}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Remediation Steps -->
+        <div class="remediation-card">
+            <div class="card-header">
+                <span>&#128296;</span>
+                <h3>Remediation Steps</h3>
+            </div>
+            <div class="card-body">
+                <ol>
+                    {% if failure_type == 'unreachable' %}
+                    <li>
+                        <strong>Verify the controller URL is correct:</strong>
+                        <div class="terminal-block">
+                            <span class="prompt">$</span> echo ${{ env_var_prefix }}_URL<br>
+                            {{ controller_url }}
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Test basic connectivity:</strong>
+                        <div class="terminal-block">
+                            <span class="comment"># Check if the host responds to ping</span><br>
+                            <span class="prompt">$</span> ping -c 3 {{ host }}<br>
+                            <br>
+                            <span class="comment"># Check if port 443 is open</span><br>
+                            <span class="prompt">$</span> curl -sk --connect-timeout 5 {{ controller_url }}<br>
+                            <br>
+                            <span class="comment"># Check for firewall/routing issues</span><br>
+                            <span class="prompt">$</span> traceroute {{ host }}
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Check if the controller is operational</strong> — verify the {{ display_name }} application is running and accepting connections on port 443.
+                    </li>
+                    <li>
+                        <strong>Check VPN/proxy settings</strong> — if the controller is behind a VPN, ensure the VPN tunnel is active.
+                    </li>
+                    {% else %}
+                    <li>
+                        <strong>Verify your credentials are correct:</strong>
+                        <div class="terminal-block">
+                            <span class="comment"># Check current values</span><br>
+                            <span class="prompt">$</span> echo ${{ env_var_prefix }}_USERNAME<br>
+                            <span class="prompt">$</span> echo ${{ env_var_prefix }}_PASSWORD<br>
+                            <br>
+                            <span class="comment"># Set correct values</span><br>
+                            <span class="prompt">$</span> export {{ env_var_prefix }}_USERNAME=&lt;your-username&gt;<br>
+                            <span class="prompt">$</span> export {{ env_var_prefix }}_PASSWORD=&lt;your-password&gt;
+                        </div>
+                    </li>
+                        {% if is_403 %}
+                    <li>
+                        <strong>Verify user role and permissions:</strong>
+                        <p style="margin: 0.5rem 0; font-size: 0.9rem;">
+                            Log into the {{ display_name }} web UI and verify the user account has the
+                            appropriate administrative role for API access.
+                        </p>
+                    </li>
+                        {% endif %}
+                    <li>
+                        <strong>Test connectivity manually:</strong>
+                        <div class="terminal-block">
+                            <span class="prompt">$</span> curl -sk {{ curl_example }}
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Verify the account is not locked</strong> — multiple failed attempts may trigger account lockout on the controller.
+                    </li>
+                    {% endif %}
+                </ol>
+            </div>
+        </div>
+
+        <!-- Context Info -->
+        <div class="info-card">
+            <h3>What Happened</h3>
+            <p>
+                Before launching any test suites, <code>nac-test</code> performs a pre-flight authentication
+                check against the configured controller.
+                {% if failure_type == 'unreachable' %}
+                The connection to <code>{{ controller_url }}</code> failed, indicating the
+                controller is not reachable from this host. No tests were executed.
+                {% else %}
+                This catches credential and connectivity problems
+                immediately rather than letting hundreds of test cases fail individually — saving significant
+                time in CI/CD pipelines.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="footer">
+        Generated by nac-test &middot; Pre-flight authentication check &middot; {{ timestamp }}
+    </div>
+</body>
+</html>

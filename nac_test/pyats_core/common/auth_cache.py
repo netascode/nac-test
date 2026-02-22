@@ -111,6 +111,52 @@ class AuthCache:
             return result
 
     @classmethod
+    def invalidate(cls, controller_type: str, url: str) -> None:
+        """Remove the cached auth data for a given controller type and URL.
+
+        This is a best-effort operation: if the cache file does not exist or
+        cannot be deleted, a debug message is logged and no exception is raised.
+        Both the cache file and its associated lock file are cleaned up.
+
+        Args:
+            controller_type: Type of controller (e.g., "ACI", "SDWAN_MANAGER", "CC").
+            url: Controller URL used to derive the cache file path.
+        """
+        cache_dir = Path(AUTH_CACHE_DIR)
+        url_hash = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
+        cache_file = cache_dir / f"{controller_type}_{url_hash}.json"
+        lock_file = cache_dir / f"{controller_type}_{url_hash}.lock"
+
+        try:
+            with FileLock(str(lock_file)):
+                if cache_file.exists():
+                    cache_file.unlink()
+                    logger.debug(
+                        "Invalidated auth cache for %s at %s", controller_type, url
+                    )
+                else:
+                    logger.debug(
+                        "No auth cache to invalidate for %s at %s",
+                        controller_type,
+                        url,
+                    )
+        except Exception as e:
+            logger.debug(
+                "Best-effort cache invalidation failed for %s at %s: %s",
+                controller_type,
+                url,
+                e,
+            )
+            return
+
+        # Clean up the lock file after releasing the lock
+        try:
+            if lock_file.exists():
+                lock_file.unlink()
+        except Exception as e:
+            logger.debug("Could not remove lock file %s: %s", lock_file, e)
+
+    @classmethod
     def get_or_create(
         cls,
         controller_type: str,

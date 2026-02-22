@@ -874,7 +874,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             *args: Any,
             **kwargs: Any,
         ) -> Any:
-            """Execute HTTP method with aggressive retry logic for APIC recovery.
+            """Execute HTTP method with aggressive retry logic for controller recovery.
 
             Handles all HTTP errors including:
             - Connection timeouts (network issues)
@@ -985,7 +985,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
                     self.logger.warning(
                         f"⏳ BACKING OFF: {method_name} {url} failed ({error_type}), "
-                        f"attempt {attempt + 1}/{MAX_RETRIES}, waiting {delay}s for APIC recovery..."
+                        f"attempt {attempt + 1}/{MAX_RETRIES}, waiting {delay}s for controller recovery..."
                     )
 
                     # Ensure connection is closed before retry
@@ -996,11 +996,11 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                             pass  # Best effort cleanup
 
                     # For server disconnections, add extra delay on first few retries
-                    # This gives APIC/controllers more time to recover from stress
+                    # This gives controllers more time to recover from stress
                     if isinstance(e, httpx.RemoteProtocolError) and attempt < 3:
                         extra_delay = 10  # Add 10 seconds for server recovery
                         self.logger.info(
-                            f"Adding {extra_delay}s extra delay for APIC recovery"
+                            f"Adding {extra_delay}s extra delay for controller recovery"
                         )
                         await asyncio.sleep(extra_delay)
 
