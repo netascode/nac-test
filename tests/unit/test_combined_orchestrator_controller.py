@@ -79,7 +79,7 @@ class TestCombinedOrchestratorController:
                     merged_data_filename="merged.yaml",
                 )
 
-            # Exit code should be 1
+            # Exit code should be 255
             assert exc_info.value.exit_code == EXIT_ERROR
 
     def test_combined_orchestrator_passes_controller_to_pyats(
