@@ -3,16 +3,12 @@
 
 """Centralized terminal formatting utilities for nac-test."""
 
-from __future__ import annotations
-
 import os
 import re
-from typing import TYPE_CHECKING
 
 from colorama import Fore, Style, init
 
-if TYPE_CHECKING:
-    from nac_test.core.types import CombinedResults
+from nac_test.core.types import CombinedResults
 
 # autoreset=True means colors reset after each print
 init(autoreset=True)
