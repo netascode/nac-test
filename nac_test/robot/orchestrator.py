@@ -11,7 +11,6 @@ pattern as PyATSOrchestrator.
 import logging
 import os
 import shutil
-from datetime import datetime
 from pathlib import Path
 
 import typer
@@ -133,29 +132,14 @@ class RobotOrchestrator:
         logger.info(f"Templates directory: {self.templates_dir}")
 
         # Phase 1: Template rendering (delegate to existing RobotWriter)
-        start_time = datetime.now()
-        start_timestamp = start_time.strftime("%H:%M:%S")
-        typer.echo(f"[{start_timestamp}] 📝 Rendering Robot Framework templates...")
-
+        typer.echo("📝 Rendering Robot Framework templates...")
         self.robot_writer.write(
             self.templates_dir, self.output_dir, ordering_file=self.ordering_file
         )
 
-        end_time = datetime.now()
-        end_timestamp = end_time.strftime("%H:%M:%S")
-        duration = (end_time - start_time).total_seconds()
-        duration_str = (
-            f"{duration:.1f}s"
-            if duration < 60
-            else f"{int(duration // 60)}m {duration % 60:.0f}s"
-        )
-        typer.echo(
-            f"[{end_timestamp}] ✅ Template rendering completed ({duration_str})"
-        )
-
         # Phase 2: Create merged data model in Robot working directory
         # Note: Robot tests expect the merged data file in their working directory
-        typer.echo("📄 Creating merged data model for Robot tests...")
+        logger.info("Creating merged data model for Robot tests")
         self.robot_writer.write_merged_data_model(
             self.output_dir, self.merged_data_filename
         )
