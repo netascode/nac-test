@@ -26,6 +26,7 @@ from nac_test.core.constants import DEBUG_MODE
 from nac_test.data_merger import DataMerger
 from nac_test.utils.controller import detect_controller_type, get_env_var_prefix
 from nac_test.utils.logging import VerbosityLevel, configure_logging
+from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 
 # Pretty exceptions are verbose but helpful for debugging.
 # Enable them when NAC_TEST_DEBUG=true, disable for cleaner output otherwise.
@@ -296,6 +297,8 @@ def main(
     """
     configure_logging(verbosity, error_handler)
 
+    check_and_exit_if_unsupported_macos_python()
+
     # Validate development flag combinations
     if pyats and robot:
         typer.echo(
@@ -405,7 +408,7 @@ def main(
     runtime_start = datetime.now()
 
     try:
-        orchestrator.run_tests()
+        stats = orchestrator.run_tests()
     except Exception as e:
         # Ensure runtime is shown even if orchestrator fails
         typer.echo(f"Error during execution: {e}")
@@ -424,12 +427,34 @@ def main(
         runtime_str = f"{minutes} minutes {secs:.2f} seconds"
 
     typer.echo(f"\nTotal runtime: {runtime_str}")
-    exit()
 
+    # Handle render-only mode: exit 0 if no exceptions occurred
+    if render_only:
+        typer.echo("\n✅ Templates rendered successfully (render-only mode)")
+        raise typer.Exit(0)
 
-def exit() -> None:
+    # Use test statistics for exit code
+    # Also check error_handler for non-test errors
     if error_handler.fired:
+        # Error handler caught a critical error during execution
+        raise typer.Exit(1)
+    elif stats.has_failures:
+        typer.echo(
+            f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests",
+            err=True,
+        )
+        raise typer.Exit(1)
+    elif stats.has_errors:
+        # Framework execution errors (not test failures)
+        error_list = "; ".join(stats.errors)
+        typer.echo(
+            f"\n❌ Execution errors occurred: {error_list}",
+            err=True,
+        )
+        raise typer.Exit(1)
+    elif stats.is_empty:
+        typer.echo("\n⚠️  No tests were executed", err=True)
         raise typer.Exit(1)
     else:
-        rc = 0
-    raise typer.Exit(code=rc)
+        typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
+        raise typer.Exit(0)

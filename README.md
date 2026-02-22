@@ -75,7 +75,14 @@ For Robot Framework tests, [Pabot](https://pabot.org/) executes test suites in p
 
 ## Installation
 
-Python 3.10+ is required to install `nac-test`. Don't have Python 3.10 or later? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/).
+**Python Requirements:**
+- **Linux / Windows**: Python 3.10 or higher
+- **macOS**: Python 3.12 or higher (earlier versions have known incompatibilities)
+
+Don't have the right Python version? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/), or install using:
+- `brew install python@3.12`
+- `uv python install 3.12`
+- `pyenv install 3.12`
 
 `nac-validate` can be installed in a virtual environment using `pip` or `uv`:
 
@@ -256,15 +263,24 @@ Test DEF
 As well as the test results and reports:
 
 ```shell
-$ tree -L 1 tests
+$ tree -L 2 tests
 tests
-├── log.html
-├── output.xml
-├── pabot_results
-├── report.html
-├── test1.robot
-└── xunit.xml
+├── combined_summary.html
+├── robot_results/
+│   ├── log.html
+│   ├── output.xml
+│   ├── report.html
+│   ├── summary_report.html
+│   └── xunit.xml
+├── log.html -> robot_results/log.html
+├── output.xml -> robot_results/output.xml
+├── report.html -> robot_results/report.html
+├── xunit.xml -> robot_results/xunit.xml
+├── pabot_results/
+└── test1.robot
 ```
+
+Note: Root-level `log.html`, `output.xml`, `report.html`, and `xunit.xml` are symlinks to the corresponding files in `robot_results/` for backward compatibility.
 
 ## PyATS Testing
 
@@ -328,15 +344,17 @@ PyATS tests generate:
 Example output structure:
 
 ```shell
-$ tree -L 2 results/pyats_results
-results/pyats_results
-├── api/
-│   ├── html_reports/
-│   └── results.json
-├── d2d/
-│   ├── html_reports/
-│   └── results.json
-└── combined_summary.html
+$ tree -L 3 results
+results
+├── combined_summary.html
+├── robot_results/
+└── pyats_results/
+    ├── api/
+    │   ├── html_reports/
+    │   └── results.json
+    └── d2d/
+        ├── html_reports/
+        └── results.json
 ```
 
 ## Merged Data Model
