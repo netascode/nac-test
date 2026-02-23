@@ -13,6 +13,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nac_test.core.constants import (
+    LOG_HTML,
+    OUTPUT_XML,
+    REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
     XUNIT_XML,
@@ -111,7 +114,7 @@ class TestRobotOrchestrator:
         robot_results_dir.mkdir()
 
         # xunit.xml is NOT symlinked (merged xunit is created separately)
-        files_to_create = ["output.xml", "log.html", "report.html"]
+        files_to_create = [LOG_HTML, OUTPUT_XML, REPORT_HTML]
         for filename in files_to_create:
             (robot_results_dir / filename).write_text(f"Mock {filename}")
 
@@ -132,16 +135,16 @@ class TestRobotOrchestrator:
         # Create robot_results directory
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
-        (robot_results_dir / "output.xml").write_text("new content")
+        (robot_results_dir / OUTPUT_XML).write_text("new content")
 
         # Create existing file at root (should be replaced)
-        (temp_output_dir / "output.xml").write_text("old content")
+        (temp_output_dir / OUTPUT_XML).write_text("old content")
 
         # Create symlinks
         orchestrator._create_backward_compat_symlinks()
 
         # Verify symlink was created and points to new content
-        symlink = temp_output_dir / "output.xml"
+        symlink = temp_output_dir / OUTPUT_XML
         assert symlink.is_symlink()
         assert symlink.read_text() == "new content"
 
@@ -208,8 +211,7 @@ class TestRobotOrchestrator:
         # Create mock Robot output files in robot_results/ (pabot 5.2+ writes directly there)
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
-        # Create mock Robot output files in robot_results/ (pabot 5.2+ writes directly there)
-        for filename in ["output.xml", "log.html", "report.html", XUNIT_XML]:
+        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
             (robot_results_dir / filename).write_text(f"Mock {filename}")
 
         stats = orchestrator.run_tests()
@@ -283,10 +285,10 @@ class TestRobotOrchestrator:
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
-        output_xml = robot_results_dir / "output.xml"
+        output_xml = robot_results_dir / OUTPUT_XML
         output_xml.write_text("<robot></robot>")
 
-        target_dir = temp_output_dir / "output.xml"
+        target_dir = temp_output_dir / OUTPUT_XML
         target_dir.mkdir()
 
         # Should not raise, but log a warning and skip that symlink
