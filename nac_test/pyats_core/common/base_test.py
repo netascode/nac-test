@@ -7,7 +7,6 @@ import asyncio
 import json
 import logging
 import os
-import re
 import sys
 import tempfile
 import time
@@ -39,6 +38,7 @@ from nac_test.pyats_core.reporting.batching_reporter import BatchingReporter
 from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
+from nac_test.utils import sanitize_hostname
 from nac_test.utils.controller import detect_controller_type
 
 T = TypeVar("T")
@@ -777,8 +777,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # The HOSTNAME environment variable is set by device_executor for d2d tests
         hostname = os.environ.get("HOSTNAME")
         if hostname:
-            # Sanitize hostname for safe filename use - replace non-alphanumeric chars with underscore
-            safe_hostname = re.sub(r"[^a-zA-Z0-9]", "_", hostname).lower()
+            safe_hostname = sanitize_hostname(hostname)
             return f"{class_name}_{safe_hostname}_{timestamp}"
 
         return f"{class_name}_{timestamp}"

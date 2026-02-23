@@ -29,6 +29,7 @@ from nac_test.core.constants import (
     PYATS_RESULTS_DIRNAME,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    XUNIT_XML,
 )
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 from tests.e2e.conftest import E2EResults
@@ -76,7 +77,7 @@ class E2ECombinedTestBase:
     @pytest.fixture
     def parsed_xunit(self, results: E2EResults) -> ET.Element | None:
         """Parse merged xunit.xml once per scenario, return root element or None."""
-        xunit_path = results.output_dir / "xunit.xml"
+        xunit_path = results.output_dir / XUNIT_XML
         if not xunit_path.is_file():
             return None
         tree = ET.parse(xunit_path)
@@ -552,15 +553,12 @@ class E2ECombinedTestBase:
 
     def test_hostnames_in_console_output(self, results: E2EResults) -> None:
         """Verify hostnames appear in console output with correct format."""
-        if (
-            not results.scenario.has_pyats_d2d_tests
-            or not results.scenario.expected_d2d_hostnames
-        ):
-            pytest.skip("No PyATS D2D tests with hostnames in this scenario")
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
 
         from tests.e2e.html_helpers import verify_hostname_in_console_output
 
-        # Type assertion: we know expected_d2d_hostnames is not None due to skip check above
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
         assert results.scenario.expected_d2d_hostnames is not None
         found_hostnames = verify_hostname_in_console_output(
             results.stdout, results.scenario.expected_d2d_hostnames
@@ -569,11 +567,8 @@ class E2ECombinedTestBase:
 
     def test_hostnames_in_d2d_summary_table(self, results: E2EResults) -> None:
         """Verify hostnames appear in PyATS D2D summary table."""
-        if (
-            not results.scenario.has_pyats_d2d_tests
-            or not results.scenario.expected_d2d_hostnames
-        ):
-            pytest.skip("No PyATS D2D tests with hostnames in this scenario")
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
 
         from tests.e2e.html_helpers import assert_hostname_display_in_summary
 
@@ -585,7 +580,7 @@ class E2ECombinedTestBase:
             / SUMMARY_REPORT_FILENAME
         )
 
-        # Type assertion: we know expected_d2d_hostnames is not None due to skip check above
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
         assert results.scenario.expected_d2d_hostnames is not None
         found_hostnames = assert_hostname_display_in_summary(
             summary_path, results.scenario.expected_d2d_hostnames
@@ -594,11 +589,8 @@ class E2ECombinedTestBase:
 
     def test_hostnames_in_d2d_detail_pages(self, results: E2EResults) -> None:
         """Verify hostnames appear in PyATS D2D detail page headers."""
-        if (
-            not results.scenario.has_pyats_d2d_tests
-            or not results.scenario.expected_d2d_hostnames
-        ):
-            pytest.skip("No PyATS D2D tests with hostnames in this scenario")
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
 
         from tests.e2e.html_helpers import assert_hostname_display_in_detail_pages
 
@@ -612,7 +604,7 @@ class E2ECombinedTestBase:
 
         assert len(detail_files) > 0, "No D2D detail HTML files found"
 
-        # Type assertion: we know expected_d2d_hostnames is not None due to skip check above
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
         assert results.scenario.expected_d2d_hostnames is not None
         found_hostnames = assert_hostname_display_in_detail_pages(
             detail_files, results.scenario.expected_d2d_hostnames
@@ -621,23 +613,16 @@ class E2ECombinedTestBase:
 
     def test_hostnames_in_d2d_html_filenames(self, results: E2EResults) -> None:
         """Verify hostnames are included in D2D HTML filenames."""
-        if (
-            not results.scenario.has_pyats_d2d_tests
-            or not results.scenario.expected_d2d_hostnames
-        ):
-            pytest.skip("No PyATS D2D tests with hostnames in this scenario")
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
 
+        from nac_test.utils import sanitize_hostname
         from tests.e2e.html_helpers import assert_hostname_in_filenames
 
-        # Type assertion: we know expected_d2d_hostnames is not None due to skip check above
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
         assert results.scenario.expected_d2d_hostnames is not None
-
-        # Convert hostnames to sanitized versions for filename checking
-        # Use the same sanitization logic as base_test.py: r"[^a-zA-Z0-9]" -> "_", then lowercase
-        # This matches the exact logic in nac_test/pyats_core/common/base_test.py line 764:
-        # safe_hostname = re.sub(r"[^a-zA-Z0-9]", "_", hostname).lower()
         sanitized_hostnames = [
-            re.sub(r"[^a-zA-Z0-9]", "_", hostname).lower()
+            sanitize_hostname(hostname)
             for hostname in results.scenario.expected_d2d_hostnames
         ]
 
@@ -678,11 +663,8 @@ class E2ECombinedTestBase:
 
     def test_hostname_sanitization_in_filenames(self, results: E2EResults) -> None:
         """Verify special characters in hostnames are properly sanitized in filenames."""
-        if (
-            not results.scenario.has_pyats_d2d_tests
-            or not results.scenario.expected_d2d_hostnames
-        ):
-            pytest.skip("No PyATS D2D tests with hostnames in this scenario")
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
 
         # Find all D2D HTML detail files
         d2d_reports_dir = (
@@ -705,7 +687,7 @@ class E2ECombinedTestBase:
 
     def test_merged_xunit_exists_at_root(self, results: E2EResults) -> None:
         """Verify merged xunit.xml exists at root and is not a symlink."""
-        xunit_path = results.output_dir / "xunit.xml"
+        xunit_path = results.output_dir / XUNIT_XML
         assert xunit_path.exists(), "Missing merged xunit.xml at root"
         assert xunit_path.is_file(), "xunit.xml should be a file (not symlink)"
         assert not xunit_path.is_symlink(), "xunit.xml should not be a symlink"
@@ -766,15 +748,15 @@ class E2ECombinedTestBase:
         """Verify Robot xunit.xml exists in robot_results/ subdirectory."""
         if not results.scenario.has_robot_tests:
             pytest.skip("No Robot tests in this scenario")
-        robot_xunit = results.output_dir / ROBOT_RESULTS_DIRNAME / "xunit.xml"
-        assert robot_xunit.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/xunit.xml"
+        robot_xunit = results.output_dir / ROBOT_RESULTS_DIRNAME / XUNIT_XML
+        assert robot_xunit.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/{XUNIT_XML}"
 
     def test_pyats_api_xunit_exists_in_subdirectory(self, results: E2EResults) -> None:
         """Verify PyATS API xunit.xml exists in pyats_results/api/ subdirectory."""
         if not results.scenario.has_pyats_api_tests:
             pytest.skip("No PyATS API tests in this scenario")
-        api_xunit = results.output_dir / PYATS_RESULTS_DIRNAME / "api" / "xunit.xml"
-        assert api_xunit.exists(), f"Missing {PYATS_RESULTS_DIRNAME}/api/xunit.xml"
+        api_xunit = results.output_dir / PYATS_RESULTS_DIRNAME / "api" / XUNIT_XML
+        assert api_xunit.exists(), f"Missing {PYATS_RESULTS_DIRNAME}/api/{XUNIT_XML}"
 
     def test_pyats_d2d_xunit_exists_in_subdirectory(self, results: E2EResults) -> None:
         if not results.scenario.has_pyats_d2d_tests:
@@ -824,7 +806,7 @@ class TestE2ESuccess(E2ECombinedTestBase):
             "log.html",
             "report.html",
             # Merged xunit.xml (combined from Robot + PyATS, not a symlink)
-            "xunit.xml",
+            XUNIT_XML,
         }
         missing = expected - root_items
         assert not missing, f"Missing expected items at root: {missing}"

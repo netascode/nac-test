@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from nac_test.core.constants import XUNIT_XML
 from nac_test.utils.xunit_merger import (
     XUnitStats,
     collect_xunit_files,
@@ -237,29 +238,29 @@ class TestCollectXunitFiles:
     def test_collects_robot_xunit(self, tmp_path: Path) -> None:
         robot_dir = tmp_path / "robot_results"
         robot_dir.mkdir()
-        (robot_dir / "xunit.xml").write_text("<testsuite/>")
+        (robot_dir / XUNIT_XML).write_text("<testsuite/>")
 
         files = collect_xunit_files(tmp_path)
 
         assert len(files) == 1
-        assert files[0] == (robot_dir / "xunit.xml", "robot")
+        assert files[0] == (robot_dir / XUNIT_XML, "robot")
 
     def test_collects_pyats_api_xunit(self, tmp_path: Path) -> None:
         api_dir = tmp_path / "pyats_results" / "api"
         api_dir.mkdir(parents=True)
-        (api_dir / "xunit.xml").write_text("<testsuite/>")
+        (api_dir / XUNIT_XML).write_text("<testsuite/>")
 
         files = collect_xunit_files(tmp_path)
 
         assert len(files) == 1
-        assert files[0] == (api_dir / "xunit.xml", "pyats_api")
+        assert files[0] == (api_dir / XUNIT_XML, "pyats_api")
 
     def test_collects_pyats_d2d_xunit_per_device(self, tmp_path: Path) -> None:
         d2d_dir = tmp_path / "pyats_results" / "d2d"
         for device in ["router1", "router2"]:
             device_dir = d2d_dir / device
             device_dir.mkdir(parents=True)
-            (device_dir / "xunit.xml").write_text("<testsuite/>")
+            (device_dir / XUNIT_XML).write_text("<testsuite/>")
 
         files = collect_xunit_files(tmp_path)
 
@@ -267,20 +268,20 @@ class TestCollectXunitFiles:
         paths = [f[0] for f in files]
         sources = [f[1] for f in files]
 
-        assert d2d_dir / "router1" / "xunit.xml" in paths
-        assert d2d_dir / "router2" / "xunit.xml" in paths
+        assert d2d_dir / "router1" / XUNIT_XML in paths
+        assert d2d_dir / "router2" / XUNIT_XML in paths
         assert "pyats_d2d/router1" in sources
         assert "pyats_d2d/router2" in sources
 
     def test_collects_all_xunit_sources(self, tmp_path: Path) -> None:
         (tmp_path / "robot_results").mkdir()
-        (tmp_path / "robot_results" / "xunit.xml").write_text("<testsuite/>")
+        (tmp_path / "robot_results" / XUNIT_XML).write_text("<testsuite/>")
 
         (tmp_path / "pyats_results" / "api").mkdir(parents=True)
-        (tmp_path / "pyats_results" / "api" / "xunit.xml").write_text("<testsuite/>")
+        (tmp_path / "pyats_results" / "api" / XUNIT_XML).write_text("<testsuite/>")
 
         (tmp_path / "pyats_results" / "d2d" / "device1").mkdir(parents=True)
-        (tmp_path / "pyats_results" / "d2d" / "device1" / "xunit.xml").write_text(
+        (tmp_path / "pyats_results" / "d2d" / "device1" / XUNIT_XML).write_text(
             "<testsuite/>"
         )
 
@@ -301,7 +302,7 @@ class TestMergeXunitResults:
     def test_merges_all_collected_files(self, tmp_path: Path) -> None:
         robot_dir = tmp_path / "robot_results"
         robot_dir.mkdir()
-        (robot_dir / "xunit.xml").write_text(
+        (robot_dir / XUNIT_XML).write_text(
             """<?xml version="1.0"?>
 <testsuite name="Robot" tests="2" failures="0" errors="0" skipped="0" time="1.0">
   <testcase name="test1" classname="Robot" time="0.5"/>
@@ -311,7 +312,7 @@ class TestMergeXunitResults:
 
         api_dir = tmp_path / "pyats_results" / "api"
         api_dir.mkdir(parents=True)
-        (api_dir / "xunit.xml").write_text(
+        (api_dir / XUNIT_XML).write_text(
             """<?xml version="1.0"?>
 <testsuite name="PyATS.API" tests="1" failures="1" errors="0" skipped="0" time="2.0">
   <testcase name="api_test" classname="PyATS.API" time="2.0">
@@ -323,7 +324,7 @@ class TestMergeXunitResults:
         result = merge_xunit_results(tmp_path)
 
         assert result is not None
-        assert result == tmp_path / "xunit.xml"
+        assert result == tmp_path / XUNIT_XML
         assert result.exists()
 
         tree = ET.parse(result)
@@ -334,4 +335,4 @@ class TestMergeXunitResults:
     def test_returns_none_for_empty_output_dir(self, tmp_path: Path) -> None:
         result = merge_xunit_results(tmp_path)
         assert result is None
-        assert not (tmp_path / "xunit.xml").exists()
+        assert not (tmp_path / XUNIT_XML).exists()

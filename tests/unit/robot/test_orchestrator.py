@@ -15,6 +15,7 @@ import pytest
 from nac_test.core.constants import (
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    XUNIT_XML,
 )
 from nac_test.core.types import TestResults
 from nac_test.robot.orchestrator import RobotOrchestrator
@@ -207,7 +208,8 @@ class TestRobotOrchestrator:
         # Create mock Robot output files in robot_results/ (pabot 5.2+ writes directly there)
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
-        for filename in ["output.xml", "log.html", "report.html", "xunit.xml"]:
+        # Create mock Robot output files in robot_results/ (pabot 5.2+ writes directly there)
+        for filename in ["output.xml", "log.html", "report.html", XUNIT_XML]:
             (robot_results_dir / filename).write_text(f"Mock {filename}")
 
         stats = orchestrator.run_tests()
