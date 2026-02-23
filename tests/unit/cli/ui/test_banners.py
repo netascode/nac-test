@@ -100,8 +100,8 @@ class TestDisplayAuthFailureBanner:
         assert "CC_USERNAME" in content
         assert "CC_PASSWORD" in content
 
-    def test_contains_error_detail(self) -> None:
-        """Banner includes the error detail string."""
+    def test_contains_auth_failed_message(self) -> None:
+        """Banner includes the authentication failed message."""
         output = StringIO()
         with patch("sys.stdout", new=output):
             display_auth_failure_banner(
@@ -112,7 +112,9 @@ class TestDisplayAuthFailureBanner:
             )
 
         content = output.getvalue()
-        assert "401" in content
+        # Banner shows authentication failure message (detail goes to HTML report)
+        assert "AUTHENTICATION FAILED" in content
+        assert "Could not authenticate" in content
 
     def test_respects_no_color_mode(self) -> None:
         """Banner uses ASCII characters in NO_COLOR mode and excludes Unicode."""

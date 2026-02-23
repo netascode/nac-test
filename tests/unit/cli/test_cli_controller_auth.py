@@ -22,7 +22,7 @@ from nac_test.cli.validators.controller_auth import (
 
 
 class TestPreflightAuthCli:
-    """Integration tests for pre-flight auth at the CLI level."""
+    """Unit tests for pre-flight auth CLI behavior with mocked auth responses."""
 
     def test_cli_exits_1_with_auth_failure_banner(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -60,7 +60,7 @@ class TestPreflightAuthCli:
 
         assert result.exit_code == 1
         # Banner should be displayed
-        assert "AUTHENTICATION FAILED" in result.output or "401" in result.output
+        assert "AUTHENTICATION FAILED" in result.output
 
     def test_cli_exits_1_with_unreachable_banner(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -98,7 +98,7 @@ class TestPreflightAuthCli:
 
         assert result.exit_code == 1
         # Unreachable banner should be displayed
-        assert "UNREACHABLE" in result.output or "timed out" in result.output
+        assert "UNREACHABLE" in result.output
 
     def test_cli_proceeds_when_auth_succeeds(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -211,15 +211,13 @@ class TestPreflightAuthCli:
             )
 
         assert result.exit_code == 1
-        # HTML report should be generated
-        report_file = tmp_path / "auth_failure_report.html"
+        # HTML report should be generated via unified pipeline
+        report_file = tmp_path / "combined_summary.html"
         assert report_file.exists(), "Auth failure HTML report should be generated"
 
         # Report should contain relevant info
         report_content = report_file.read_text()
-        assert (
-            "Catalyst Center" in report_content or "catc.test.local" in report_content
-        )
+        assert "catc.test.local" in report_content
 
 
 class TestPreflightCacheInvalidation:
