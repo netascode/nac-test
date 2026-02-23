@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from nac_test.core.constants import DEBUG_MODE
+from nac_test.core.constants import DEBUG_MODE, FILE_TIMESTAMP_FORMAT
 
 logger = logging.getLogger(__name__)
 
@@ -343,7 +343,7 @@ class OverflowQueue:
         self.total_overflowed_to_disk += 1
 
         # Create unique filename with timestamp and sequence
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        timestamp = time.strftime(FILE_TIMESTAMP_FORMAT)
         filename = (
             self.overflow_dir
             / f"overflow_{timestamp}_{self.overflow_file_count:06d}.json"
