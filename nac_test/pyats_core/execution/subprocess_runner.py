@@ -53,6 +53,60 @@ class SubprocessRunner:
             )
         self.pyats_executable = str(pyats_path)
 
+    def _build_command(
+        self,
+        job_file_path: Path,
+        plugin_config_file: str,
+        pyats_config_file: str,
+        archive_name: str,
+        testbed_file_path: Path | None = None,
+    ) -> list[str]:
+        """Build the PyATS command with all arguments.
+
+        Args:
+            job_file_path: Path to the job file
+            plugin_config_file: Path to the plugin configuration file
+            pyats_config_file: Path to the PyATS configuration file
+            archive_name: Name for the archive file
+            testbed_file_path: Optional path to the testbed file (for D2D tests)
+
+        Returns:
+            List of command arguments for subprocess execution
+        """
+        cmd = [
+            self.pyats_executable,
+            "run",
+            "job",
+            str(job_file_path),
+        ]
+
+        if testbed_file_path is not None:
+            cmd.extend(["--testbed-file", str(testbed_file_path)])
+
+        cmd.extend(
+            [
+                "--configuration",
+                plugin_config_file,
+                "--pyats-configuration",
+                pyats_config_file,
+                "--archive-dir",
+                str(self.output_dir),
+                "--archive-name",
+                archive_name,
+                "--no-archive-subdir",
+                "--no-mail",
+                "--no-xml-report",
+                "--xunit",
+            ]
+        )
+
+        if logger.isEnabledFor(logging.DEBUG):
+            cmd.append("--verbose")
+        else:
+            cmd.append("--quiet")
+
+        return cmd
+
     async def execute_job(
         self, job_file_path: Path, env: dict[str, str]
     ) -> Path | None:
@@ -106,28 +160,9 @@ class SubprocessRunner:
         job_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
         archive_name = f"nac_test_job_{job_timestamp}.zip"
 
-        cmd = [
-            self.pyats_executable,
-            "run",
-            "job",
-            str(job_file_path),
-            "--configuration",
-            plugin_config_file,
-            "--pyats-configuration",
-            pyats_config_file,
-            "--archive-dir",
-            str(self.output_dir),
-            "--archive-name",
-            archive_name,
-            "--no-archive-subdir",
-            "--no-mail",
-            "--no-xml-report",
-            "--xunit",
-        ]
-
-        # Add verbose flag if logging level is DEBUG
-        if logger.isEnabledFor(logging.DEBUG):
-            cmd.append("--verbose")
+        cmd = self._build_command(
+            job_file_path, plugin_config_file, pyats_config_file, archive_name
+        )
 
         logger.info(f"Executing command: {' '.join(cmd)}")
         print(f"\nExecuting PyATS with command: {' '.join(cmd)}")
@@ -234,37 +269,13 @@ class SubprocessRunner:
         hostname = env.get("HOSTNAME", "unknown")
         archive_name = f"pyats_archive_device_{hostname}"
 
-        cmd = [
-            self.pyats_executable,
-            "run",
-            "job",
-            str(job_file_path),
-            "--testbed-file",
-            str(testbed_file_path),
-        ]
-
-        cmd.extend(
-            [
-                "--configuration",
-                plugin_config_file,
-                "--pyats-configuration",
-                pyats_config_file,
-                "--archive-dir",
-                str(self.output_dir),
-                "--archive-name",
-                archive_name,
-                "--no-archive-subdir",
-                "--no-mail",
-                "--no-xml-report",
-                "--xunit",
-            ]
+        cmd = self._build_command(
+            job_file_path,
+            plugin_config_file,
+            pyats_config_file,
+            archive_name,
+            testbed_file_path=testbed_file_path,
         )
-
-        # Add verbose flag if logging level is DEBUG, otherwise use quiet
-        if logger.isEnabledFor(logging.DEBUG):
-            cmd.append("--verbose")
-        else:
-            cmd.append("--quiet")
 
         logger.info(f"Executing command: {' '.join(cmd)}")
         print(f"\nExecuting PyATS with command: {' '.join(cmd)}")
