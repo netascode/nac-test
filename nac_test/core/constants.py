@@ -36,6 +36,7 @@ ROBOT_RESULTS_DIRNAME = "robot_results"
 HTML_REPORTS_DIRNAME = "html_reports"
 SUMMARY_REPORT_FILENAME = "summary_report.html"
 COMBINED_SUMMARY_FILENAME = "combined_summary.html"
+XUNIT_XML = "xunit.xml"
 
 # Platform detection
 IS_MACOS: bool = platform.system() == "Darwin"

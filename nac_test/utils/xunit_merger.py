@@ -19,7 +19,11 @@ from pathlib import Path
 # lxml.etree is 2-5x faster than stdlib xml.etree.ElementTree and already an indirect dependency
 from lxml import etree as ET
 
-from nac_test.core.constants import PYATS_RESULTS_DIRNAME, ROBOT_RESULTS_DIRNAME
+from nac_test.core.constants import (
+    PYATS_RESULTS_DIRNAME,
+    ROBOT_RESULTS_DIRNAME,
+    XUNIT_XML,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -211,13 +215,13 @@ def collect_xunit_files(output_dir: Path) -> list[tuple[Path, str]]:
     xunit_files: list[tuple[Path, str]] = []
 
     # Robot Framework xunit
-    robot_xunit = output_dir / ROBOT_RESULTS_DIRNAME / "xunit.xml"
+    robot_xunit = output_dir / ROBOT_RESULTS_DIRNAME / XUNIT_XML
     if robot_xunit.is_file():
         xunit_files.append((robot_xunit, "robot"))
         logger.debug(f"Found Robot xunit: {robot_xunit}")
 
     # PyATS API xunit
-    pyats_api_xunit = output_dir / PYATS_RESULTS_DIRNAME / "api" / "xunit.xml"
+    pyats_api_xunit = output_dir / PYATS_RESULTS_DIRNAME / "api" / XUNIT_XML
     if pyats_api_xunit.is_file():
         xunit_files.append((pyats_api_xunit, "pyats_api"))
         logger.debug(f"Found PyATS API xunit: {pyats_api_xunit}")
@@ -227,7 +231,7 @@ def collect_xunit_files(output_dir: Path) -> list[tuple[Path, str]]:
     if pyats_d2d_dir.is_dir():
         for device_dir in sorted(pyats_d2d_dir.iterdir()):
             if device_dir.is_dir():
-                d2d_xunit = device_dir / "xunit.xml"
+                d2d_xunit = device_dir / XUNIT_XML
                 if d2d_xunit.is_file():
                     device_name = device_dir.name
                     xunit_files.append((d2d_xunit, f"pyats_d2d/{device_name}"))
@@ -257,5 +261,5 @@ def merge_xunit_results(output_dir: Path) -> Path | None:
         logger.info("No xunit files found to merge")
         return None
 
-    merged_path = output_dir / "xunit.xml"
+    merged_path = output_dir / XUNIT_XML
     return merge_xunit_files(xunit_files, merged_path)

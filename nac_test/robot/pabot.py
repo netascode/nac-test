@@ -8,7 +8,7 @@ import pabot.pabot
 from pabot.arguments import parse_args
 from robot.errors import DataError
 
-from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
+from nac_test.core.constants import ROBOT_RESULTS_DIRNAME, XUNIT_XML
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,7 @@ def run_pabot(
             # via --outputdir. Currently only xunit.xml is placed there; other artifacts
             # (output.xml, log.html, report.html) are moved post-execution by orchestrator.
             "--xunit",
-            str(robot_results_dir / "xunit.xml"),
+            str(robot_results_dir / XUNIT_XML),
         ]
     )
 
