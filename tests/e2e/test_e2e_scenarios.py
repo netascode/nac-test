@@ -801,16 +801,88 @@ class TestE2EDryRun:
     def test_pyats_results_not_created(self, results: E2EResults) -> None:
         """Verify PyATS results directory has no actual test results (dry-run skips execution)."""
         pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
+        api_results = pyats_dir / "api" / HTML_REPORTS_DIRNAME / SUMMARY_REPORT_FILENAME
+        d2d_results = pyats_dir / "d2d" / HTML_REPORTS_DIRNAME / SUMMARY_REPORT_FILENAME
+        assert not api_results.exists(), (
+            "PyATS API results should not exist in dry-run mode"
+        )
+        assert not d2d_results.exists(), (
+            "PyATS D2D results should not exist in dry-run mode"
+        )
+
+
+class TestE2EDryRunPyatsOnly:
+    """E2E tests for dry-run mode with PyATS-only (no Robot tests).
+
+    This specifically tests the fix for the exit code bug where --dry-run
+    on a PyATS-only repo would return exit code 1 because stats.is_empty
+    becomes True (PyATS returns not_run with total=0, and no Robot tests
+    contribute passed tests).
+
+    Expected: CLI exits with code 0, no tests actually executed.
+    """
+
+    @pytest.fixture
+    def results(self, e2e_dry_run_pyats_only_results: E2EResults) -> E2EResults:
+        """Provide dry-run PyATS-only scenario results."""
+        return e2e_dry_run_pyats_only_results
+
+    def test_cli_exit_code_is_zero(self, results: E2EResults) -> None:
+        """Dry-run should exit 0 even with PyATS-only (no Robot tests)."""
+        assert results.exit_code == 0, (
+            f"Expected exit code 0 for PyATS-only dry-run, got {results.exit_code}\n"
+            f"stdout: {results.stdout}"
+        )
+
+    def test_cli_has_no_exception(self, results: E2EResults) -> None:
+        """Verify CLI execution completed without unexpected exceptions."""
+        exception = results.cli_result.exception
+        if exception is not None:
+            assert isinstance(exception, SystemExit) and exception.code == 0, (
+                f"CLI raised unexpected exception: {type(exception).__name__}: {exception}"
+            )
+
+    def test_pyats_dry_run_header_in_output(self, results: E2EResults) -> None:
+        """Verify PyATS dry-run mode header is printed."""
+        assert "DRY-RUN MODE" in results.stdout, (
+            "Expected 'DRY-RUN MODE' header in stdout for PyATS dry-run"
+        )
+
+    def test_pyats_api_tests_listed(self, results: E2EResults) -> None:
+        """Verify PyATS API tests are listed in dry-run output."""
+        assert "API Tests" in results.stdout, (
+            "Expected 'API Tests' section in dry-run output"
+        )
+        assert "verify_aci_apic_appliance_operational_status.py" in results.stdout, (
+            "Expected ACI API test file to be listed in dry-run output"
+        )
+
+    def test_pyats_dry_run_complete_message(self, results: E2EResults) -> None:
+        """Verify PyATS dry-run completion message is printed."""
+        assert "PyATS dry-run complete" in results.stdout, (
+            "Expected 'PyATS dry-run complete' message in stdout"
+        )
+
+    def test_dry_run_complete_message_in_cli_output(self, results: E2EResults) -> None:
+        """Verify the CLI-level dry-run complete message is printed."""
+        assert "Dry-run complete" in results.stdout, (
+            "Expected 'Dry-run complete' message in stdout"
+        )
+
+    def test_no_robot_results_directory(self, results: E2EResults) -> None:
+        """Verify no Robot results directory was created (no Robot tests)."""
+        robot_dir = results.output_dir / ROBOT_RESULTS_DIRNAME
+        assert not robot_dir.exists(), (
+            "Robot results directory should not exist for PyATS-only scenario"
+        )
+
+    def test_pyats_results_not_created(self, results: E2EResults) -> None:
+        """Verify PyATS results directory has no actual test results."""
+        pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
         if pyats_dir.exists():
             api_results = (
                 pyats_dir / "api" / HTML_REPORTS_DIRNAME / SUMMARY_REPORT_FILENAME
             )
-            d2d_results = (
-                pyats_dir / "d2d" / HTML_REPORTS_DIRNAME / SUMMARY_REPORT_FILENAME
-            )
             assert not api_results.exists(), (
                 "PyATS API results should not exist in dry-run mode"
-            )
-            assert not d2d_results.exists(), (
-                "PyATS D2D results should not exist in dry-run mode"
             )
