@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from nac_test.core.constants import FILE_TIMESTAMP_MS_FORMAT
 from nac_test.pyats_core.constants import (
     DEFAULT_BUFFER_LIMIT,
     PIPE_DRAIN_DELAY_SECONDS,
@@ -103,7 +104,7 @@ class SubprocessRunner:
             return None
 
         # Generate archive name with timestamp
-        job_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+        job_timestamp = datetime.now().strftime(FILE_TIMESTAMP_MS_FORMAT)[:-3]
         archive_name = f"nac_test_job_{job_timestamp}.zip"
 
         cmd = [
