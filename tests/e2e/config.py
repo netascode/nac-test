@@ -181,6 +181,13 @@ class E2EScenario:
                 f"Scenario '{self.name}' expects no failures but exit_code={self.expected_exit_code}"
             )
 
+        # D2D tests require expected_d2d_hostnames to be defined
+        if self.has_pyats_d2d_tests and not self.expected_d2d_hostnames:
+            raise ValueError(
+                f"Scenario '{self.name}' has D2D tests ({self.expected_pyats_d2d_total} total) "
+                "but expected_d2d_hostnames is not defined"
+            )
+
         # Paths should exist (relative to project root)
         data_file = Path(self.data_path)
         templates_dir = Path(self.templates_path)

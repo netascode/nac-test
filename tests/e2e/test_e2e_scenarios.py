@@ -552,15 +552,12 @@ class E2ECombinedTestBase:
 
     def test_hostnames_in_console_output(self, results: E2EResults) -> None:
         """Verify hostnames appear in console output with correct format."""
-        if (
-            not results.scenario.has_pyats_d2d_tests
-            or not results.scenario.expected_d2d_hostnames
-        ):
-            pytest.skip("No PyATS D2D tests with hostnames in this scenario")
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
 
         from tests.e2e.html_helpers import verify_hostname_in_console_output
 
-        # Type assertion: we know expected_d2d_hostnames is not None due to skip check above
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
         assert results.scenario.expected_d2d_hostnames is not None
         found_hostnames = verify_hostname_in_console_output(
             results.stdout, results.scenario.expected_d2d_hostnames
@@ -569,11 +566,8 @@ class E2ECombinedTestBase:
 
     def test_hostnames_in_d2d_summary_table(self, results: E2EResults) -> None:
         """Verify hostnames appear in PyATS D2D summary table."""
-        if (
-            not results.scenario.has_pyats_d2d_tests
-            or not results.scenario.expected_d2d_hostnames
-        ):
-            pytest.skip("No PyATS D2D tests with hostnames in this scenario")
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
 
         from tests.e2e.html_helpers import assert_hostname_display_in_summary
 
@@ -585,7 +579,7 @@ class E2ECombinedTestBase:
             / SUMMARY_REPORT_FILENAME
         )
 
-        # Type assertion: we know expected_d2d_hostnames is not None due to skip check above
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
         assert results.scenario.expected_d2d_hostnames is not None
         found_hostnames = assert_hostname_display_in_summary(
             summary_path, results.scenario.expected_d2d_hostnames
@@ -594,11 +588,8 @@ class E2ECombinedTestBase:
 
     def test_hostnames_in_d2d_detail_pages(self, results: E2EResults) -> None:
         """Verify hostnames appear in PyATS D2D detail page headers."""
-        if (
-            not results.scenario.has_pyats_d2d_tests
-            or not results.scenario.expected_d2d_hostnames
-        ):
-            pytest.skip("No PyATS D2D tests with hostnames in this scenario")
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
 
         from tests.e2e.html_helpers import assert_hostname_display_in_detail_pages
 
@@ -612,7 +603,7 @@ class E2ECombinedTestBase:
 
         assert len(detail_files) > 0, "No D2D detail HTML files found"
 
-        # Type assertion: we know expected_d2d_hostnames is not None due to skip check above
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
         assert results.scenario.expected_d2d_hostnames is not None
         found_hostnames = assert_hostname_display_in_detail_pages(
             detail_files, results.scenario.expected_d2d_hostnames
@@ -621,23 +612,16 @@ class E2ECombinedTestBase:
 
     def test_hostnames_in_d2d_html_filenames(self, results: E2EResults) -> None:
         """Verify hostnames are included in D2D HTML filenames."""
-        if (
-            not results.scenario.has_pyats_d2d_tests
-            or not results.scenario.expected_d2d_hostnames
-        ):
-            pytest.skip("No PyATS D2D tests with hostnames in this scenario")
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
 
+        from nac_test.utils import sanitize_hostname
         from tests.e2e.html_helpers import assert_hostname_in_filenames
 
-        # Type assertion: we know expected_d2d_hostnames is not None due to skip check above
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
         assert results.scenario.expected_d2d_hostnames is not None
-
-        # Convert hostnames to sanitized versions for filename checking
-        # Use the same sanitization logic as base_test.py: r"[^a-zA-Z0-9]" -> "_", then lowercase
-        # This matches the exact logic in nac_test/pyats_core/common/base_test.py line 764:
-        # safe_hostname = re.sub(r"[^a-zA-Z0-9]", "_", hostname).lower()
         sanitized_hostnames = [
-            re.sub(r"[^a-zA-Z0-9]", "_", hostname).lower()
+            sanitize_hostname(hostname)
             for hostname in results.scenario.expected_d2d_hostnames
         ]
 
@@ -678,11 +662,8 @@ class E2ECombinedTestBase:
 
     def test_hostname_sanitization_in_filenames(self, results: E2EResults) -> None:
         """Verify special characters in hostnames are properly sanitized in filenames."""
-        if (
-            not results.scenario.has_pyats_d2d_tests
-            or not results.scenario.expected_d2d_hostnames
-        ):
-            pytest.skip("No PyATS D2D tests with hostnames in this scenario")
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
 
         # Find all D2D HTML detail files
         d2d_reports_dir = (
