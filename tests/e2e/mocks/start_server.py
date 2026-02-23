@@ -97,16 +97,6 @@ def main() -> None:
     # Write PID file
     PID_FILE.write_text(str(os.getpid()))
 
-    # Setup signal handlers for graceful shutdown
-    def signal_handler(signum: int, frame: object) -> None:
-        print(f"\nReceived signal {signum}, shutting down...")
-        if PID_FILE.exists():
-            PID_FILE.unlink()
-        sys.exit(0)
-
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
-
     # Create and start server
     server = MockAPIServer(host="127.0.0.1", port=args.port)
 
@@ -123,6 +113,17 @@ def main() -> None:
     server.start()
     print(f"Mock server running at {server.url}")
     print(f"PID: {os.getpid()}")
+
+    # Setup signal handlers for graceful shutdown (after server is created)
+    def signal_handler(signum: int, frame: object) -> None:
+        print(f"\nReceived signal {signum}, shutting down...")
+        server.stop()
+        if PID_FILE.exists():
+            PID_FILE.unlink()
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
     # Keep running
     try:
