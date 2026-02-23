@@ -1,11 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-
-# -*- coding: utf-8 -*-
-
-# -*- coding: utf-8 -*-
-
 """Generic base test class for all architectures."""
 
 import asyncio
@@ -32,6 +27,7 @@ import yaml  # type: ignore[import-untyped]
 from pyats import aetest
 
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
+from nac_test.core.constants import PYATS_RESULTS_DIRNAME
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
 from nac_test.pyats_core.common.types import (
@@ -224,7 +220,9 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         if data_file and data_file.exists():
             # Use base output directory (parent of data file) to avoid conflict with pyats_results cleanup
             base_output_dir = data_file.parent
-            output_dir = base_output_dir / "pyats_results"  # Keep for emergency dumps
+            output_dir = (
+                base_output_dir / PYATS_RESULTS_DIRNAME
+            )  # Keep for emergency dumps
         else:
             base_output_dir = Path(".")
             output_dir = Path(".")

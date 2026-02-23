@@ -67,6 +67,7 @@ class SubprocessRunner:
         """
         # Create plugin configuration for progress reporting
         plugin_config_file = None
+        pyats_config_file = None
         try:
             plugin_config = textwrap.dedent("""
             plugins:
@@ -85,9 +86,20 @@ class SubprocessRunner:
                 f"Created plugin_config {plugin_config_file} with content\n{plugin_config}"
             )
 
+            # Create PyATS configuration to disable git_info collection
+            # This prevents fork() crashes on macOS with Python 3.12+ caused by
+            # CoreFoundation lock corruption in get_git_info()
+            pyats_config = "[report]\ngit_info = false\n"
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix="_pyats_config.conf", delete=False
+            ) as f:
+                f.write(pyats_config)
+                pyats_config_file = f.name
+            logger.debug(f"Created pyats_config {pyats_config_file}")
+
         except Exception as e:
-            logger.warning(f"Failed to create plugin config: {e}")
-            # If we can't create plugin config, we should probably fail
+            logger.warning(f"Failed to create config files: {e}")
+            # If we can't create config files, we should probably fail
             return None
 
         # Generate archive name with timestamp
@@ -101,6 +113,8 @@ class SubprocessRunner:
             str(job_file_path),
             "--configuration",
             plugin_config_file,
+            "--pyats-configuration",
+            pyats_config_file,
             "--archive-dir",
             str(self.output_dir),
             "--archive-name",
@@ -184,6 +198,7 @@ class SubprocessRunner:
         """
         # Create plugin configuration for progress reporting
         plugin_config_file = None
+        pyats_config_file = None
         try:
             plugin_config = textwrap.dedent("""
             plugins:
@@ -198,9 +213,20 @@ class SubprocessRunner:
             ) as f:
                 f.write(plugin_config)
                 plugin_config_file = f.name
+
+            # Create PyATS configuration to disable git_info collection
+            # This prevents fork() crashes on macOS with Python 3.12+ caused by
+            # CoreFoundation lock corruption in get_git_info()
+            pyats_config = "[report]\ngit_info = false\n"
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix="_pyats_config.conf", delete=False
+            ) as f:
+                f.write(pyats_config)
+                pyats_config_file = f.name
+
         except Exception as e:
-            logger.warning(f"Failed to create plugin config: {e}")
-            # If we can't create plugin config, we should probably fail
+            logger.warning(f"Failed to create config files: {e}")
+            # If we can't create config files, we should probably fail
             return None
 
         # Get device ID from environment for archive naming
@@ -220,6 +246,8 @@ class SubprocessRunner:
             [
                 "--configuration",
                 plugin_config_file,
+                "--pyats-configuration",
+                pyats_config_file,
                 "--archive-dir",
                 str(self.output_dir),
                 "--archive-name",

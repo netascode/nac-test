@@ -53,6 +53,8 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_MAX_PARALLEL...]  │
 │    --minimal-reports                    Reduce HTML report size (80-95%).    │
 │                                         [env var: NAC_TEST_MINIMAL_REPORTS]  │
+│    --diagnostic                         Wrap execution with diagnostic       │
+│                                         collection script for troubleshooting│
 │    --merged-data-file… -m   TEXT        Filename for merged data model.      │
 │                                         [default: merged_data_model_test...] │
 │    --verbosity         -v   [DEBUG|...] Verbosity level. [default: WARNING]  │
@@ -73,7 +75,14 @@ For Robot Framework tests, [Pabot](https://pabot.org/) executes test suites in p
 
 ## Installation
 
-Python 3.10+ is required to install `nac-test`. Don't have Python 3.10 or later? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/).
+**Python Requirements:**
+- **Linux / Windows**: Python 3.10 or higher
+- **macOS**: Python 3.12 or higher (earlier versions have known incompatibilities)
+
+Don't have the right Python version? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/), or install using:
+- `brew install python@3.12`
+- `uv python install 3.12`
+- `pyenv install 3.12`
 
 `nac-validate` can be installed in a virtual environment using `pip` or `uv`:
 
@@ -254,15 +263,24 @@ Test DEF
 As well as the test results and reports:
 
 ```shell
-$ tree -L 1 tests
+$ tree -L 2 tests
 tests
-├── log.html
-├── output.xml
-├── pabot_results
-├── report.html
-├── test1.robot
-└── xunit.xml
+├── combined_summary.html
+├── robot_results/
+│   ├── log.html
+│   ├── output.xml
+│   ├── report.html
+│   ├── summary_report.html
+│   └── xunit.xml
+├── log.html -> robot_results/log.html
+├── output.xml -> robot_results/output.xml
+├── report.html -> robot_results/report.html
+├── xunit.xml -> robot_results/xunit.xml
+├── pabot_results/
+└── test1.robot
 ```
+
+Note: Root-level `log.html`, `output.xml`, `report.html`, and `xunit.xml` are symlinks to the corresponding files in `robot_results/` for backward compatibility.
 
 ## PyATS Testing
 
@@ -326,15 +344,17 @@ PyATS tests generate:
 Example output structure:
 
 ```shell
-$ tree -L 2 results/pyats_results
-results/pyats_results
-├── api/
-│   ├── html_reports/
-│   └── results.json
-├── d2d/
-│   ├── html_reports/
-│   └── results.json
-└── combined_summary.html
+$ tree -L 3 results
+results
+├── combined_summary.html
+├── robot_results/
+└── pyats_results/
+    ├── api/
+    │   ├── html_reports/
+    │   └── results.json
+    └── d2d/
+        ├── html_reports/
+        └── results.json
 ```
 
 ## Merged Data Model
@@ -631,3 +651,35 @@ nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --loglevel INFO -
 **Note:** Only Robot Framework options are supported. Pabot-specific options (like `--testlevelsplit`, `--pabotlib`, etc.) and test file paths are not allowed and will result in an error with exit code 252.
 
 See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#command-line-options) for all available options.
+
+## Troubleshooting
+
+If you're experiencing issues with nac-test (crashes, unexpected errors, test failures), use the `--diagnostic` flag to collect comprehensive diagnostic information.
+
+**[Diagnostic Collection Guide](nac_test/support/README.md)**
+
+The diagnostic flag:
+- Collects system information, Python environment, and package versions
+- Captures error logs and crash reports (especially useful for macOS issues)
+- Automatically masks credentials before generating output
+- Produces a single `.tar.gz` file you can safely attach to GitHub issues
+
+### Quick Start
+
+Simply add `--diagnostic` to your existing nac-test command:
+
+```bash
+# 1. Activate your virtual environment
+source .venv/bin/activate
+
+# 2. Set your environment variables (as you normally would for nac-test)
+# Example for SD-WAN:
+export SDWAN_URL=https://your-sdwan-manager.example.com
+export SDWAN_USERNAME=admin
+export SDWAN_PASSWORD=your-password
+
+# 3. Run nac-test with the --diagnostic flag
+nac-test -d ./data -t ./tests -o ./results --pyats --diagnostic
+```
+
+The diagnostic flag will wrap your nac-test execution and generate a `nac-test-diagnostics-XXXXXX.tar.gz` file containing all diagnostic information with sensitive data automatically masked.

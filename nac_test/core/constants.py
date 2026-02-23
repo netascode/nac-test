@@ -4,6 +4,8 @@
 """Core constants shared across the nac-test framework."""
 
 import os
+import platform
+import sys
 
 # Retry configuration - Generic retry logic used by multiple components
 RETRY_MAX_ATTEMPTS = 3
@@ -26,3 +28,17 @@ PROGRESS_UPDATE_INTERVAL = 0.5  # seconds
 # Debug mode - enables progressive disclosure of error details
 # Set NAC_TEST_DEBUG=true for developer-level error context
 DEBUG_MODE = os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"
+
+# Output directory structure - single source of truth for directory layout
+# These define the standardized paths for test results and reports
+PYATS_RESULTS_DIRNAME = "pyats_results"
+ROBOT_RESULTS_DIRNAME = "robot_results"
+HTML_REPORTS_DIRNAME = "html_reports"
+SUMMARY_REPORT_FILENAME = "summary_report.html"
+COMBINED_SUMMARY_FILENAME = "combined_summary.html"
+
+# Platform detection
+IS_MACOS: bool = platform.system() == "Darwin"
+
+# macOS requires Python 3.12+.
+IS_UNSUPPORTED_MACOS_PYTHON: bool = IS_MACOS and sys.version_info < (3, 12)
