@@ -382,6 +382,13 @@ def main(
         typer.echo("\n✅ Templates rendered successfully (render-only mode)")
         raise typer.Exit(0)
 
+    # Handle dry-run mode: exit 0 since no tests were meant to execute
+    # This prevents PyATS-only dry-run from hitting the "no tests executed" error
+    # when stats.is_empty is True (PyATS returns not_run with total=0)
+    if dry_run:
+        typer.echo("\n✅ Dry-run complete (no tests executed)")
+        raise typer.Exit(0)
+
     # Use test statistics for exit code
     # Also check error_handler for non-test errors
     if error_handler.fired:
