@@ -16,11 +16,12 @@ from pathlib import Path
 
 import typer
 
-from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
+from nac_test.core.constants import CONSOLE_TIME_FORMAT, ROBOT_RESULTS_DIRNAME
 from nac_test.core.types import TestResults
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
+from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import VerbosityLevel
 
 logger = logging.getLogger(__name__)
@@ -134,7 +135,7 @@ class RobotOrchestrator:
 
         # Phase 1: Template rendering (delegate to existing RobotWriter)
         start_time = datetime.now()
-        start_timestamp = start_time.strftime("%H:%M:%S")
+        start_timestamp = start_time.strftime(CONSOLE_TIME_FORMAT)
         typer.echo(f"[{start_timestamp}] 📝 Rendering Robot Framework templates...")
 
         self.robot_writer.write(
@@ -142,15 +143,11 @@ class RobotOrchestrator:
         )
 
         end_time = datetime.now()
-        end_timestamp = end_time.strftime("%H:%M:%S")
+        end_timestamp = end_time.strftime(CONSOLE_TIME_FORMAT)
         duration = (end_time - start_time).total_seconds()
-        duration_str = (
-            f"{duration:.1f}s"
-            if duration < 60
-            else f"{int(duration // 60)}m {duration % 60:.0f}s"
-        )
         typer.echo(
-            f"[{end_timestamp}] ✅ Template rendering completed ({duration_str})"
+            f"[{end_timestamp}] ✅ Template rendering completed"
+            f" ({format_duration(duration)})"
         )
 
         # Phase 2: Create merged data model in Robot working directory
