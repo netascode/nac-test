@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 import yaml
 
+from nac_test.pyats_core.constants import PYATS_POST_DISCONNECT_WAIT_SECONDS
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
 
 
@@ -22,7 +23,10 @@ def assert_connection_has_optimizations(connection: dict[str, Any]) -> None:
     """
     assert connection["arguments"]["init_config_commands"] == []
     assert connection["arguments"]["operating_mode"] is True
-    assert connection["settings"]["POST_DISCONNECT_WAIT_SEC"] == 0
+    assert (
+        connection["settings"]["POST_DISCONNECT_WAIT_SEC"]
+        == PYATS_POST_DISCONNECT_WAIT_SECONDS
+    )
 
 
 class TestGenerateTestbedYaml:

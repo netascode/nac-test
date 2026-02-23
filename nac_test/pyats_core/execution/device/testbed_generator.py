@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from nac_test.pyats_core.constants import PYATS_POST_DISCONNECT_WAIT_SEC
+from nac_test.pyats_core.constants import PYATS_POST_DISCONNECT_WAIT_SECONDS
 
 logger = logging.getLogger(__name__)
 
@@ -239,25 +239,25 @@ class TestbedGenerator:
         """
         hostname = device["hostname"]
 
+        # Shared connection arguments for all device types
+        default_arguments = {
+            "init_config_commands": [],
+            "operating_mode": True,
+        }
+
         # Build connection arguments
         if "command" in device:
             # Special handling for mock or radkit devices
             connection_args = {
                 "command": device["command"],
-                "arguments": {
-                    "init_config_commands": [],
-                    "operating_mode": True,
-                },
+                "arguments": default_arguments,
             }
         else:
             connection_args = {
                 "protocol": "ssh",
                 "ip": device["host"],
                 "port": device.get("port", 22),
-                "arguments": {
-                    "init_config_commands": [],
-                    "operating_mode": True,
-                },
+                "arguments": default_arguments,
             }
 
             # Override protocol/port if connection_options is present
@@ -289,7 +289,7 @@ class TestbedGenerator:
 
         connection_args.setdefault("settings", {})
         connection_args["settings"].setdefault(
-            "POST_DISCONNECT_WAIT_SEC", PYATS_POST_DISCONNECT_WAIT_SEC
+            "POST_DISCONNECT_WAIT_SEC", PYATS_POST_DISCONNECT_WAIT_SECONDS
         )
 
         if "platform" in device:
