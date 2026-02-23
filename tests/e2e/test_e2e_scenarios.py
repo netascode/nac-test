@@ -601,6 +601,43 @@ class E2ECombinedTestBase:
             "Missing consolidated PyATS discovery message in stdout"
         )
 
+    def test_stdout_combined_summary_has_visual_spacing(
+        self, results: E2EResults
+    ) -> None:
+        """Verify Combined Summary block has blank lines before and after.
+
+        The Combined Summary block should have visual breathing room:
+        - Two blank lines before the opening '======' separator
+        - Two blank lines after the closing '======' separator
+
+        This prevents the summary from running into pabot output above
+        and the "Total runtime" line below.
+        """
+        stdout = results.filtered_stdout
+        summary_header = "Combined Test Execution Summary"
+        separator = "=" * 70
+
+        summary_pos = stdout.find(summary_header)
+        assert summary_pos != -1, "Combined Summary section not found"
+
+        opening_sep_pos = stdout.rfind(separator, 0, summary_pos)
+        assert opening_sep_pos != -1, "Opening separator not found"
+
+        closing_sep_pos = stdout.find(separator, summary_pos + len(summary_header))
+        assert closing_sep_pos != -1, "Closing separator not found"
+
+        before_opening = stdout[:opening_sep_pos]
+        assert before_opening.endswith("\n\n\n"), (
+            f"Missing two blank lines before Combined Summary block.\n"
+            f"Content before separator ends with: {repr(before_opening[-20:])}"
+        )
+
+        after_closing = stdout[closing_sep_pos + len(separator) :]
+        assert after_closing.startswith("\n\n\n"), (
+            f"Missing two blank lines after Combined Summary block.\n"
+            f"Content after separator starts with: {repr(after_closing[:20])}"
+        )
+
 
 # =============================================================================
 # SUCCESS SCENARIO TESTS

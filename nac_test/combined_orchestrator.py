@@ -297,7 +297,9 @@ class CombinedOrchestrator:
 
     def _print_execution_summary(self, results: CombinedResults) -> None:
         """Print execution summary with statistics."""
-        typer.echo("\n" + "=" * 70)
+        # typer.echo("\n") prints two newlines for visual separation
+        typer.echo("\n")
+        typer.echo("=" * 70)
         typer.echo("Combined Test Execution Summary")
         typer.echo("-" * 70)
         typer.echo(terminal.format_test_summary(results))
@@ -337,3 +339,4 @@ class CombinedOrchestrator:
             typer.echo(f"xUnit:      {xunit_path.resolve()}")
 
         typer.echo("=" * 70)
+        typer.echo()
