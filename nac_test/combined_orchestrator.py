@@ -5,15 +5,12 @@
 
 import logging
 import os
-import platform
-import sys
 from pathlib import Path
 
 import typer
 
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
-    DEBUG_MODE,
     HTML_REPORTS_DIRNAME,
     PYATS_RESULTS_DIRNAME,
     ROBOT_RESULTS_DIRNAME,
@@ -26,6 +23,7 @@ from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 
 logger = logging.getLogger(__name__)
 
@@ -116,19 +114,20 @@ class CombinedOrchestrator:
         self.dev_pyats_only = dev_pyats_only
         self.dev_robot_only = dev_robot_only
 
-        # Detect controller type early (required for all test types)
-        try:
-            self.controller_type = detect_controller_type()
-            logger.info(f"Controller type detected: {self.controller_type}")
-        except ValueError as e:
-            # Exit gracefully if controller detection fails
-            typer.secho(
-                f"\n❌ Controller detection failed:\n{e}", fg=typer.colors.RED, err=True
-            )
-            # Progressive disclosure: clean output for customers, full context for developers
-            if DEBUG_MODE:
-                raise typer.Exit(1) from e  # Developer: full exception context
-            raise typer.Exit(1) from None  # Customer: clean output
+        # Detect controller type early (unless we are in render-only mode, which doesn't require controller access)
+        self.controller_type: str | None = None
+        if not self.render_only:
+            try:
+                self.controller_type = detect_controller_type()
+                logger.info(f"Controller type detected: {self.controller_type}")
+            except ValueError as e:
+                # Exit gracefully if controller detection fails
+                typer.secho(
+                    f"\n❌ Controller detection failed:\n{e}",
+                    fg=typer.colors.RED,
+                    err=True,
+                )
+                raise typer.Exit(1) from None
 
     def run_tests(self) -> CombinedResults:
         """Main entry point for combined test execution.
@@ -142,8 +141,8 @@ class CombinedOrchestrator:
         """
         # Note: Output directory and merged data file created by main.py
 
-        # Print dev mode warnings if applicable
-        if self.dev_pyats_only:
+        # Print dev mode warnings if applicable (skip in render-only mode)
+        if self.dev_pyats_only and not self.render_only:
             typer.secho(
                 "\n\n⚠️  WARNING: --pyats flag is for development use only. "
                 "Production runs should use combined execution.",
@@ -173,7 +172,7 @@ class CombinedOrchestrator:
         # Build combined results from individual orchestrators
         combined_results = CombinedResults()
 
-        if has_pyats:
+        if has_pyats and not self.render_only:
             typer.echo("\n🧪 Running PyATS tests...\n")
             self._check_python_version()
 
@@ -232,7 +231,6 @@ class CombinedOrchestrator:
                 # Record error in robot results
                 combined_results.robot = TestResults.from_error(str(e))
 
-        # Generate combined dashboard and print summary (unless render_only mode)
         if not self.render_only:
             typer.echo("\n📊 Generating combined dashboard...")
             logger.debug(
@@ -252,15 +250,8 @@ class CombinedOrchestrator:
 
     @staticmethod
     def _check_python_version() -> None:
-        if platform.system() == "Darwin" and sys.version_info.minor == 11:
-            typer.echo(
-                typer.style(
-                    "Warning: Python 3.11 on macOS has known compatibility issues with PyATS.\n"
-                    "We recommend using Python 3.12 or higher on macOS for optimal reliability.",
-                    fg=typer.colors.YELLOW,
-                )
-            )
-            typer.echo()
+        """Defense-in-depth for programmatic usage that bypasses the CLI."""
+        check_and_exit_if_unsupported_macos_python()
 
     def _discover_test_types(self) -> tuple[bool, bool]:
         """Discover which test types are present in the templates directory.

@@ -10,10 +10,13 @@ import typer
 
 import nac_test
 from nac_test.cli.diagnostic import diagnostic_callback
+from nac_test.cli.ui import display_aci_defaults_banner
+from nac_test.cli.validators import validate_aci_defaults
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import DEBUG_MODE
 from nac_test.data_merger import DataMerger
 from nac_test.utils.logging import VerbosityLevel, configure_logging
+from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 
 # Pretty exceptions are verbose but helpful for debugging.
 # Enable them when NAC_TEST_DEBUG=true, disable for cleaner output otherwise.
@@ -284,6 +287,8 @@ def main(
     """
     configure_logging(verbosity, error_handler)
 
+    check_and_exit_if_unsupported_macos_python()
+
     # Validate development flag combinations
     if pyats and robot:
         typer.echo(
@@ -299,6 +304,14 @@ def main(
 
     # Create output directory and shared merged data file (SOT)
     output.mkdir(parents=True, exist_ok=True)
+
+    # Validate ACI defaults before expensive merge operation
+    # This catches the common mistake of forgetting -d ./defaults/
+    if not validate_aci_defaults(data):
+        typer.echo("")
+        display_aci_defaults_banner()
+        typer.echo("")
+        raise typer.Exit(1)
 
     # Merge data files with timing
     start_time = datetime.now()
