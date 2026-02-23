@@ -19,6 +19,8 @@ from pathlib import Path
 # lxml.etree is 2-5x faster than stdlib xml.etree.ElementTree and already an indirect dependency
 from lxml import etree as ET
 
+from nac_test.core.constants import PYATS_RESULTS_DIRNAME, ROBOT_RESULTS_DIRNAME
+
 logger = logging.getLogger(__name__)
 
 
@@ -205,19 +207,19 @@ def collect_xunit_files(output_dir: Path) -> list[tuple[Path, str]]:
     xunit_files: list[tuple[Path, str]] = []
 
     # Robot Framework xunit
-    robot_xunit = output_dir / "robot_results" / "xunit.xml"
+    robot_xunit = output_dir / ROBOT_RESULTS_DIRNAME / "xunit.xml"
     if robot_xunit.is_file():
         xunit_files.append((robot_xunit, "robot"))
         logger.debug(f"Found Robot xunit: {robot_xunit}")
 
     # PyATS API xunit
-    pyats_api_xunit = output_dir / "pyats_results" / "api" / "xunit.xml"
+    pyats_api_xunit = output_dir / PYATS_RESULTS_DIRNAME / "api" / "xunit.xml"
     if pyats_api_xunit.is_file():
         xunit_files.append((pyats_api_xunit, "pyats_api"))
         logger.debug(f"Found PyATS API xunit: {pyats_api_xunit}")
 
     # PyATS D2D xunit files (one per device)
-    pyats_d2d_dir = output_dir / "pyats_results" / "d2d"
+    pyats_d2d_dir = output_dir / PYATS_RESULTS_DIRNAME / "d2d"
     if pyats_d2d_dir.is_dir():
         for device_dir in sorted(pyats_d2d_dir.iterdir()):
             if device_dir.is_dir():
