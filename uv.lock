@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -2039,16 +2039,16 @@ provides-extras = ["adapters", "all", "dev"]
 
 [[package]]
 name = "nac-test-pyats-common"
-version = "0.2.1"
+version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
     { name = "httpx" },
     { name = "nac-test" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7a/64/901e022f04acb4f77097f520146299769943d01c968410eca46e9ac529b4/nac_test_pyats_common-0.2.1.tar.gz", hash = "sha256:344ab7b3ce92884e258f8543544d378ac30abd17e8d3b75f8140cb2f7644f340", size = 51124, upload-time = "2026-02-04T03:01:23.211Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/a0/a15bad37b3eb812836072efd467f4e8db2e6e726e97a89f2c66283bb072a/nac_test_pyats_common-0.2.2.tar.gz", hash = "sha256:93ed91cdc078d92eff84b4c96ee4e0e32c6d7e91e5e73f38f262eb6134d13b99", size = 51134, upload-time = "2026-02-18T00:48:31.085Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/6e/b4d57531a0110fa29e85562894147c21363ae5b62b8aa0baac705481efdb/nac_test_pyats_common-0.2.1-py3-none-any.whl", hash = "sha256:43f4c6d7a052555826c3f1c82f33b0632d6bc50707609d8bfa8465b465d8ac2f", size = 54859, upload-time = "2026-02-04T03:01:24.051Z" },
+    { url = "https://files.pythonhosted.org/packages/99/6a/3b3c90d60b9bff2c51762835c0e2a51af76468a203bb3c7384e5ea6c29e0/nac_test_pyats_common-0.2.2-py3-none-any.whl", hash = "sha256:13acc629e14961275b5024c07e7646e568b157ef3ab6363101cb2218ebff4a20", size = 54854, upload-time = "2026-02-18T00:48:29.612Z" },
 ]
 
 [[package]]
