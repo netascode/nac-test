@@ -90,15 +90,15 @@ def _get_auth_callable(controller_type: str) -> Callable[[], Any] | None:
         if controller_type == "ACI":
             from nac_test_pyats_common.aci import APICAuth
 
-            return APICAuth.get_auth  # type: ignore[no-any-return]  # External adapters return Any
+            return APICAuth.get_auth  # type: ignore[attr-defined, no-any-return]  # External adapters return Any
         elif controller_type == "SDWAN":
             from nac_test_pyats_common.sdwan import SDWANManagerAuth
 
-            return SDWANManagerAuth.get_auth  # type: ignore[no-any-return]  # External adapters return Any
+            return SDWANManagerAuth.get_auth  # type: ignore[attr-defined, no-any-return]  # External adapters return Any
         elif controller_type == "CC":
             from nac_test_pyats_common.catc import CatalystCenterAuth
 
-            return CatalystCenterAuth.get_auth  # type: ignore[no-any-return]  # External adapters return Any
+            return CatalystCenterAuth.get_auth  # type: ignore[attr-defined, no-any-return]  # External adapters return Any
     except ImportError:
         logger.debug(
             "nac-test-pyats-common not installed, skipping pre-flight auth check"

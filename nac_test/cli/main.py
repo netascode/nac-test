@@ -3,14 +3,13 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import errorhandler
 import typer
 
 import nac_test
 from nac_test.cli.diagnostic import diagnostic_callback
-from nac_test.cli.reporting import generate_auth_failure_report
 from nac_test.cli.ui import (
     display_aci_defaults_banner,
     display_auth_failure_banner,
@@ -22,9 +21,12 @@ from nac_test.cli.validators import (
     validate_aci_defaults,
 )
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.core.constants import DEBUG_MODE
+from nac_test.core.constants import CONSOLE_TIME_FORMAT, DEBUG_MODE
+from nac_test.core.reporting.combined_generator import CombinedReportGenerator
+from nac_test.core.types import CombinedResults, ControllerTypeKey, PreFlightFailure
 from nac_test.data_merger import DataMerger
 from nac_test.utils.controller import detect_controller_type, get_env_var_prefix
+from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import VerbosityLevel, configure_logging
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 
@@ -358,29 +360,39 @@ def main(
                 )
             typer.echo("")
 
-            # Generate HTML report for CI/CD artifact collection
-            report_path = generate_auth_failure_report(auth_result, output)
-            typer.echo(f"Auth failure report: {report_path}")
+            # Generate HTML report via unified pipeline
+            failure = PreFlightFailure(
+                failure_type=(
+                    "unreachable"
+                    if auth_result.reason == AuthOutcome.UNREACHABLE
+                    else "auth"
+                ),
+                controller_type=cast(ControllerTypeKey, auth_result.controller_type),
+                controller_url=auth_result.controller_url,
+                detail=auth_result.detail,
+            )
+            results = CombinedResults(pre_flight_failure=failure)
+            generator = CombinedReportGenerator(output)
+            report_path = generator.generate_combined_summary(results)
+            if report_path is not None:
+                typer.echo(f"Report: {report_path}")
 
             raise typer.Exit(1)
 
     # Merge data files with timing
     start_time = datetime.now()
-    start_timestamp = start_time.strftime("%H:%M:%S")
+    start_timestamp = start_time.strftime(CONSOLE_TIME_FORMAT)
     typer.echo(f"\n\n[{start_timestamp}] 📄 Merging data model files...")
 
     merged_data = DataMerger.merge_data_files(data)
     DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
 
     end_time = datetime.now()
-    end_timestamp = end_time.strftime("%H:%M:%S")
+    end_timestamp = end_time.strftime(CONSOLE_TIME_FORMAT)
     duration = (end_time - start_time).total_seconds()
-    duration_str = (
-        f"{duration:.1f}s"
-        if duration < 60
-        else f"{int(duration // 60)}m {duration % 60:.0f}s"
+    typer.echo(
+        f"[{end_timestamp}] ✅ Data model merging completed ({format_duration(duration)})"
     )
-    typer.echo(f"[{end_timestamp}] ✅ Data model merging completed ({duration_str})")
 
     # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
     orchestrator = CombinedOrchestrator(
@@ -418,15 +430,7 @@ def main(
     runtime_end = datetime.now()
     total_runtime = (runtime_end - runtime_start).total_seconds()
 
-    # Format like other timing outputs
-    if total_runtime < 60:
-        runtime_str = f"{total_runtime:.2f} seconds"
-    else:
-        minutes = int(total_runtime / 60)
-        secs = total_runtime % 60
-        runtime_str = f"{minutes} minutes {secs:.2f} seconds"
-
-    typer.echo(f"\nTotal runtime: {runtime_str}")
+    typer.echo(f"\nTotal runtime: {format_duration(total_runtime)}")
 
     # Handle render-only mode: exit 0 if no exceptions occurred
     if render_only:
