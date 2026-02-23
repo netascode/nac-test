@@ -43,13 +43,6 @@ class ErrorType(Enum):
     INTERRUPTED = "interrupted"
 
 
-ERROR_TYPE_EXIT_CODES: dict[ErrorType, int] = {
-    ErrorType.INVALID_ROBOT_ARGS: EXIT_INVALID_ROBOT_ARGS,
-    ErrorType.INTERRUPTED: EXIT_INTERRUPTED,
-    ErrorType.GENERIC: EXIT_ERROR,
-}
-
-
 @dataclass
 class TestResults:
     """Test execution results from a single test framework or test type.
