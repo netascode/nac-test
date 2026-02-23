@@ -48,6 +48,7 @@ class E2EScenario:
     architecture: str = (
         ""  # Controller type: "SDWAN", "ACI", "CC" - determines env var prefix
     )
+    is_dry_run: bool = False  # Dry-run mode: validates structure without execution
 
     # Expected CLI behavior
     expected_exit_code: int = 0
@@ -325,14 +326,35 @@ PYATS_CC_SCENARIO = E2EScenario(
 )
 
 DRY_RUN_SCENARIO = E2EScenario(
-    name="dry_run",
+    name="dry_run_robot_pyats",
     description="Dry-run mode - Robot (2 validated) + PyATS (discovered, not executed)",
     data_path=f"{_FIXTURE_BASE}/mixed/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/mixed/templates",
     requires_testbed=True,
     architecture="SDWAN",
+    is_dry_run=True,
     expected_exit_code=0,
     expected_robot_passed=2,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
+
+DRY_RUN_PYATS_ONLY_SCENARIO = E2EScenario(
+    name="dry_run_pyats_only",
+    description="Dry-run mode - PyATS API only (no Robot tests)",
+    data_path=f"{_FIXTURE_BASE}/pyats_api_only/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/pyats_api_only/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    is_dry_run=True,
+    expected_exit_code=0,
+    expected_robot_passed=0,
     expected_robot_failed=0,
     expected_robot_skipped=0,
     expected_pyats_api_passed=0,

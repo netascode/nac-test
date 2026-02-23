@@ -46,6 +46,26 @@ class E2EResults:
     stderr: str
     cli_result: Any  # typer.testing.Result
 
+    @property
+    def has_robot_results(self) -> bool:
+        """Robot always produces output (even in dry-run mode)."""
+        return self.scenario.has_robot_tests
+
+    @property
+    def has_pyats_api_results(self) -> bool:
+        """PyATS API results exist only when not in dry-run mode."""
+        return self.scenario.has_pyats_api_tests and not self.scenario.is_dry_run
+
+    @property
+    def has_pyats_d2d_results(self) -> bool:
+        """PyATS D2D results exist only when not in dry-run mode."""
+        return self.scenario.has_pyats_d2d_tests and not self.scenario.is_dry_run
+
+    @property
+    def has_pyats_results(self) -> bool:
+        """Any PyATS results exist."""
+        return self.has_pyats_api_results or self.has_pyats_d2d_results
+
 
 # =============================================================================
 # Session-scoped fixtures
@@ -333,6 +353,25 @@ def e2e_dry_run_results(
         DRY_RUN_SCENARIO,
         mock_api_server,
         sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--dry-run"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_dry_run_pyats_only_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute dry-run with PyATS-only (no Robot tests)."""
+    from tests.e2e.config import DRY_RUN_PYATS_ONLY_SCENARIO
+
+    return _run_e2e_scenario(
+        DRY_RUN_PYATS_ONLY_SCENARIO,
+        mock_api_server,
+        None,
         tmp_path_factory,
         class_mocker,
         extra_cli_args=["--dry-run"],

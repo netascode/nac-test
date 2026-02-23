@@ -121,39 +121,42 @@ class E2ECombinedTestBase:
     # Robot Framework Output Tests
     # -------------------------------------------------------------------------
 
-    def test_robot_results_directory_exists(self, results: E2EResults) -> None:
-        """Verify robot_results/ subdirectory was created."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+    def test_robot_results_directory_state(self, results: E2EResults) -> None:
+        """Verify robot_results/ exists when expected, doesn't exist otherwise."""
         robot_dir = results.output_dir / ROBOT_RESULTS_DIRNAME
-        assert robot_dir.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/ directory"
-        assert robot_dir.is_dir()
+        if results.has_robot_results:
+            assert robot_dir.exists(), f"Expected {ROBOT_RESULTS_DIRNAME}/ to exist"
+            assert robot_dir.is_dir()
+        else:
+            assert not robot_dir.exists(), (
+                f"Expected {ROBOT_RESULTS_DIRNAME}/ to NOT exist"
+            )
 
     def test_robot_output_xml_exists(self, results: E2EResults) -> None:
         """Verify Robot output.xml exists."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         output_xml = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
         assert output_xml.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/output.xml"
 
     def test_robot_log_html_exists(self, results: E2EResults) -> None:
         """Verify Robot log.html exists."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         log_html = results.output_dir / ROBOT_RESULTS_DIRNAME / "log.html"
         assert log_html.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/log.html"
 
     def test_robot_report_html_exists(self, results: E2EResults) -> None:
         """Verify Robot report.html exists."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         report_html = results.output_dir / ROBOT_RESULTS_DIRNAME / "report.html"
         assert report_html.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/report.html"
 
     def test_robot_summary_report_exists(self, results: E2EResults) -> None:
         """Verify Robot summary_report.html exists."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         summary = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
         assert summary.exists(), (
             f"Missing {ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}"
@@ -161,8 +164,8 @@ class E2ECombinedTestBase:
 
     def test_robot_output_xml_parseable(self, results: E2EResults) -> None:
         """Verify Robot output.xml is valid XML."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
         tree = ET.parse(xml_path)
         root = tree.getroot()
@@ -170,8 +173,8 @@ class E2ECombinedTestBase:
 
     def test_robot_statistics_correct(self, results: E2EResults) -> None:
         """Verify Robot test statistics match scenario expectations."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
         parser = RobotResultParser(xml_path)
         data = parser.parse()
@@ -193,16 +196,16 @@ class E2ECombinedTestBase:
 
     def test_robot_output_xml_symlink_exists(self, results: E2EResults) -> None:
         """Verify output.xml symlink exists at root."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         symlink = results.output_dir / "output.xml"
         assert symlink.exists(), "Missing output.xml symlink at root"
         assert symlink.is_symlink(), "output.xml is not a symlink"
 
     def test_robot_symlinks_point_correctly(self, results: E2EResults) -> None:
         """Verify symlinks correctly point to robot_results/ subdirectory."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         symlink = results.output_dir / "output.xml"
         target = symlink.resolve()
         expected = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
@@ -218,32 +221,32 @@ class E2ECombinedTestBase:
 
     def test_robot_summary_has_valid_html(self, results: E2EResults) -> None:
         """Verify Robot summary report is valid HTML."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
         html_content = load_html_file(html_path)
         verify_html_structure(html_content)
 
     def test_robot_summary_has_table(self, results: E2EResults) -> None:
         """Verify Robot summary has results table."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
         html_content = load_html_file(html_path)
         verify_table_structure(html_content)
 
     def test_robot_summary_has_breadcrumb(self, results: E2EResults) -> None:
         """Verify Robot summary has breadcrumb to combined dashboard."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
         html_content = load_html_file(html_path)
         verify_breadcrumb_link(html_content, COMBINED_SUMMARY_FILENAME)
 
     def test_robot_summary_stats_correct(self, results: E2EResults) -> None:
         """Verify Robot summary statistics are correct."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
         scenario = results.scenario
         assert_report_stats(
@@ -258,8 +261,8 @@ class E2ECombinedTestBase:
         self, results: E2EResults
     ) -> None:
         """Verify Robot summary View Details links point to existing files."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
         verified_links = verify_view_details_links_resolve(html_path)
         assert len(verified_links) > 0, "No View Details links found in Robot summary"
@@ -268,29 +271,35 @@ class E2ECombinedTestBase:
     # PyATS Results Directory Tests
     # -------------------------------------------------------------------------
 
-    def test_pyats_results_directory_exists(self, results: E2EResults) -> None:
-        """Verify pyats_results/ subdirectory was created."""
-        if not results.scenario.has_pyats_tests:
-            pytest.skip("No PyATS tests in this scenario")
+    def test_pyats_results_directory_state(self, results: E2EResults) -> None:
+        """Verify pyats_results/ exists when expected, doesn't exist otherwise."""
         pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
-        assert pyats_dir.exists(), f"Missing {PYATS_RESULTS_DIRNAME}/ directory"
-        assert pyats_dir.is_dir()
+        if results.has_pyats_results:
+            assert pyats_dir.exists(), f"Expected {PYATS_RESULTS_DIRNAME}/ to exist"
+            assert pyats_dir.is_dir()
+        else:
+            assert not pyats_dir.exists(), (
+                f"Expected {PYATS_RESULTS_DIRNAME}/ to NOT exist"
+            )
 
     # -------------------------------------------------------------------------
     # PyATS API Output Tests
     # -------------------------------------------------------------------------
 
-    def test_pyats_api_results_exist(self, results: E2EResults) -> None:
-        """Verify PyATS API results directory exists."""
-        if not results.scenario.has_pyats_api_tests:
-            pytest.skip("No PyATS API tests in this scenario")
+    def test_pyats_api_results_directory_state(self, results: E2EResults) -> None:
+        """Verify pyats_results/api/ exists when expected, doesn't exist otherwise."""
         api_dir = results.output_dir / PYATS_RESULTS_DIRNAME / "api"
-        assert api_dir.exists(), f"Missing {PYATS_RESULTS_DIRNAME}/api directory"
+        if results.has_pyats_api_results:
+            assert api_dir.exists(), f"Expected {PYATS_RESULTS_DIRNAME}/api/ to exist"
+        else:
+            assert not api_dir.exists(), (
+                f"Expected {PYATS_RESULTS_DIRNAME}/api/ to NOT exist"
+            )
 
     def test_pyats_api_summary_report_exists(self, results: E2EResults) -> None:
         """Verify PyATS API summary report exists."""
-        if not results.scenario.has_pyats_api_tests:
-            pytest.skip("No PyATS API tests in this scenario")
+        if not results.has_pyats_api_results:
+            pytest.skip("No PyATS API results in this scenario")
         summary = (
             results.output_dir
             / PYATS_RESULTS_DIRNAME
@@ -302,8 +311,8 @@ class E2ECombinedTestBase:
 
     def test_pyats_api_summary_has_valid_html(self, results: E2EResults) -> None:
         """Verify PyATS API summary is valid HTML."""
-        if not results.scenario.has_pyats_api_tests:
-            pytest.skip("No PyATS API tests in this scenario")
+        if not results.has_pyats_api_results:
+            pytest.skip("No PyATS API results in this scenario")
         summary = (
             results.output_dir
             / PYATS_RESULTS_DIRNAME
@@ -316,8 +325,8 @@ class E2ECombinedTestBase:
 
     def test_pyats_api_summary_has_breadcrumb(self, results: E2EResults) -> None:
         """Verify PyATS API summary has breadcrumb to combined dashboard."""
-        if not results.scenario.has_pyats_api_tests:
-            pytest.skip("No PyATS API tests in this scenario")
+        if not results.has_pyats_api_results:
+            pytest.skip("No PyATS API results in this scenario")
         summary = (
             results.output_dir
             / PYATS_RESULTS_DIRNAME
@@ -330,8 +339,8 @@ class E2ECombinedTestBase:
 
     def test_pyats_api_summary_stats_correct(self, results: E2EResults) -> None:
         """Verify PyATS API summary statistics are correct."""
-        if not results.scenario.has_pyats_api_tests:
-            pytest.skip("No PyATS API tests in this scenario")
+        if not results.has_pyats_api_results:
+            pytest.skip("No PyATS API results in this scenario")
         summary = (
             results.output_dir
             / PYATS_RESULTS_DIRNAME
@@ -352,8 +361,8 @@ class E2ECombinedTestBase:
         self, results: E2EResults
     ) -> None:
         """Verify PyATS API summary View Details links point to existing files."""
-        if not results.scenario.has_pyats_api_tests:
-            pytest.skip("No PyATS API tests in this scenario")
+        if not results.has_pyats_api_results:
+            pytest.skip("No PyATS API results in this scenario")
         summary = (
             results.output_dir
             / PYATS_RESULTS_DIRNAME
@@ -370,17 +379,20 @@ class E2ECombinedTestBase:
     # PyATS D2D Output Tests
     # -------------------------------------------------------------------------
 
-    def test_pyats_d2d_results_exist(self, results: E2EResults) -> None:
-        """Verify PyATS D2D results directory exists."""
-        if not results.scenario.has_pyats_d2d_tests:
-            pytest.skip("No PyATS D2D tests in this scenario")
+    def test_pyats_d2d_results_directory_state(self, results: E2EResults) -> None:
+        """Verify pyats_results/d2d/ exists when expected, doesn't exist otherwise."""
         d2d_dir = results.output_dir / PYATS_RESULTS_DIRNAME / "d2d"
-        assert d2d_dir.exists(), f"Missing {PYATS_RESULTS_DIRNAME}/d2d directory"
+        if results.has_pyats_d2d_results:
+            assert d2d_dir.exists(), f"Expected {PYATS_RESULTS_DIRNAME}/d2d/ to exist"
+        else:
+            assert not d2d_dir.exists(), (
+                f"Expected {PYATS_RESULTS_DIRNAME}/d2d/ to NOT exist"
+            )
 
     def test_pyats_d2d_summary_report_exists(self, results: E2EResults) -> None:
         """Verify PyATS D2D summary report exists."""
-        if not results.scenario.has_pyats_d2d_tests:
-            pytest.skip("No PyATS D2D tests in this scenario")
+        if not results.has_pyats_d2d_results:
+            pytest.skip("No PyATS D2D results in this scenario")
         summary = (
             results.output_dir
             / PYATS_RESULTS_DIRNAME
@@ -392,8 +404,8 @@ class E2ECombinedTestBase:
 
     def test_pyats_d2d_summary_has_valid_html(self, results: E2EResults) -> None:
         """Verify PyATS D2D summary is valid HTML."""
-        if not results.scenario.has_pyats_d2d_tests:
-            pytest.skip("No PyATS D2D tests in this scenario")
+        if not results.has_pyats_d2d_results:
+            pytest.skip("No PyATS D2D results in this scenario")
         summary = (
             results.output_dir
             / PYATS_RESULTS_DIRNAME
@@ -406,8 +418,8 @@ class E2ECombinedTestBase:
 
     def test_pyats_d2d_summary_has_breadcrumb(self, results: E2EResults) -> None:
         """Verify PyATS D2D summary has breadcrumb to combined dashboard."""
-        if not results.scenario.has_pyats_d2d_tests:
-            pytest.skip("No PyATS D2D tests in this scenario")
+        if not results.has_pyats_d2d_results:
+            pytest.skip("No PyATS D2D results in this scenario")
         summary = (
             results.output_dir
             / PYATS_RESULTS_DIRNAME
@@ -420,8 +432,8 @@ class E2ECombinedTestBase:
 
     def test_pyats_d2d_summary_stats_correct(self, results: E2EResults) -> None:
         """Verify PyATS D2D summary statistics are correct."""
-        if not results.scenario.has_pyats_d2d_tests:
-            pytest.skip("No PyATS D2D tests in this scenario")
+        if not results.has_pyats_d2d_results:
+            pytest.skip("No PyATS D2D results in this scenario")
         summary = (
             results.output_dir
             / PYATS_RESULTS_DIRNAME
@@ -442,8 +454,8 @@ class E2ECombinedTestBase:
         self, results: E2EResults
     ) -> None:
         """Verify PyATS D2D summary View Details links point to existing files."""
-        if not results.scenario.has_pyats_d2d_tests:
-            pytest.skip("No PyATS D2D tests in this scenario")
+        if not results.has_pyats_d2d_results:
+            pytest.skip("No PyATS D2D results in this scenario")
         summary = (
             results.output_dir
             / PYATS_RESULTS_DIRNAME
@@ -468,8 +480,8 @@ class E2ECombinedTestBase:
 
     def test_combined_dashboard_links_to_robot(self, results: E2EResults) -> None:
         """Verify combined dashboard links to Robot summary."""
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
         html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
         html_content = load_html_file(html_path)
         assert f"{ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}" in html_content, (
@@ -478,8 +490,8 @@ class E2ECombinedTestBase:
 
     def test_combined_dashboard_links_to_pyats(self, results: E2EResults) -> None:
         """Verify combined dashboard links to PyATS results."""
-        if not results.scenario.has_pyats_tests:
-            pytest.skip("No PyATS tests in this scenario")
+        if not results.has_pyats_results:
+            pytest.skip("No PyATS results in this scenario")
         html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
         html_content = load_html_file(html_path)
         assert PYATS_RESULTS_DIRNAME in html_content, "Missing link to PyATS results"
@@ -704,11 +716,11 @@ class TestE2EPyatsCc(E2ECombinedTestBase):
 # =============================================================================
 
 
-class TestE2EDryRun:
+class TestE2EDryRun(E2ECombinedTestBase):
     """E2E tests for dry-run mode with mixed Robot + PyATS tests.
 
     Dry-run mode validates test structure without executing tests:
-    - Robot: Uses Robot's --dryrun flag (validates syntax, reports as skipped)
+    - Robot: Uses Robot's --dryrun flag (validates syntax, reports as passed)
     - PyATS: Discovers and categorizes tests, prints what would run, exits early
 
     Expected: CLI exits with code 0, no tests actually executed
@@ -719,20 +731,9 @@ class TestE2EDryRun:
         """Provide dry-run scenario results."""
         return e2e_dry_run_results
 
-    def test_cli_exit_code_is_zero(self, results: E2EResults) -> None:
-        """Dry-run should always exit 0 (no tests executed = no failures)."""
-        assert results.exit_code == 0, (
-            f"Expected exit code 0 for dry-run, got {results.exit_code}\n"
-            f"stdout: {results.stdout}"
-        )
-
-    def test_cli_has_no_exception(self, results: E2EResults) -> None:
-        """Verify CLI execution completed without unexpected exceptions."""
-        exception = results.cli_result.exception
-        if exception is not None:
-            assert isinstance(exception, SystemExit) and exception.code == 0, (
-                f"CLI raised unexpected exception: {type(exception).__name__}: {exception}"
-            )
+    # -------------------------------------------------------------------------
+    # Dry-run specific tests (stdout validation)
+    # -------------------------------------------------------------------------
 
     def test_pyats_dry_run_header_in_output(self, results: E2EResults) -> None:
         """Verify PyATS dry-run mode header is printed."""
@@ -767,51 +768,8 @@ class TestE2EDryRun:
             "Expected 'no tests executed' message in stdout"
         )
 
-    def test_output_directory_created(self, results: E2EResults) -> None:
-        """Verify output directory was created."""
-        assert results.output_dir.exists()
-        assert results.output_dir.is_dir()
 
-    def test_robot_results_directory_exists(self, results: E2EResults) -> None:
-        """Verify robot_results/ subdirectory was created (for dry-run output)."""
-        robot_dir = results.output_dir / ROBOT_RESULTS_DIRNAME
-        assert robot_dir.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/ directory"
-
-    def test_robot_output_xml_exists(self, results: E2EResults) -> None:
-        """Verify Robot output.xml exists (contains dry-run results)."""
-        output_xml = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
-        assert output_xml.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/output.xml"
-
-    def test_robot_tests_validated_not_executed(self, results: E2EResults) -> None:
-        """Verify Robot tests were validated (dry-run) but keywords not executed.
-
-        In Robot's --dryrun mode, tests pass if the structure is valid.
-        Keywords are not actually executed, but tests report as passed.
-        """
-        xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
-        parser = RobotResultParser(xml_path)
-        data = parser.parse()
-        stats = data["aggregated_stats"]
-
-        assert stats.passed == 2, (
-            f"Expected 2 passed Robot tests (dry-run validates structure), got {stats.passed}"
-        )
-        assert stats.failed == 0, f"Expected 0 failed Robot tests, got {stats.failed}"
-
-    def test_pyats_results_not_created(self, results: E2EResults) -> None:
-        """Verify PyATS results directory has no actual test results (dry-run skips execution)."""
-        pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
-        api_results = pyats_dir / "api" / HTML_REPORTS_DIRNAME / SUMMARY_REPORT_FILENAME
-        d2d_results = pyats_dir / "d2d" / HTML_REPORTS_DIRNAME / SUMMARY_REPORT_FILENAME
-        assert not api_results.exists(), (
-            "PyATS API results should not exist in dry-run mode"
-        )
-        assert not d2d_results.exists(), (
-            "PyATS D2D results should not exist in dry-run mode"
-        )
-
-
-class TestE2EDryRunPyatsOnly:
+class TestE2EDryRunPyatsOnly(E2ECombinedTestBase):
     """E2E tests for dry-run mode with PyATS-only (no Robot tests).
 
     This specifically tests the fix for the exit code bug where --dry-run
@@ -827,20 +785,9 @@ class TestE2EDryRunPyatsOnly:
         """Provide dry-run PyATS-only scenario results."""
         return e2e_dry_run_pyats_only_results
 
-    def test_cli_exit_code_is_zero(self, results: E2EResults) -> None:
-        """Dry-run should exit 0 even with PyATS-only (no Robot tests)."""
-        assert results.exit_code == 0, (
-            f"Expected exit code 0 for PyATS-only dry-run, got {results.exit_code}\n"
-            f"stdout: {results.stdout}"
-        )
-
-    def test_cli_has_no_exception(self, results: E2EResults) -> None:
-        """Verify CLI execution completed without unexpected exceptions."""
-        exception = results.cli_result.exception
-        if exception is not None:
-            assert isinstance(exception, SystemExit) and exception.code == 0, (
-                f"CLI raised unexpected exception: {type(exception).__name__}: {exception}"
-            )
+    # -------------------------------------------------------------------------
+    # PyATS-only dry-run specific tests
+    # -------------------------------------------------------------------------
 
     def test_pyats_dry_run_header_in_output(self, results: E2EResults) -> None:
         """Verify PyATS dry-run mode header is printed."""
@@ -868,21 +815,3 @@ class TestE2EDryRunPyatsOnly:
         assert "Dry-run complete" in results.stdout, (
             "Expected 'Dry-run complete' message in stdout"
         )
-
-    def test_no_robot_results_directory(self, results: E2EResults) -> None:
-        """Verify no Robot results directory was created (no Robot tests)."""
-        robot_dir = results.output_dir / ROBOT_RESULTS_DIRNAME
-        assert not robot_dir.exists(), (
-            "Robot results directory should not exist for PyATS-only scenario"
-        )
-
-    def test_pyats_results_not_created(self, results: E2EResults) -> None:
-        """Verify PyATS results directory has no actual test results."""
-        pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
-        if pyats_dir.exists():
-            api_results = (
-                pyats_dir / "api" / HTML_REPORTS_DIRNAME / SUMMARY_REPORT_FILENAME
-            )
-            assert not api_results.exists(), (
-                "PyATS API results should not exist in dry-run mode"
-            )
