@@ -245,7 +245,11 @@ class CombinedOrchestrator:
             if combined_path:
                 typer.echo(f"   ✅ Combined dashboard: {combined_path}")
 
-            merged_xunit = merge_xunit_results(self.output_dir)
+            merged_xunit = None
+            try:
+                merged_xunit = merge_xunit_results(self.output_dir)
+            except Exception as e:
+                logger.warning(f"Failed to merge xunit files: {e}")
             if merged_xunit:
                 typer.echo(f"   ✅ Merged xunit.xml: {merged_xunit}")
             else:
