@@ -10,6 +10,7 @@ from typing import Any
 
 from nac_test.core.constants import PYATS_RESULTS_DIRNAME
 from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
+from nac_test.utils.formatting import format_duration
 from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
@@ -21,23 +22,6 @@ class SummaryPrinter:
     def __init__(self) -> None:
         """Initialize the SummaryPrinter."""
         pass  # No dependencies needed currently
-
-    @staticmethod
-    def format_duration(seconds: float) -> str:
-        """Format duration like Robot Framework does.
-
-        Args:
-            seconds: Duration in seconds
-
-        Returns:
-            Formatted duration string (e.g., "1 minute 23.456 seconds")
-        """
-        if seconds < 60:
-            return f"{seconds:.2f} seconds"
-        else:
-            minutes = int(seconds / 60)
-            secs = seconds % 60
-            return f"{minutes} minutes {secs:.2f} seconds"
 
     def _format_test_line(
         self,
@@ -189,10 +173,8 @@ class SummaryPrinter:
             self.print_archive_info(output_dir)
 
         # Color the timing information
-        print(
-            f"\n{terminal.info('Total testing:')} {self.format_duration(total_test_time)}"
-        )
-        print(f"{terminal.info('Elapsed time:')}  {self.format_duration(wall_time)}")
+        print(f"\n{terminal.info('Total testing:')} {format_duration(total_test_time)}")
+        print(f"{terminal.info('Elapsed time:')}  {format_duration(wall_time)}")
 
     def print_summary_with_breakdown(
         self,
@@ -322,10 +304,8 @@ class SummaryPrinter:
             self.print_archive_info(output_dir)
 
         # Print timing information at the end
-        print(
-            f"\n{terminal.info('Total testing:')} {self.format_duration(total_test_time)}"
-        )
-        print(f"{terminal.info('Elapsed time:')}  {self.format_duration(wall_time)}")
+        print(f"\n{terminal.info('Total testing:')} {format_duration(total_test_time)}")
+        print(f"{terminal.info('Elapsed time:')}  {format_duration(wall_time)}")
 
     def print_archive_info(self, output_dir: Path) -> None:
         """Print information about generated archives and their contents.
