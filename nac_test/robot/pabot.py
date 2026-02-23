@@ -8,7 +8,13 @@ import pabot.pabot
 from pabot.arguments import parse_args
 from robot.errors import DataError
 
-from nac_test.core.constants import ROBOT_RESULTS_DIRNAME, XUNIT_XML
+from nac_test.core.constants import (
+    LOG_HTML,
+    OUTPUT_XML,
+    REPORT_HTML,
+    ROBOT_RESULTS_DIRNAME,
+    XUNIT_XML,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -116,11 +122,11 @@ def run_pabot(
             "--skiponfailure",
             "non-critical",
             "--output",
-            str(robot_results_dir / "output.xml"),
+            str(robot_results_dir / OUTPUT_XML),
             "--log",
-            str(robot_results_dir / "log.html"),
+            str(robot_results_dir / LOG_HTML),
             "--report",
-            str(robot_results_dir / "report.html"),
+            str(robot_results_dir / REPORT_HTML),
             "--xunit",
             str(robot_results_dir / XUNIT_XML),
         ]
