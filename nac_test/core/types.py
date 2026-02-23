@@ -299,7 +299,12 @@ class CombinedResults:
             253: Execution was interrupted (Ctrl+C, etc.)
             255: Execution errors occurred (has_errors is True)
 
-        Priority (highest to lowest): 253 (interrupted) > 252 (invalid args) > 255 (generic)
+        Priority (highest to lowest): 253 (interrupted) > 252 (data error) > 255 (generic)
+
+        Why this priority? Interrupted (253) is highest because it's the most actionable
+        signal for CI/CD - the user explicitly stopped execution. Data errors (252) come
+        next as they indicate a configuration problem. Generic errors (255) are lowest
+        as they may be transient infrastructure issues.
         """
         if self.has_errors:
             error_types = [
