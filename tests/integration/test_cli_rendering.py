@@ -22,21 +22,6 @@ from nac_test.core.constants import EXIT_ERROR
 pytestmark = pytest.mark.integration
 
 
-@pytest.fixture(scope="function", autouse=True)
-def setup_bogus_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set up environment variables for a bogus ACI controller.
-
-    Uses monkeypatch for safe, automatic cleanup that preserves
-    original environment state even if tests fail.
-
-    Args:
-        monkeypatch: Pytest monkeypatch fixture for safe environment manipulation.
-    """
-    monkeypatch.setenv("ACI_URL", "foo")
-    monkeypatch.setenv("ACI_USERNAME", "foo")
-    monkeypatch.setenv("ACI_PASSWORD", "foo")
-
-
 def verify_file_content(expected_yaml_path: Path, output_dir: Path) -> None:
     """Verify that files in output_dir match the expected content from YAML.
 
@@ -178,6 +163,7 @@ def test_list_rendering_creates_device_folders(tmp_path: Path) -> None:
             templates_path,
             "-o",
             str(tmp_path),
+            "--render-only",
         ],
     )
     assert (tmp_path / "ABC" / "test1.robot").exists(), (
@@ -216,6 +202,7 @@ def test_list_rendering_creates_device_files_in_shared_folder(tmp_path: Path) ->
             templates_path,
             "-o",
             str(tmp_path),
+            "--render-only",
         ],
     )
     assert (tmp_path / "test1" / "ABC.robot").exists(), (
@@ -255,6 +242,7 @@ def test_chunked_list_rendering_produces_expected_content(tmp_path: Path) -> Non
             templates_path,
             "-o",
             str(tmp_path),
+            "--render-only",
         ],
     )
     assert result.exit_code == 0, (
@@ -355,3 +343,37 @@ def test_merged_data_model_creates_custom_filename(tmp_path: Path) -> None:
         f"Custom merged data model content should match expected content from "
         f"{expected_model_path}"
     )
+
+
+def test_render_only_without_controller_credentials(tmp_path: Path) -> None:
+    """Render-only mode works without controller environment variables.
+    All other tests in this module implicitly also test this, but this
+    is important enough that it warrants an explicit test.
+    """
+    data_file = tmp_path / "data.yaml"
+    data_file.write_text("device: Router1\nip: 192.168.1.1")
+
+    template = tmp_path / "templates" / "test.robot"
+    template.parent.mkdir(parents=True)
+    template.write_text(
+        "*** Test Cases ***\nVerify {{ device }}\n    Log    IP: {{ ip }}"
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            str(data_file),
+            "-t",
+            str(template.parent),
+            "-o",
+            str(tmp_path / "output"),
+            "--render-only",
+        ],
+    )
+
+    assert result.exit_code == 0
+    output = (tmp_path / "output" / "test.robot").read_text()
+    assert "Verify Router1" in output
+    assert "{{" not in output

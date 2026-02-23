@@ -1,4 +1,11 @@
 repos:
+  - repo: local
+    hooks:
+      - id: license-headers
+        name: Check license headers
+        entry: ./scripts/license-headers.sh
+        language: script
+        types: [python]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

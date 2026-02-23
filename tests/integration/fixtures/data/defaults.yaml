@@ -1,0 +1,4 @@
+---
+defaults:
+  apic:
+    version: 6.0
