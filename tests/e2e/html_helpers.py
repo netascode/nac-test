@@ -220,35 +220,24 @@ def extract_test_type_sections(html_content: str) -> list[TestTypeStats]:
 
 
 def verify_html_structure(html_content: str) -> None:
-    """Verify basic HTML structure is valid.
+    """Verify basic HTML structure is valid, including UTF-8 charset declaration.
 
-    Args:
-        html_content: The HTML content to verify.
-
-    Raises:
-        AssertionError: If HTML structure is invalid.
-    """
-    assert "<html" in html_content.lower(), "Missing <html> tag"
-    assert "</html>" in html_content.lower(), "Missing </html> closing tag"
-    assert "<head>" in html_content.lower(), "Missing <head> tag"
-    assert "<body>" in html_content.lower(), "Missing <body> tag"
-
-
-def verify_html_charset(html_content: str) -> None:
-    """Verify HTML has UTF-8 charset declaration for proper character rendering.
-
-    Without an explicit charset meta tag, browsers (especially Safari) may default
-    to a different encoding, causing UTF-8 characters (arrows, checkmarks, etc.)
+    Checks for required HTML elements and UTF-8 charset meta tag. Without an
+    explicit charset meta tag, browsers (especially Safari) may default to a
+    different encoding, causing UTF-8 characters (arrows, checkmarks, etc.)
     to display as garbled text.
 
     Args:
         html_content: The HTML content to verify.
 
     Raises:
-        AssertionError: If charset declaration is missing.
-
-    See: https://github.com/netascode/nac-test/issues/484
+        AssertionError: If HTML structure is invalid or charset is missing.
     """
+    assert "<html" in html_content.lower(), "Missing <html> tag"
+    assert "</html>" in html_content.lower(), "Missing </html> closing tag"
+    assert "<head>" in html_content.lower(), "Missing <head> tag"
+    assert "<body>" in html_content.lower(), "Missing <body> tag"
+
     # Check for <meta charset="UTF-8"> (case-insensitive)
     charset_pattern = r'<meta\s+charset\s*=\s*["\']?UTF-8["\']?\s*/?>'
     has_charset = re.search(charset_pattern, html_content, re.IGNORECASE)
