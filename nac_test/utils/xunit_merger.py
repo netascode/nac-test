@@ -155,6 +155,10 @@ def merge_xunit_files(
         except ET.ParseError as e:
             logger.warning(f"Failed to parse {file_path}: {e}")
             continue
+        except ValueError as e:
+            # Malformed xunit with non-numeric attribute values (e.g., tests="abc")
+            logger.warning(f"Invalid attribute values in {file_path}: {e}")
+            continue
         except OSError as e:
             logger.warning(f"Failed to read {file_path}: {type(e).__name__}: {e}")
             continue
