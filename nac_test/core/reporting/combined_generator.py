@@ -12,17 +12,21 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     HTML_REPORTS_DIRNAME,
+    HTTP_FORBIDDEN_CODE,
     PYATS_RESULTS_DIRNAME,
+    REPORT_TIMESTAMP_FORMAT,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
-from nac_test.core.types import CombinedResults
+from nac_test.core.types import CombinedResults, PreFlightFailure
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
+from nac_test.utils.controller import get_display_name, get_env_var_prefix
+from nac_test.utils.url import extract_host
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +45,56 @@ FRAMEWORK_METADATA: dict[str, dict[str, str]] = {
         "report_path": f"{ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}",
     },
 }
+
+
+class _CurlTemplate(NamedTuple):
+    """Curl command template for manual auth testing.
+
+    Attributes:
+        endpoint: URL path appended to the controller URL.
+        options: Curl command-line options (method, headers, data).
+    """
+
+    endpoint: str
+    options: str
+
+
+# Curl command templates for manual auth testing, keyed by controller type.
+_CURL_TEMPLATES: dict[str, _CurlTemplate] = {
+    "ACI": _CurlTemplate(
+        endpoint="/api/aaaLogin.json",
+        options='-X POST -H "Content-Type: application/json" \\\n'
+        '            -d \'{"aaaUser":{"attributes":{"name":"USERNAME","pwd":"PASSWORD"}}}\'',
+    ),
+    "SDWAN": _CurlTemplate(
+        endpoint="/j_security_check",
+        options='-X POST \\\n            -d "j_username=USERNAME&j_password=PASSWORD"',
+    ),
+    "CC": _CurlTemplate(
+        endpoint="/dna/system/api/v1/auth/token",
+        options='-X POST \\\n            -u "USERNAME:PASSWORD"',
+    ),
+}
+
+
+def _get_curl_example(controller_type: str, controller_url: str) -> str:
+    """Generate a curl command example for manual auth testing.
+
+    Args:
+        controller_type: The controller type (ACI, SDWAN, CC).
+        controller_url: The controller URL.
+
+    Returns:
+        A curl command string for the user to test authentication manually.
+    """
+    template = _CURL_TEMPLATES.get(controller_type)
+    if template is None:
+        logger.debug(
+            "No curl template for controller type %s, returning URL only",
+            controller_type,
+        )
+        return f"{controller_url}"
+    return f"{controller_url}{template.endpoint} \\\n            {template.options}"
 
 
 class CombinedReportGenerator:
@@ -70,13 +124,23 @@ class CombinedReportGenerator:
     ) -> Path | None:
         """Generate combined summary dashboard.
 
+        Dispatches to the appropriate renderer based on the results state:
+        - If pre_flight_failure is set, renders the auth failure template
+        - Otherwise, renders the normal combined dashboard template
+
         Args:
-            results: CombinedResults with .api, .d2d, .robot attributes.
+            results: CombinedResults with test data or pre-flight failure.
                 If None, an empty dashboard will be generated.
 
         Returns:
-            Path to combined_summary.html at root level, or None if generation fails
+            Path to combined_summary.html, or None if generation fails.
         """
+        if results is not None and results.has_pre_flight_failure:
+            failure = results.pre_flight_failure
+            if failure is None:  # Unreachable, but satisfies mypy without assert
+                return None
+            return self._generate_pre_flight_failure_report(failure)
+
         try:
             test_type_stats: dict[str, dict[str, Any]] = {}
 
@@ -105,7 +169,7 @@ class CombinedReportGenerator:
             # Render combined summary template
             template = self.env.get_template("summary/combined_report.html.j2")
             html_content = template.render(
-                generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                generation_time=datetime.now().strftime(REPORT_TIMESTAMP_FORMAT),
                 overall_stats=overall_stats,
                 test_type_stats=test_type_stats,
             )
@@ -123,4 +187,55 @@ class CombinedReportGenerator:
 
         except Exception as e:
             logger.error(f"Failed to generate combined summary: {e}")
+            return None
+
+    def _generate_pre_flight_failure_report(
+        self, failure: PreFlightFailure
+    ) -> Path | None:
+        """Generate HTML report for a pre-flight failure.
+
+        Renders the auth_failure/report.html.j2 template with context
+        derived from the PreFlightFailure dataclass. Writes to
+        combined_summary.html (not auth_failure_report.html).
+
+        Args:
+            failure: The pre-flight failure details.
+
+        Returns:
+            Path to combined_summary.html, or None if generation fails.
+        """
+        try:
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+
+            is_403 = str(HTTP_FORBIDDEN_CODE) in failure.detail
+            display_name = get_display_name(failure.controller_type)
+            env_var_prefix = get_env_var_prefix(failure.controller_type)
+            host = extract_host(failure.controller_url)
+            curl_example = _get_curl_example(
+                failure.controller_type, failure.controller_url
+            )
+            timestamp = datetime.now().strftime(REPORT_TIMESTAMP_FORMAT)
+
+            template = self.env.get_template("auth_failure/report.html.j2")
+            html_content = template.render(
+                failure_type=failure.failure_type,
+                is_403=is_403,
+                controller_type=failure.controller_type,
+                controller_url=failure.controller_url,
+                display_name=display_name,
+                detail=failure.detail,
+                env_var_prefix=env_var_prefix,
+                host=host,
+                curl_example=curl_example,
+                timestamp=timestamp,
+            )
+
+            combined_summary_path = self.output_dir / COMBINED_SUMMARY_FILENAME
+            combined_summary_path.write_text(html_content, encoding="utf-8")
+
+            logger.info(f"Generated pre-flight failure report: {combined_summary_path}")
+            return combined_summary_path
+
+        except Exception as e:
+            logger.error(f"Failed to generate pre-flight failure report: {e}")
             return None
