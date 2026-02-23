@@ -79,7 +79,7 @@ class CombinedOrchestrator:
             include_tags: Tags to include (Robot only)
             exclude_tags: Tags to exclude (Robot only)
             render_only: Only render tests without executing (Robot only)
-            dry_run: Dry run mode (Robot only)
+            dry_run: Dry run mode (skips actual test execution)
             processes: Number of parallel processes for Robot test execution (Robot only)
             extra_args: Additional Robot Framework arguments to pass to pabot (Robot only)
             max_parallel_devices: Max parallel devices for PyATS D2D tests
