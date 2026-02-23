@@ -147,6 +147,37 @@ class TestFormatTestSummary:
         # Total: 2+3+5=10 passed, 1+0+2=3 failed, 0+1+0=1 skipped = 14 total
         assert plain == "14 tests, 10 passed, 3 failed, 1 skipped."
 
+    def test_other_shown_when_positive(self) -> None:
+        """Verify 'other' count appears when > 0."""
+        results = CombinedResults(
+            api=TestResults(passed=2, failed=1, skipped=0, other=3),
+        )
+        output = terminal.format_test_summary(results)
+        plain = terminal.strip_ansi(output)
+
+        assert plain == "6 tests, 2 passed, 1 failed, 0 skipped, 3 other."
+
+    def test_other_colored_magenta_when_positive(self) -> None:
+        """Verify 'other' count is colored magenta when > 0."""
+        results = CombinedResults(
+            api=TestResults(passed=2, failed=0, skipped=0, other=1),
+        )
+        output = terminal.format_test_summary(results)
+
+        assert TerminalColors.HIGHLIGHT in output
+        assert f"{TerminalColors.HIGHLIGHT}1{TerminalColors.RESET}" in output
+
+    def test_other_not_shown_when_zero(self) -> None:
+        """Verify 'other' count is NOT shown when 0."""
+        results = CombinedResults(
+            robot=TestResults(passed=5, failed=2, skipped=1, other=0),
+        )
+        output = terminal.format_test_summary(results)
+        plain = terminal.strip_ansi(output)
+
+        assert "other" not in plain
+        assert plain == "8 tests, 5 passed, 2 failed, 1 skipped."
+
 
 class TestFormatTestSummaryNoColor:
     """Test format_test_summary() behavior with NO_COLOR environment variable."""

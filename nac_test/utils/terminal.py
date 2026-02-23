@@ -213,6 +213,7 @@ class TerminalColors:
         - passed: green
         - failed: red
         - skipped: yellow
+        - other: magenta (only shown when > 0)
         """
         passed_str = (
             cls.success(str(results.passed))
@@ -229,10 +230,14 @@ class TerminalColors:
             if results.skipped > 0
             else str(results.skipped)
         )
-        return (
+        summary = (
             f"{results.total} tests, {passed_str} passed, "
             f"{failed_str} failed, {skipped_str} skipped."
         )
+        if results.other > 0:
+            other_str = cls.highlight(str(results.other))
+            summary = summary[:-1] + f", {other_str} other."
+        return summary
 
 
 # Single instance for use across the codebase
