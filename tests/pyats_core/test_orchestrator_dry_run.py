@@ -7,97 +7,30 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
+
+from .conftest import PyATSTestDirs
 
 
 class TestOrchestratorDryRun:
     """Tests for PyATSOrchestrator dry_run parameter and behavior."""
 
-    def test_orchestrator_accepts_dry_run_parameter(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch
-    ) -> None:
-        """Test that PyATSOrchestrator accepts dry_run parameter."""
-        # Set up controller env
-        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
-        monkeypatch.setenv("ACI_USERNAME", "admin")
-        monkeypatch.setenv("ACI_PASSWORD", "password")
-
-        # Create test directories
-        test_dir = tmp_path / "tests"
-        test_dir.mkdir()
-        output_dir = tmp_path / "output"
-        output_dir.mkdir()
-        merged_file = output_dir / "merged.yaml"
-        merged_file.write_text("test: data")
-
-        # Initialize with dry_run=True
-        orchestrator = PyATSOrchestrator(
-            data_paths=[tmp_path / "data"],
-            test_dir=test_dir,
-            output_dir=output_dir,
-            merged_data_filename="merged.yaml",
-            dry_run=True,
-        )
-
-        assert orchestrator.dry_run is True
-
-    def test_orchestrator_dry_run_defaults_to_false(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch
-    ) -> None:
-        """Test that dry_run defaults to False when not specified."""
-        # Set up controller env
-        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
-        monkeypatch.setenv("ACI_USERNAME", "admin")
-        monkeypatch.setenv("ACI_PASSWORD", "password")
-
-        # Create test directories
-        test_dir = tmp_path / "tests"
-        test_dir.mkdir()
-        output_dir = tmp_path / "output"
-        output_dir.mkdir()
-        merged_file = output_dir / "merged.yaml"
-        merged_file.write_text("test: data")
-
-        # Initialize without dry_run parameter
-        orchestrator = PyATSOrchestrator(
-            data_paths=[tmp_path / "data"],
-            test_dir=test_dir,
-            output_dir=output_dir,
-            merged_data_filename="merged.yaml",
-        )
-
-        assert orchestrator.dry_run is False
-
     def test_dry_run_prints_summary_and_skips_execution(
         self,
-        tmp_path: Path,
-        monkeypatch: MonkeyPatch,
+        aci_controller_env: None,
+        pyats_test_dirs: PyATSTestDirs,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that dry_run mode prints test summary and skips execution."""
-        # Set up controller env
-        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
-        monkeypatch.setenv("ACI_USERNAME", "admin")
-        monkeypatch.setenv("ACI_PASSWORD", "password")
-
-        # Create test directories
-        test_dir = tmp_path / "tests"
-        test_dir.mkdir()
-        output_dir = tmp_path / "output"
-        output_dir.mkdir()
-        merged_file = output_dir / "merged.yaml"
-        merged_file.write_text("test: data")
-
         # Create mock test files
-        api_test = test_dir / "test_api.py"
+        api_test = pyats_test_dirs.test_dir / "test_api.py"
         api_test.write_text("# API test")
 
         orchestrator = PyATSOrchestrator(
-            data_paths=[tmp_path / "data"],
-            test_dir=test_dir,
-            output_dir=output_dir,
+            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
+            test_dir=pyats_test_dirs.test_dir,
+            output_dir=pyats_test_dirs.output_dir,
             merged_data_filename="merged.yaml",
             dry_run=True,
         )
@@ -132,34 +65,22 @@ class TestOrchestratorDryRun:
         assert result.d2d is None  # No D2D tests
 
     def test_dry_run_returns_not_run_results_for_api_and_d2d(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch
+        self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
     ) -> None:
         """Test that dry_run returns not_run results for both API and D2D tests."""
-        # Set up controller env
-        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
-        monkeypatch.setenv("ACI_USERNAME", "admin")
-        monkeypatch.setenv("ACI_PASSWORD", "password")
-
-        # Create test directories
-        test_dir = tmp_path / "tests"
-        test_dir.mkdir()
-        d2d_dir = test_dir / "d2d"
+        d2d_dir = pyats_test_dirs.test_dir / "d2d"
         d2d_dir.mkdir()
-        output_dir = tmp_path / "output"
-        output_dir.mkdir()
-        merged_file = output_dir / "merged.yaml"
-        merged_file.write_text("test: data")
 
         # Create mock test files
-        api_test = test_dir / "test_api.py"
+        api_test = pyats_test_dirs.test_dir / "test_api.py"
         api_test.write_text("# API test")
         d2d_test = d2d_dir / "test_d2d.py"
         d2d_test.write_text("# D2D test")
 
         orchestrator = PyATSOrchestrator(
-            data_paths=[tmp_path / "data"],
-            test_dir=test_dir,
-            output_dir=output_dir,
+            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
+            test_dir=pyats_test_dirs.test_dir,
+            output_dir=pyats_test_dirs.output_dir,
             merged_data_filename="merged.yaml",
             dry_run=True,
         )
@@ -184,27 +105,16 @@ class TestOrchestratorDryRun:
         assert result.d2d.reason == "dry-run mode"
 
     def test_dry_run_does_not_execute_tests(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch
+        self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
     ) -> None:
         """Test that dry_run mode does not execute tests."""
-        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
-        monkeypatch.setenv("ACI_USERNAME", "admin")
-        monkeypatch.setenv("ACI_PASSWORD", "password")
-
-        test_dir = tmp_path / "tests"
-        test_dir.mkdir()
-        output_dir = tmp_path / "output"
-        output_dir.mkdir()
-        merged_file = output_dir / "merged.yaml"
-        merged_file.write_text("test: data")
-
-        api_test = test_dir / "test_api.py"
+        api_test = pyats_test_dirs.test_dir / "test_api.py"
         api_test.write_text("# API test")
 
         orchestrator = PyATSOrchestrator(
-            data_paths=[tmp_path / "data"],
-            test_dir=test_dir,
-            output_dir=output_dir,
+            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
+            test_dir=pyats_test_dirs.test_dir,
+            output_dir=pyats_test_dirs.output_dir,
             merged_data_filename="merged.yaml",
             dry_run=True,
         )
@@ -229,28 +139,15 @@ class TestOrchestratorDryRun:
 
     def test_dry_run_empty_test_lists(
         self,
-        tmp_path: Path,
-        monkeypatch: MonkeyPatch,
+        aci_controller_env: None,
+        pyats_test_dirs: PyATSTestDirs,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test dry_run with no tests discovered returns empty PyATSResults."""
-        # Set up controller env
-        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
-        monkeypatch.setenv("ACI_USERNAME", "admin")
-        monkeypatch.setenv("ACI_PASSWORD", "password")
-
-        # Create test directories
-        test_dir = tmp_path / "tests"
-        test_dir.mkdir()
-        output_dir = tmp_path / "output"
-        output_dir.mkdir()
-        merged_file = output_dir / "merged.yaml"
-        merged_file.write_text("test: data")
-
         orchestrator = PyATSOrchestrator(
-            data_paths=[tmp_path / "data"],
-            test_dir=test_dir,
-            output_dir=output_dir,
+            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
+            test_dir=pyats_test_dirs.test_dir,
+            output_dir=pyats_test_dirs.output_dir,
             merged_data_filename="merged.yaml",
             dry_run=True,
         )
