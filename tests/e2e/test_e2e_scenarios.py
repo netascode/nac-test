@@ -220,7 +220,7 @@ class E2ECombinedTestBase:
     # -------------------------------------------------------------------------
 
     def test_robot_summary_has_valid_html(self, results: E2EResults) -> None:
-        """Verify Robot summary report is valid HTML."""
+        """Verify Robot summary report is valid HTML with UTF-8 charset."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
@@ -310,7 +310,7 @@ class E2ECombinedTestBase:
         assert summary.exists(), f"Missing PyATS API {SUMMARY_REPORT_FILENAME}"
 
     def test_pyats_api_summary_has_valid_html(self, results: E2EResults) -> None:
-        """Verify PyATS API summary is valid HTML."""
+        """Verify PyATS API summary is valid HTML with UTF-8 charset."""
         if not results.has_pyats_api_results:
             pytest.skip("No PyATS API results in this scenario")
         summary = (
@@ -403,7 +403,7 @@ class E2ECombinedTestBase:
         assert summary.exists(), f"Missing PyATS D2D {SUMMARY_REPORT_FILENAME}"
 
     def test_pyats_d2d_summary_has_valid_html(self, results: E2EResults) -> None:
-        """Verify PyATS D2D summary is valid HTML."""
+        """Verify PyATS D2D summary is valid HTML with UTF-8 charset."""
         if not results.has_pyats_d2d_results:
             pytest.skip("No PyATS D2D results in this scenario")
         summary = (
@@ -473,7 +473,7 @@ class E2ECombinedTestBase:
     # -------------------------------------------------------------------------
 
     def test_combined_dashboard_has_valid_html(self, results: E2EResults) -> None:
-        """Verify combined dashboard is valid HTML."""
+        """Verify combined dashboard is valid HTML with UTF-8 charset."""
         html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
         html_content = load_html_file(html_path)
         verify_html_structure(html_content)
