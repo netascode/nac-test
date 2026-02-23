@@ -27,7 +27,11 @@ import yaml  # type: ignore[import-untyped]
 from pyats import aetest
 
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
-from nac_test.core.constants import PYATS_RESULTS_DIRNAME
+from nac_test.core.constants import (
+    FILE_TIMESTAMP_FORMAT,
+    FILE_TIMESTAMP_MS_FORMAT,
+    PYATS_RESULTS_DIRNAME,
+)
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
 from nac_test.pyats_core.common.types import (
@@ -668,7 +672,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         try:
             # Generate unique filename
             test_name = self.__class__.__name__
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now().strftime(FILE_TIMESTAMP_FORMAT)
             pid = os.getpid()
             filename = f"pyats_recovery_{test_name}_{pid}_{timestamp}.json"
 
@@ -769,7 +773,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             - API tests: classname_YYYYMMDD_HHMMSS_mmm
         """
         class_name = self.__class__.__name__.lower()
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[
+        timestamp = datetime.now().strftime(FILE_TIMESTAMP_MS_FORMAT)[
             :-3
         ]  # Millisecond precision
 
