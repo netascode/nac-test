@@ -5,6 +5,7 @@
 """Stop the mock API server."""
 
 import os
+import signal
 import sys
 import time
 from pathlib import Path
@@ -36,7 +37,7 @@ def main() -> None:
     # Send SIGTERM for graceful shutdown
     print(f"Stopping server (PID: {pid})...")
     try:
-        os.kill(pid, 15)  # SIGTERM
+        os.kill(pid, signal.SIGTERM)
 
         # Wait up to 5 seconds for graceful shutdown
         for _ in range(50):
@@ -49,7 +50,7 @@ def main() -> None:
         else:
             # Force kill if still running
             print("Graceful shutdown failed, forcing...")
-            os.kill(pid, 9)  # SIGKILL
+            os.kill(pid, signal.SIGKILL)
 
         print("Server stopped")
         if PID_FILE.exists():
