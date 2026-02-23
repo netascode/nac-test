@@ -8,8 +8,11 @@ from pathlib import Path
 import pytest
 
 from nac_test.core.constants import COMBINED_SUMMARY_FILENAME
-from nac_test.core.reporting.combined_generator import CombinedReportGenerator
-from nac_test.core.types import CombinedResults, TestResults
+from nac_test.core.reporting.combined_generator import (
+    CombinedReportGenerator,
+    _get_curl_example,
+)
+from nac_test.core.types import CombinedResults, PreFlightFailure, TestResults
 
 
 @pytest.fixture
@@ -245,3 +248,160 @@ def test_combined_report_template_receives_stats_objects(tmp_path: Path) -> None
     assert "<h3>12</h3>" in content
     assert "<h3>3</h3>" in content
     assert "80.0%" in content
+
+
+class TestGetCurlExample:
+    """Tests for the _get_curl_example helper function."""
+
+    def test_aci_curl_example(self) -> None:
+        """ACI curl example generates complete auth command with JSON payload."""
+        result = _get_curl_example("ACI", "https://apic.local")
+        assert result.startswith("https://apic.local/api/aaaLogin.json")
+        assert "-X POST" in result
+        assert '-H "Content-Type: application/json"' in result
+        assert '"aaaUser"' in result
+        assert '"name":"USERNAME"' in result
+        assert '"pwd":"PASSWORD"' in result
+
+    def test_sdwan_curl_example(self) -> None:
+        """SDWAN curl example generates form-encoded auth command."""
+        result = _get_curl_example("SDWAN", "https://sdwan.local")
+        assert result.startswith("https://sdwan.local/j_security_check")
+        assert "-X POST" in result
+        assert "j_username=USERNAME" in result
+        assert "j_password=PASSWORD" in result
+
+    def test_cc_curl_example(self) -> None:
+        """CC curl example generates basic-auth command against token endpoint."""
+        result = _get_curl_example("CC", "https://catc.local")
+        assert result.startswith("https://catc.local/dna/system/api/v1/auth/token")
+        assert "-X POST" in result
+        assert '-u "USERNAME:PASSWORD"' in result
+
+    def test_unknown_controller_returns_url_only(self) -> None:
+        """Unknown controller types return just the URL as fallback."""
+        result = _get_curl_example("MERAKI", "https://meraki.local")
+        assert result == "https://meraki.local"
+
+
+class TestPreFlightFailureReport:
+    """Tests for pre-flight failure report generation."""
+
+    def test_auth_failure_generates_report(self, tmp_path: Path) -> None:
+        """Auth failure produces combined_summary.html with failure details."""
+        failure = PreFlightFailure(
+            failure_type="auth",
+            controller_type="ACI",
+            controller_url="https://apic.test.local",
+            detail="HTTP 401: Unauthorized",
+        )
+        results = CombinedResults(pre_flight_failure=failure)
+        generator = CombinedReportGenerator(tmp_path)
+
+        report_path = generator.generate_combined_summary(results)
+
+        assert report_path is not None
+        assert report_path.name == COMBINED_SUMMARY_FILENAME
+        content = report_path.read_text()
+        assert "apic.test.local" in content
+        assert "401" in content
+
+    def test_401_failure_does_not_render_privileges_guidance(
+        self, tmp_path: Path
+    ) -> None:
+        """HTTP 401 must NOT trigger the 403-specific privileges/role guidance."""
+        failure = PreFlightFailure(
+            failure_type="auth",
+            controller_type="ACI",
+            controller_url="https://apic.test.local",
+            detail="HTTP 401: Unauthorized",
+        )
+        results = CombinedResults(pre_flight_failure=failure)
+        generator = CombinedReportGenerator(tmp_path)
+
+        report_path = generator.generate_combined_summary(results)
+
+        assert report_path is not None
+        content = report_path.read_text()
+        # 403-specific guidance must NOT appear for 401 errors
+        assert "sufficient privileges" not in content
+        assert "role and permissions" not in content
+
+    def test_unreachable_failure_generates_report(self, tmp_path: Path) -> None:
+        """Unreachable failure produces report with connection error context."""
+        failure = PreFlightFailure(
+            failure_type="unreachable",
+            controller_type="SDWAN",
+            controller_url="https://sdwan.test.local",
+            detail="Connection timed out",
+        )
+        results = CombinedResults(pre_flight_failure=failure)
+        generator = CombinedReportGenerator(tmp_path)
+
+        report_path = generator.generate_combined_summary(results)
+
+        assert report_path is not None
+        content = report_path.read_text()
+        assert "sdwan.test.local" in content
+        assert "timed out" in content
+
+    def test_403_failure_renders_privileges_guidance(self, tmp_path: Path) -> None:
+        """HTTP 403 in detail triggers the is_403 template branch with role/permissions advice."""
+        failure = PreFlightFailure(
+            failure_type="auth",
+            controller_type="CC",
+            controller_url="https://catc.test.local",
+            detail="HTTP 403: Forbidden",
+        )
+        results = CombinedResults(pre_flight_failure=failure)
+        generator = CombinedReportGenerator(tmp_path)
+
+        report_path = generator.generate_combined_summary(results)
+
+        assert report_path is not None
+        content = report_path.read_text()
+        assert "catc.test.local" in content
+        # 403-specific template content: privileges callout and role guidance
+        assert "sufficient privileges" in content
+        assert "role and permissions" in content
+
+    def test_no_legacy_auth_failure_report_generated(self, tmp_path: Path) -> None:
+        """Pre-flight failure must NOT produce the legacy auth_failure_report.html."""
+        failure = PreFlightFailure(
+            failure_type="auth",
+            controller_type="ACI",
+            controller_url="https://apic.test.local",
+            detail="HTTP 401: Unauthorized",
+        )
+        results = CombinedResults(pre_flight_failure=failure)
+        generator = CombinedReportGenerator(tmp_path)
+
+        report_path = generator.generate_combined_summary(results)
+
+        assert report_path is not None
+        # Only combined_summary.html should exist — no legacy standalone report
+        generated_files = [f.name for f in tmp_path.iterdir() if f.is_file()]
+        assert COMBINED_SUMMARY_FILENAME in generated_files
+        assert "auth_failure_report.html" not in generated_files
+
+    def test_pre_flight_failure_exception_returns_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Template rendering failure returns None gracefully."""
+        generator = CombinedReportGenerator(tmp_path)
+
+        def raise_error(*args: object, **kwargs: object) -> None:
+            raise RuntimeError("Template rendering failed")
+
+        monkeypatch.setattr(generator.env, "get_template", raise_error)
+
+        failure = PreFlightFailure(
+            failure_type="auth",
+            controller_type="ACI",
+            controller_url="https://apic.test.local",
+            detail="HTTP 401: Unauthorized",
+        )
+        results = CombinedResults(pre_flight_failure=failure)
+        report_path = generator.generate_combined_summary(results)
+
+        assert report_path is None
