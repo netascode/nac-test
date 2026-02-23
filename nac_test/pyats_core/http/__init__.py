@@ -8,7 +8,7 @@ after fork() on macOS, where standard httpx/OpenSSL clients crash due to
 threading primitive issues.
 """
 
-from nac_test.core.http_constants import (
+from nac_test.core.constants import (
     HTTP_STATUS_CLIENT_ERROR_MAX,
     HTTP_STATUS_CLIENT_ERROR_MIN,
     HTTP_STATUS_REDIRECT_MAX,

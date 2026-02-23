@@ -10,7 +10,7 @@ exceptions into structured outcome classifications.
 import re
 from enum import Enum
 
-from nac_test.core.http_constants import (
+from nac_test.core.constants import (
     HTTP_AUTH_FAILURE_CODES,
     HTTP_SERVICE_UNAVAILABLE_CODES,
     HTTP_STATUS_CLIENT_ERROR_MAX,

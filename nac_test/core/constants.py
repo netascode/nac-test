@@ -29,6 +29,23 @@ PROGRESS_UPDATE_INTERVAL = 0.5  # seconds
 # Set NAC_TEST_DEBUG=true for developer-level error context
 DEBUG_MODE = os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"
 
+# Report timestamp format - single source of truth for all report generators
+REPORT_TIMESTAMP_FORMAT: str = "%Y-%m-%d %H:%M:%S"
+
+# Progress/logging timestamp format with millisecond precision
+PROGRESS_TIMESTAMP_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
+
+# Filesystem-safe timestamp formats for job IDs and filenames
+FILE_TIMESTAMP_FORMAT: str = "%Y%m%d_%H%M%S"
+FILE_TIMESTAMP_MS_FORMAT: str = "%Y%m%d_%H%M%S_%f"
+
+# Simple time-only format for CLI progress display
+CONSOLE_TIME_FORMAT: str = "%H:%M:%S"
+
+# Robot Framework timestamp formats (e.g., "20250131 12:34:56.789")
+ROBOT_TIMESTAMP_FORMAT: str = "%Y%m%d %H:%M:%S.%f"
+ROBOT_TIMESTAMP_FORMAT_NO_MS: str = "%Y%m%d %H:%M:%S"
+
 # Output directory structure - single source of truth for directory layout
 # These define the standardized paths for test results and reports
 PYATS_RESULTS_DIRNAME = "pyats_results"
@@ -36,6 +53,25 @@ ROBOT_RESULTS_DIRNAME = "robot_results"
 HTML_REPORTS_DIRNAME = "html_reports"
 SUMMARY_REPORT_FILENAME = "summary_report.html"
 COMBINED_SUMMARY_FILENAME = "combined_summary.html"
+
+# HTTP status code range boundaries
+HTTP_STATUS_SUCCESS_MIN: int = 200
+HTTP_STATUS_SUCCESS_MAX: int = 299
+HTTP_STATUS_REDIRECT_MIN: int = 300
+HTTP_STATUS_REDIRECT_MAX: int = 399
+HTTP_STATUS_CLIENT_ERROR_MIN: int = 400
+HTTP_STATUS_CLIENT_ERROR_MAX: int = 499
+HTTP_STATUS_SERVER_ERROR_MIN: int = 500
+HTTP_STATUS_SERVER_ERROR_MAX: int = 599
+
+# Authentication failure status codes
+HTTP_AUTH_FAILURE_CODES: tuple[int, ...] = (401, 403)
+
+# Specific auth status codes for targeted detection
+HTTP_FORBIDDEN_CODE: int = 403
+
+# Service unavailable status codes (treat as unreachable)
+HTTP_SERVICE_UNAVAILABLE_CODES: tuple[int, ...] = (408, 429, 503, 504)
 
 # Platform detection
 IS_MACOS: bool = platform.system() == "Darwin"
