@@ -597,7 +597,6 @@ class PyATSOrchestrator:
 
         # Pre-flight check and setup
         self.validate_environment()
-        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Note: Merged data file created by main.py (single source of truth)
 
@@ -625,6 +624,9 @@ class PyATSOrchestrator:
             api_result = TestResults.not_run("dry-run mode") if api_tests else None
             d2d_result = TestResults.not_run("dry-run mode") if d2d_tests else None
             return PyATSResults(api=api_result, d2d=d2d_result)
+
+        # Create output directory only when actually executing tests (not in dry-run mode)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         print(f"Running with {self.max_workers} parallel workers")
 
