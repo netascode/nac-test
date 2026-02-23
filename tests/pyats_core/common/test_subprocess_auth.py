@@ -12,6 +12,8 @@ Tests the fork-safe subprocess authentication mechanism:
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -105,41 +107,37 @@ result = {
 
         assert "did not set result" in str(exc_info.value)
 
-    def test_temp_files_cleaned_up_on_success(self) -> None:
+    def test_temp_files_cleaned_up_on_success(self, tmp_path: Path) -> None:
         """Test that temp files are cleaned up after successful execution."""
-        auth_params = {"key": "value"}
-        auth_script = 'result = {"success": True}'
+        # Redirect temp files to isolated directory to avoid race conditions
+        # with parallel tests (see issue #568)
+        original = tempfile.NamedTemporaryFile
 
-        # Get temp directory
-        temp_dir = tempfile.gettempdir()
+        def patched_named_temp_file(*args: Any, **kwargs: Any) -> Any:
+            kwargs.setdefault("dir", str(tmp_path))
+            return original(*args, **kwargs)
 
-        # Count auth-related files before
-        auth_files_before = len(list(Path(temp_dir).glob("*_auth_*.json")))
-        script_files_before = len(list(Path(temp_dir).glob("*_auth_script.py")))
+        with patch.object(tempfile, "NamedTemporaryFile", patched_named_temp_file):
+            execute_auth_subprocess({"key": "value"}, 'result = {"success": True}')
 
-        execute_auth_subprocess(auth_params, auth_script)
+        assert list(tmp_path.glob("*_auth_*.json")) == []
+        assert list(tmp_path.glob("*_auth_script.py")) == []
 
-        # Count auth-related files after
-        auth_files_after = len(list(Path(temp_dir).glob("*_auth_*.json")))
-        script_files_after = len(list(Path(temp_dir).glob("*_auth_script.py")))
-
-        # Should be same count (files were cleaned up)
-        assert auth_files_after == auth_files_before
-        assert script_files_after == script_files_before
-
-    def test_temp_files_cleaned_up_on_error(self) -> None:
+    def test_temp_files_cleaned_up_on_error(self, tmp_path: Path) -> None:
         """Test that temp files are cleaned up even when script errors."""
-        auth_params: dict[str, str] = {}
-        auth_script = 'raise Exception("Intentional error")'
+        # Redirect temp files to isolated directory to avoid race conditions
+        # with parallel tests (see issue #568)
+        original = tempfile.NamedTemporaryFile
 
-        temp_dir = tempfile.gettempdir()
-        auth_files_before = len(list(Path(temp_dir).glob("*_auth_*.json")))
+        def patched_named_temp_file(*args: Any, **kwargs: Any) -> Any:
+            kwargs.setdefault("dir", str(tmp_path))
+            return original(*args, **kwargs)
 
-        with pytest.raises(SubprocessAuthError):
-            execute_auth_subprocess(auth_params, auth_script)
+        with patch.object(tempfile, "NamedTemporaryFile", patched_named_temp_file):
+            with pytest.raises(SubprocessAuthError):
+                execute_auth_subprocess({}, 'raise Exception("Intentional error")')
 
-        auth_files_after = len(list(Path(temp_dir).glob("*_auth_*.json")))
-        assert auth_files_after == auth_files_before
+        assert list(tmp_path.glob("*_auth_*.json")) == []
 
     def test_complex_auth_params(self) -> None:
         """Test with complex nested auth params."""
