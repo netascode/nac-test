@@ -14,7 +14,7 @@ import pytest
 from typer.testing import CliRunner
 
 import nac_test.cli.main
-from nac_test.core.constants import EXIT_INVALID_ROBOT_ARGS
+from nac_test.core.constants import EXIT_DATA_ERROR
 
 pytestmark = pytest.mark.integration
 
@@ -130,9 +130,9 @@ def test_extra_args_with_illegal_argument_and_separator_fails(tmp_path: Path) ->
             "MY_VAR:value",
         ],
     )
-    assert result.exit_code == EXIT_INVALID_ROBOT_ARGS, (
+    assert result.exit_code == EXIT_DATA_ERROR, (
         f"Extra args with illegal argument should fail with exit code "
-        f"{EXIT_INVALID_ROBOT_ARGS}, got {result.exit_code}: {result.output}"
+        f"{EXIT_DATA_ERROR}, got {result.exit_code}: {result.output}"
     )
 
 
@@ -164,9 +164,9 @@ def test_extra_args_with_illegal_argument_without_separator_fails(
             "MY_VAR:value",
         ],
     )
-    assert result.exit_code == EXIT_INVALID_ROBOT_ARGS, (
+    assert result.exit_code == EXIT_DATA_ERROR, (
         f"Extra args with illegal argument should fail with exit code "
-        f"{EXIT_INVALID_ROBOT_ARGS}, got {result.exit_code}: {result.output}"
+        f"{EXIT_DATA_ERROR}, got {result.exit_code}: {result.output}"
     )
 
 
@@ -196,7 +196,7 @@ def test_extra_args_with_testlevelsplit_flag_fails(tmp_path: Path) -> None:
             "--testlevelsplit",
         ],
     )
-    assert result.exit_code == EXIT_INVALID_ROBOT_ARGS, (
+    assert result.exit_code == EXIT_DATA_ERROR, (
         f"--testlevelsplit flag should fail as invalid robot arg with exit code "
-        f"{EXIT_INVALID_ROBOT_ARGS}, got {result.exit_code}: {result.output}"
+        f"{EXIT_DATA_ERROR}, got {result.exit_code}: {result.output}"
     )

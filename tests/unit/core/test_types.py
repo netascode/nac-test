@@ -11,10 +11,10 @@ dataclass handles it automatically.
 import pytest
 
 from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
-    EXIT_INVALID_ROBOT_ARGS,
 )
 from nac_test.core.types import (
     CombinedResults,
@@ -364,7 +364,7 @@ class TestCombinedResultsExitCode:
     def test_exit_code_252_for_empty(self) -> None:
         """Exit code 252 when no results across any framework."""
         result = CombinedResults()
-        assert result.exit_code == EXIT_INVALID_ROBOT_ARGS
+        assert result.exit_code == EXIT_DATA_ERROR
 
     def test_was_not_run_true_when_all_skipped(self) -> None:
         """was_not_run is True when all frameworks were intentionally skipped."""
@@ -425,7 +425,7 @@ class TestCombinedResultsExitCode:
                 "Invalid arguments", ErrorType.INVALID_ROBOT_ARGS
             )
         )
-        assert result.exit_code == EXIT_INVALID_ROBOT_ARGS
+        assert result.exit_code == EXIT_DATA_ERROR
 
     def test_exit_code_priority_invalid_robot_args_over_generic_errors(self) -> None:
         """Exit code 252 (invalid args) is prioritized over generic errors (255)."""
@@ -435,7 +435,7 @@ class TestCombinedResultsExitCode:
             ),
             api=TestResults.from_error("API execution failed"),
         )
-        assert result.exit_code == EXIT_INVALID_ROBOT_ARGS
+        assert result.exit_code == EXIT_DATA_ERROR
 
     def test_exit_code_priority_interrupted_over_invalid_robot_args(self) -> None:
         """Exit code 253 (interrupted) is prioritized over 252 (invalid args)."""

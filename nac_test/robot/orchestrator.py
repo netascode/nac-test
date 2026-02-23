@@ -17,9 +17,9 @@ from pathlib import Path
 import typer
 
 from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
-    EXIT_INVALID_ROBOT_ARGS,
     ROBOT_RESULTS_DIRNAME,
 )
 from nac_test.core.types import ErrorType, TestResults
@@ -180,7 +180,7 @@ class RobotOrchestrator:
             )
             # Handle special exit codes - just log and return appropriate TestResults
             # User-facing error messages are handled centrally in main.py
-            if exit_code == EXIT_INVALID_ROBOT_ARGS:
+            if exit_code == EXIT_DATA_ERROR:
                 error_msg = "Invalid Robot Framework arguments passed to nac-test"
                 logger.error(error_msg)
                 return TestResults.from_error(error_msg, ErrorType.INVALID_ROBOT_ARGS)

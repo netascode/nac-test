@@ -8,10 +8,10 @@ from enum import Enum
 from functools import cached_property
 
 from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
-    EXIT_INVALID_ROBOT_ARGS,
 )
 
 
@@ -308,12 +308,12 @@ class CombinedResults:
             if ErrorType.INTERRUPTED in error_types:
                 return EXIT_INTERRUPTED
             if ErrorType.INVALID_ROBOT_ARGS in error_types:
-                return EXIT_INVALID_ROBOT_ARGS
+                return EXIT_DATA_ERROR
             return EXIT_ERROR
         if self.has_failures:
             return min(self.failed, EXIT_FAILURE_CAP)
         if self.was_not_run:
             return 0
         if self.is_empty:
-            return EXIT_INVALID_ROBOT_ARGS
+            return EXIT_DATA_ERROR
         return 0
