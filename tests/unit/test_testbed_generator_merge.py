@@ -12,7 +12,7 @@ import yaml
 
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
 
-from .test_testbed_generator import assert_connection_has_optimizations
+from .conftest import assert_connection_has_optimizations
 
 
 @pytest.fixture

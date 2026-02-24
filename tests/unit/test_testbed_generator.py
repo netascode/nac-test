@@ -3,30 +3,12 @@
 
 """Unit tests for PyATS testbed generator."""
 
-from typing import Any
-
 import pytest
 import yaml
 
-from nac_test.pyats_core.constants import PYATS_POST_DISCONNECT_WAIT_SECONDS
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
 
-
-def assert_connection_has_optimizations(connection: dict[str, Any]) -> None:
-    """Verify connection includes expected optimization settings.
-
-    This helper consolidates assertions for connection optimization settings,
-    making it easier to maintain tests when new optimizations are added.
-
-    Args:
-        connection: The connection dict from testbed["devices"][hostname]["connections"]["cli"]
-    """
-    assert connection["arguments"]["init_config_commands"] == []
-    assert connection["arguments"]["operating_mode"] is True
-    assert (
-        connection["settings"]["POST_DISCONNECT_WAIT_SEC"]
-        == PYATS_POST_DISCONNECT_WAIT_SECONDS
-    )
+from .conftest import assert_connection_has_optimizations
 
 
 class TestGenerateTestbedYaml:

@@ -9,7 +9,10 @@ from typing import Any
 
 import yaml
 
-from nac_test.pyats_core.constants import PYATS_POST_DISCONNECT_WAIT_SECONDS
+from nac_test.pyats_core.constants import (
+    PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS,
+    PYATS_POST_DISCONNECT_WAIT_SECONDS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +275,14 @@ class TestbedGenerator:
             if device.get("ssh_options"):
                 connection_args["ssh_options"] = device["ssh_options"]
 
+        # speed up device disconnection, we don't need to cool down as we never
+        # reconnect to the same device multiple times in a row, and we want to optimize
+        # for test runtime
+        connection_args["settings"] = {
+            "GRACEFUL_DISCONNECT_WAIT_SEC": PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS,
+            "POST_DISCONNECT_WAIT_SEC": PYATS_POST_DISCONNECT_WAIT_SECONDS,
+        }
+
         # Build device config
         device_config = {
             "alias": device.get("alias", hostname),
@@ -286,11 +297,6 @@ class TestbedGenerator:
             "connections": {"cli": connection_args},
             "custom": {"abstraction": {"order": ["os"]}},
         }
-
-        connection_args.setdefault("settings", {})
-        connection_args["settings"].setdefault(
-            "POST_DISCONNECT_WAIT_SEC", PYATS_POST_DISCONNECT_WAIT_SECONDS
-        )
 
         if "platform" in device:
             device_config["platform"] = device["platform"]
