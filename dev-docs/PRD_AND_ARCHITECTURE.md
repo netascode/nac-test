@@ -3359,13 +3359,14 @@ devices:
         ip: {host}
         port: 22
         settings:
+          GRACEFUL_DISCONNECT_WAIT_SEC: 0
           POST_DISCONNECT_WAIT_SEC: 0
 ```
 
 **Performance Note (Disconnect Cooldown):**
 
-- Generated testbeds now include `POST_DISCONNECT_WAIT_SEC: 0` for **all** connections (including `command`-based) to skip Unicon's default 10s post-disconnect cooldown.
-- This reduces overall test runtime by **~10 seconds per device disconnect**, which scales linearly with device count and disconnect frequency when using the connection broker.
+- Generated testbeds now include `GRACEFUL_DISCONNECT_WAIT_SEC: 0` and `POST_DISCONNECT_WAIT_SEC: 0` for **all** connections (including `command`-based) to skip Unicon's default 1s/10s disconnect cooldowns.
+- This reduces overall test runtime by **~11 seconds per device disconnect**, which scales linearly with device count and disconnect frequency when using the connection broker.
 
 #### Progress Module (`pyats_core/progress/`)
 
