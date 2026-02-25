@@ -587,7 +587,36 @@ tests
 
 ## Select Test Cases By Tag
 
-It is possible to include and exclude test cases by tag names with the `--include` and `--exclude` CLI options. These options are directly passed to the Pabot/Robot executor and are documented [here](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#by-tag-names).
+The `--include` and `--exclude` CLI options filter test cases by tag for both Robot Framework and PyATS tests.
+
+**Robot Framework**: Tags are applied to test cases using Robot's standard tagging mechanism. See [Robot Framework documentation](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#by-tag-names) for details.
+
+**PyATS**: Tests are filtered based on their `groups` class attribute:
+
+```python
+class VerifyBgpNeighbors(SDWANTestBase):
+    groups = ["bgp", "routing"]  # Matches --include bgp or --include routing
+```
+
+Both frameworks use Robot Framework's TagPatterns for consistent pattern matching:
+- Simple tags: `bgp`, `health`, `ospf`
+- Wildcards: `bgp*`, `?est`
+- Boolean: `bgpANDrouting`, `bgpORospf`, `bgpNOTnrfu`
+- Case-insensitive, underscores ignored
+
+**Examples:**
+
+```bash
+# Run only tests tagged with 'bgp'
+nac-test -d data/ -t templates/ -o output/ --include bgp
+
+# Exclude tests tagged with 'nrfu'
+nac-test -d data/ -t templates/ -o output/ --exclude nrfu
+
+# Boolean patterns
+nac-test -d data/ -t templates/ -o output/ --include "bgpORospf"
+nac-test -d data/ -t templates/ -o output/ --exclude "bgpANDnrfu"
+```
 
 
 ## Parallel Execution Control

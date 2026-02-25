@@ -861,9 +861,13 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 - **Type**: `list[str]`
 - **Default**: `[]` (all tests)
 - **Environment Variable**: `NAC_TEST_INCLUDE`
-- **Purpose**: Select test cases by tag (include filter for Robot Framework)
+- **Purpose**: Select test cases by tag (include filter for Robot Framework and PyATS)
 - **Behavior**:
-  - Passed to Robot Framework via Pabot's tag filtering
+  - **Robot Framework**: Passed to Pabot's tag filtering
+  - **PyATS**: Filters tests based on their `groups` class attribute
+  - Uses Robot Framework's TagPatterns for consistent matching across both frameworks
+  - Tag pattern syntax: simple tags (`health`), wildcards (`bgp*`), boolean (`healthANDbgp`, `healthORbgp`, `healthNOTnrfu`)
+  - Case-insensitive, underscores ignored
   - Multiple tags: logical OR (test must match ANY tag)
   - Combined with `--exclude` (exclude takes precedence)
 - **Examples**:
@@ -883,8 +887,11 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 - **Type**: `list[str]`
 - **Default**: `[]` (no exclusions)
 - **Environment Variable**: `NAC_TEST_EXCLUDE`
-- **Purpose**: Exclude test cases by tag (exclude filter for Robot Framework)
+- **Purpose**: Exclude test cases by tag (exclude filter for Robot Framework and PyATS)
 - **Behavior**:
+  - **Robot Framework**: Passed to Pabot's tag filtering
+  - **PyATS**: Filters tests based on their `groups` class attribute
+  - Uses Robot Framework's TagPatterns for consistent matching across both frameworks
   - Takes precedence over `--include` (excluded tests never run)
   - Multiple tags: logical OR (test excluded if it matches ANY tag)
 - **Example**:
