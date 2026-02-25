@@ -11,6 +11,7 @@ import typer
 
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
+    EXIT_ERROR,
     HTML_REPORTS_DIRNAME,
     PYATS_RESULTS_DIRNAME,
     ROBOT_RESULTS_DIRNAME,
@@ -127,7 +128,7 @@ class CombinedOrchestrator:
                     fg=typer.colors.RED,
                     err=True,
                 )
-                raise typer.Exit(1) from None
+                raise typer.Exit(EXIT_ERROR) from None
 
     def run_tests(self) -> CombinedResults:
         """Main entry point for combined test execution.
@@ -218,19 +219,7 @@ class CombinedOrchestrator:
                 robot_results = robot_orchestrator.run_tests()
                 combined_results.robot = robot_results
             except Exception as e:
-                # In render-only mode, propagate exceptions immediately
-                if self.render_only:
-                    raise
-
-                # Robot orchestrator failed (e.g., invalid arguments, execution errors)
                 logger.error(f"Robot Framework execution failed: {e}", exc_info=True)
-                typer.echo(
-                    typer.style(
-                        f"⚠️  Robot Framework tests skipped due to error: {e}",
-                        fg=typer.colors.YELLOW,
-                    )
-                )
-                # Record error in robot results
                 combined_results.robot = TestResults.from_error(str(e))
 
         if not self.render_only:

@@ -17,6 +17,7 @@ import yaml  # type: ignore
 from typer.testing import CliRunner
 
 import nac_test.cli.main
+from nac_test.core.constants import EXIT_ERROR
 
 pytestmark = pytest.mark.integration
 
@@ -102,7 +103,7 @@ def test_render_only_mode_fails_with_missing_template_variables(
             "--render-only",
         ],
     )
-    assert result.exit_code == 1, (
+    assert result.exit_code == EXIT_ERROR, (
         f"Render-only mode should fail with missing variables, got exit code "
         f"{result.exit_code}: {result.output}"
     )

@@ -8,6 +8,8 @@ import pabot.pabot
 from pabot.arguments import parse_args
 from robot.errors import DataError
 
+from nac_test.core.constants import EXIT_DATA_ERROR
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +35,9 @@ def parse_and_validate_extra_args(extra_args: list[str]) -> list[str]:
             extra_args + ["__dummy__.robot"]
         )
     except DataError as e:
-        logger.error(f"Invalid Robot Framework arguments: {e}")
+        logger.warning(
+            f"Invalid Robot Framework arguments: {e}"
+        )  # Changed from error to warning - this is a handled condition
         raise
 
     # Check if datasources were provided in extra_args (excluding our dummy)
@@ -123,7 +127,7 @@ def run_pabot(
         try:
             validated_extra_args = parse_and_validate_extra_args(extra_args)
         except (ValueError, DataError):
-            return 252
+            return EXIT_DATA_ERROR
         robot_args.extend(validated_extra_args)
 
     args = pabot_args + robot_args + [str(path)]
