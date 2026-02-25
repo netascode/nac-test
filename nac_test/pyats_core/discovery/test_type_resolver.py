@@ -1,18 +1,27 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Test type resolver for NAC-Test framework.
+"""Test metadata resolver for NAC-Test framework.
 
-This module provides automated test type detection for PyATS test files, determining
-whether tests should be classified as API (controller/REST) or D2D (Direct-to-Device/SSH)
-tests. The resolver uses a three-tier detection strategy to accurately classify tests
-without executing any code.
+This module provides automated metadata extraction for PyATS test files,
+including:
+
+1. **Test Type Detection**: Determining whether tests should be classified as
+   API (controller/REST) or D2D (Direct-to-Device/SSH) tests based on base
+   class inheritance.
+
+2. **Groups Extraction**: Extracting the `groups` class attribute from test
+   classes for tag-based filtering using Robot Framework tag pattern semantics.
+
+The TestMetadataResolver uses static AST analysis to extract metadata without
+importing or executing any test code, ensuring fast and safe analysis.
 
 Detection Strategy (Priority Order):
     1. **AST Analysis** (Highest Priority):
        - Statically analyzes Python AST to detect base class inheritance
        - Maps known base classes to test types via BASE_CLASS_MAPPING
        - Handles both direct (Name) and qualified (Attribute) class references
+       - Extracts `groups` attribute for tag-based filtering
        - Most reliable method with <5ms performance per file
 
     2. **Directory Structure** (Fallback):
@@ -27,8 +36,6 @@ Detection Strategy (Priority Order):
 Performance Characteristics:
     - AST parsing: <5ms per file (typical)
     - Directory check: <0.1ms per file
-    - Caching layer reduces repeated detections to <0.01ms
-    - Memory overhead: ~100 bytes per cached file
 
 Extending for New Architectures:
     To add support for new network architectures or test bases:
@@ -45,25 +52,23 @@ Extending for New Architectures:
 
 Example Usage:
     ```python
-    from nac_test.pyats_core.discovery.test_type_resolver import TestTypeResolver
+    from nac_test.pyats_core.discovery.test_type_resolver import TestMetadataResolver
     from pathlib import Path
 
-    # Initialize resolver (typically done once)
-    resolver = TestTypeResolver(Path("/path/to/tests"))
+    # Initialize resolver
+    resolver = TestMetadataResolver(Path("/path/to/tests"))
 
-    # Detect test type for a file
-    test_type = resolver.resolve(Path("/path/to/verify_bgp.py"))
-    # Returns: "api" or "d2d"
+    # Get full metadata (type + groups) for tag filtering
+    metadata = resolver.resolve(Path("/path/to/verify_bgp.py"))
+    # Returns: TestFileMetadata(path=..., test_type="api", groups=["health", "bgp"])
 
-    # Bulk detection with caching benefits
-    for test_file in test_files:
-        test_type = resolver.resolve(test_file)
-        if test_type == "d2d":
-            # Handle D2D test (SSH-based)
-            pass
-        else:
-            # Handle API test (REST-based)
-            pass
+    # Use metadata for filtering and categorization
+    if metadata.test_type == "d2d":
+        # Handle D2D test (SSH-based)
+        pass
+    else:
+        # Handle API test (REST-based)
+        pass
     ```
 
 Module Constants:
@@ -80,9 +85,25 @@ import logging
 from pathlib import Path
 from typing import Final
 
+from nac_test.pyats_core.common.types import (
+    DEFAULT_TEST_TYPE,
+    TestExecutionPlan,
+    TestFileMetadata,
+)
+
 # Module-level constants
 VALID_TEST_TYPES: Final[set[str]] = {"api", "d2d"}
-DEFAULT_TEST_TYPE: Final[str] = "api"
+
+# Re-export DEFAULT_TEST_TYPE for backward compatibility
+__all__ = [
+    "BASE_CLASS_MAPPING",
+    "DEFAULT_TEST_TYPE",
+    "NoRecognizedBaseError",
+    "TestExecutionPlan",
+    "TestFileMetadata",
+    "TestMetadataResolver",
+    "VALID_TEST_TYPES",
+]
 
 # Base class to test type mapping
 # This dictionary maps known PyATS test base class names to their test types
@@ -114,16 +135,6 @@ class NoRecognizedBaseError(Exception):
     Attributes:
         filename: Path to the test file that was analyzed
         found_bases: List of base class names that were found but not recognized
-
-    Example:
-        ```python
-        try:
-            test_type = resolver._detect_via_ast(test_file)
-        except NoRecognizedBaseError as e:
-            # Fallback to directory-based detection
-            logger.debug(f"No recognized base in {e.filename}, trying directory detection")
-            test_type = resolver._detect_via_directory(test_file)
-        ```
     """
 
     def __init__(self, filename: str, found_bases: list[str] | None = None) -> None:
@@ -148,160 +159,165 @@ class NoRecognizedBaseError(Exception):
         super().__init__(message)
 
 
-class TestTypeResolver:
-    """Resolves test execution type using static analysis.
+class TestMetadataResolver:
+    """Resolves test metadata (type and groups) using static AST analysis.
 
-    This class provides intelligent test type detection for PyATS test files,
-    using a multi-tier strategy to classify tests as either API (controller/REST)
-    or D2D (Direct-to-Device/SSH) tests.
+    This class extracts metadata from PyATS test files without importing or
+    executing the code:
 
-    The resolver maintains a cache to optimize repeated detections and uses
-    static AST analysis to avoid importing or executing test code.
+    1. **Test Type**: Classifies tests as API (controller/REST) or D2D
+       (Direct-to-Device/SSH) based on base class inheritance.
+
+    2. **Groups**: Extracts the `groups` class attribute for tag-based
+       filtering using Robot Framework tag pattern semantics.
+
+    The resolver uses a multi-tier detection strategy with AST analysis as
+    the primary method and directory-based fallback.
 
     Attributes:
         test_root: Root directory containing test files
-        _cache: Internal cache mapping file paths to detected test types
         logger: Logger instance for debugging and diagnostics
-
-    Example:
-        ```python
-        resolver = TestTypeResolver(Path("/path/to/tests"))
-
-        # Detect single file
-        test_type = resolver.resolve(Path("verify_bgp.py"))
-
-        # Clear cache if files have changed
-        resolver.clear_cache()
-        ```
     """
 
     def __init__(self, test_root: Path) -> None:
-        """Initialize the test type resolver.
+        """Initialize the test metadata resolver.
 
         Args:
             test_root: Root directory containing test files. Will be resolved
-                      to an absolute path for consistent cache keys.
+                      to an absolute path.
         """
         self.test_root = test_root.resolve()
-        self._cache: dict[Path, str] = {}
         self.logger = logging.getLogger(__name__)
-        self.logger.debug(f"Initialized TestTypeResolver with root: {self.test_root}")
+        self.logger.debug(
+            f"Initialized TestMetadataResolver with root: {self.test_root}"
+        )
 
-    def clear_cache(self) -> None:
-        """Clear the internal cache of detected test types.
-
-        Call this method if test files have been modified or moved and you need
-        to re-detect their types. This is typically only needed during development
-        or when test files are dynamically generated.
-
-        Example:
-            ```python
-            resolver = TestTypeResolver(Path("/tests"))
-
-            # Initial detection
-            test_type = resolver.resolve(Path("test_bgp.py"))
-
-            # After modifying the test file's base class
-            resolver.clear_cache()
-            test_type = resolver.resolve(Path("test_bgp.py"))  # Re-detects
-            ```
-        """
-        cache_size = len(self._cache)
-        self._cache.clear()
-        self.logger.debug(f"Cleared cache ({cache_size} entries)")
-
-    def _detect_from_base_class(self, file_path: Path) -> str:
-        """Detect test type by analyzing base class inheritance using AST.
+    def _extract_metadata_via_ast(self, file_path: Path) -> TestFileMetadata:
+        """Detect test type and extract groups by analyzing base class inheritance using AST.
 
         This method parses the Python file into an Abstract Syntax Tree (AST)
         and examines the base classes of all top-level class definitions.
-        It maps recognized base class names to their corresponding test types.
-
-        The method handles both direct inheritance (ast.Name nodes) and
-        qualified inheritance (ast.Attribute nodes for module.ClassName).
+        It maps recognized base class names to their corresponding test types
+        and extracts the `groups` class attribute for tag-based filtering.
 
         Args:
             file_path: Path to the Python test file to analyze
 
         Returns:
-            Test type string ("api" or "d2d") based on detected base class
+            TestFileMetadata with path, test_type, and groups
 
         Raises:
             NoRecognizedBaseError: When no recognized base class is found
             OSError: When the file cannot be read (propagated)
             SyntaxError: When the Python file has syntax errors (propagated)
-
-        Example:
-            Given a test file with:
-            ```python
-            class TestBGP(SSHTestBase):
-                pass
-            ```
-
-            This method will:
-            1. Parse the file into an AST
-            2. Find the TestBGP class definition
-            3. Identify SSHTestBase as the base class
-            4. Look up SSHTestBase in BASE_CLASS_MAPPING
-            5. Return "d2d" (the mapped test type)
         """
         self.logger.debug(f"Analyzing AST for file: {file_path}")
 
-        # Read the file content - let OSError propagate
         content = file_path.read_text(encoding="utf-8")
-
-        # Parse into AST - let SyntaxError propagate
         tree = ast.parse(content, filename=str(file_path))
 
-        # Track all found base classes for error reporting
         found_bases: list[str] = []
+        detected_test_type: str | None = None
+        detected_groups: list[str] = []
 
-        # Only examine top-level classes (tree.body)
         for node in tree.body:
             if not isinstance(node, ast.ClassDef):
                 continue
 
             self.logger.debug(f"Found class: {node.name}")
 
-            # Check each base class of this class
             for base in node.bases:
                 base_name: str | None = None
 
                 if isinstance(base, ast.Name):
-                    # Direct inheritance: class MyTest(SSHTestBase)
                     base_name = base.id
                     self.logger.debug(f"  Direct base: {base_name}")
                 elif isinstance(base, ast.Attribute):
-                    # Qualified inheritance: class MyTest(module.SSHTestBase)
-                    # We only care about the class name, not the module
                     base_name = base.attr
                     self.logger.debug(f"  Qualified base: {base_name}")
 
                 if base_name:
                     found_bases.append(base_name)
 
-                    # Check if this base class is in our mapping
-                    if base_name in BASE_CLASS_MAPPING:
-                        test_type = BASE_CLASS_MAPPING[base_name]
+                    if base_name in BASE_CLASS_MAPPING and detected_test_type is None:
+                        detected_test_type = BASE_CLASS_MAPPING[base_name]
                         self.logger.info(
-                            f"Detected test type '{test_type}' from base class "
+                            f"Detected test type '{detected_test_type}' from base class "
                             f"'{base_name}' in {file_path}"
                         )
-                        return test_type
 
-        # No recognized base class found
+            if detected_test_type is not None:
+                groups = self._extract_groups_from_class(node)
+                if groups:
+                    detected_groups = groups
+                    self.logger.debug(f"  Extracted groups: {groups}")
+                break
+
+        if detected_test_type is not None:
+            return TestFileMetadata(
+                path=file_path, test_type=detected_test_type, groups=detected_groups
+            )
+
         self.logger.debug(
             f"No recognized base class in {file_path}. "
             f"Found bases: {found_bases if found_bases else 'none'}"
         )
         raise NoRecognizedBaseError(str(file_path), found_bases)
 
-    def resolve(self, test_file: Path) -> str:
-        """Resolve test type for a test file.
+    def _extract_groups_from_class(self, class_node: ast.ClassDef) -> list[str]:
+        """Extract the `groups` attribute from a class definition.
 
-        This is the main API entry point for test type detection. It implements
-        caching for performance and delegates to _resolve_uncached for the actual
-        detection logic.
+        Looks for class-level assignments like:
+            groups = ['health', 'bgp', 'ospf']
+
+        Args:
+            class_node: AST ClassDef node to examine
+
+        Returns:
+            List of group strings, empty if no groups attribute found
+        """
+        for item in class_node.body:
+            # Look for simple assignments: groups = [...]
+            if isinstance(item, ast.Assign):
+                for target in item.targets:
+                    if isinstance(target, ast.Name) and target.id == "groups":
+                        return self._parse_list_value(item.value)
+
+            # Also handle annotated assignments: groups: list[str] = [...]
+            if isinstance(item, ast.AnnAssign):
+                if (
+                    isinstance(item.target, ast.Name)
+                    and item.target.id == "groups"
+                    and item.value is not None
+                ):
+                    return self._parse_list_value(item.value)
+
+        return []
+
+    def _parse_list_value(self, node: ast.expr) -> list[str]:
+        """Parse a list literal from an AST node.
+
+        Args:
+            node: AST expression node (expected to be ast.List)
+
+        Returns:
+            List of string values, empty if not a valid string list
+        """
+        if not isinstance(node, ast.List):
+            return []
+
+        result: list[str] = []
+        for elt in node.elts:
+            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                result.append(elt.value)
+        return result
+
+    def resolve(self, test_file: Path) -> TestFileMetadata:
+        """Resolve test metadata (type and groups) for a test file.
+
+        This is the main API entry point for test metadata extraction. It uses
+        a three-tier detection strategy to determine test type and extracts
+        the groups attribute for tag-based filtering.
 
         Detection Priority:
             1. Static analysis of base class inheritance (most reliable)
@@ -309,76 +325,49 @@ class TestTypeResolver:
             3. Default to 'api' with warning
 
         Args:
-            test_file: Path to the test file to classify
+            test_file: Path to the test file to analyze
 
         Returns:
-            Test type string: either "api" or "d2d"
+            TestFileMetadata containing path, test_type, and groups list
 
         Example:
             ```python
-            resolver = TestTypeResolver(Path("/tests"))
-
-            # First call performs detection
-            test_type = resolver.resolve(Path("verify_bgp.py"))  # Takes ~5ms
-
-            # Subsequent calls use cache
-            test_type = resolver.resolve(Path("verify_bgp.py"))  # Takes <0.01ms
+            resolver = TestMetadataResolver(Path("/tests"))
+            metadata = resolver.resolve(Path("verify_bgp.py"))
+            # metadata.test_type = "d2d"
+            # metadata.groups = ["health", "bgp"]
             ```
         """
         test_file = test_file.resolve()
 
-        # Check cache first
-        if test_file in self._cache:
-            self.logger.debug(f"Cache hit for {test_file}")
-            return self._cache[test_file]
+        # Try AST-based detection first (extracts both type and groups)
+        try:
+            return self._extract_metadata_via_ast(test_file)
+        except NoRecognizedBaseError:
+            self.logger.debug(
+                f"{test_file.name}: No recognized base class, trying directory detection"
+            )
+        except (OSError, SyntaxError) as e:
+            self.logger.warning(
+                f"Failed to parse {test_file}: {e}, trying directory detection"
+            )
 
-        # Cache miss - perform detection and cache result
-        self.logger.debug(f"Cache miss for {test_file}")
-        test_type = self._resolve_uncached(test_file)
-        self._cache[test_file] = test_type
-        return test_type
+        # Fall back to directory-based detection (no groups available)
+        test_type = self._detect_via_directory(test_file)
+        return TestFileMetadata(path=test_file, test_type=test_type, groups=[])
 
-    def _resolve_uncached(self, test_file: Path) -> str:
-        """Resolve test type using three-tier detection strategy.
+    def _detect_via_directory(self, test_file: Path) -> str:
+        """Detect test type from directory structure.
 
-        This method implements the core detection logic without caching.
-        It tries detection methods in priority order, falling back to the
-        next method if the current one fails.
-
-        Detection Flow:
-            1. Try AST-based detection (examines base classes)
-            2. If AST fails, try directory-based detection
-            3. If both fail, default to 'api' with warning
+        This is the fallback detection method when AST analysis fails to
+        find a recognized base class.
 
         Args:
             test_file: Absolute path to the test file
 
         Returns:
-            Test type string: either "api" or "d2d"
-
-        Note:
-            This method logs extensively for debugging. Use appropriate
-            log levels to control verbosity in production.
+            Test type string: "api" or "d2d"
         """
-        # Priority 1: Try static analysis of base classes
-        try:
-            test_type = self._detect_from_base_class(test_file)
-            self.logger.debug(
-                f"{test_file.name}: Detected '{test_type}' from base class"
-            )
-            return test_type
-        except NoRecognizedBaseError:
-            # This is expected for tests without recognized bases
-            self.logger.debug(
-                f"{test_file.name}: No recognized base class, trying directory detection"
-            )
-        except (OSError, SyntaxError) as e:
-            # File read or parse errors - try fallback methods
-            self.logger.warning(
-                f"Failed to parse {test_file}: {e}, trying directory detection"
-            )
-
-        # Priority 2: Fall back to directory structure detection
         path_str = test_file.as_posix()
 
         # Check for /d2d/ in path (Direct-to-Device tests)
@@ -395,7 +384,7 @@ class TestTypeResolver:
             )
             return "api"
 
-        # Priority 3: Default to 'api' with warning
+        # Default to 'api' with warning
         self.logger.warning(
             f"{test_file}: Could not detect test type from base class or directory. "
             f"Assuming 'api'. To fix: inherit from a known base class or place in /d2d/ directory."

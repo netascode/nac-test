@@ -76,8 +76,8 @@ class CombinedOrchestrator:
             merged_data_filename: Name of the merged data model file
             filters_path: Path to Jinja filters (Robot only)
             tests_path: Path to Jinja tests (Robot only)
-            include_tags: Tags to include (Robot only)
-            exclude_tags: Tags to exclude (Robot only)
+            include_tags: Tag patterns to include (Robot Framework syntax, applies to both)
+            exclude_tags: Tag patterns to exclude (Robot Framework syntax, applies to both)
             render_only: Only render tests without executing (Robot only)
             dry_run: Dry run mode (skips actual test execution)
             processes: Number of parallel processes for Robot test execution (Robot only)
@@ -185,6 +185,8 @@ class CombinedOrchestrator:
                 custom_testbed_path=self.custom_testbed_path,
                 controller_type=self.controller_type,
                 dry_run=self.dry_run,
+                include_tags=self.include_tags,
+                exclude_tags=self.exclude_tags,
             )
             if self.max_parallel_devices is not None:
                 pyats_orchestrator.max_parallel_devices = self.max_parallel_devices

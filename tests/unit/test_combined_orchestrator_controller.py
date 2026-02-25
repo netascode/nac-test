@@ -163,6 +163,8 @@ class TestCombinedOrchestratorController:
                     custom_testbed_path=None,
                     controller_type="SDWAN",
                     dry_run=False,
+                    include_tags=[],
+                    exclude_tags=[],
                 )
 
                 # Verify run_tests was called on the instance
@@ -314,6 +316,8 @@ class TestCombinedOrchestratorController:
                     custom_testbed_path=None,
                     controller_type="CC",
                     dry_run=False,
+                    include_tags=[],
+                    exclude_tags=[],
                 )
 
                 # Verify run_tests was called on the instance
