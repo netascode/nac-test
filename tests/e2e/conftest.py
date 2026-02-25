@@ -36,6 +36,7 @@ class E2EResults:
         exit_code: CLI exit code.
         stdout: CLI standard output.
         stderr: CLI standard error.
+        filtered_stdout: Stdout with logger lines (INFO -, DEBUG -, etc.) removed.
         cli_result: The full CliRunner result object.
     """
 
@@ -44,6 +45,7 @@ class E2EResults:
     exit_code: int
     stdout: str
     stderr: str
+    filtered_stdout: str
     cli_result: Any  # typer.testing.Result
 
     @property
@@ -187,12 +189,19 @@ def _run_e2e_scenario(
     runner = CliRunner()
     result = runner.invoke(nac_test.cli.main.app, cli_args)
 
+    filtered_stdout = "\n".join(
+        line
+        for line in result.stdout.split("\n")
+        if not line.startswith(("INFO -", "DEBUG -", "WARNING -", "ERROR -"))
+    )
+
     return E2EResults(
         scenario=scenario,
         output_dir=output_dir,
         exit_code=result.exit_code,
         stdout=result.stdout,
         stderr=result.stderr if hasattr(result, "stderr") else "",
+        filtered_stdout=filtered_stdout,
         cli_result=result,
     )
 
@@ -375,4 +384,76 @@ def e2e_dry_run_pyats_only_results(
         tmp_path_factory,
         class_mocker,
         extra_cli_args=["--dry-run"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_tag_filter_include_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    from tests.e2e.config import TAG_FILTER_INCLUDE_SCENARIO
+
+    return _run_e2e_scenario(
+        TAG_FILTER_INCLUDE_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--include", "bgp"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_tag_filter_exclude_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    from tests.e2e.config import TAG_FILTER_EXCLUDE_SCENARIO
+
+    return _run_e2e_scenario(
+        TAG_FILTER_EXCLUDE_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--exclude", "ospf"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_tag_filter_combined_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    from tests.e2e.config import TAG_FILTER_COMBINED_SCENARIO
+
+    return _run_e2e_scenario(
+        TAG_FILTER_COMBINED_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--include", "api-only"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_tag_filter_no_match_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    from tests.e2e.config import TAG_FILTER_NO_MATCH_SCENARIO
+
+    return _run_e2e_scenario(
+        TAG_FILTER_NO_MATCH_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--exclude", "bgpORospf"],
     )

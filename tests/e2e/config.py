@@ -372,6 +372,86 @@ DRY_RUN_PYATS_ONLY_SCENARIO = E2EScenario(
     expected_pyats_d2d_skipped=0,
 )
 
+TAG_FILTER_INCLUDE_SCENARIO = E2EScenario(
+    name="tag_filter_include",
+    description="--include bgp: filters to 1 Robot + 1 PyATS (both pass)",
+    data_path=f"{_FIXTURE_BASE}/tag_filtering/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/tag_filtering/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=0,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    # PyATS API: verify_bgp_api.py (groups=["bgp"]) - 1 pass
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
+
+TAG_FILTER_EXCLUDE_SCENARIO = E2EScenario(
+    name="tag_filter_exclude",
+    description="--exclude ospf: filters to 1 Robot + 1 PyATS (both pass)",
+    data_path=f"{_FIXTURE_BASE}/tag_filtering/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/tag_filtering/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=0,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    # PyATS API: verify_bgp_api.py (groups=["bgp"]) - 1 pass (ospf excluded)
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
+
+TAG_FILTER_COMBINED_SCENARIO = E2EScenario(
+    name="tag_filter_combined",
+    description="--include api-only: 0 Robot (no match, exit 252) + 1 PyATS (verify_ospf_api.py)",
+    data_path=f"{_FIXTURE_BASE}/tag_filtering/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/tag_filtering/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    # Exit 252: Robot has no tests matching 'api-only' tag
+    expected_exit_code=252,
+    expected_robot_passed=0,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    # PyATS API: verify_ospf_api.py (groups=["ospf", "api-only"]) - 1 pass
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
+
+TAG_FILTER_NO_MATCH_SCENARIO = E2EScenario(
+    name="tag_filter_no_match",
+    description="--exclude bgpORospf filters out all tests: 0 Robot + 0 PyATS, exit 252",
+    data_path=f"{_FIXTURE_BASE}/tag_filtering/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/tag_filtering/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=252,
+    expected_robot_passed=0,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
+
 
 # All scenarios for parameterized testing (dry-run excluded - it has special execution)
 ALL_SCENARIOS = [
