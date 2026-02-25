@@ -21,8 +21,6 @@ Usage:
     >>> matcher.should_include(['nrfu'])           # False
 """
 
-from __future__ import annotations
-
 import logging
 from collections.abc import Sequence
 
