@@ -28,6 +28,7 @@ from nac_test.pyats_core.constants import (
     MEMORY_PER_WORKER_GB,
 )
 from nac_test.pyats_core.discovery import DeviceInventoryDiscovery, TestDiscovery
+from nac_test.pyats_core.discovery.tag_matcher import format_filter_description
 from nac_test.pyats_core.execution import (
     JobGenerator,
     OutputProcessor,
@@ -613,7 +614,13 @@ class PyATSOrchestrator:
         )
 
         if not execution_plan.total_count:
-            print("No PyATS test files (*.py) found in test directory")
+            if execution_plan.filtered_by_tags:
+                filter_desc = format_filter_description(
+                    include=self.include_tags, exclude=self.exclude_tags
+                )
+                print(f"No pyATS tests matching tag filter ({filter_desc})")
+            else:
+                print("No PyATS test files (*.py) found in test directory")
             return PyATSResults()
 
         print(f"Discovered {execution_plan.total_count} PyATS test files")

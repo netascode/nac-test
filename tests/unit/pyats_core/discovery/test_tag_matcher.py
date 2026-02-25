@@ -15,7 +15,10 @@ Test Structure:
     - TestEdgeCases: Tests edge cases like empty tags, None values, etc.
 """
 
-from nac_test.pyats_core.discovery.tag_matcher import TagMatcher
+from nac_test.pyats_core.discovery.tag_matcher import (
+    TagMatcher,
+    format_filter_description,
+)
 
 
 class TestBasicMatching:
@@ -275,3 +278,47 @@ class TestEdgeCases:
 
         assert matcher.should_include(["v1"])
         assert not matcher.should_include(["v2"])
+
+
+class TestFormatFilterDescription:
+    """Test format_filter_description helper and TagMatcher.__str__."""
+
+    def test_include_only(self) -> None:
+        result = format_filter_description(include=["bgp"])
+        assert result == "include: 'bgp'"
+
+    def test_exclude_only(self) -> None:
+        result = format_filter_description(exclude=["ospf"])
+        assert result == "exclude: 'ospf'"
+
+    def test_include_and_exclude(self) -> None:
+        result = format_filter_description(include=["bgp"], exclude=["health"])
+        assert result == "include: 'bgp', exclude: 'health'"
+
+    def test_or_pattern_formatting(self) -> None:
+        result = format_filter_description(exclude=["bgpORospf"])
+        assert result == "exclude: 'bgp OR ospf'"
+
+    def test_and_pattern_formatting(self) -> None:
+        result = format_filter_description(include=["healthANDbgp"])
+        assert result == "include: 'health AND bgp'"
+
+    def test_multiple_patterns(self) -> None:
+        result = format_filter_description(
+            include=["bgp", "ospf"], exclude=["nrfuANDhealth"]
+        )
+        assert result == "include: 'bgp', 'ospf', exclude: 'nrfu AND health'"
+
+    def test_empty_returns_empty_string(self) -> None:
+        result = format_filter_description()
+        assert result == ""
+
+    def test_none_values_returns_empty_string(self) -> None:
+        result = format_filter_description(include=None, exclude=None)
+        assert result == ""
+
+    def test_str_matches_format_filter_description(self) -> None:
+        matcher = TagMatcher(include=["bgpORospf"], exclude=["health"])
+        assert str(matcher) == format_filter_description(
+            include=["bgpORospf"], exclude=["health"]
+        )

@@ -104,6 +104,25 @@ class TagMatcher:
         # Check if tags match any include pattern
         return bool(self.include_patterns.match(tags_list))
 
+    def __str__(self) -> str:
+        """Return human-readable filter description using Robot's pattern formatting."""
+        parts = []
+        if self.include_patterns:
+            include_str = ", ".join(f"'{p}'" for p in self.include_patterns)
+            parts.append(f"include: {include_str}")
+        if self.exclude_patterns:
+            exclude_str = ", ".join(f"'{p}'" for p in self.exclude_patterns)
+            parts.append(f"exclude: {exclude_str}")
+        return ", ".join(parts)
+
     def __repr__(self) -> str:
         """Return a string representation of the TagMatcher."""
         return f"TagMatcher(include={self._include_list}, exclude={self._exclude_list})"
+
+
+def format_filter_description(
+    include: Sequence[str] | None = None,
+    exclude: Sequence[str] | None = None,
+) -> str:
+    """Format tag filter patterns into a human-readable description."""
+    return str(TagMatcher(include=include, exclude=exclude))
