@@ -150,7 +150,13 @@ def _run_e2e_scenario(
 
     Returns:
         E2EResults containing all execution results.
+
+    Raises:
+        ValueError: If scenario configuration is invalid (via scenario.validate()).
     """
+    # Validate scenario configuration before execution
+    scenario.validate()
+
     # Create scenario-specific temp directory
     output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
 
