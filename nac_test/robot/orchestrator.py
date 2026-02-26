@@ -10,14 +10,21 @@ pattern as PyATSOrchestrator.
 
 import logging
 import os
-import shutil
 from datetime import datetime
 from pathlib import Path
 
 import typer
 
-from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
-from nac_test.core.types import TestResults
+from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
+    EXIT_ERROR,
+    EXIT_INTERRUPTED,
+    LOG_HTML,
+    OUTPUT_XML,
+    REPORT_HTML,
+    ROBOT_RESULTS_DIRNAME,
+)
+from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
@@ -173,45 +180,27 @@ class RobotOrchestrator:
                 ordering_file=self.ordering_file,
                 extra_args=self.extra_args,
             )
-            # Handle special exit codes
-            if exit_code == 252:
+            # Handle special exit codes - just log and return appropriate TestResults
+            # User-facing error messages are handled centrally in main.py
+            if exit_code == EXIT_DATA_ERROR:
                 error_msg = "Invalid Robot Framework arguments passed to nac-test"
                 logger.error(error_msg)
-                typer.echo(
-                    typer.style(
-                        f"Error: {error_msg}",
-                        fg=typer.colors.RED,
-                    )
-                )
-                raise RuntimeError(error_msg)
-            elif exit_code == 253:
-                typer.echo("⚠️  No Robot Framework tests found to execute")
-                return TestResults.empty()
-            elif exit_code == 255:
+                return TestResults.from_error(error_msg, ErrorType.INVALID_ROBOT_ARGS)
+            elif exit_code == EXIT_INTERRUPTED:
+                error_msg = "Robot Framework execution was interrupted"
+                logger.error(error_msg)
+                return TestResults.from_error(error_msg, ErrorType.INTERRUPTED)
+            elif exit_code == EXIT_ERROR:
                 error_msg = "Robot Framework execution failed (fatal error, see logs)"
                 logger.error(error_msg)
-                typer.echo(
-                    typer.style(
-                        f"Error: {error_msg}",
-                        fg=typer.colors.RED,
-                    )
-                )
                 return TestResults.from_error(error_msg)
             typer.echo("✅ Robot Framework tests completed")
 
-            # Phase 4: Move Robot files to robot_results/ subdirectory
-            #
-            # Unfortunately pabot does not allow me to specify the output.xml/etc. to be in a different
-            # directory than the outputdir, so we have to move them after the fact.
-            # pabot 5.2.0 due to be released shortly will have a fix, then we can
-            # change run_pabot to specify the output files to be in robot_results/ directly and
-            # remove this step.
-            self._move_robot_results_to_subdirectory()
-
-            # Phase 5: Create backward compatibility symlinks
+            # Phase 4: Create backward compatibility symlinks
+            # (output files written directly to robot_results/ via --output/--log/--report flags)
             self._create_backward_compat_symlinks()
 
-            # Phase 5.5: Generate Robot summary report and get stats
+            # Phase 5: Generate Robot summary report and get stats
             typer.echo("📊 Generating Robot summary report...")
             generator = RobotReportGenerator(self.base_output_dir)
             summary_path, stats = generator.generate_summary_report()
@@ -227,35 +216,6 @@ class RobotOrchestrator:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
             return TestResults.not_run("render-only mode")
 
-    def _move_robot_results_to_subdirectory(self) -> None:
-        """Move Robot output files from root to robot_results/ subdirectory.
-
-        Moves the following files:
-        - output.xml
-        - log.html
-        - report.html
-        - xunit.xml
-
-        This is done after pabot completes to organize outputs while maintaining
-        pabot's expected behavior.
-        """
-        robot_results_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
-        robot_results_dir.mkdir(parents=True, exist_ok=True)
-
-        files_to_move = ["output.xml", "log.html", "report.html", "xunit.xml"]
-
-        for filename in files_to_move:
-            source = self.base_output_dir / filename
-            target = robot_results_dir / filename
-
-            if source.exists():
-                # Remove target if it exists (in case of re-runs)
-                if target.exists():
-                    target.unlink()
-                # Move the file
-                shutil.move(str(source), str(target))
-                logger.debug(f"Moved {filename} to robot_results/")
-
     def _create_backward_compat_symlinks(self) -> None:
         """Create backward compatibility symlinks at root pointing to robot_results/.
 
@@ -263,12 +223,14 @@ class RobotOrchestrator:
         - output.xml -> robot_results/output.xml
         - log.html -> robot_results/log.html
         - report.html -> robot_results/report.html
-        - xunit.xml -> robot_results/xunit.xml
+
+        Note: xunit.xml is NOT symlinked here. The combined xunit.xml at root
+        is created by the xunit merger (merging Robot + PyATS results).
 
         This ensures existing tools/scripts that expect these files at root continue to work.
         """
         robot_results_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
-        files_to_link = ["output.xml", "log.html", "report.html", "xunit.xml"]
+        files_to_link = [LOG_HTML, OUTPUT_XML, REPORT_HTML]
 
         for filename in files_to_link:
             source = robot_results_dir / filename

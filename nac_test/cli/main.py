@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-import errorhandler
 import typer
 
 import nac_test
@@ -13,7 +12,12 @@ from nac_test.cli.diagnostic import diagnostic_callback
 from nac_test.cli.ui import display_aci_defaults_banner
 from nac_test.cli.validators import validate_aci_defaults
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.core.constants import DEBUG_MODE
+from nac_test.core.constants import (
+    DEBUG_MODE,
+    EXIT_ERROR,
+    EXIT_INTERRUPTED,
+    EXIT_INVALID_ARGS,
+)
 from nac_test.data_merger import DataMerger
 from nac_test.utils.logging import VerbosityLevel, configure_logging
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
@@ -23,8 +27,6 @@ from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 app = typer.Typer(add_completion=False, pretty_exceptions_enable=DEBUG_MODE)
 
 logger = logging.getLogger(__name__)
-
-error_handler = errorhandler.ErrorHandler()
 
 
 def version_callback(value: bool) -> None:
@@ -285,7 +287,7 @@ def main(
     These are appended to the pabot invocation. Pabot-specific options and test
     files/directories are not supported and will result in an error.
     """
-    configure_logging(verbosity, error_handler)
+    configure_logging(verbosity)
 
     check_and_exit_if_unsupported_macos_python()
 
@@ -300,7 +302,7 @@ def main(
         typer.echo(
             "Use one development flag at a time, or neither for combined execution."
         )
-        raise typer.Exit(1)
+        raise typer.Exit(EXIT_INVALID_ARGS)
 
     # Create output directory and shared merged data file (SOT)
     output.mkdir(parents=True, exist_ok=True)
@@ -358,10 +360,23 @@ def main(
 
     try:
         stats = orchestrator.run_tests()
+    except KeyboardInterrupt:
+        # Handle Ctrl+C interruption gracefully
+        typer.echo(
+            typer.style(
+                "\n⚠️  Test execution was interrupted by user (Ctrl+C)",
+                fg=typer.colors.YELLOW,
+            )
+        )
+        # Exit with code 253 following Robot Framework convention
+        raise typer.Exit(EXIT_INTERRUPTED) from None
     except Exception as e:
-        # Ensure runtime is shown even if orchestrator fails
+        # Infrastructure errors (template rendering, controller detection, etc.)
         typer.echo(f"Error during execution: {e}")
-        raise
+        # Progressive disclosure: clean output for customers, full context for developers
+        if DEBUG_MODE:
+            raise typer.Exit(EXIT_ERROR) from e  # Developer: full exception context
+        raise typer.Exit(EXIT_ERROR) from None  # Customer: clean output
 
     # Display total runtime before exit
     runtime_end = datetime.now()
@@ -377,8 +392,14 @@ def main(
 
     typer.echo(f"\nTotal runtime: {runtime_str}")
 
-    # Handle render-only mode: exit 0 if no exceptions occurred
     if render_only:
+        if stats.has_errors:
+            reason = stats.robot.reason if stats.robot and stats.robot.reason else None
+            if reason:
+                typer.echo(f"\n❌ Template rendering failed: {reason}", err=True)
+            else:
+                typer.echo("\n❌ Template rendering failed", err=True)
+            raise typer.Exit(stats.exit_code)
         typer.echo("\n✅ Templates rendered successfully (render-only mode)")
         raise typer.Exit(0)
 
@@ -389,28 +410,20 @@ def main(
         typer.echo("\n✅ Dry-run complete (no tests executed)")
         raise typer.Exit(0)
 
-    # Use test statistics for exit code
-    # Also check error_handler for non-test errors
-    if error_handler.fired:
-        # Error handler caught a critical error during execution
-        raise typer.Exit(1)
-    elif stats.has_failures:
-        typer.echo(
-            f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests",
-            err=True,
-        )
-        raise typer.Exit(1)
-    elif stats.has_errors:
-        # Framework execution errors (not test failures)
+    if stats.has_errors:
         error_list = "; ".join(stats.errors)
+        typer.echo(f"\n❌ Execution errors: {error_list}", err=True)
+        raise typer.Exit(stats.exit_code)
+
+    if stats.has_failures:
         typer.echo(
-            f"\n❌ Execution errors occurred: {error_list}",
-            err=True,
+            f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests", err=True
         )
-        raise typer.Exit(1)
-    elif stats.is_empty:
+        raise typer.Exit(stats.exit_code)
+
+    if stats.is_empty:
         typer.echo("\n⚠️  No tests were executed", err=True)
-        raise typer.Exit(1)
-    else:
-        typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
-        raise typer.Exit(0)
+        raise typer.Exit(stats.exit_code)
+
+    typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
+    raise typer.Exit(0)

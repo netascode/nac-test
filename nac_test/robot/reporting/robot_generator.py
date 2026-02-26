@@ -12,6 +12,7 @@ from pathlib import Path
 
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
+    OUTPUT_XML,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
@@ -46,7 +47,7 @@ class RobotReportGenerator:
         """
         self.output_dir = output_dir
         self.robot_results_dir = output_dir / ROBOT_RESULTS_DIRNAME
-        self.output_xml_path = self.robot_results_dir / "output.xml"
+        self.output_xml_path = self.robot_results_dir / OUTPUT_XML
 
         # Initialize Jinja2 environment (reuse PyATS templates)
         self.env = get_jinja_environment(TEMPLATES_DIR)

@@ -116,10 +116,10 @@ class JobGenerator:
         import json
         import logging
         import os
-        import re
         from pathlib import Path
         from pyats.easypy import run
         from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
+        from nac_test.utils import sanitize_hostname
 
         # Device being tested (using hostname)
         HOSTNAME = "{hostname}"
@@ -139,8 +139,7 @@ class JobGenerator:
             # This will be shared across all tests for this device
             runtime.connection_manager = DeviceConnectionManager(max_concurrent=1)
 
-            # Sanitize hostname for taskid (replace non-alphanumeric with underscore and lowercase)
-            safe_hostname = re.sub(r'[^a-zA-Z0-9_]', '_', HOSTNAME).lower()
+            safe_hostname = sanitize_hostname(HOSTNAME)
 
             # Run all test files for this device
             for idx, test_file in enumerate(TEST_FILES):
