@@ -25,6 +25,7 @@ from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.logging import VerbosityLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
+from nac_test.utils.terminal import terminal
 from nac_test.utils.xunit_merger import merge_xunit_results
 
 logger = logging.getLogger(__name__)
@@ -225,7 +226,8 @@ class CombinedOrchestrator:
                 combined_results.robot = TestResults.from_error(str(e))
 
         if not self.render_only:
-            typer.echo("\n📊 Generating combined dashboard...")
+            logger.info("Generating combined dashboard...")
+            logger.info(f"Combined results: {combined_results}")
             logger.debug(
                 f"Calling CombinedReportGenerator with results: {combined_results}"
             )
@@ -235,7 +237,7 @@ class CombinedOrchestrator:
                 combined_results
             )
             if combined_path:
-                typer.echo(f"   ✅ Combined dashboard: {combined_path}")
+                logger.info(f"Combined dashboard generated: {combined_path}")
 
             merged_xunit = None
             try:
@@ -243,11 +245,11 @@ class CombinedOrchestrator:
             except Exception as e:
                 logger.warning(f"Failed to merge xunit files: {e}")
             if merged_xunit:
-                typer.echo(f"   ✅ Merged xunit.xml: {merged_xunit}")
+                logger.info(f"Merged xunit.xml: {merged_xunit}")
             else:
                 logger.warning("No xunit files found to merge")
 
-            self._print_execution_summary(has_pyats, has_robot, combined_results)
+            self._print_execution_summary(combined_results)
 
         return combined_results
 
@@ -297,50 +299,25 @@ class CombinedOrchestrator:
 
         return has_pyats, has_robot
 
-    def _print_execution_summary(
-        self, has_pyats: bool, has_robot: bool, results: CombinedResults | None = None
-    ) -> None:
+    def _print_execution_summary(self, results: CombinedResults) -> None:
         """Print execution summary with statistics."""
-        typer.echo("\n" + "=" * 70)
-        typer.echo("📋 Combined Test Execution Summary")
+        # typer.echo("\n") prints two newlines for visual separation
+        typer.echo("\n")
         typer.echo("=" * 70)
+        typer.echo("Combined Test Execution Summary")
+        typer.echo("-" * 70)
+        typer.echo(terminal.format_test_summary(results))
+        typer.echo("-" * 70)
 
-        # Show overall stats if available
-        if results:
-            typer.echo("\n📊 Overall Results:")
-            typer.echo(f"   Total: {results.total} tests")
-            typer.echo(f"   ✅ Passed: {results.passed}")
-            typer.echo(f"   ❌ Failed: {results.failed}")
-            typer.echo(f"   ⊘ Skipped: {results.skipped}")
-
-            # Combined dashboard is the main entry point
-            if not self.render_only:
-                typer.echo("\n🎯 Combined Dashboard:")
-                combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME
-                if combined_dashboard.exists():
-                    typer.echo(f"   📊 {combined_dashboard}")
-                    typer.echo("   (Aggregated results from all test frameworks)")
-
-        if has_robot:
-            typer.echo("\n✅ Robot Framework tests: Completed")
-            typer.echo(f"   📁 Results: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/")
-            if results and results.robot is not None:
-                robot_stats = results.robot
-                typer.echo(
-                    f"   📊 {robot_stats.total} tests: "
-                    f"{robot_stats.passed} passed, {robot_stats.failed} failed"
-                )
-            if not self.render_only:
-                typer.echo(
-                    f"   📊 Summary: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}"
-                )
-                typer.echo(
-                    f"   📊 Detailed: {self.output_dir}/{ROBOT_RESULTS_DIRNAME}/log.html"
-                )
-
-        if has_pyats:
-            typer.echo("\n✅ PyATS tests: Completed")
-            typer.echo(f"   📁 Results: {self.output_dir}/{PYATS_RESULTS_DIRNAME}/")
+        # print absolute filenames in our summary to align with robot/rebot output
+        combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME
+        if combined_dashboard.exists():
+            typer.echo(f"Dashboard:  {combined_dashboard.resolve()}")
+        if results.robot is not None:
+            robot_log = self.output_dir / ROBOT_RESULTS_DIRNAME / "log.html"
+            if robot_log.exists():
+                typer.echo(f"Robot:      {robot_log.resolve()}")
+        if results.api is not None:
             api_summary = (
                 self.output_dir
                 / PYATS_RESULTS_DIRNAME
@@ -348,6 +325,9 @@ class CombinedOrchestrator:
                 / HTML_REPORTS_DIRNAME
                 / SUMMARY_REPORT_FILENAME
             )
+            if api_summary.exists():
+                typer.echo(f"PyATS API:  {api_summary.resolve()}")
+        if results.d2d is not None:
             d2d_summary = (
                 self.output_dir
                 / PYATS_RESULTS_DIRNAME
@@ -355,12 +335,11 @@ class CombinedOrchestrator:
                 / HTML_REPORTS_DIRNAME
                 / SUMMARY_REPORT_FILENAME
             )
-            if api_summary.exists():
-                typer.echo(f"   📊 API Summary: {api_summary}")
             if d2d_summary.exists():
-                typer.echo(f"   📊 D2D Summary: {d2d_summary}")
+                typer.echo(f"PyATS D2D:  {d2d_summary.resolve()}")
+        xunit_path = self.output_dir / "xunit.xml"
+        if xunit_path.exists():
+            typer.echo(f"xUnit:      {xunit_path.resolve()}")
 
-        typer.echo(
-            f"\n📄 Merged data model: {self.output_dir}/{self.merged_data_filename}"
-        )
         typer.echo("=" * 70)
+        typer.echo()
