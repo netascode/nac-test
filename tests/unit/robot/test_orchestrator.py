@@ -1,0 +1,300 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+# mypy: disable-error-code="no-untyped-def,method-assign"
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+"""Unit tests for Robot Framework orchestrator."""
+
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from nac_test.core.constants import (
+    LOG_HTML,
+    OUTPUT_XML,
+    REPORT_HTML,
+    ROBOT_RESULTS_DIRNAME,
+    SUMMARY_REPORT_FILENAME,
+    XUNIT_XML,
+)
+from nac_test.core.types import ErrorType, TestResults
+from nac_test.robot.orchestrator import RobotOrchestrator
+from nac_test.utils.logging import VerbosityLevel
+
+
+@pytest.fixture
+def temp_output_dir(tmp_path: Path) -> Path:
+    """Create a temporary output directory for tests."""
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    return output_dir
+
+
+@pytest.fixture
+def mock_data_paths(tmp_path: Path) -> list[Path]:
+    """Create mock data paths."""
+    data_file = tmp_path / "data.yaml"
+    data_file.write_text("test: data")
+    return [data_file]
+
+
+@pytest.fixture
+def mock_templates_dir(tmp_path: Path) -> Path:
+    """Create mock templates directory."""
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    return templates_dir
+
+
+@pytest.fixture
+def orchestrator(
+    mock_data_paths, mock_templates_dir, temp_output_dir
+) -> RobotOrchestrator:
+    """Create a RobotOrchestrator instance for testing."""
+    return RobotOrchestrator(
+        data_paths=mock_data_paths,
+        templates_dir=mock_templates_dir,
+        output_dir=temp_output_dir,
+        merged_data_filename="merged_data.yaml",
+        verbosity=VerbosityLevel.WARNING,
+    )
+
+
+class TestRobotOrchestrator:
+    """Test suite for RobotOrchestrator."""
+
+    def test_initialization(
+        self, orchestrator, temp_output_dir, mock_data_paths, mock_templates_dir
+    ) -> None:
+        """Test orchestrator initialization."""
+        assert orchestrator.base_output_dir == temp_output_dir
+        assert orchestrator.output_dir == temp_output_dir  # At root for backward compat
+        assert orchestrator.data_paths == mock_data_paths
+        assert orchestrator.templates_dir == mock_templates_dir
+        assert orchestrator.merged_data_filename == "merged_data.yaml"
+        assert orchestrator.render_only is False
+        assert orchestrator.dry_run is False
+        assert orchestrator.verbosity == VerbosityLevel.WARNING
+
+    def test_initialization_with_optional_params(
+        self, mock_data_paths, mock_templates_dir, temp_output_dir
+    ) -> None:
+        """Test orchestrator initialization with optional parameters."""
+        orchestrator = RobotOrchestrator(
+            data_paths=mock_data_paths,
+            templates_dir=mock_templates_dir,
+            output_dir=temp_output_dir,
+            merged_data_filename="merged.yaml",
+            include_tags=["smoke", "regression"],
+            exclude_tags=["wip"],
+            render_only=True,
+            dry_run=True,
+            processes=4,
+            extra_args=["--exitonfailure"],
+            verbosity=VerbosityLevel.DEBUG,
+        )
+
+        assert orchestrator.include_tags == ["smoke", "regression"]
+        assert orchestrator.exclude_tags == ["wip"]
+        assert orchestrator.render_only is True
+        assert orchestrator.dry_run is True
+        assert orchestrator.processes == 4
+        assert orchestrator.extra_args == ["--exitonfailure"]
+        assert orchestrator.verbosity == VerbosityLevel.DEBUG
+
+    def test_create_backward_compat_symlinks(
+        self, orchestrator, temp_output_dir
+    ) -> None:
+        """Test _create_backward_compat_symlinks creates correct symlinks."""
+        # Create robot_results directory with files
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+
+        # xunit.xml is NOT symlinked (merged xunit is created separately)
+        files_to_create = [LOG_HTML, OUTPUT_XML, REPORT_HTML]
+        for filename in files_to_create:
+            (robot_results_dir / filename).write_text(f"Mock {filename}")
+
+        # Create symlinks
+        orchestrator._create_backward_compat_symlinks()
+
+        # Verify symlinks were created at root
+        for filename in files_to_create:
+            symlink = temp_output_dir / filename
+            assert symlink.is_symlink()
+            assert symlink.resolve() == robot_results_dir / filename
+            assert symlink.read_text() == f"Mock {filename}"
+
+    def test_create_backward_compat_symlinks_replaces_existing(
+        self, orchestrator, temp_output_dir
+    ) -> None:
+        """Test _create_backward_compat_symlinks replaces existing symlinks/files."""
+        # Create robot_results directory
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+        (robot_results_dir / OUTPUT_XML).write_text("new content")
+
+        # Create existing file at root (should be replaced)
+        (temp_output_dir / OUTPUT_XML).write_text("old content")
+
+        # Create symlinks
+        orchestrator._create_backward_compat_symlinks()
+
+        # Verify symlink was created and points to new content
+        symlink = temp_output_dir / OUTPUT_XML
+        assert symlink.is_symlink()
+        assert symlink.read_text() == "new content"
+
+    def test_create_backward_compat_symlinks_handles_missing_source(
+        self, orchestrator, temp_output_dir, caplog
+    ) -> None:
+        """Test _create_backward_compat_symlinks handles missing source files."""
+        # Create robot_results directory but no files
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+
+        # Should not raise an error
+        orchestrator._create_backward_compat_symlinks()
+
+        # Verify warning was logged
+        assert "Source file not found for symlink" in caplog.text
+
+    @patch("nac_test.robot.orchestrator.run_pabot")
+    def test_run_tests_render_only_mode(
+        self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
+    ) -> None:
+        """Test run_tests in render-only mode."""
+        orchestrator.render_only = True
+
+        # Mock RobotWriter instance methods directly on the orchestrator's writer
+        orchestrator.robot_writer.write = MagicMock()
+        orchestrator.robot_writer.write_merged_data_model = MagicMock()
+
+        stats = orchestrator.run_tests()
+
+        # Verify template rendering was called
+        orchestrator.robot_writer.write.assert_called_once()
+        orchestrator.robot_writer.write_merged_data_model.assert_called_once()
+
+        # Verify pabot was NOT called
+        mock_pabot.assert_not_called()
+
+        # Verify render-only mode returns not_run() result with SKIPPED state
+        assert stats.was_not_run is True
+        assert stats.reason == "render-only mode"
+
+    @patch("nac_test.robot.orchestrator.run_pabot")
+    @patch("nac_test.robot.orchestrator.RobotReportGenerator")
+    def test_run_tests_full_execution(
+        self, mock_generator, mock_pabot, orchestrator, temp_output_dir
+    ) -> None:
+        """Test run_tests executes full test lifecycle."""
+        # Mock RobotWriter instance methods directly
+        orchestrator.robot_writer.write = MagicMock()
+        orchestrator.robot_writer.write_merged_data_model = MagicMock()
+
+        # Mock pabot success
+        mock_pabot.return_value = 0
+
+        # Mock report generator - now returns tuple (path, stats)
+        mock_generator_instance = MagicMock()
+        mock_stats = TestResults(passed=1, failed=0, skipped=0)
+        mock_generator_instance.generate_summary_report.return_value = (
+            temp_output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME,
+            mock_stats,
+        )
+        mock_generator.return_value = mock_generator_instance
+
+        # Create mock Robot output files in robot_results/ (pabot 5.2+ writes directly there)
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
+            (robot_results_dir / filename).write_text(f"Mock {filename}")
+
+        stats = orchestrator.run_tests()
+
+        # Verify all phases executed
+        orchestrator.robot_writer.write.assert_called_once()
+        orchestrator.robot_writer.write_merged_data_model.assert_called_once()
+        mock_pabot.assert_called_once()
+        mock_generator_instance.generate_summary_report.assert_called_once()
+
+        # Verify statistics returned
+        assert stats.total == 1
+        assert stats.passed == 1
+        assert stats.failed == 0
+        assert stats.skipped == 0
+
+    @patch("nac_test.robot.orchestrator.run_pabot")
+    def test_run_tests_handles_pabot_error_252(
+        self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
+    ) -> None:
+        """Test run_tests returns TestResults.from_error on pabot exit code 252 (invalid arguments)."""
+        # Mock RobotWriter instance methods
+        orchestrator.robot_writer.write = MagicMock()
+        orchestrator.robot_writer.write_merged_data_model = MagicMock()
+
+        # Mock pabot failure with exit code 252
+        mock_pabot.return_value = 252
+
+        # Should return TestResults with error state
+        result = orchestrator.run_tests()
+        assert isinstance(result, TestResults)
+        assert result.has_error
+        assert result.reason is not None
+        assert result.error_type == ErrorType.INVALID_ROBOT_ARGS
+
+    def test_run_tests_return_type(self, orchestrator: RobotOrchestrator) -> None:
+        """Test run_tests returns TestResults with correct attributes."""
+        orchestrator.render_only = True
+
+        stats = orchestrator.run_tests()
+
+        # Verify return type and attributes (TestResults, not dict)
+        assert isinstance(stats, TestResults)
+        assert hasattr(stats, "total")
+        assert hasattr(stats, "passed")
+        assert hasattr(stats, "failed")
+        assert hasattr(stats, "skipped")
+        # Verify values for render-only mode
+        assert stats.total == 0
+        assert stats.passed == 0
+        assert stats.failed == 0
+        assert stats.skipped == 0
+
+    def test_run_tests_raises_on_template_rendering_error(
+        self, orchestrator: RobotOrchestrator
+    ) -> None:
+        """Test run_tests raises exception on template rendering errors.
+
+        Exceptions are caught at the combined_orchestrator level, not here.
+        """
+        # Mock RobotWriter.write to raise an exception
+        orchestrator.robot_writer.write = MagicMock(
+            side_effect=ValueError("Template error: invalid syntax")
+        )
+
+        # Should raise exception (handled by combined_orchestrator)
+        with pytest.raises(ValueError, match="Template error"):
+            orchestrator.run_tests()
+
+    def test_create_backward_compat_symlinks_target_is_directory(
+        self, orchestrator, temp_output_dir, caplog
+    ) -> None:
+        """Test symlink creation when target path exists as a directory."""
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+
+        output_xml = robot_results_dir / OUTPUT_XML
+        output_xml.write_text("<robot></robot>")
+
+        target_dir = temp_output_dir / OUTPUT_XML
+        target_dir.mkdir()
+
+        # Should not raise, but log a warning and skip that symlink
+        orchestrator._create_backward_compat_symlinks()
+
+        assert "is a directory" in caplog.text

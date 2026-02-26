@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Network as Code Test Results Summary</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --skip: #95a5a6;
+            --info: #3498db;
+            --neutral: #95a5a6;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+            background-color: #f9f9f9;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 6px var(--shadow);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h1, h2, h3, h4 {
+            margin-top: 0;
+            line-height: 1.2;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        header h1 {
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        /* Report type subtitle styles */
+        .report-type-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 20px;
+            font-weight: 400;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .header-content {
+            position: relative;
+        }
+
+        .nav-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        @media (max-width: 768px) {
+            .nav-button {
+                position: static;
+                margin-bottom: 20px;
+                display: inline-flex;
+            }
+        }
+
+        .date-info {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            margin-bottom: 30px;
+            padding: 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            margin: 20px 0;
+            padding: 25px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-gap: 20px;
+            margin-top: 20px;
+        }
+
+        .summary-item {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .summary-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--shadow);
+        }
+
+        .summary-item:focus {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .summary-item.active {
+            opacity: 1 !important;
+            box-shadow: 0 0 0 3px var(--accent);
+            transform: scale(1.05);
+        }
+
+        .summary-item.filtered-out {
+            opacity: 0.4;
+        }
+
+        .summary-item h3 {
+            font-size: 2.5rem;
+            margin: 10px 0;
+        }
+
+        .summary-item p {
+            color: #7f8c8d;
+            margin: 0;
+        }
+
+        .total {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-left: 4px solid var(--accent);
+        }
+
+        .passed {
+            background-color: rgba(46, 204, 113, 0.1);
+            border-left: 4px solid var(--success);
+        }
+
+        .failed {
+            background-color: rgba(231, 76, 60, 0.1);
+            border-left: 4px solid var(--danger);
+        }
+
+        .skipped {
+            background-color: rgba(149, 165, 166, 0.1);
+            border-left: 4px solid var(--neutral);
+        }
+
+        .rate {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-left: 4px solid var(--accent);
+        }
+
+        .progress-container {
+            margin-top: 10px;
+            background-color: #f1f1f1;
+            border-radius: 10px;
+            height: 10px;
+            position: relative;
+        }
+
+        .progress-bar {
+            border-radius: 10px;
+            height: 10px;
+            background: linear-gradient(to right, var(--success), var(--accent));
+            width: {{ stats.success_rate }}%;
+        }
+
+        /* Result table styles */
+        .results-table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        table.results-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+
+        table.results-table thead th {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 500;
+            position: relative;
+        }
+
+        table.results-table tbody tr {
+            border-bottom: 1px solid var(--light);
+            transition: background-color 0.3s;
+        }
+
+        table.results-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        table.results-table tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+
+        table.results-table td {
+            padding: 15px;
+        }
+
+        .status-cell {
+            font-weight: bold;
+        }
+
+        .pass-status {
+            color: var(--success);
+        }
+
+        .fail-status {
+            color: var(--danger);
+        }
+
+        .skip-status {
+            color: var(--warning);
+        }
+
+        .abort-status {
+            color: #e67e22;
+        }
+
+        .error-status {
+            color: #8e44ad;
+        }
+
+        .block-status {
+            color: var(--secondary);
+        }
+
+        .neutral-status {
+            color: var(--neutral);
+        }
+
+        .info-status {
+            color: var(--info);
+        }
+
+        .action-cell {
+            text-align: center;
+        }
+
+        .view-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: var(--accent);
+            color: white;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .view-btn:hover {
+            background-color: #2980b9;
+            text-decoration: none;
+        }
+
+        /* Filter indicator styles */
+        .filter-indicator {
+            background: linear-gradient(135deg, var(--accent), var(--info));
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .filter-indicator.active {
+            display: flex;
+        }
+
+        .filter-indicator strong {
+            text-transform: capitalize;
+        }
+
+        .filter-indicator button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .filter-indicator button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Sortable table header styles */
+        table.results-table thead th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        table.results-table thead th.sortable:hover {
+            background: var(--secondary);
+        }
+
+        table.results-table thead th.sortable::after {
+            content: ' ↕';
+            opacity: 0.5;
+        }
+
+        table.results-table thead th.sortable.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        table.results-table thead th.sortable.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
+        /* Hidden row for filtering */
+        tr.hidden {
+            display: none !important;
+        }
+
+        /* Responsive table */
+        @media (max-width: 768px) {
+            table.results-table thead {
+                display: none;
+            }
+
+            table.results-table tbody tr {
+                display: block;
+                margin-bottom: 15px;
+                border-bottom: none;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+
+            table.results-table tbody td {
+                display: block;
+                text-align: right;
+                position: relative;
+                padding-left: 50%;
+                border-bottom: 1px solid #eee;
+            }
+
+            table.results-table td:before {
+                content: attr(data-label);
+                position: absolute;
+                left: 15px;
+                font-weight: bold;
+            }
+
+            table.results-table td:last-child {
+                border-bottom: none;
+            }
+
+            .action-cell {
+                text-align: center;
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="{{ breadcrumb_link | default('../../combined_summary.html') }}" class="nav-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                    Back to Combined Dashboard
+                </a>
+                <h1>Network as Code Test Results Summary</h1>
+                {% if report_type %}
+                <div class="report-type-subtitle">{{ report_type }}</div>
+                {% endif %}
+                <div class="date-info">Generated on {{ generation_time }}</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="summary">
+            <h2>Executive Summary</h2>
+            <div class="summary-grid">
+                <div class="summary-item total">
+                    <p>Total Tests</p>
+                    <h3>{{ stats.total }}</h3>
+                </div>
+                <div class="summary-item passed"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Filter by passed tests"
+                     data-filter="passed">
+                    <p>Passed</p>
+                    <h3>{{ stats.passed }}</h3>
+                </div>
+                <div class="summary-item failed"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Filter by failed tests"
+                     data-filter="failed">
+                    <p>Failed</p>
+                    <h3>{{ stats.failed }}</h3>
+                </div>
+                <div class="summary-item skipped"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Filter by skipped tests"
+                     data-filter="skipped">
+                    <p>Skipped</p>
+                    <h3>{{ stats.skipped }}</h3>
+                </div>
+                <div class="summary-item rate">
+                    <p>Success Rate</p>
+                    <h3>{{ "%.1f"|format(stats.success_rate) }}%</h3>
+                    <div class="progress-container">
+                        <div class="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="filter-indicator" class="filter-indicator">
+            <span>Showing: <strong id="filter-type"></strong> tests</span>
+            <button onclick="clearFilter()" aria-label="Clear filter">✕ Clear Filter</button>
+        </div>
+
+        <h2>Test Results</h2>
+        <div class="results-table-container">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-column="0" role="button" tabindex="0" aria-label="Sort by test name">Test Name</th>
+                        <th class="sortable" data-column="1" role="button" tabindex="0" aria-label="Sort by status">Status</th>
+                        <th class="sortable" data-column="2" role="button" tabindex="0" aria-label="Sort by duration">Duration</th>
+                        <th class="sortable" data-column="3" role="button" tabindex="0" aria-label="Sort by date">Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in results %}
+                    {% set status_style = result.status|status_style %}
+                    <tr data-status="{{ result.status }}">
+                        <td data-label="Test Name">{{ result.title }}{% if result.hostname %} <span style="color: #7f8c8d;">({{ result.hostname }})</span>{% endif %}</td>
+                        <td data-label="Status" class="status-cell {{ status_style.css_class }}">
+                            {{ status_style.display_text }}
+                        </td>
+                        <td data-label="Duration" data-duration="{{ result.duration }}">
+                            {{ result.duration|format_duration }}
+                        </td>
+                        <td data-label="Date">{{ result.timestamp|format_datetime }}</td>
+                        <td data-label="Action" class="action-cell">
+                            <a href="{{ result.result_file_path }}" class="view-btn">
+                                View Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <p>Generated by Cisco's Network as Code <code>nac-test</code> Tool</p>
+        </footer>
+    </div>
+
+    <script>
+        // State management
+        let currentFilter = '';
+        let sortState = { column: null, direction: 'asc' };
+
+        // Filter functionality
+        function filterTests(status) {
+            // Toggle filter on/off if clicking same status
+            currentFilter = (currentFilter === status) ? '' : status;
+
+            const rows = document.querySelectorAll('.results-table tbody tr');
+            const filterIndicator = document.getElementById('filter-indicator');
+            const filterType = document.getElementById('filter-type');
+            const summaryItems = document.querySelectorAll('.summary-item[data-filter]');
+
+            if (currentFilter) {
+                // Apply filter
+                rows.forEach(row => {
+                    const rowStatus = row.getAttribute('data-status');
+                    if (rowStatus === currentFilter) {
+                        row.classList.remove('hidden');
+                    } else {
+                        row.classList.add('hidden');
+                    }
+                });
+
+                // Update visual feedback on summary cards
+                summaryItems.forEach(item => {
+                    const itemFilter = item.getAttribute('data-filter');
+                    if (itemFilter === currentFilter) {
+                        item.classList.add('active');
+                        item.classList.remove('filtered-out');
+                    } else {
+                        item.classList.remove('active');
+                        item.classList.add('filtered-out');
+                    }
+                });
+
+                // Show filter indicator
+                filterType.textContent = currentFilter;
+                filterIndicator.classList.add('active');
+            } else {
+                // Clear filter
+                rows.forEach(row => row.classList.remove('hidden'));
+                summaryItems.forEach(item => {
+                    item.classList.remove('active', 'filtered-out');
+                });
+                filterIndicator.classList.remove('active');
+            }
+        }
+
+        function clearFilter() {
+            currentFilter = '';
+            filterTests('');
+        }
+
+        // Sort functionality with direction toggle
+        function sortTable(column) {
+            const table = document.querySelector('.results-table tbody');
+            const rows = Array.from(table.querySelectorAll('tr'));
+            const headers = document.querySelectorAll('.results-table thead th.sortable');
+
+            // Determine sort direction
+            if (sortState.column === column) {
+                sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.column = column;
+                sortState.direction = 'asc';
+            }
+
+            // Update header visual indicators
+            headers.forEach((header, idx) => {
+                header.classList.remove('sort-asc', 'sort-desc');
+                if (idx === column) {
+                    header.classList.add(sortState.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+
+            // Sort rows
+            rows.sort((a, b) => {
+                const aCell = a.children[column];
+                const bCell = b.children[column];
+
+                let comparison = 0;
+
+                // Check for data-duration attribute (Duration column)
+                const aDuration = aCell.getAttribute('data-duration');
+                const bDuration = bCell.getAttribute('data-duration');
+
+                if (aDuration && bDuration) {
+                    // Sort by numeric duration value
+                    const aDur = parseFloat(aDuration) || 0;
+                    const bDur = parseFloat(bDuration) || 0;
+                    comparison = aDur - bDur;
+                } else {
+                    // For other columns, use text content
+                    const aText = aCell.textContent.trim();
+                    const bText = bCell.textContent.trim();
+
+                    // Numeric comparison for dates or numbers, otherwise string comparison
+                    const aNum = parseFloat(aText);
+                    const bNum = parseFloat(bText);
+
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                        comparison = aNum - bNum;
+                    } else {
+                        comparison = aText.localeCompare(bText);
+                    }
+                }
+
+                return sortState.direction === 'asc' ? comparison : -comparison;
+            });
+
+            // Re-append sorted rows
+            rows.forEach(row => table.appendChild(row));
+        }
+
+        // Event delegation for summary card clicks
+        document.querySelector('.summary-grid').addEventListener('click', (e) => {
+            const card = e.target.closest('.summary-item[data-filter]');
+            if (card) {
+                filterTests(card.getAttribute('data-filter'));
+            }
+        });
+
+        // Event delegation for table header clicks
+        document.querySelector('.results-table thead').addEventListener('click', (e) => {
+            const header = e.target.closest('th.sortable');
+            if (header) {
+                const column = parseInt(header.getAttribute('data-column'));
+                sortTable(column);
+            }
+        });
+
+        // Keyboard support for summary cards (Enter/Space)
+        document.querySelector('.summary-grid').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                const card = e.target.closest('.summary-item[data-filter]');
+                if (card) {
+                    e.preventDefault();
+                    filterTests(card.getAttribute('data-filter'));
+                }
+            }
+        });
+
+        // Keyboard support for table headers (Enter/Space)
+        document.querySelector('.results-table thead').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                const header = e.target.closest('th.sortable');
+                if (header) {
+                    e.preventDefault();
+                    const column = parseInt(header.getAttribute('data-column'));
+                    sortTable(column);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

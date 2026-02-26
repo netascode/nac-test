@@ -11,7 +11,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jinja2 import (  # type: ignore
     ChainableUndefined,
@@ -19,9 +19,10 @@ from jinja2 import (  # type: ignore
     FileSystemLoader,
     Undefined,
 )
-from nac_yaml import yaml
 from robot.api import SuiteVisitor, TestSuite  # type: ignore
 from robot.utils import is_truthy
+
+from nac_test.data_merger import DataMerger
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +63,10 @@ class RobotWriter:
         include_tags: list[str] | None = None,
         exclude_tags: list[str] | None = None,
     ) -> None:
-        logger.info("Loading yaml files from %s", data_paths)
-        self.data = yaml.load_yaml_files(data_paths)
+        self.data = DataMerger.merge_data_files(data_paths)
+        # Convert OrderedDict to dict once during initialization instead of per-template
+        # This eliminates expensive JSON round-trip serialization for each template render
+        self.template_data = self._convert_data_model_for_templates(self.data)
         self.filters: dict[str, Any] = {}
         self.include_tags = include_tags or []
         self.exclude_tags = exclude_tags or []
@@ -98,6 +101,36 @@ class RobotWriter:
                             self.tests[mod.Test.name] = mod.Test
         self.ordering_entries: list[str] = []
 
+    def _convert_data_model_for_templates(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Convert nested OrderedDict to dict to avoid duplicate dict keys.
+
+        This method performs the same conversion that was previously done per-template,
+        but centralizes it during initialization for performance efficiency.
+
+        Args:
+            data: Raw data model from DataMerger (may contain OrderedDict structures)
+
+        Returns:
+            Converted data model safe for Jinja template rendering
+
+        Note:
+            JSON round-trip approach is used as it's safe for all serializable data
+            and handles nested OrderedDict structures reliably.
+        """
+        logger.debug(
+            "Converting data model for template rendering (one-time conversion)"
+        )
+        try:
+            # JSON round-trip to convert nested OrderedDict to dict
+            # This preserves all data while fixing duplicate key issues (e.g., 'tag' fields)
+            converted_data = cast(dict[str, Any], json.loads(json.dumps(data)))
+            logger.debug("Data model conversion completed successfully")
+            return converted_data
+        except Exception as e:
+            logger.warning(f"Data model conversion failed: {e}. Using original data.")
+            # Fallback to original data if conversion fails
+            return data
+
     def render_template(
         self,
         template_path: Path,
@@ -114,12 +147,15 @@ class RobotWriter:
         # create output directory if it does not exist yet
         pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 
-        template = env.get_template(template_path.as_posix())
-        # hack to convert nested ordereddict to dict, to avoid duplicate dict keys
-        # json roundtrip should be safe as everything should be serializable
-        data_source = custom_data if custom_data is not None else self.data
-        data = json.loads(json.dumps(data_source))
-        result = template.render(data, **kwargs)
+        template = env.get_template(str(template_path))
+        # Use custom_data if provided (for chunked templates), otherwise use pre-converted template_data
+        if custom_data is not None:
+            # Convert custom_data for template rendering (same as initialization conversion)
+            template_data = self._convert_data_model_for_templates(custom_data)
+        else:
+            # Use pre-converted data model (converted once during initialization)
+            template_data = self.template_data
+        result = template.render(template_data, **kwargs)
 
         # remove extra empty lines
         lines = result.splitlines()
@@ -344,7 +380,7 @@ class RobotWriter:
                         next_template = True
                         path = params[2].split(".")
                         attr = params[3]
-                        elem = self.data
+                        elem: Any = self.template_data
                         for p in path:
                             try:
                                 elem = elem.get(p, {})
@@ -503,3 +539,19 @@ class RobotWriter:
         else:
             # ensure we clean out a leftover ordering file if we don't want testlevelsplit
             ordering_file.unlink(missing_ok=True)
+
+    def write_merged_data_model(
+        self,
+        output_directory: Path,
+        filename: str = "merged_data_model_test_variables.yaml",
+    ) -> None:
+        """Writes the merged data model to a specified YAML file.
+
+        This method takes the internal, merged data dictionary (`self.data`)
+        and writes it to a YAML file in the specified output directory.
+
+        Args:
+            output_directory: The directory where the YAML file will be saved.
+            filename: The name of the output YAML file.
+        """
+        DataMerger.write_merged_data_model(self.data, output_directory, filename)

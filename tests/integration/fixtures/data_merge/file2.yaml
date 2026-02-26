@@ -1,0 +1,11 @@
+---
+root:
+  attr2: value2
+  primitive_list:
+    - item1
+  dict_list:
+    - name: abc
+      extra: def
+  dict_list_extra:
+    - name: abc
+      extra2: ghi

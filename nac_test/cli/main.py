@@ -1,56 +1,37 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
-
 import logging
-import os
-import sys
-from enum import Enum
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-import nac_test.pabot
-import nac_test.robot_writer
+import nac_test
+from nac_test.cli.diagnostic import diagnostic_callback
+from nac_test.cli.ui import display_aci_defaults_banner
+from nac_test.cli.validators import validate_aci_defaults
+from nac_test.combined_orchestrator import CombinedOrchestrator
+from nac_test.core.constants import (
+    DEBUG_MODE,
+    EXIT_ERROR,
+    EXIT_INTERRUPTED,
+    EXIT_INVALID_ARGS,
+)
+from nac_test.data_merger import DataMerger
+from nac_test.utils.logging import VerbosityLevel, configure_logging
+from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 
-# typer exceptions are BIG (albeit colorful), I feel for a program
-# with this complextiy logging everything is not required, hence disabling
-# them
-app = typer.Typer(add_completion=False, pretty_exceptions_enable=False)
+# Pretty exceptions are verbose but helpful for debugging.
+# Enable them when NAC_TEST_DEBUG=true, disable for cleaner output otherwise.
+app = typer.Typer(add_completion=False, pretty_exceptions_enable=DEBUG_MODE)
 
 logger = logging.getLogger(__name__)
-
-ORDERING_FILE = "ordering.txt"
-
-
-def configure_logging(level: str) -> None:
-    if level == "DEBUG":
-        lev = logging.DEBUG
-    elif level == "INFO":
-        lev = logging.INFO
-    elif level == "WARNING":
-        lev = logging.WARNING
-    elif level == "ERROR":
-        lev = logging.ERROR
-    else:
-        lev = logging.CRITICAL
-
-    logging.basicConfig(
-        level=lev, format="%(levelname)s - %(message)s", stream=sys.stdout, force=True
-    )
-
-
-class VerbosityLevel(str, Enum):
-    DEBUG = "DEBUG"
-    INFO = "INFO"
-    WARNING = "WARNING"
-    ERROR = "ERROR"
-    CRITICAL = "CRITICAL"
 
 
 def version_callback(value: bool) -> None:
     if value:
-        print(f"nac-test, version {nac_test.__version__}")
+        typer.echo(f"nac-test, version {nac_test.__version__}")
         raise typer.Exit()
 
 
@@ -157,6 +138,16 @@ Exclude = Annotated[
 ]
 
 
+MergedDataFilename = Annotated[
+    str,
+    typer.Option(
+        "-m",
+        "--merged-data-filename",
+        help="Filename for the merged data model YAML file.",
+    ),
+]
+
+
 RenderOnly = Annotated[
     bool,
     typer.Option(
@@ -187,6 +178,48 @@ Processes = Annotated[
 ]
 
 
+PyATS = Annotated[
+    bool,
+    typer.Option(
+        "--pyats",
+        help="[DEV ONLY] Run only PyATS tests (skips Robot Framework). Use for faster development cycles.",
+        envvar="NAC_TEST_PYATS",
+    ),
+]
+
+
+Robot = Annotated[
+    bool,
+    typer.Option(
+        "--robot",
+        help="[DEV ONLY] Run only Robot Framework tests (skips PyATS). Use for faster development cycles.",
+        envvar="NAC_TEST_ROBOT",
+    ),
+]
+
+
+MaxParallelDevices = Annotated[
+    int,
+    typer.Option(
+        "--max-parallel-devices",
+        help="Maximum number of devices to test in parallel for SSH/D2D tests. If not specified, automatically calculated based on system resources. Use this to set a lower limit if needed.",
+        envvar="NAC_TEST_MAX_PARALLEL_DEVICES",
+        min=1,
+        max=500,
+    ),
+]
+
+
+MinimalReports = Annotated[
+    bool,
+    typer.Option(
+        "--minimal-reports",
+        help="Only include detailed command outputs for failed/errored tests in HTML reports (80-95%% artifact size reduction).",
+        envvar="NAC_TEST_MINIMAL_REPORTS",
+    ),
+]
+
+
 Version = Annotated[
     bool,
     typer.Option(
@@ -194,6 +227,30 @@ Version = Annotated[
         callback=version_callback,
         help="Display version number.",
         is_eager=True,
+    ),
+]
+
+
+Diagnostic = Annotated[
+    bool,
+    typer.Option(
+        "--diagnostic",
+        callback=diagnostic_callback,
+        is_eager=True,
+        help="Wrap execution with diagnostic collection. Produces a zip with system info, logs, and artifacts.",
+    ),
+]
+
+
+Testbed = Annotated[
+    Path | None,
+    typer.Option(
+        "--testbed",
+        exists=True,
+        dir_okay=False,
+        file_okay=True,
+        help="Path to custom PyATS testbed YAML. Devices in this file will override auto-discovered device connections and can include additional helper devices (e.g., jump hosts).",
+        envvar="NAC_TEST_TESTBED",
     ),
 ]
 
@@ -213,11 +270,17 @@ def main(
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
     processes: Processes = None,
+    pyats: PyATS = False,
+    robot: Robot = False,
+    max_parallel_devices: MaxParallelDevices | None = None,
+    minimal_reports: MinimalReports = False,
+    testbed: Testbed = None,
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,  # noqa: ARG001
+    diagnostic: Diagnostic = False,  # noqa: ARG001
+    merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
-    """
-    A CLI tool to render and execute Robot Framework tests using Jinja templating.
+    """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
 
     Additional Robot Framework options can be passed at the end of the command to
     further control test execution (e.g., --variable, --listener, --loglevel).
@@ -226,24 +289,132 @@ def main(
     """
     configure_logging(verbosity)
 
-    if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
-        ordering_file = output / ORDERING_FILE
-    else:
-        ordering_file = None
+    check_and_exit_if_unsupported_macos_python()
 
-    writer = nac_test.robot_writer.RobotWriter(data, filters, tests, include, exclude)
-    writer.write(templates, output, ordering_file=ordering_file)
-    if not render_only:
-        rc = nac_test.pabot.run_pabot(
-            output,
-            include,
-            exclude,
-            processes,
-            dry_run,
-            verbosity == VerbosityLevel.DEBUG,
-            ordering_file=ordering_file,
-            extra_args=ctx.args,
+    # Validate development flag combinations
+    if pyats and robot:
+        typer.echo(
+            typer.style(
+                "Error: Cannot use both --pyats and --robot flags simultaneously.",
+                fg=typer.colors.RED,
+            )
         )
+        typer.echo(
+            "Use one development flag at a time, or neither for combined execution."
+        )
+        raise typer.Exit(EXIT_INVALID_ARGS)
+
+    # Create output directory and shared merged data file (SOT)
+    output.mkdir(parents=True, exist_ok=True)
+
+    # Validate ACI defaults before expensive merge operation
+    # This catches the common mistake of forgetting -d ./defaults/
+    if not validate_aci_defaults(data):
+        typer.echo("")
+        display_aci_defaults_banner()
+        typer.echo("")
+        raise typer.Exit(1)
+
+    # Merge data files with timing
+    start_time = datetime.now()
+    typer.echo("\n\n📄 Merging data model files...")
+
+    merged_data = DataMerger.merge_data_files(data)
+    DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
+
+    end_time = datetime.now()
+    duration = (end_time - start_time).total_seconds()
+    duration_str = (
+        f"{duration:.1f}s"
+        if duration < 60
+        else f"{int(duration // 60)}m {duration % 60:.0f}s"
+    )
+    typer.echo(f"✅ Data model merging completed ({duration_str})")
+
+    # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
+    orchestrator = CombinedOrchestrator(
+        data_paths=data,
+        templates_dir=templates,
+        custom_testbed_path=testbed,
+        output_dir=output,
+        merged_data_filename=merged_data_filename,
+        filters_path=filters,
+        tests_path=tests,
+        include_tags=include,
+        exclude_tags=exclude,
+        render_only=render_only,
+        dry_run=dry_run,
+        processes=processes,
+        extra_args=ctx.args,
+        max_parallel_devices=max_parallel_devices,
+        minimal_reports=minimal_reports,
+        verbosity=verbosity,
+        dev_pyats_only=pyats,
+        dev_robot_only=robot,
+    )
+
+    # Track total runtime for benchmarking
+    runtime_start = datetime.now()
+
+    try:
+        stats = orchestrator.run_tests()
+    except KeyboardInterrupt:
+        # Handle Ctrl+C interruption gracefully
+        typer.echo(
+            typer.style(
+                "\n⚠️  Test execution was interrupted by user (Ctrl+C)",
+                fg=typer.colors.YELLOW,
+            )
+        )
+        # Exit with code 253 following Robot Framework convention
+        raise typer.Exit(EXIT_INTERRUPTED) from None
+    except Exception as e:
+        # Infrastructure errors (template rendering, controller detection, etc.)
+        typer.echo(f"Error during execution: {e}")
+        # Progressive disclosure: clean output for customers, full context for developers
+        if DEBUG_MODE:
+            raise typer.Exit(EXIT_ERROR) from e  # Developer: full exception context
+        raise typer.Exit(EXIT_ERROR) from None  # Customer: clean output
+
+    # Display total runtime before exit
+    runtime_end = datetime.now()
+    total_runtime = (runtime_end - runtime_start).total_seconds()
+
+    # Format like other timing outputs
+    if total_runtime < 60:
+        runtime_str = f"{total_runtime:.2f} seconds"
     else:
-        rc = 0
-    raise typer.Exit(code=rc)
+        minutes = int(total_runtime / 60)
+        secs = total_runtime % 60
+        runtime_str = f"{minutes} minutes {secs:.2f} seconds"
+
+    typer.echo(f"\nTotal runtime: {runtime_str}")
+
+    if render_only:
+        if stats.has_errors:
+            reason = stats.robot.reason if stats.robot and stats.robot.reason else None
+            if reason:
+                typer.echo(f"\n❌ Template rendering failed: {reason}", err=True)
+            else:
+                typer.echo("\n❌ Template rendering failed", err=True)
+            raise typer.Exit(stats.exit_code)
+        typer.echo("\n✅ Templates rendered successfully (render-only mode)")
+        raise typer.Exit(0)
+
+    if stats.has_errors:
+        error_list = "; ".join(stats.errors)
+        typer.echo(f"\n❌ Execution errors: {error_list}", err=True)
+        raise typer.Exit(stats.exit_code)
+
+    if stats.has_failures:
+        typer.echo(
+            f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests", err=True
+        )
+        raise typer.Exit(stats.exit_code)
+
+    if stats.is_empty:
+        typer.echo("\n⚠️  No tests were executed", err=True)
+        raise typer.Exit(stats.exit_code)
+
+    typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
+    raise typer.Exit(0)

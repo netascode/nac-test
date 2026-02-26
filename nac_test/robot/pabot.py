@@ -1,11 +1,21 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
+
 import logging
 from pathlib import Path
 
 import pabot.pabot
 from pabot.arguments import parse_args
 from robot.errors import DataError
+
+from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
+    LOG_HTML,
+    OUTPUT_XML,
+    REPORT_HTML,
+    ROBOT_RESULTS_DIRNAME,
+    XUNIT_XML,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +42,9 @@ def parse_and_validate_extra_args(extra_args: list[str]) -> list[str]:
             extra_args + ["__dummy__.robot"]
         )
     except DataError as e:
-        logger.error(f"Invalid Robot Framework arguments: {e}")
+        logger.warning(
+            f"Invalid Robot Framework arguments: {e}"
+        )  # Changed from error to warning - this is a handled condition
         raise
 
     # Check if datasources were provided in extra_args (excluding our dummy)
@@ -87,7 +99,7 @@ def run_pabot(
     """Run pabot"""
     include = include or []
     exclude = exclude or []
-    robot_args = []
+    robot_args: list[str] = []
     pabot_args = ["--pabotlib", "--pabotlibport", "0"]
 
     if ordering_file and ordering_file.exists():
@@ -105,14 +117,21 @@ def run_pabot(
         robot_args.extend(["--include", i])
     for e in exclude:
         robot_args.extend(["--exclude", e])
+    robot_results_dir = path / ROBOT_RESULTS_DIRNAME
     robot_args.extend(
         [
             "--outputdir",
             str(path),
             "--skiponfailure",
             "non-critical",
+            "--output",
+            str(robot_results_dir / OUTPUT_XML),
+            "--log",
+            str(robot_results_dir / LOG_HTML),
+            "--report",
+            str(robot_results_dir / REPORT_HTML),
             "--xunit",
-            "xunit.xml",
+            str(robot_results_dir / XUNIT_XML),
         ]
     )
 
@@ -122,10 +141,11 @@ def run_pabot(
         try:
             validated_extra_args = parse_and_validate_extra_args(extra_args)
         except (ValueError, DataError):
-            return 252
+            return EXIT_DATA_ERROR
         robot_args.extend(validated_extra_args)
 
     args = pabot_args + robot_args + [str(path)]
     logger.info("Running pabot with args: %s", " ".join(args))
     exit_code: int = pabot.pabot.main_program(args)
+    logger.info(f"Pabot execution completed with exit code {exit_code}")
     return exit_code

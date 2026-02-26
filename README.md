@@ -3,78 +3,86 @@
 
 # nac-test
 
-A CLI tool to render and execute [Robot Framework](https://robotframework.org/) tests using [Jinja](https://jinja.palletsprojects.com/) templating. Combining Robot's language agnostic syntax with the flexibility of Jinja templating allows dynamically rendering a set of test suites from the desired infrastructure state expressed in YAML syntax.
+A CLI tool to render and execute [Robot Framework](https://robotframework.org/) and [PyATS](https://developer.cisco.com/pyats/) tests using [Jinja](https://jinja.palletsprojects.com/) templating. The framework supports two test execution engines:
+
+- **Robot Framework**: Language-agnostic syntax with Jinja templating for dynamically rendered test suites
+- **PyATS**: Cisco's Python-based test automation framework for network infrastructure validation
+
+Both test types can be executed together (default) or independently using development flags.
 
 ```
 $ nac-test --help
 
- Usage: nac-test [OPTIONS]                                                      
-                                                                                
- A CLI tool to render and execute Robot Framework tests using Jinja templating. 
+ Usage: nac-test [OPTIONS]
+
+ A CLI tool to render and execute Robot Framework and PyATS tests using Jinja
+ templating.
 
  Additional Robot Framework options can be passed at the end of the command to
  further control test execution (e.g., --variable, --listener, --loglevel).
  These are appended to the pabot invocation. Pabot-specific options and test
  files/directories are not supported and will result in an error.
-                                                                                
+
 ╭─ Options ────────────────────────────────────────────────────────────────────╮
-│ *  --data         -d      PATH                     Path to data YAML files.  │
-│                                                    [env var: NAC_TEST_DATA]  │
-│                                                    [required]                │
-│ *  --templates    -t      DIRECTORY                Path to test templates.   │
-│                                                    [env var:                 │
-│                                                    NAC_TEST_TEMPLATES]       │
-│                                                    [required]                │
-│ *  --output       -o      DIRECTORY                Path to output directory. │
-│                                                    [env var:                 │
-│                                                    NAC_TEST_OUTPUT]          │
-│                                                    [required]                │
-│    --filters      -f      DIRECTORY                Path to Jinja filters.    │
-│                                                    [env var:                 │
-│                                                    NAC_TEST_FILTERS]         │
-│    --tests                DIRECTORY                Path to Jinja tests.      │
-│                                                    [env var: NAC_TEST_TESTS] │
-│    --include      -i      TEXT                     Selects the test cases by │
-│                                                    tag (include).            │
-│                                                    [env var:                 │
-│                                                    NAC_TEST_INCLUDE]         │
-│    --exclude      -e      TEXT                     Selects the test cases by │
-│                                                    tag (exclude).            │
-│                                                    [env var:                 │
-│                                                    NAC_TEST_EXCLUDE]         │
-│    --processes            INTEGER                  Number of parallel        │
-│                                                    processes for test        │
-│                                                    execution (pabot          │
-│                                                    --processes option),      │
-│                                                    default is max(2, cpu     │
-│                                                    count).                   │
-│                                                    [env var:                 │
-│                                                    NAC_TEST_PROCESS]         |
-|    --render-only                                   Only render tests without │
-│                                                    executing them.           │
-│                                                    [env var:                 │
-│                                                    NAC_TEST_RENDER_ONLY]     │
-│    --dry-run                                       Dry run flag. See robot   │
-│                                                    dry run mode.             │
-│                                                    [env var:                 │
-│                                                    NAC_TEST_DRY_RUN]         │
-│    --verbosity    -v      [DEBUG|INFO|WARNING|ERR  Verbosity level.          │
-│                           OR|CRITICAL]             [env var:                 │
-│                                                    NAC_VALIDATE_VERBOSITY]   │
-│                                                    [default: WARNING]        │
-│    --version                                       Display version number.   │
-│    --help                                          Show this message and     │
-│                                                    exit.                     │
+│ *  --data              -d   PATH        Path to data YAML files.             │
+│                                         [env var: NAC_TEST_DATA] [required]  │
+│ *  --templates         -t   DIRECTORY   Path to test templates.              │
+│                                         [env var: NAC_TEST_TEMPLATES]        │
+│                                         [required]                           │
+│ *  --output            -o   DIRECTORY   Path to output directory.            │
+│                                         [env var: NAC_TEST_OUTPUT] [required]│
+│    --filters           -f   DIRECTORY   Path to Jinja filters.               │
+│                                         [env var: NAC_TEST_FILTERS]          │
+│    --tests                  DIRECTORY   Path to Jinja tests.                 │
+│                                         [env var: NAC_TEST_TESTS]            │
+│    --include           -i   TEXT        Selects test cases by tag (include). │
+│                                         [env var: NAC_TEST_INCLUDE]          │
+│    --exclude           -e   TEXT        Selects test cases by tag (exclude). │
+│                                         [env var: NAC_TEST_EXCLUDE]          │
+│    --processes              INTEGER     Number of parallel processes.        │
+│                                         [env var: NAC_TEST_PROCESSES]        │
+│    --render-only                        Only render tests without executing. │
+│                                         [env var: NAC_TEST_RENDER_ONLY]      │
+│    --dry-run                            Dry run flag (robot dry run mode).   │
+│                                         [env var: NAC_TEST_DRY_RUN]          │
+│    --pyats                              [DEV] Run only PyATS tests.          │
+│                                         [env var: NAC_TEST_PYATS]            │
+│    --robot                              [DEV] Run only Robot Framework tests.│
+│                                         [env var: NAC_TEST_ROBOT]            │
+│    --max-parallel-devices   INTEGER     Max devices for parallel SSH/D2D.    │
+│                                         [env var: NAC_TEST_MAX_PARALLEL...]  │
+│    --minimal-reports                    Reduce HTML report size (80-95%).    │
+│                                         [env var: NAC_TEST_MINIMAL_REPORTS]  │
+│    --diagnostic                         Wrap execution with diagnostic       │
+│                                         collection script for troubleshooting│
+│    --merged-data-file… -m   TEXT        Filename for merged data model.      │
+│                                         [default: merged_data_model_test...] │
+│    --verbosity         -v   [DEBUG|...] Verbosity level. [default: WARNING]  │
+│    --version                            Display version number.              │
+│    --help                               Show this message and exit.          │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
-All data from the YAML files (`--data` option) will first be combined into a single data structure which is then provided as input to the templating process. Each template in the `--templates` path will then be rendered and written to the `--output` path. If the `--templates` path has subfolders, the folder structure will be retained when rendering the templates.
+## How It Works
 
-After all templates have been rendered [Pabot](https://pabot.org/) will execute all test suites in parallel and create a test report in the `--output` path. The `--skiponfailure non-critical` argument will be used by default, meaning all failed tests with a `non-critical` tag will show up as "skipped" instead of "failed" in the final test report.
+1. **Data Merging**: All YAML files from `--data` paths are merged into a single data model
+2. **Test Discovery**: The framework discovers both Robot templates (`.robot`, `.j2`) and PyATS tests (`.py`) in the `--templates` directory
+3. **Robot Rendering**: Jinja templates are rendered using the merged data model
+4. **Test Execution**: Both Robot Framework and PyATS tests execute in parallel
+5. **Report Generation**: HTML reports and artifacts are generated in the `--output` directory
+
+For Robot Framework tests, [Pabot](https://pabot.org/) executes test suites in parallel. The `--skiponfailure non-critical` argument is used by default, meaning failed tests with a `non-critical` tag show up as "skipped" in the final report.
 
 ## Installation
 
-Python 3.10+ is required to install `nac-test`. Don't have Python 3.10 or later? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/).
+**Python Requirements:**
+- **Linux / Windows**: Python 3.10 or higher
+- **macOS**: Python 3.12 or higher (earlier versions have known incompatibilities)
+
+Don't have the right Python version? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/), or install using:
+- `brew install python@3.12`
+- `uv python install 3.12`
+- `pyenv install 3.12`
 
 `nac-validate` can be installed in a virtual environment using `pip` or `uv`:
 
@@ -95,6 +103,91 @@ The following Robot libraries are included with `nac-test`:
 - [robotframework-pabot](https://pabot.org/) for parallel test execution
 
 Any other libraries can of course be added via `pip` or `uv`.
+
+## Development Installation (Feature Branch / Pre-Release)
+
+When working with feature branches or pre-release versions that aren't yet published to PyPI, you must install packages in **editable mode** from local source. This is required because `pip install nac-test` only works for released versions on PyPI.
+
+### Prerequisites
+
+- Python 3.10+
+- `uv` installed ([Installation Guide](https://docs.astral.sh/uv/getting-started/installation/))
+- Local clones of the required repositories
+
+### Required Packages for PyATS Testing
+
+For PyATS-based testing, you need **both** packages:
+
+| Package | Purpose |
+|---------|---------|
+| `nac-test` | Core test orchestration framework |
+| `nac-test-pyats-common` | Architecture-specific adapters (ACI, SD-WAN, Catalyst Center) - **required** for PyATS tests |
+
+### Quick Start: Install Both Packages
+
+From a workspace containing both repositories:
+
+```bash
+cd /path/to/testing-for-nac  # or your workspace root
+
+# Install both packages in editable mode (order matters - nac-test first)
+uv pip install -e ./nac-test -e ./nac-test-pyats-common
+```
+
+Or install them separately:
+
+```bash
+# 1. Install nac-test (core framework) first
+cd /path/to/nac-test
+uv pip install -e .
+
+# 2. Then install nac-test-pyats-common (depends on nac-test)
+cd /path/to/nac-test-pyats-common
+uv pip install -e .
+```
+
+### Install with Development Dependencies
+
+To include testing, linting, and type-checking tools:
+
+```bash
+cd /path/to/nac-test
+uv pip install -e ".[dev]"
+
+cd /path/to/nac-test-pyats-common
+uv pip install -e ".[dev]"
+```
+
+The `[dev]` extra includes `pytest`, `ruff`, `mypy`, `bandit`, and test coverage tools.
+
+### Install from Architecture Repository
+
+If you're working in an architecture-specific repository (e.g., `nac-sdwan-terraform`, `nac-catalystcenter-terraform`):
+
+```bash
+cd /path/to/nac-sdwan-terraform  # or nac-catalystcenter-terraform
+
+# Install both frameworks from relative paths
+uv pip install -e ../nac-test -e ../nac-test-pyats-common
+```
+
+### Key Points
+
+- **Editable mode** (`-e` flag): Code changes take effect immediately without reinstalling
+- **Installation order matters**: Always install `nac-test` before `nac-test-pyats-common`
+- **Both packages required**: PyATS tests import from both `nac_test` and `nac_test_pyats_common`
+- **Feature branches**: Use editable installs since unreleased versions aren't on PyPI
+
+### Verifying Installation
+
+```bash
+uv pip list | grep nac-test
+# Should show both packages with local file paths:
+# nac-test                 X.Y.Z    /path/to/nac-test
+# nac-test-pyats-common    X.Y.Z    /path/to/nac-test-pyats-common
+```
+
+The file paths confirm editable installations from local source.
 
 ## Ansible Vault Support
 
@@ -170,15 +263,180 @@ Test DEF
 As well as the test results and reports:
 
 ```shell
-$ tree -L 1 tests
+$ tree -L 2 tests
 tests
-├── log.html
-├── output.xml
-├── pabot_results
-├── report.html
-├── test1.robot
-└── xunit.xml
+├── combined_summary.html
+├── robot_results/
+│   ├── log.html
+│   ├── output.xml
+│   ├── report.html
+│   ├── summary_report.html
+│   └── xunit.xml
+├── log.html -> robot_results/log.html
+├── output.xml -> robot_results/output.xml
+├── report.html -> robot_results/report.html
+├── xunit.xml -> robot_results/xunit.xml
+├── pabot_results/
+└── test1.robot
 ```
+
+Note: Root-level `log.html`, `output.xml`, `report.html`, and `xunit.xml` are symlinks to the corresponding files in `robot_results/` for backward compatibility.
+
+## PyATS Testing
+
+In addition to Robot Framework, `nac-test` supports PyATS-based tests for network infrastructure validation. PyATS tests are Python files that inherit from architecture-specific base classes and validate network state against the data model.
+
+### Supported Architectures
+
+PyATS tests support multiple Cisco architectures, each requiring specific environment variables:
+
+| Architecture | Controller | Environment Variables |
+|-------------|------------|----------------------|
+| ACI | APIC | `ACI_URL`, `ACI_USERNAME`, `ACI_PASSWORD` |
+| SD-WAN | SD-WAN Manager | `SDWAN_URL`, `SDWAN_USERNAME`, `SDWAN_PASSWORD` |
+| Catalyst Center | Catalyst Center | `CC_URL`, `CC_USERNAME`, `CC_PASSWORD` |
+
+For D2D (Direct-to-Device) SSH tests, IOS-XE device credentials are also required:
+
+| Test Type | Environment Variables |
+|-----------|----------------------|
+| SD-WAN D2D | `IOSXE_USERNAME`, `IOSXE_PASSWORD` (in addition to SD-WAN Manager credentials) |
+| Catalyst Center D2D | `IOSXE_USERNAME`, `IOSXE_PASSWORD` (in addition to Catalyst Center credentials) |
+
+### Test Types
+
+PyATS tests are organized into two categories:
+
+| Type | Location | Description |
+|------|----------|-------------|
+| **API Tests** | `tests/` (not under `d2d/`) | Tests against controllers via REST API |
+| **D2D Tests** | `tests/d2d/` | Direct-to-Device SSH tests against network devices |
+
+### Running PyATS Tests
+
+```bash
+# Set environment variables for your architecture (SD-WAN example)
+export SDWAN_URL=https://sdwan-manager.example.com
+export SDWAN_USERNAME=admin
+export SDWAN_PASSWORD=yourpassword
+
+# For D2D/SSH tests, also set IOS-XE device credentials
+export IOSXE_USERNAME=admin
+export IOSXE_PASSWORD=devicepassword
+
+# Run all tests (Robot + PyATS combined)
+nac-test -d ./data -t ./tests -o ./results
+
+# Run only PyATS tests (development mode)
+nac-test -d ./data -t ./tests -o ./results --pyats
+
+# Run only Robot Framework tests (development mode)
+nac-test -d ./data -t ./tests -o ./results --robot
+```
+
+### PyATS Output
+
+PyATS tests generate:
+- **HTML Reports**: Detailed test results with pass/fail status per verification item
+- **JSON Results**: Machine-readable results for CI/CD integration
+- **Archive Files**: Compressed test artifacts (`.zip`)
+
+Example output structure:
+
+```shell
+$ tree -L 3 results
+results
+├── combined_summary.html
+├── robot_results/
+└── pyats_results/
+    ├── api/
+    │   ├── html_reports/
+    │   └── results.json
+    └── d2d/
+        ├── html_reports/
+        └── results.json
+```
+
+## Merged Data Model
+
+Before test execution, `nac-test` merges all YAML data files into a single data model. This merged file serves as the single source of truth for both Robot Framework templating and PyATS test validation.
+
+### How It Works
+
+1. All files from `--data` paths are recursively loaded
+2. YAML structures are deep-merged (later files override earlier ones)
+3. The merged result is written to the output directory
+4. Both Robot and PyATS tests reference this merged data
+
+### Custom Filename
+
+By default, the merged file is named `merged_data_model_test_variables.yaml`. You can customize this:
+
+```bash
+nac-test -d ./data -t ./tests -o ./results -m my_custom_data.yaml
+```
+
+### Accessing the Merged Data
+
+The merged data model is available to:
+- **Robot templates**: Via Jinja templating during render phase
+- **PyATS tests**: Via the `MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH` environment variable
+
+## Development Flags
+
+For faster development cycles, you can run only one test framework at a time:
+
+### `--pyats` Flag
+
+Run only PyATS tests, skipping Robot Framework:
+
+```bash
+nac-test -d ./data -t ./tests -o ./results --pyats
+```
+
+This is useful when:
+- Developing or debugging PyATS test files
+- You don't have Robot templates in your test directory
+- You want faster iteration on API/D2D tests
+
+### `--robot` Flag
+
+Run only Robot Framework tests, skipping PyATS:
+
+```bash
+nac-test -d ./data -t ./tests -o ./results --robot
+```
+
+This is useful when:
+- Developing or debugging Robot templates
+- You don't have PyATS tests in your test directory
+- You want faster iteration on Robot test suites
+
+**Note:** Using both `--pyats` and `--robot` simultaneously is not allowed and will result in an error.
+
+## Report Size Optimization
+
+For CI/CD pipelines with artifact size constraints, use the `--minimal-reports` flag:
+
+```bash
+nac-test -d ./data -t ./tests -o ./results --minimal-reports
+```
+
+This reduces HTML report size by **80-95%** by only including detailed command outputs for failed or errored tests. Passed tests show summary information without full API response bodies.
+
+## SSH/D2D Test Parallelization
+
+For Direct-to-Device (D2D) tests that connect to network devices via SSH, you can control parallelization:
+
+```bash
+# Automatically calculate based on system resources (default)
+nac-test -d ./data -t ./tests -o ./results --pyats
+
+# Limit to specific number of parallel device connections
+nac-test -d ./data -t ./tests -o ./results --pyats --max-parallel-devices 10
+```
+
+The `--max-parallel-devices` option sets an upper limit on concurrent SSH connections to prevent overwhelming network devices or exhausting system resources.
 
 ## Custom Jinja Filters
 
@@ -332,21 +590,111 @@ tests
 It is possible to include and exclude test cases by tag names with the `--include` and `--exclude` CLI options. These options are directly passed to the Pabot/Robot executor and are documented [here](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#by-tag-names).
 
 
+## Parallel Execution Control
+
+The number of parallel processes used by pabot can be controlled via the `--processes` option:
+
+```bash
+nac-test -d data/ -t templates/ -o output/ --processes 4
+```
+
+If not specified, pabot uses `max(2, cpu_count)` as the default number of processes. You can also set this via the `NAC_TEST_PROCESSES` environment variable.
+
+This option applies to both suite-level and test-level parallelization (see next section).
+
+
 ## Test Case Parallelization
 
-By default, `nac-test` (via pabot) executes test **suites** (i.e., each robot file) in parallel. The number of parallel processes can be controlled via the `--processes` option.
+### Suite-Level Parallelization (Default)
 
-However, suite-level parallelization may be inefficient for test suites containing multiple long-running test cases (e.g., >10 seconds each). If your test cases are independent and can run concurrently, you can enable **test-level parallelization** by adding the following metadata to the suite's settings:
+By default, `nac-test` (via pabot) executes test **suites** (i.e., each robot file) in parallel. Each suite runs in its own process, and the `--processes` option controls how many suites can run simultaneously.
+
+### Test-Level Parallelization
+
+Suite-level parallelization may be inefficient for test suites containing multiple long-running test cases (e.g., >10 seconds each). If your test cases are independent and can run concurrently, you can enable **test-level parallelization** by adding the following metadata to the suite's settings:
 
 ```robot
 *** Settings ***
 Metadata        Test Concurrency     True
 ```
 
-Note: This approach benefits only long-running tests. For short tests, the scheduling overhead and log collection may offset any performance gains.
+**Note:** This approach benefits only long-running tests. For short tests, the scheduling overhead and log collection may offset any performance gains.
 
-Tip: The _Test Concurrency_ metadata is case-insensitive (_test concurrency_, _TEST CONCURRENCY_, etc.).
+**Tip:** The _Test Concurrency_ metadata is case-insensitive (_test concurrency_, _TEST CONCURRENCY_, etc.).
 
-Implementation: `nac-test` checks the rendered robot files for the `Metadata` setting and instruct pabot to run each test within the respective suite in parallel (using pabot's `--testlevelsplit --orderingfile ordering.txt` arguments). You can inspect the `ordering.txt` file in the output directory.
+**Implementation:** `nac-test` checks the rendered robot files for the `Metadata` setting and instructs pabot to run each test within the respective suite in parallel (using pabot's `--testlevelsplit --ordering ordering.txt` arguments). You can inspect the `ordering.txt` file in the output directory.
 
-This behaviour can be disabled when setting the environment variable `NAC_TEST_NO_TESTLEVELSPLIT`.
+**Disabling test-level parallelization:** Set the environment variable `NAC_TEST_NO_TESTLEVELSPLIT=1` to disable this feature.
+
+
+## Advanced Robot Framework Options
+
+You can pass additional Robot Framework options directly to `nac-test`, which are forwarded to the pabot/Robot Framework execution. This enables advanced use cases like custom variables, listeners, and logging configuration:
+
+```bash
+# Pass custom variables
+nac-test -d data/ -t templates/ -o output/ --variable MY_VAR:value
+
+# Multiple variables
+nac-test -d data/ -t templates/ -o output/ --variable VAR1:value1 --variable VAR2:value2
+
+# Custom log level
+nac-test -d data/ -t templates/ -o output/ --loglevel DEBUG
+
+# Add a listener
+nac-test -d data/ -t templates/ -o output/ --listener MyListener.py
+
+# Combine multiple options
+nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --loglevel INFO --listener MyListener
+```
+
+**Note:** Only Robot Framework options are supported. Pabot-specific options (like `--testlevelsplit`, `--pabotlib`, etc.) and test file paths are not allowed and will result in an error with exit code 252 (invalid Robot Framework arguments).
+
+See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#command-line-options) for all available options.
+
+## Exit Codes
+
+nac-test _mostly_ follows Robot Framework exit code conventions to provide meaningful feedback for CI/CD pipelines:
+
+| Exit Code | Meaning | Description |
+|-----------|---------|-------------|
+| **0** | Success | All tests passed, no errors |
+| **1-250** | Test failures | Number of failed tests (capped at 250) |
+| **2** | Invalid nac-test arguments | Invalid or conflicting nac-test CLI arguments (aligns with POSIX/Typer convention) |
+| **252** | Invalid Robot Framework arguments or no tests found | Robot Framework invalid arguments or no tests executed |
+| **253** | Execution interrupted | Test execution was interrupted (Ctrl+C, etc.) |
+| **255** | Execution error | Framework crash or infrastructure error |
+
+(we only follow _mostly_ as we deviate in using `2` for invalid nac-test arguments, and don't use `251`).
+
+## Troubleshooting
+
+If you're experiencing issues with nac-test (crashes, unexpected errors, test failures), use the `--diagnostic` flag to collect comprehensive diagnostic information.
+
+**[Diagnostic Collection Guide](nac_test/support/README.md)**
+
+The diagnostic flag:
+- Collects system information, Python environment, and package versions
+- Captures error logs and crash reports (especially useful for macOS issues)
+- Automatically masks credentials before generating output
+- Produces a single `.tar.gz` file you can safely attach to GitHub issues
+
+### Quick Start
+
+Simply add `--diagnostic` to your existing nac-test command:
+
+```bash
+# 1. Activate your virtual environment
+source .venv/bin/activate
+
+# 2. Set your environment variables (as you normally would for nac-test)
+# Example for SD-WAN:
+export SDWAN_URL=https://your-sdwan-manager.example.com
+export SDWAN_USERNAME=admin
+export SDWAN_PASSWORD=your-password
+
+# 3. Run nac-test with the --diagnostic flag
+nac-test -d ./data -t ./tests -o ./results --pyats --diagnostic
+```
+
+The diagnostic flag will wrap your nac-test execution and generate a `nac-test-diagnostics-XXXXXX.tar.gz` file containing all diagnostic information with sensitive data automatically masked.

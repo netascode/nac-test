@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} - Test Results</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --skip: #95a5a6;
+            --info: #3498db;
+            --neutral: #95a5a6;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+            background-color: #f9f9f9;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 6px var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        h1, h2, h3, h4 {
+            margin-top: 0;
+            line-height: 1.2;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        header h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .header-content {
+            position: relative;
+        }
+
+        .nav-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        @media (max-width: 768px) {
+            .nav-button {
+                position: static;
+                margin-bottom: 20px;
+                display: inline-flex;
+            }
+        }
+
+        .status-banner {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .pass-status {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .fail-status {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .skip-status {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: #7f8c8d;
+            border-left: 4px solid #95a5a6;
+        }
+
+        .abort-status {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e67e22;
+            border-left: 4px solid #e67e22;
+        }
+
+        .error-status {
+            background-color: rgba(142, 68, 173, 0.15);
+            color: #8e44ad;
+            border-left: 4px solid #8e44ad;
+        }
+
+        .block-status {
+            background-color: rgba(52, 73, 94, 0.15);
+            color: var(--secondary);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .neutral-status {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: var(--neutral);
+            border-left: 4px solid var(--neutral);
+        }
+
+        .result-pass {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .result-fail {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .result-info {
+            background-color: rgba(52, 152, 219, 0.15);
+            color: var(--info);
+            border-left: 4px solid var(--info);
+        }
+
+        .result-skip {
+            background-color: rgba(243, 156, 18, 0.15);
+            color: var(--warning);
+            border-left: 4px solid var(--warning);
+        }
+
+        .result-abort {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e67e22;
+            border-left: 4px solid #e67e22;
+        }
+
+        .result-error {
+            background-color: rgba(142, 68, 173, 0.15);
+            color: #8e44ad;
+            border-left: 4px solid #8e44ad;
+        }
+
+        .result-block {
+            background-color: rgba(52, 73, 94, 0.15);
+            color: var(--secondary);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .result-neutral {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: var(--neutral);
+            border-left: 4px solid var(--neutral);
+        }
+
+        section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            margin-bottom: 30px;
+            padding: 25px;
+        }
+
+        section h2 {
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 10px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--primary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow: auto;
+            border: 1px solid #e9ecef;
+            margin: 15px 0;
+        }
+
+        code {
+            font-family: 'Source Code Pro', Consolas, Monaco, 'Andale Mono', monospace;
+            font-size: 0.9em;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid #e9ecef;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        /* List styling */
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+
+        li {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+
+        /* Nested list styling */
+        ul ul, ol ol, ul ol, ol ul {
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        /* Bold text styling */
+        strong, b {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Jobfile path styling */
+        .jobfile-path {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85em;
+            font-weight: normal;
+            margin-top: 5px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+        }
+
+        /* Highlighted box styling for important criteria */
+        p:has(> strong:first-child) {
+            background-color: rgba(147, 112, 219, 0.15);
+            border-left: 4px solid #9370DB;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        /* Alternative for browsers that don't support :has() */
+        p > strong:first-child {
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        .result-item {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        /* ===== Universal Result Message Formatting (All Result Types) ===== */
+
+        .result-message {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* Apply consistent formatting to all result messages */
+        .result-message p {
+            margin: 0.5em 0;
+            line-height: 1.6;
+        }
+
+        .result-message p:first-child {
+            margin-top: 0;
+        }
+
+        .result-message p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Spacer paragraphs for visual separation */
+        .result-message p.spacer {
+            height: 0.75em;
+            margin: 0;
+        }
+
+        /* Strong emphasis in all result messages */
+        .result-message strong {
+            font-weight: 600;
+            color: inherit;  /* Inherit from parent result type */
+        }
+
+        /* Inline code formatting in all result messages */
+        .result-message code {
+            background-color: rgba(52, 73, 94, 0.08);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+
+        /* Universal bullet list styling for all result types */
+        .result-detail-list {
+            margin: 0.75em 0;
+            padding-left: 1.5em;
+            list-style: disc outside;
+        }
+
+        .result-detail-list li {
+            margin: 0.4em 0;
+            line-height: 1.5;
+            color: inherit;  /* Inherit from parent result type */
+        }
+
+        .result-detail-list li code {
+            /* Inline code within list items */
+            font-size: 0.85em;
+        }
+
+        /* Emoji styling in result messages */
+        .result-message span[style*="font-size: 1.2em"] {
+            margin-right: 0.3em;
+        }
+
+        /* ===== Result Type Specific Styling ===== */
+
+        /* Skip results - softer appearance */
+        .result-skip {
+            background-color: rgba(149, 165, 166, 0.08);
+            border-left: 4px solid var(--skip);
+            color: #5d6d7e;
+        }
+
+        .result-skip .result-message strong {
+            color: #5a6c7d;
+        }
+
+        .result-skip .result-message code {
+            background-color: rgba(149, 165, 166, 0.1);
+        }
+
+        /* Failed results - clear error presentation */
+        .result-fail {
+            background-color: rgba(231, 76, 60, 0.05);
+            border-left: 4px solid var(--danger);
+            color: #5a2321;
+        }
+
+        .result-fail .result-message strong {
+            color: #c0392b;
+            font-weight: 600;
+        }
+
+        .result-fail .result-message code {
+            background-color: rgba(231, 76, 60, 0.08);
+            color: #922b21;
+        }
+
+        /* Passed results - subtle success indication */
+        .result-pass {
+            background-color: rgba(46, 204, 113, 0.05);
+            border-left: 4px solid var(--success);
+            color: #1e4620;
+        }
+
+        .result-pass .result-message strong {
+            color: #27ae60;
+        }
+
+        .result-pass .result-message code {
+            background-color: rgba(46, 204, 113, 0.08);
+            color: #186a3b;
+        }
+
+        /* ===== Nested Result-Command Structure ===== */
+
+        .result-header.expandable {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-commands {
+            margin-top: 15px;
+            padding-left: 20px;
+            border-left: 2px solid #e9ecef;
+        }
+
+        .cmd-count {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            border-top: 1px solid var(--light);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* CLI Terminal Styling */
+        .cli-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .cli-header {
+            background-color: #f5f5f5;
+            padding: 8px 15px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cli-content {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        .cli-prompt {
+            color: #98c379;
+        }
+
+        .cli-command {
+            color: #61afef;
+            font-weight: bold;
+        }
+
+        .cli-output {
+            color: #abb2bf;
+            display: block;
+            margin-top: 10px;
+        }
+
+        /* Parsed Output Styling */
+        .parsed-data-header {
+            background-color: #2d333b;
+            color: #ddd;
+            padding: 8px 15px;
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .parsed-data-content {
+            background-color: #1a1f26;
+            color: #56b6c2;
+            padding: 15px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        /* JSON output styling */
+        .json-output {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+        }
+
+        /* Test context banner styling */
+        .test-context-banner {
+            background-color: #f0f4f8;
+            border-left: 4px solid var(--accent);
+            padding: 10px 15px;
+            margin: 15px 0 10px 0;
+            font-weight: 500;
+            color: var(--secondary);
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+
+        .test-context-banner::before {
+            content: "Test Context: ";
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Collapsible sections */
+        .chevron::before {
+            content: '\25BC'; /* Down-pointing triangle HTML entity */
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+
+        .collapsed .chevron::before {
+            content: '\25B6'; /* Right-pointing triangle HTML entity */
+        }
+
+        .content-collapsed {
+            display: none;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            header {
+                padding: 20px 15px;
+            }
+
+            section {
+                padding: 15px;
+            }
+        }
+
+        /* Client-side JSON formatting styles */
+        .command-output {
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .raw-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;  /* CRITICAL: Prevent layout breaks from extremely long unbreakable strings */
+            margin: 0;
+        }
+
+        .format-json-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 0.8em;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            min-width: 100px;  /* Consistent button width for toggle states */
+            text-align: center;
+        }
+
+        .format-json-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .format-json-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Toggle button states for better UX */
+        .format-json-btn.toggle-state {
+            background-color: #28a745;  /* Green when showing formatted JSON */
+        }
+
+        .format-json-btn.toggle-state:hover {
+            background-color: #1e7e34;
+        }
+
+        .formatted-json {
+            color: #333;
+        }
+
+        /* JSON syntax highlighting colors */
+        .json-key {
+            color: #0451a5;
+            font-weight: bold;
+        }
+
+        .json-string {
+            color: #0f7b0f;
+        }
+
+        .json-number {
+            color: #098658;
+        }
+
+        .json-boolean {
+            color: #0000ff;
+        }
+
+        .json-null {
+            color: #795e26;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="summary_report.html" class="nav-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                    Back to Summary
+                </a>
+                <h1>{{ title }}{% if hostname %} <span style="color: #7f8c8d;">({{ hostname }})</span>{% endif %}</h1>
+                {% set status_style = status|status_style %}
+                <div class="status-banner {{ status_style.css_class }}">
+                    Test Status: {{ status_style.display_text }}
+                </div>
+                {% if jobfile_path %}
+                <div class="jobfile-path">
+                    Jobfile: {{ jobfile_path }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <section id="section-description">
+            <h2 onclick="toggleCollapse('section-description-content')">
+                Description <span class="chevron"></span>
+            </h2>
+            <div id="section-description-content">
+                {{ description_html|safe }}
+            </div>
+        </section>
+
+        <section id="section-setup">
+            <h2 onclick="toggleCollapse('section-setup-content')">
+                Setup <span class="chevron"></span>
+            </h2>
+            <div id="section-setup-content">
+                {{ setup_html|safe }}
+            </div>
+        </section>
+
+        <section id="section-procedure">
+            <h2 onclick="toggleCollapse('section-procedure-content')">
+                Procedure <span class="chevron"></span>
+            </h2>
+            <div id="section-procedure-content">
+                {{ procedure_html|safe }}
+            </div>
+        </section>
+
+        <section id="section-criteria">
+            <h2 onclick="toggleCollapse('section-criteria-content')">
+                Pass/Fail Criteria <span class="chevron"></span>
+            </h2>
+            <div id="section-criteria-content">
+                {{ criteria_html|safe }}
+            </div>
+        </section>
+
+        <section id="section-results">
+            <h2 onclick="toggleCollapse('section-results-content')">
+                Results <span class="chevron"></span>
+            </h2>
+            <div id="section-results-content">
+                {% if results %}
+                    <!-- Leverage existing Jinja2 groupby filter (handle None values for sorting) -->
+                    {% set commands_with_safe_context = [] %}
+                    {% for cmd in command_executions %}
+                        {% set _ = cmd.update({'safe_context': cmd.test_context or ''}) %}
+                        {% set _ = commands_with_safe_context.append(cmd) %}
+                    {% endfor %}
+                    {% set commands_by_context = commands_with_safe_context | groupby('safe_context') | list %}
+                    {% set context_to_commands = {} %}
+                    {% for context, cmds in commands_by_context %}
+                        {% set original_context = context if context else none %}
+                        {% set _ = context_to_commands.update({original_context: cmds | list}) %}
+                    {% endfor %}
+                    
+                    <!-- Sort results: FAILED first, then PASSED, then SKIPPED (for better debugging UX) -->
+                    {% set failed_results = results | selectattr('status', 'in', ['FAILED', 'failed']) | list %}
+                    {% set passed_results = results | selectattr('status', 'in', ['PASSED', 'passed']) | list %}  
+                    {% set skipped_results = results | selectattr('status', 'in', ['SKIPPED', 'skipped']) | list %}
+                    {% set sorted_results = failed_results + passed_results + skipped_results %}
+                    
+                    {% for result in sorted_results %}
+                        {% set result_idx = loop.index0 %}
+                        {% set result_style = result.status|status_style %}
+                        <div class="result-item result-{{ result_style.css_class|replace('-status', '') }}">
+                            
+                            <!-- Result header (clickable if has commands) -->
+                            <div class="result-header {% if result.context and result.context in context_to_commands %}expandable{% endif %}"
+                                 onclick="{% if result.context and result.context in context_to_commands %}toggleCollapse('result-commands-{{ loop.index }}'){% endif %}">
+                                <div class="result-message">
+                                    <!-- Universal formatting applied to ALL result types for consistent, readable output -->
+                                    {{ result.message|format_result_message|safe }}
+                                </div>
+                                {% if result.context and result.context in context_to_commands %}
+                                    <span class="cmd-count">({{ context_to_commands[result.context]|length }} commands)</span>
+                                    <span class="chevron"></span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Nested commands (reuse existing command rendering logic exactly) -->
+                            {% if result.context and result.context in context_to_commands %}
+                            <div class="result-commands content-collapsed" id="result-commands-{{ loop.index }}">
+                                {% for execution in context_to_commands[result.context] %}
+                                    {% set exec_idx = loop.index0 %}
+                                    <!-- REUSE existing command template code (no duplication) -->
+                                    <div class="cli-container" id="cmd-result{{ result_idx }}-exec{{ exec_idx }}">
+                                        <div class="cli-header" onclick="toggleCollapse('cmd-content-result{{ result_idx }}-exec{{ exec_idx }}')">
+                                            <span>Device: {{ execution.device_name }}</span>
+                                            <span class="chevron"></span>
+                                        </div>
+                                        <div class="device-content" id="cmd-content-result{{ result_idx }}-exec{{ exec_idx }}">
+                                            <div class="cli-content">
+<span class="cli-prompt">{{ execution.device_name }}#</span> <span class="cli-command">{{ execution.command }}</span>
+<div class="command-output">
+    <pre class="raw-output" id="raw-result{{ result_idx }}-exec{{ exec_idx }}" data-raw-output="{{ execution.output | e }}">{{ execution.output }}</pre>
+    {% if execution.output and '{' in execution.output[:50] %}
+    <button class="format-json-btn" onclick="toggleJSONFormatting('raw-result{{ result_idx }}-exec{{ exec_idx }}', this)" title="Format JSON for readability">
+        📋 Format JSON
+    </button>
+    {% endif %}
+</div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <!-- No results available - test was likely skipped at the beginning -->
+                    <div class="result-item result-skip">
+                        <div class="result-message">
+                            <p><em>No detailed results available - test was skipped during execution.</em></p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        {% if command_executions %}
+        <!-- Handle orphaned commands (defensive programming for edge cases) -->
+        {% set orphaned_commands = [] %}
+        {% for execution in command_executions %}
+            {% if not execution.test_context or not (results | selectattr('context', 'equalto', execution.test_context) | list) %}
+                {% set _ = orphaned_commands.append(execution) %}
+            {% endif %}
+        {% endfor %}
+        
+        {% if orphaned_commands %}
+        <section id="section-orphaned-commands">
+            <h2 onclick="toggleCollapse('section-orphaned-commands-content')">
+                Commands Without Matching Results <span class="chevron"></span>
+            </h2>
+            <div id="section-orphaned-commands-content">
+                <div class="orphaned-notice" style="background-color: rgba(243, 156, 18, 0.1); border-left: 4px solid #f39c12; padding: 10px 15px; margin-bottom: 15px; border-radius: 4px;">
+                    <strong>Note:</strong> These commands don't have corresponding test results (possibly due to missing context or test execution issues):
+                </div>
+                {% for execution in orphaned_commands %}
+                    <!-- REUSE existing command template code (no duplication) -->
+                    <div class="cli-container" id="orphaned-cmd-{{ loop.index }}">
+                        <div class="cli-header" onclick="toggleCollapse('orphaned-cmd-content-{{ loop.index }}')">
+                            <span>Device: {{ execution.device_name }}</span>
+                            <span class="chevron"></span>
+                        </div>
+                        <div class="device-content" id="orphaned-cmd-content-{{ loop.index }}">
+                            <div class="cli-content">
+<span class="cli-prompt">{{ execution.device_name }}#</span> <span class="cli-command">{{ execution.command }}</span>
+<div class="command-output">
+    <pre class="raw-output" id="orphaned-raw-{{ loop.index }}" data-raw-output="{{ execution.output | e }}">{{ execution.output }}</pre>
+    {% if execution.output and '{' in execution.output[:50] %}
+    <button class="format-json-btn" onclick="toggleJSONFormatting('orphaned-raw-{{ loop.index }}', this)" title="Format JSON for readability">
+        📋 Format JSON
+    </button>
+    {% endif %}
+</div>
+                            </div>
+
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+        {% endif %}
+
+        <footer>
+            <p>Generated: {{ generation_time }}</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleCollapse(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                // Toggle collapsed class on the element
+                element.classList.toggle('collapsed');
+
+                // For command containers (both nested and orphaned), toggle the content differently
+                if (id.startsWith('cmd-content-') || id.startsWith('orphaned-cmd-content-')) {
+                    const content = element.querySelector('.device-content');
+                    if (content) {
+                        content.classList.toggle('content-collapsed');
+                    }
+                }
+                // For main sections toggle the content-collapsed class
+                else if (id.startsWith('section-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the header that triggered this section
+                    const header = document.querySelector(`h2[onclick*="${id}"]`);
+                    if (header) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
+                // For result command sections, toggle them and update the result header chevron
+                else if (id.startsWith('result-commands-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the result header that triggered this
+                    const header = element.previousElementSibling;
+                    if (header && header.classList.contains('result-header')) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
+            }
+        }
+
+        // JSON formatting toggle function with enhanced UX
+        function toggleJSONFormatting(elementId, button) {
+            const element = document.getElementById(elementId);
+            const isFormatted = element.classList.contains('formatted-json');
+            
+            if (isFormatted) {
+                // Switch back to raw
+                const rawOutput = element.dataset.rawOutput;
+                element.textContent = rawOutput;
+                element.classList.remove('formatted-json');
+                
+                // Update button to format state
+                button.textContent = '📋 Format JSON';
+                button.title = 'Format JSON for readability';
+                button.classList.remove('toggle-state');
+                button.disabled = false;
+                
+            } else {
+                try {
+                    const rawText = element.textContent;
+                    
+                    // Store original text in data attribute if not already stored
+                    if (!element.dataset.rawOutput) {
+                        element.dataset.rawOutput = rawText;
+                    }
+                    
+                    // Show loading state for potentially large JSON
+                    button.textContent = '⏳ Formatting...';
+                    button.disabled = true;
+                    
+                    // Use setTimeout to allow UI update and prevent blocking
+                    setTimeout(() => {
+                        try {
+                            // Check for JSON support (defensive programming)
+                            if (typeof JSON === 'undefined' || !JSON.parse) {
+                                button.textContent = '❌ Browser too old';
+                                button.title = 'Browser does not support JSON formatting';
+                                return;
+                            }
+                            
+                            // Attempt to parse JSON
+                            const parsed = JSON.parse(rawText);
+                            
+                            // Pretty-print with 2-space indentation
+                            const formatted = JSON.stringify(parsed, null, 2);
+                            
+                            // Apply syntax highlighting
+                            const highlighted = syntaxHighlightJSON(formatted);
+                            
+                            // Replace content
+                            element.innerHTML = highlighted;
+                            element.classList.add('formatted-json');
+                            
+                            // Update button to raw state
+                            button.textContent = '⬅️ Show Raw';
+                            button.title = 'Show raw, unformatted output';
+                            button.classList.add('toggle-state');
+                            button.disabled = false;
+                            
+                        } catch (error) {
+                            // Not valid JSON or parsing failed
+                            console.warn('JSON formatting failed:', error);
+                            button.textContent = '❌ Invalid JSON';
+                            button.title = `Invalid JSON format: ${error.message}`;
+                            button.style.backgroundColor = '#dc3545';
+                            // Keep button disabled
+                        }
+                    }, 10);
+                    
+                } catch (error) {
+                    // Immediate error
+                    console.warn('JSON formatting failed:', error);
+                    button.textContent = '❌ Invalid JSON';
+                    button.disabled = true;
+                    button.title = 'Invalid JSON format';
+                }
+            }
+        }
+
+        // Enhanced syntax highlighting function
+        function syntaxHighlightJSON(json) {
+            // Escape HTML entities first
+            return json
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
+        // Initialize sections
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // Initialize all result command sections as collapsed by default
+            const resultCommandSections = document.querySelectorAll('[id^="result-commands-"]');
+            resultCommandSections.forEach(function(section) {
+                section.classList.add('content-collapsed');
+                // Find the corresponding result header to add collapsed chevron
+                const resultHeader = section.previousElementSibling;
+                if (resultHeader && resultHeader.classList.contains('result-header')) {
+                    const chevron = resultHeader.querySelector('.chevron');
+                    if (chevron) {
+                        chevron.parentElement.classList.add('collapsed');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
