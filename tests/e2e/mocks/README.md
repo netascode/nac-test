@@ -2,6 +2,10 @@
 
 This directory contains a mock API server and related utilities for E2E testing of nac-test.
 
+## Platform Support
+
+**Unix-only (Linux/macOS)**: The standalone server control script (`mock_server_ctl.py`) uses Unix-specific features (`os.fork()`, `signal.pause()`) and does not support Windows. This is consistent with nac-test itself, which requires pyATS/Unicon — packages that are not supported on Windows.
+
 ## Components
 
 - **mock_server.py** - Flask-based mock API server class (used by pytest fixtures)
