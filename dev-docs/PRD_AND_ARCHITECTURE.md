@@ -715,6 +715,44 @@ The CLI (`cli/main.py`) is nac-test's **user-facing gateway**, providing a type-
 
 ---
 
+#### CLI Exit Code Strategy
+
+nac-test implements graduated exit codes following Robot Framework conventions to provide meaningful feedback for CI/CD systems:
+
+**Exit Code Semantics:**
+
+| Exit Code | Meaning | Usage in nac-test |
+|-----------|---------|-------------------|
+| **0** | Success | All tests passed across all frameworks |
+| **1-250** | Test failures | Exact count of failed tests (capped at 250) |
+| **252** | Invalid arguments or no tests | Robot Framework argument errors or no tests found |
+| **253** | Execution interrupted | Test execution was interrupted (Ctrl+C, etc.) |
+| **255** | Infrastructure errors | Framework crashes, controller auth failures, etc. |
+
+**Implementation Details:**
+
+- **CombinedResults.exit_code**: Aggregated exit code across all frameworks (single source of truth)
+- **Priority Order**: Infrastructure errors (255) > Invalid arguments (252) > Test failures (1-250) > Success (0)
+- **Failure Aggregation**: Sums failures across all frameworks, capped at 250 per Robot Framework spec
+- **Special Cases**:
+  - Intentionally skipped execution (render-only mode) returns 0
+  - Empty results (no tests found) returns 252
+
+**CI/CD Integration Benefits:**
+
+```bash
+# Distinguish between test failures and infrastructure issues
+nac-test -d config/ -t templates/ -o output/
+case $? in
+  0) echo "✅ All tests passed" ;;
+  [1-9]|[1-9][0-9]|[12][0-4][0-9]|250) echo "❌ $? test(s) failed" ;;
+  252) echo "⚠️ No tests found or invalid arguments" ;;
+  255) echo "💥 Infrastructure error" ;;
+esac
+```
+
+---
+
 #### Complete CLI Flag Reference
 
 nac-test provides 13 CLI flags covering data input, template configuration, execution control, output management, and development modes.
@@ -3358,7 +3396,15 @@ devices:
         protocol: ssh
         ip: {host}
         port: 22
+        settings:
+          GRACEFUL_DISCONNECT_WAIT_SEC: 0
+          POST_DISCONNECT_WAIT_SEC: 0
 ```
+
+**Performance Note (Disconnect Cooldown):**
+
+- Generated testbeds now include `GRACEFUL_DISCONNECT_WAIT_SEC: 0` and `POST_DISCONNECT_WAIT_SEC: 0` for **all** connections (including `command`-based) to skip Unicon's default 1s/10s disconnect cooldowns.
+- This reduces overall test runtime by **~11 seconds per device disconnect**, which scales linearly with device count and disconnect frequency when using the connection broker.
 
 #### Progress Module (`pyats_core/progress/`)
 

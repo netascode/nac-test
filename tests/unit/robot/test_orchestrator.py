@@ -17,7 +17,7 @@ from nac_test.core.constants import (
     SUMMARY_REPORT_FILENAME,
     XUNIT_XML,
 )
-from nac_test.core.types import TestResults
+from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import VerbosityLevel
 
@@ -274,7 +274,7 @@ class TestRobotOrchestrator:
     def test_run_tests_handles_pabot_error_252(
         self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
     ) -> None:
-        """Test run_tests raises RuntimeError on pabot exit code 252 (invalid arguments)."""
+        """Test run_tests returns TestResults.from_error on pabot exit code 252 (invalid arguments)."""
         # Mock RobotWriter instance methods
         orchestrator.robot_writer.write = MagicMock()
         orchestrator.robot_writer.write_merged_data_model = MagicMock()
@@ -282,9 +282,12 @@ class TestRobotOrchestrator:
         # Mock pabot failure with exit code 252
         mock_pabot.return_value = 252
 
-        # Should raise RuntimeError (handled by combined_orchestrator)
-        with pytest.raises(RuntimeError, match="Invalid Robot Framework arguments"):
-            orchestrator.run_tests()
+        # Should return TestResults with error state
+        result = orchestrator.run_tests()
+        assert isinstance(result, TestResults)
+        assert result.has_error
+        assert result.reason is not None
+        assert result.error_type == ErrorType.INVALID_ROBOT_ARGS
 
     def test_run_tests_return_type(self, orchestrator: RobotOrchestrator) -> None:
         """Test run_tests returns TestResults with correct attributes."""
