@@ -15,6 +15,8 @@ from pathlib import Path
 
 import typer
 
+from nac_test.core.constants import EXIT_INVALID_ARGS
+
 
 def _find_diagnostic_script() -> Path:
     """Locate the nac-test diagnostic shell script within the package.
@@ -133,7 +135,7 @@ def diagnostic_callback(value: bool) -> None:
                 fg=typer.colors.RED,
             )
         )
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=EXIT_INVALID_ARGS)
 
     typer.echo("Running diagnostic collection...")
 

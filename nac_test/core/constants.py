@@ -29,6 +29,15 @@ PROGRESS_UPDATE_INTERVAL = 0.5  # seconds
 # Set NAC_TEST_DEBUG=true for developer-level error context
 DEBUG_MODE = os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"
 
+# Exit codes
+# Note: EXIT_SUCCESS (0) is intentionally not defined here - zero is a universal
+# POSIX convention that never changes, so a named constant adds no clarity.
+EXIT_INVALID_ARGS = 2  # Invalid nac-test arguments (aligns with POSIX/Typer convention)
+EXIT_FAILURE_CAP = 250  # Maximum failure count reported (1-250)
+EXIT_DATA_ERROR = 252  # Invalid Robot Framework arguments OR no tests found (matches Robot Framework naming)
+EXIT_INTERRUPTED = 253  # Execution was interrupted (Ctrl+C, etc.)
+EXIT_ERROR = 255  # Infrastructure/execution errors occurred
+
 # Output directory structure - single source of truth for directory layout
 # These define the standardized paths for test results and reports
 PYATS_RESULTS_DIRNAME = "pyats_results"

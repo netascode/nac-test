@@ -14,12 +14,9 @@ import pytest
 from typer.testing import CliRunner
 
 import nac_test.cli.main
+from nac_test.core.constants import EXIT_DATA_ERROR
 
 pytestmark = pytest.mark.integration
-
-
-# Exit code returned by Robot Framework for invalid argument errors
-ROBOT_ARGUMENT_ERROR_EXIT_CODE = 252
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -105,7 +102,6 @@ def test_extra_args_with_valid_variable_without_separator_succeeds(
     )
 
 
-@pytest.mark.skip(reason="Exit code 252 handling to be fixed in #469")
 def test_extra_args_with_illegal_argument_and_separator_fails(tmp_path: Path) -> None:
     """Test that illegal Robot Framework arguments with -- separator fail.
 
@@ -134,13 +130,12 @@ def test_extra_args_with_illegal_argument_and_separator_fails(tmp_path: Path) ->
             "MY_VAR:value",
         ],
     )
-    assert result.exit_code == ROBOT_ARGUMENT_ERROR_EXIT_CODE, (
+    assert result.exit_code == EXIT_DATA_ERROR, (
         f"Extra args with illegal argument should fail with exit code "
-        f"{ROBOT_ARGUMENT_ERROR_EXIT_CODE}, got {result.exit_code}: {result.output}"
+        f"{EXIT_DATA_ERROR}, got {result.exit_code}: {result.output}"
     )
 
 
-@pytest.mark.skip(reason="Exit code 252 handling to be fixed in #469")
 def test_extra_args_with_illegal_argument_without_separator_fails(
     tmp_path: Path,
 ) -> None:
@@ -169,13 +164,12 @@ def test_extra_args_with_illegal_argument_without_separator_fails(
             "MY_VAR:value",
         ],
     )
-    assert result.exit_code == ROBOT_ARGUMENT_ERROR_EXIT_CODE, (
+    assert result.exit_code == EXIT_DATA_ERROR, (
         f"Extra args with illegal argument should fail with exit code "
-        f"{ROBOT_ARGUMENT_ERROR_EXIT_CODE}, got {result.exit_code}: {result.output}"
+        f"{EXIT_DATA_ERROR}, got {result.exit_code}: {result.output}"
     )
 
 
-@pytest.mark.skip(reason="Exit code 252 handling to be fixed in #469")
 def test_extra_args_with_testlevelsplit_flag_fails(tmp_path: Path) -> None:
     """Test that --testlevelsplit flag is rejected as an invalid Robot argument.
 
@@ -202,7 +196,7 @@ def test_extra_args_with_testlevelsplit_flag_fails(tmp_path: Path) -> None:
             "--testlevelsplit",
         ],
     )
-    assert result.exit_code == ROBOT_ARGUMENT_ERROR_EXIT_CODE, (
+    assert result.exit_code == EXIT_DATA_ERROR, (
         f"--testlevelsplit flag should fail as invalid robot arg with exit code "
-        f"{ROBOT_ARGUMENT_ERROR_EXIT_CODE}, got {result.exit_code}: {result.output}"
+        f"{EXIT_DATA_ERROR}, got {result.exit_code}: {result.output}"
     )
