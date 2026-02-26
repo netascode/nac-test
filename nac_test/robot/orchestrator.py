@@ -16,12 +16,15 @@ from pathlib import Path
 import typer
 
 from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
+    EXIT_ERROR,
+    EXIT_INTERRUPTED,
     LOG_HTML,
     OUTPUT_XML,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
 )
-from nac_test.core.types import TestResults
+from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
@@ -177,29 +180,19 @@ class RobotOrchestrator:
                 ordering_file=self.ordering_file,
                 extra_args=self.extra_args,
             )
-            # Handle special exit codes
-            if exit_code == 252:
+            # Handle special exit codes - just log and return appropriate TestResults
+            # User-facing error messages are handled centrally in main.py
+            if exit_code == EXIT_DATA_ERROR:
                 error_msg = "Invalid Robot Framework arguments passed to nac-test"
                 logger.error(error_msg)
-                typer.echo(
-                    typer.style(
-                        f"Error: {error_msg}",
-                        fg=typer.colors.RED,
-                    )
-                )
-                raise RuntimeError(error_msg)
-            elif exit_code == 253:
-                typer.echo("⚠️  No Robot Framework tests found to execute")
-                return TestResults.empty()
-            elif exit_code == 255:
+                return TestResults.from_error(error_msg, ErrorType.INVALID_ROBOT_ARGS)
+            elif exit_code == EXIT_INTERRUPTED:
+                error_msg = "Robot Framework execution was interrupted"
+                logger.error(error_msg)
+                return TestResults.from_error(error_msg, ErrorType.INTERRUPTED)
+            elif exit_code == EXIT_ERROR:
                 error_msg = "Robot Framework execution failed (fatal error, see logs)"
                 logger.error(error_msg)
-                typer.echo(
-                    typer.style(
-                        f"Error: {error_msg}",
-                        fg=typer.colors.RED,
-                    )
-                )
                 return TestResults.from_error(error_msg)
             typer.echo("✅ Robot Framework tests completed")
 

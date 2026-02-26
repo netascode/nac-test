@@ -50,7 +50,7 @@ class TestMergeXunitFiles:
   </testcase>
 </testsuite>"""
 
-        xunit_file = tmp_path / XUNIT_XML
+        xunit_file = tmp_path / "xunit.xml"
         xunit_file.write_text(xunit_content)
         output_file = tmp_path / "merged.xml"
 
@@ -87,7 +87,7 @@ class TestMergeXunitFiles:
   </testsuite>
 </testsuites>"""
 
-        xunit_file = tmp_path / XUNIT_XML
+        xunit_file = tmp_path / "xunit.xml"
         xunit_file.write_text(xunit_content)
         output_file = tmp_path / "merged.xml"
 

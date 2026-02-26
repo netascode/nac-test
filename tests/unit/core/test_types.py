@@ -10,8 +10,15 @@ dataclass handles it automatically.
 
 import pytest
 
+from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
+    EXIT_ERROR,
+    EXIT_FAILURE_CAP,
+    EXIT_INTERRUPTED,
+)
 from nac_test.core.types import (
     CombinedResults,
+    ErrorType,
     ExecutionState,
     PyATSResults,
     TestResults,
@@ -50,6 +57,32 @@ class TestTestResultsFactoryMethods:
         assert result.state == ExecutionState.ERROR
         assert result.reason == "Pabot execution failed"
         assert result.total == 0
+
+    def test_from_error_default_error_type_is_generic(self) -> None:
+        """from_error() defaults to GENERIC error type."""
+        result = TestResults.from_error("Something failed")
+
+        assert result.error_type == ErrorType.GENERIC
+
+    def test_from_error_with_invalid_robot_args_error_type(self) -> None:
+        """from_error() stores INVALID_ROBOT_ARGS error type."""
+        result = TestResults.from_error(
+            "Invalid Robot arguments", ErrorType.INVALID_ROBOT_ARGS
+        )
+
+        assert result.state == ExecutionState.ERROR
+        assert result.reason == "Invalid Robot arguments"
+        assert result.error_type == ErrorType.INVALID_ROBOT_ARGS
+
+    def test_from_error_with_interrupted_error_type(self) -> None:
+        """from_error() stores INTERRUPTED error type."""
+        result = TestResults.from_error(
+            "Execution was interrupted", ErrorType.INTERRUPTED
+        )
+
+        assert result.state == ExecutionState.ERROR
+        assert result.reason == "Execution was interrupted"
+        assert result.error_type == ErrorType.INTERRUPTED
 
     def test_default_constructor_creates_success_state(self) -> None:
         """Default constructor creates SUCCESS state."""
@@ -112,55 +145,6 @@ class TestTestResultsSuccessRate:
         # 80 passed / (100 - 10 skipped) = 80/90 = 88.89%
         result = TestResults(passed=80, failed=5, skipped=10, other=5)
         assert result.success_rate == pytest.approx(88.888, rel=0.01)
-
-
-class TestTestResultsExitCode:
-    """Tests for exit_code calculation with priority and boundary conditions."""
-
-    def test_exit_code_zero_all_passed(self) -> None:
-        """Exit code 0 when all tests pass."""
-        result = TestResults(passed=10)
-        assert result.exit_code == 0
-
-    def test_exit_code_equals_failed_count(self) -> None:
-        """Exit code equals number of failures."""
-        result = TestResults(passed=7, failed=3)
-        assert result.exit_code == 3
-
-    def test_exit_code_boundary_at_250(self) -> None:
-        """Exit code is exactly 250 when failures equal 250."""
-        result = TestResults(passed=0, failed=250)
-        assert result.exit_code == 250
-
-    def test_exit_code_capped_above_250(self) -> None:
-        """Exit code is capped at 250 for failures > 250."""
-        result = TestResults(passed=0, failed=300)
-        assert result.exit_code == 250
-
-    def test_exit_code_255_for_error(self) -> None:
-        """Exit code 255 when execution error occurred."""
-        result = TestResults.from_error("crash")
-        assert result.exit_code == 255
-
-    def test_exit_code_error_priority_over_failures(self) -> None:
-        """Error exit code (255) takes priority over failure count."""
-        result = TestResults(
-            passed=5,
-            failed=100,
-            reason="also crashed",
-            state=ExecutionState.ERROR,
-        )
-        assert result.exit_code == 255
-
-    def test_exit_code_zero_for_empty(self) -> None:
-        """Exit code 0 for empty results (no tests, no errors)."""
-        result = TestResults.empty()
-        assert result.exit_code == 0
-
-    def test_exit_code_zero_for_skipped(self) -> None:
-        """Exit code 0 when tests were intentionally skipped."""
-        result = TestResults.not_run("render-only")
-        assert result.exit_code == 0
 
 
 class TestTestResultsStateChecks:
@@ -367,7 +351,7 @@ class TestCombinedResultsExitCode:
             api=TestResults(passed=0, failed=150),
             robot=TestResults(passed=0, failed=150),
         )
-        assert result.exit_code == 250
+        assert result.exit_code == EXIT_FAILURE_CAP
 
     def test_exit_code_error_priority_over_failures(self) -> None:
         """Exit code 255 when any framework has error, regardless of failures."""
@@ -375,12 +359,95 @@ class TestCombinedResultsExitCode:
             api=TestResults(passed=0, failed=100),
             robot=TestResults.from_error("crash"),
         )
-        assert result.exit_code == 255
+        assert result.exit_code == EXIT_ERROR
 
-    def test_exit_code_zero_for_empty(self) -> None:
-        """Exit code 0 when no results."""
+    def test_exit_code_252_for_empty(self) -> None:
+        """Exit code 252 when no results across any framework."""
         result = CombinedResults()
+        assert result.exit_code == EXIT_DATA_ERROR
+
+    def test_was_not_run_true_when_all_skipped(self) -> None:
+        """was_not_run is True when all frameworks were intentionally skipped."""
+        result = CombinedResults(
+            robot=TestResults.not_run("render-only"),
+            api=TestResults.not_run("render-only"),
+        )
+        assert result.was_not_run is True
         assert result.exit_code == 0
+
+    def test_was_not_run_false_when_mixed_states(self) -> None:
+        """was_not_run is False when frameworks have mixed states."""
+        result = CombinedResults(
+            robot=TestResults.not_run("render-only"),
+            api=TestResults(passed=5, failed=0),
+        )
+        assert result.was_not_run is False
+
+    def test_was_not_run_false_when_empty(self) -> None:
+        """was_not_run is False when no frameworks are present."""
+        result = CombinedResults()
+        assert result.was_not_run is False
+
+    def test_errors_property_collects_all_reasons(self) -> None:
+        """errors property collects all reason messages from frameworks."""
+        result = CombinedResults(
+            robot=TestResults.from_error("Robot framework crashed"),
+            api=TestResults.not_run("Skipped for testing"),
+            d2d=TestResults(passed=5, failed=0),  # No reason
+        )
+        assert len(result.errors) == 2
+        assert "Robot framework crashed" in result.errors
+        assert "Skipped for testing" in result.errors
+
+    def test_exit_code_253_for_robot_interrupted_combined(self) -> None:
+        """Exit code 253 for Robot Framework execution interrupted in combined results."""
+        result = CombinedResults(
+            robot=TestResults.from_error(
+                "Robot Framework execution was interrupted", ErrorType.INTERRUPTED
+            )
+        )
+        assert result.exit_code == EXIT_INTERRUPTED
+
+    def test_exit_code_priority_interrupted_over_other_errors(self) -> None:
+        """Exit code 253 (interrupted) is prioritized over generic errors (255)."""
+        result = CombinedResults(
+            robot=TestResults.from_error(
+                "Robot Framework execution was interrupted", ErrorType.INTERRUPTED
+            ),
+            api=TestResults.from_error("API execution failed"),
+        )
+        assert result.exit_code == EXIT_INTERRUPTED
+
+    def test_exit_code_252_for_invalid_robot_args_error_type(self) -> None:
+        """Exit code 252 for INVALID_ROBOT_ARGS error type."""
+        result = CombinedResults(
+            robot=TestResults.from_error(
+                "Invalid arguments", ErrorType.INVALID_ROBOT_ARGS
+            )
+        )
+        assert result.exit_code == EXIT_DATA_ERROR
+
+    def test_exit_code_priority_invalid_robot_args_over_generic_errors(self) -> None:
+        """Exit code 252 (invalid args) is prioritized over generic errors (255)."""
+        result = CombinedResults(
+            robot=TestResults.from_error(
+                "Invalid arguments", ErrorType.INVALID_ROBOT_ARGS
+            ),
+            api=TestResults.from_error("API execution failed"),
+        )
+        assert result.exit_code == EXIT_DATA_ERROR
+
+    def test_exit_code_priority_interrupted_over_invalid_robot_args(self) -> None:
+        """Exit code 253 (interrupted) is prioritized over 252 (invalid args)."""
+        result = CombinedResults(
+            robot=TestResults.from_error(
+                "Execution was interrupted", ErrorType.INTERRUPTED
+            ),
+            api=TestResults.from_error(
+                "Invalid arguments", ErrorType.INVALID_ROBOT_ARGS
+            ),
+        )
+        assert result.exit_code == EXIT_INTERRUPTED
 
 
 class TestCombinedResultsStateChecks:
