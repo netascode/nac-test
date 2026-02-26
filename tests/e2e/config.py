@@ -173,10 +173,17 @@ class E2EScenario:
         Raises:
             ValueError: If configuration is inconsistent.
         """
-        # Exit code should match failure expectations
-        if self.expected_total_failed > 0 and self.expected_exit_code == 0:
-            raise ValueError(f"Scenario '{self.name}' expects failures but exit_code=0")
-        if self.expected_total_failed == 0 and self.expected_exit_code != 0:
+        # Exit code should match failure expectations (graduated exit codes)
+        expected_failures = self.expected_total_failed
+        if expected_failures > 0:
+            # Should match failure count (capped at 250)
+            expected_exit_code = min(expected_failures, 250)
+            if self.expected_exit_code != expected_exit_code:
+                raise ValueError(
+                    f"Scenario '{self.name}' expects {expected_failures} failures "
+                    f"but exit_code={self.expected_exit_code} (should be {expected_exit_code})"
+                )
+        elif self.expected_exit_code != 0:
             raise ValueError(
                 f"Scenario '{self.name}' expects no failures but exit_code={self.expected_exit_code}"
             )
@@ -233,7 +240,7 @@ ALL_FAIL_SCENARIO = E2EScenario(
     data_path=f"{_FIXTURE_BASE}/failure/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/failure/templates",
     architecture="SDWAN",
-    expected_exit_code=1,
+    expected_exit_code=3,  # 3 total failures (graduated exit code)
     expected_robot_passed=0,
     expected_robot_failed=1,
     # PyATS API: verify_sdwan_sync_fail.py (SDWANManagerTestBase) - 1 fail
@@ -251,7 +258,7 @@ MIXED_SCENARIO = E2EScenario(
     data_path=f"{_FIXTURE_BASE}/mixed/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/mixed/templates",
     architecture="SDWAN",
-    expected_exit_code=1,
+    expected_exit_code=2,  # 2 total failures (graduated exit code)
     expected_robot_passed=1,
     expected_robot_failed=1,
     # PyATS API: verify_sdwan_sync_fail.py (SDWANManagerTestBase) - 1 fail
