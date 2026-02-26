@@ -51,6 +51,7 @@ dependencies = [
     "markdown>=3.8.2",
     "typing_extensions>=4.0; python_version < '3.11'",
     "filelock>=3.0.0",
+    "lxml>=4.5.1",
 ]
 
 [project.urls]
