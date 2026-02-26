@@ -386,33 +386,3 @@ DRY_RUN_PYATS_ONLY_SCENARIO = E2EScenario(
     expected_pyats_d2d_failed=0,
     expected_pyats_d2d_skipped=0,
 )
-
-
-# All scenarios for parameterized testing (dry-run excluded - it has special execution)
-ALL_SCENARIOS = [
-    SUCCESS_SCENARIO,
-    ALL_FAIL_SCENARIO,
-    MIXED_SCENARIO,
-    ROBOT_ONLY_SCENARIO,
-    PYATS_API_ONLY_SCENARIO,
-    PYATS_D2D_ONLY_SCENARIO,
-    PYATS_CC_SCENARIO,
-]
-
-
-def get_scenario_by_name(name: str) -> E2EScenario:
-    """Get a scenario by its name.
-
-    Args:
-        name: The scenario name to look up.
-
-    Returns:
-        The matching E2EScenario.
-
-    Raises:
-        KeyError: If no scenario with that name exists.
-    """
-    for scenario in ALL_SCENARIOS:
-        if scenario.name == name:
-            return scenario
-    raise KeyError(f"No scenario found with name: {name}")
