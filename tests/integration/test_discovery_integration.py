@@ -21,8 +21,6 @@ Test Categories:
 
 from pathlib import Path
 
-import pytest
-
 from nac_test.pyats_core.discovery.test_discovery import TestDiscovery
 
 
@@ -688,7 +686,6 @@ class Test(aetest.Testcase):
 class TestDiscoveryPerformance:
     """Performance tests for the discovery mechanism."""
 
-    @pytest.mark.flaky(reruns=2, reruns_delay=1)
     def test_categorization_performance(self, tmp_path: Path) -> None:
         """Test that categorization completes quickly even with many files.
 
