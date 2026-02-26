@@ -13,6 +13,7 @@ from nac_test.utils.device_validation import (
 from nac_test.utils.environment import EnvironmentValidator
 from nac_test.utils.file_discovery import find_data_file
 from nac_test.utils.logging import VerbosityLevel, configure_logging
+from nac_test.utils.strings import sanitize_hostname
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
 
@@ -33,4 +34,6 @@ __all__ = [
     "find_data_file",
     # Controller detection utilities (SSH/D2D architecture)
     "detect_controller_type",
+    # String utilities
+    "sanitize_hostname",
 ]
