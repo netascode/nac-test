@@ -386,3 +386,23 @@ DRY_RUN_PYATS_ONLY_SCENARIO = E2EScenario(
     expected_pyats_d2d_failed=0,
     expected_pyats_d2d_skipped=0,
 )
+
+DRY_RUN_ROBOT_FAIL_SCENARIO = E2EScenario(
+    name="dry_run_robot_fail",
+    description="Dry-run mode - Robot only with non-existent keyword (1 fail)",
+    data_path=f"{_FIXTURE_BASE}/dry_run_robot_fail/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/dry_run_robot_fail/templates",
+    requires_testbed=False,
+    architecture="SDWAN",
+    is_dry_run=True,
+    expected_exit_code=1,
+    expected_robot_passed=0,
+    expected_robot_failed=1,
+    expected_robot_skipped=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)

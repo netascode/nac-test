@@ -176,7 +176,8 @@ class CombinedOrchestrator:
         combined_results = CombinedResults()
 
         if has_pyats and not self.render_only:
-            typer.echo("\n🧪 Running PyATS tests...\n")
+            mode_suffix = " (dry-run)" if self.dry_run else ""
+            typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
             self._check_python_version()
 
             pyats_orchestrator = PyATSOrchestrator(
@@ -198,7 +199,8 @@ class CombinedOrchestrator:
             combined_results.d2d = pyats_results.d2d
 
         if has_robot:
-            typer.echo("\n🤖 Running Robot Framework tests...\n")
+            mode_suffix = " (dry-run)" if self.dry_run else ""
+            typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")
 
             robot_orchestrator = RobotOrchestrator(
                 data_paths=self.data_paths,

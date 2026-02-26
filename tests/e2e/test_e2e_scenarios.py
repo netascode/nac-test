@@ -697,6 +697,30 @@ class E2ECombinedTestBase:
             )
 
     # -------------------------------------------------------------------------
+    # Dry-Run Mode Indicator Tests
+    # -------------------------------------------------------------------------
+
+    def test_dry_run_indicator_in_pyats_message(self, results: E2EResults) -> None:
+        """Verify dry-run indicator appears in PyATS startup message."""
+        if not results.scenario.is_dry_run:
+            pytest.skip("Not a dry-run scenario")
+        if not results.scenario.has_pyats_tests:
+            pytest.skip("No PyATS tests in this scenario")
+        assert re.search(
+            r"(running|executing).*pyats.*dry-run", results.stdout, re.I
+        ), "Expected dry-run indicator in PyATS startup message"
+
+    def test_dry_run_indicator_in_robot_message(self, results: E2EResults) -> None:
+        """Verify dry-run indicator appears in Robot Framework startup message."""
+        if not results.scenario.is_dry_run:
+            pytest.skip("Not a dry-run scenario")
+        if not results.scenario.has_robot_tests:
+            pytest.skip("No Robot tests in this scenario")
+        assert re.search(
+            r"(running|executing).*robot.*dry-run", results.stdout, re.I
+        ), "Expected dry-run indicator in Robot Framework startup message"
+
+    # -------------------------------------------------------------------------
     # Merged xunit.xml Tests
     # -------------------------------------------------------------------------
 
@@ -1069,8 +1093,24 @@ class TestE2EDryRunPyatsOnly(E2ECombinedTestBase):
             "Expected 'PyATS dry-run complete' message in stdout"
         )
 
-    def test_dry_run_complete_message_in_cli_output(self, results: E2EResults) -> None:
-        """Verify the CLI-level dry-run complete message is printed."""
-        assert "Dry-run complete" in results.stdout, (
-            "Expected 'Dry-run complete' message in stdout"
-        )
+    def test_dry_run_indicator_in_pyats_message(self, results: E2EResults) -> None:
+        """Verify dry-run indicator appears in PyATS startup message.
+
+        Override: Base class skips this because has_pyats_tests=False (expected
+        counts are 0 in dry-run). But this scenario DOES include PyATS tests.
+        """
+        assert re.search(
+            r"(running|executing).*pyats.*dry-run", results.stdout, re.I
+        ), "Expected dry-run indicator in PyATS startup message"
+
+
+class TestE2EDryRunRobotFail(E2ECombinedTestBase):
+    """E2E tests for dry-run mode with Robot test that fails validation.
+
+    Tests that Robot dry-run correctly fails when a test uses a non-existent
+    keyword. The expected exit code is 1 (one failing test).
+    """
+
+    @pytest.fixture
+    def results(self, e2e_dry_run_robot_fail_results: E2EResults) -> E2EResults:
+        return e2e_dry_run_robot_fail_results

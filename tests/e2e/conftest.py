@@ -130,7 +130,7 @@ devices:
 
 def _run_e2e_scenario(
     scenario: E2EScenario,
-    mock_api_server: MockAPIServer,
+    mock_api_server: MockAPIServer | None,
     sdwan_user_testbed: str | None,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
@@ -142,7 +142,7 @@ def _run_e2e_scenario(
 
     Args:
         scenario: The scenario configuration to execute.
-        mock_api_server: The mock API server instance.
+        mock_api_server: The mock API server instance (None for Robot-only scenarios).
         sdwan_user_testbed: Path to the testbed YAML (None if not required).
         tmp_path_factory: Pytest temp path factory.
         class_mocker: Class-scoped monkeypatch.
@@ -154,9 +154,11 @@ def _run_e2e_scenario(
     # Create scenario-specific temp directory
     output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
 
-    # Configure environment - use architecture as env var prefix
-    arch = scenario.architecture  # e.g., "SDWAN", "ACI", "CC"
-    class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
+    arch = scenario.architecture
+    if mock_api_server:
+        class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
+    else:
+        class_mocker.setenv(f"{arch}_URL", "<not-set>")
     class_mocker.setenv(f"{arch}_USERNAME", "mock_user")
     class_mocker.setenv(f"{arch}_PASSWORD", "mock_pass")
     # IOSXE credentials needed for D2D tests (device access)
@@ -341,7 +343,6 @@ def e2e_pyats_cc_results(
 
 @pytest.fixture(scope="class")
 def e2e_dry_run_results(
-    mock_api_server: MockAPIServer,
     sdwan_user_testbed: str,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
@@ -351,7 +352,7 @@ def e2e_dry_run_results(
 
     return _run_e2e_scenario(
         DRY_RUN_SCENARIO,
-        mock_api_server,
+        None,
         sdwan_user_testbed,
         tmp_path_factory,
         class_mocker,
@@ -361,7 +362,6 @@ def e2e_dry_run_results(
 
 @pytest.fixture(scope="class")
 def e2e_dry_run_pyats_only_results(
-    mock_api_server: MockAPIServer,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
@@ -370,7 +370,25 @@ def e2e_dry_run_pyats_only_results(
 
     return _run_e2e_scenario(
         DRY_RUN_PYATS_ONLY_SCENARIO,
-        mock_api_server,
+        None,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--dry-run"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_dry_run_robot_fail_results(
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute dry-run with Robot test that has non-existent keyword (fails dryrun)."""
+    from tests.e2e.config import DRY_RUN_ROBOT_FAIL_SCENARIO
+
+    return _run_e2e_scenario(
+        DRY_RUN_ROBOT_FAIL_SCENARIO,
+        None,
         None,
         tmp_path_factory,
         class_mocker,
