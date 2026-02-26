@@ -703,12 +703,21 @@ class E2ECombinedTestBase:
     def test_merged_xunit_exists_at_root(self, results: E2EResults) -> None:
         """Verify merged xunit.xml exists at root and is not a symlink."""
         xunit_path = results.output_dir / XUNIT_XML
-        assert xunit_path.exists(), "Missing merged xunit.xml at root"
-        assert xunit_path.is_file(), "xunit.xml should be a file (not symlink)"
-        assert not xunit_path.is_symlink(), "xunit.xml should not be a symlink"
+        if results.has_pyats_results or results.has_robot_results:
+            assert xunit_path.exists(), "Missing merged xunit.xml at root"
+            assert xunit_path.is_file(), "xunit.xml should be a file (not symlink)"
+            assert not xunit_path.is_symlink(), "xunit.xml should not be a symlink"
+        else:
+            assert not xunit_path.exists(), (
+                "Merged xunit.xml should not exist when no tests were run"
+            )
 
-    def test_merged_xunit_is_valid_xml(self, parsed_xunit: ET.Element | None) -> None:
+    def test_merged_xunit_is_valid_xml(
+        self, results: E2EResults, parsed_xunit: ET.Element | None
+    ) -> None:
         """Verify merged xunit.xml is valid XML with testsuites root."""
+        if not results.has_pyats_results and not results.has_robot_results:
+            pytest.skip("No test runs in this scenario")
         assert parsed_xunit is not None, "xunit.xml missing or unparseable"
         assert parsed_xunit.tag == "testsuites", (
             f"Expected root 'testsuites', got '{parsed_xunit.tag}'"
@@ -718,6 +727,8 @@ class E2ECombinedTestBase:
         self, results: E2EResults, parsed_xunit: ET.Element | None
     ) -> None:
         """Verify merged xunit.xml has correct total test count."""
+        if not results.has_pyats_results and not results.has_robot_results:
+            pytest.skip("No test runs in this scenario")
         assert parsed_xunit is not None, "xunit.xml missing or unparseable"
         expected_total = results.scenario.expected_total_tests
         actual_total = int(parsed_xunit.get("tests", 0))
@@ -729,6 +740,8 @@ class E2ECombinedTestBase:
         self, results: E2EResults, parsed_xunit: ET.Element | None
     ) -> None:
         """Verify merged xunit.xml has correct failure count."""
+        if not results.has_pyats_results and not results.has_robot_results:
+            pytest.skip("No test runs in this scenario")
         assert parsed_xunit is not None, "xunit.xml missing or unparseable"
         expected_failures = results.scenario.expected_total_failed
         actual_failures = int(parsed_xunit.get("failures", 0))
@@ -740,6 +753,8 @@ class E2ECombinedTestBase:
         self, results: E2EResults, parsed_xunit: ET.Element | None
     ) -> None:
         """Verify merged xunit.xml contains testsuites from all test sources."""
+        if not results.has_pyats_results and not results.has_robot_results:
+            pytest.skip("No test runs in this scenario")
         assert parsed_xunit is not None, "xunit.xml missing or unparseable"
         testsuites = parsed_xunit.findall("testsuite")
         testsuite_names = [ts.get("name", "") for ts in testsuites]
