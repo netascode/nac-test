@@ -18,7 +18,11 @@ from pathlib import Path
 # Ensure we can import mock_server from the same directory
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mock_server import MockAPIServer
+from mock_server import (
+    SERVER_POLL_INTERVAL_SECONDS,
+    SERVER_STARTUP_TIMEOUT_SECONDS,
+    MockAPIServer,
+)
 
 DEFAULT_PORT = 5555
 STATE_FILE = Path("/tmp/nac-test-mock-server.json")
@@ -77,6 +81,7 @@ def daemonize() -> bool:
     log_fd = open(LOG_FILE, "a")
     os.dup2(log_fd.fileno(), sys.stdout.fileno())
     os.dup2(log_fd.fileno(), sys.stderr.fileno())
+    log_fd.close()  # Release original handle after duplication
 
     return True  # Child process (daemon)
 
@@ -154,11 +159,13 @@ def cmd_stop(args: argparse.Namespace) -> None:
     try:
         os.kill(pid, signal.SIGTERM)
 
-        # Wait up to 5 seconds for graceful shutdown
-        for _ in range(50):
+        max_attempts = int(
+            SERVER_STARTUP_TIMEOUT_SECONDS / SERVER_POLL_INTERVAL_SECONDS
+        )
+        for _ in range(max_attempts):
             if not is_process_running(pid):
                 break
-            time.sleep(0.1)
+            time.sleep(SERVER_POLL_INTERVAL_SECONDS)
         else:
             print("Graceful shutdown failed, forcing...")
             os.kill(pid, signal.SIGKILL)
