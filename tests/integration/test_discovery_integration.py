@@ -734,8 +734,10 @@ class TestD2D{i}(SSHTestBase):
         assert len(api_tests) == 25
         assert len(d2d_tests) == 25
 
-        # Should complete in under 5 seconds (generous bound)
-        assert elapsed < 5.0, f"Categorization took {elapsed:.2f}s, expected <5s"
+        # Should complete in under 7 seconds (generous bound)
+        # Note: I have seen consistent failures under python 3.13 github runner, so increasing
+        # bound to 7s for now, but locally it should be much faster (~1s)
+        assert elapsed < 7.0, f"Categorization took {elapsed:.2f}s, expected <7s"
 
 
 class TestRelaxedPathRequirements:
