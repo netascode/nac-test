@@ -178,7 +178,6 @@ class RobotOrchestrator:
                 error_msg = "Robot Framework execution failed (fatal error, see logs)"
                 logger.error(error_msg)
                 return TestResults.from_error(error_msg)
-            typer.echo("✅ Robot Framework tests completed")
 
             # Phase 4: Create backward compatibility symlinks
             # (output files written directly to robot_results/ via --output/--log/--report flags)
