@@ -142,7 +142,7 @@ def _run_e2e_scenario(
 
     Args:
         scenario: The scenario configuration to execute.
-        mock_api_server: The mock API server instance (None for Robot-only scenarios).
+        mock_api_server: The mock API server instance (can be None, for example for dry-run scenarios).
         sdwan_user_testbed: Path to the testbed YAML (None if not required).
         tmp_path_factory: Pytest temp path factory.
         class_mocker: Class-scoped monkeypatch.
