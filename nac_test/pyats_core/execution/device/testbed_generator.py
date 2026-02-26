@@ -9,6 +9,11 @@ from typing import Any
 
 import yaml
 
+from nac_test.pyats_core.constants import (
+    PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS,
+    PYATS_POST_DISCONNECT_WAIT_SECONDS,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -237,25 +242,25 @@ class TestbedGenerator:
         """
         hostname = device["hostname"]
 
+        # Shared connection arguments for all device types
+        default_arguments = {
+            "init_config_commands": [],
+            "operating_mode": True,
+        }
+
         # Build connection arguments
         if "command" in device:
             # Special handling for mock or radkit devices
             connection_args = {
                 "command": device["command"],
-                "arguments": {
-                    "init_config_commands": [],
-                    "operating_mode": True,
-                },
+                "arguments": default_arguments,
             }
         else:
             connection_args = {
                 "protocol": "ssh",
                 "ip": device["host"],
                 "port": device.get("port", 22),
-                "arguments": {
-                    "init_config_commands": [],
-                    "operating_mode": True,
-                },
+                "arguments": default_arguments,
             }
 
             # Override protocol/port if connection_options is present
@@ -269,6 +274,14 @@ class TestbedGenerator:
             # Add optional SSH arguments if provided
             if device.get("ssh_options"):
                 connection_args["ssh_options"] = device["ssh_options"]
+
+        # speed up device disconnection, we don't need to cool down as we never
+        # reconnect to the same device multiple times in a row, and we want to optimize
+        # for test runtime
+        connection_args["settings"] = {
+            "GRACEFUL_DISCONNECT_WAIT_SEC": PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS,
+            "POST_DISCONNECT_WAIT_SEC": PYATS_POST_DISCONNECT_WAIT_SECONDS,
+        }
 
         # Build device config
         device_config = {
