@@ -49,9 +49,9 @@ dependencies = [
     "aiofiles>=24.1",
     "colorama>=0.4.6",
     "markdown>=3.8.2",
-    "errorhandler>=2.0",
     "typing_extensions>=4.0; python_version < '3.11'",
     "filelock>=3.0.0",
+    "lxml>=4.5.1",
 ]
 
 [project.urls]

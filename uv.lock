@@ -824,15 +824,6 @@ wheels = [
 ]
 
 [[package]]
-name = "errorhandler"
-version = "2.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ee/f4/6efa866dfb5b72d468666eb69adc19142e3956af8e6a95f3109d29685038/errorhandler-2.0.1.tar.gz", hash = "sha256:7e578ad67af40845bfd044f71627a29f1fc436d53ccb058bbf1792ef31ab6163", size = 8534, upload-time = "2016-06-06T13:30:55.287Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/04/71d196b9ed5a561e10150c32892eaac9a85dfffdd09c5f850ea7e4e3344f/errorhandler-2.0.1-py2.py3-none-any.whl", hash = "sha256:dc6c54f5d9a4599e744b57aac2f925cce873188e9b02cae7c0eb120ee08a893f", size = 5530, upload-time = "2016-06-06T13:30:49.044Z" },
-]
-
-[[package]]
 name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1941,12 +1932,12 @@ dependencies = [
     { name = "aiofiles" },
     { name = "asyncssh" },
     { name = "colorama" },
-    { name = "errorhandler" },
     { name = "filelock" },
     { name = "genie" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "jmespath" },
+    { name = "lxml" },
     { name = "markdown" },
     { name = "nac-yaml" },
     { name = "psutil" },
@@ -1998,13 +1989,13 @@ requires-dist = [
     { name = "asyncssh", specifier = ">=2.22.0" },
     { name = "bandit", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=1.8.6" },
     { name = "colorama", specifier = ">=0.4.6" },
-    { name = "errorhandler", specifier = ">=2.0" },
     { name = "filelock", specifier = ">=3.0.0" },
     { name = "flask", marker = "extra == 'dev'", specifier = ">=3.1" },
     { name = "genie", specifier = ">=25.5" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "jmespath", specifier = ">=1.0.1" },
+    { name = "lxml", specifier = ">=4.5.1" },
     { name = "markdown", specifier = ">=3.8.2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
     { name = "nac-test-pyats-common", marker = "extra == 'adapters'", specifier = ">=0.2.0" },

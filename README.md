@@ -648,9 +648,24 @@ nac-test -d data/ -t templates/ -o output/ --listener MyListener.py
 nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --loglevel INFO --listener MyListener
 ```
 
-**Note:** Only Robot Framework options are supported. Pabot-specific options (like `--testlevelsplit`, `--pabotlib`, etc.) and test file paths are not allowed and will result in an error with exit code 252.
+**Note:** Only Robot Framework options are supported. Pabot-specific options (like `--testlevelsplit`, `--pabotlib`, etc.) and test file paths are not allowed and will result in an error with exit code 252 (invalid Robot Framework arguments).
 
 See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#command-line-options) for all available options.
+
+## Exit Codes
+
+nac-test _mostly_ follows Robot Framework exit code conventions to provide meaningful feedback for CI/CD pipelines:
+
+| Exit Code | Meaning | Description |
+|-----------|---------|-------------|
+| **0** | Success | All tests passed, no errors |
+| **1-250** | Test failures | Number of failed tests (capped at 250) |
+| **2** | Invalid nac-test arguments | Invalid or conflicting nac-test CLI arguments (aligns with POSIX/Typer convention) |
+| **252** | Invalid Robot Framework arguments or no tests found | Robot Framework invalid arguments or no tests executed |
+| **253** | Execution interrupted | Test execution was interrupted (Ctrl+C, etc.) |
+| **255** | Execution error | Framework crash or infrastructure error |
+
+(we only follow _mostly_ as we deviate in using `2` for invalid nac-test arguments, and don't use `251`).
 
 ## Troubleshooting
 

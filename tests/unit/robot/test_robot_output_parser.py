@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from robot.errors import DataError
 
+from nac_test.core.constants import OUTPUT_XML
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 
 
@@ -24,7 +25,7 @@ def sample_output_xml(tmp_path: Path) -> Path:
     - 1 failed test
     - 1 skipped test
     """
-    output_xml = tmp_path / "output.xml"
+    output_xml = tmp_path / OUTPUT_XML
     content = """<?xml version="1.0" encoding="UTF-8"?>
 <robot generator="Robot 7.0" generated="2025-02-01T12:00:00.000" rpa="false" schemaversion="5">
 <suite id="s1" name="Test Suite" source="/path/to/tests">
@@ -150,7 +151,7 @@ def test_parser_timestamp_parsing(sample_output_xml: Path) -> None:
 
 def test_parser_all_passed(tmp_path: Path) -> None:
     """Test parser with all tests passing."""
-    output_xml = tmp_path / "output.xml"
+    output_xml = tmp_path / OUTPUT_XML
     content = """<?xml version="1.0" encoding="UTF-8"?>
 <robot generator="Robot 7.0" generated="2025-02-01T12:00:00.000">
 <suite id="s1" name="Test Suite">
@@ -210,7 +211,7 @@ def test_parser_test_id_for_deep_linking(sample_output_xml: Path) -> None:
 
 def test_collector_empty_results(tmp_path: Path) -> None:
     """Test parser with no tests."""
-    output_xml = tmp_path / "output.xml"
+    output_xml = tmp_path / OUTPUT_XML
     content = """<?xml version="1.0" encoding="UTF-8"?>
 <robot generator="Robot 7.0" generated="2025-02-01T12:00:00.000">
 <suite id="s1" name="Empty Suite">
@@ -244,7 +245,7 @@ def test_parse_corrupted_xml_structure(tmp_path: Path) -> None:
     Robot Framework elements (no root <robot> element). ExecutionResult should
     raise an exception when it cannot parse the expected structure.
     """
-    output_xml = tmp_path / "output.xml"
+    output_xml = tmp_path / OUTPUT_XML
     # Valid XML but missing the expected <robot> root element
     # ExecutionResult expects a <robot> element at the root
     content = """<?xml version="1.0" encoding="UTF-8"?>
