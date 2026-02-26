@@ -13,6 +13,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nac_test.core.constants import (
+    LOG_HTML,
+    OUTPUT_XML,
+    REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
     XUNIT_XML,
@@ -102,49 +105,6 @@ class TestRobotOrchestrator:
         assert orchestrator.extra_args == ["--exitonfailure"]
         assert orchestrator.verbosity == VerbosityLevel.DEBUG
 
-    def test_move_robot_results_to_subdirectory(
-        self, orchestrator, temp_output_dir
-    ) -> None:
-        """Test _move_robot_results_to_subdirectory moves files correctly."""
-        # Create mock Robot output files at root (xunit.xml is written directly
-        # to robot_results by pabot, so it's not moved)
-        files_to_create = ["output.xml", "log.html", "report.html"]
-        for filename in files_to_create:
-            (temp_output_dir / filename).write_text(f"Mock {filename} content")
-
-        # Move files to subdirectory
-        orchestrator._move_robot_results_to_subdirectory()
-
-        # Verify files were moved to robot_results/
-        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
-        assert robot_results_dir.exists()
-
-        for filename in files_to_create:
-            target = robot_results_dir / filename
-            assert target.exists()
-            assert target.read_text() == f"Mock {filename} content"
-
-            # Verify files no longer at root
-            assert not (temp_output_dir / filename).exists()
-
-    def test_move_robot_results_handles_missing_files(
-        self, orchestrator, temp_output_dir
-    ) -> None:
-        """Test _move_robot_results_to_subdirectory handles missing files gracefully."""
-        # Create only some files (xunit.xml is not moved - written directly by pabot)
-        (temp_output_dir / "output.xml").write_text("output")
-        (temp_output_dir / "log.html").write_text("log")
-        # Don't create report.html
-
-        # Should not raise an error
-        orchestrator._move_robot_results_to_subdirectory()
-
-        # Verify existing files were moved
-        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
-        assert (robot_results_dir / "output.xml").exists()
-        assert (robot_results_dir / "log.html").exists()
-        assert not (robot_results_dir / "report.html").exists()
-
     def test_create_backward_compat_symlinks(
         self, orchestrator, temp_output_dir
     ) -> None:
@@ -154,7 +114,7 @@ class TestRobotOrchestrator:
         robot_results_dir.mkdir()
 
         # xunit.xml is NOT symlinked (merged xunit is created separately)
-        files_to_create = ["output.xml", "log.html", "report.html"]
+        files_to_create = [LOG_HTML, OUTPUT_XML, REPORT_HTML]
         for filename in files_to_create:
             (robot_results_dir / filename).write_text(f"Mock {filename}")
 
@@ -175,16 +135,16 @@ class TestRobotOrchestrator:
         # Create robot_results directory
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
-        (robot_results_dir / "output.xml").write_text("new content")
+        (robot_results_dir / OUTPUT_XML).write_text("new content")
 
         # Create existing file at root (should be replaced)
-        (temp_output_dir / "output.xml").write_text("old content")
+        (temp_output_dir / OUTPUT_XML).write_text("old content")
 
         # Create symlinks
         orchestrator._create_backward_compat_symlinks()
 
         # Verify symlink was created and points to new content
-        symlink = temp_output_dir / "output.xml"
+        symlink = temp_output_dir / OUTPUT_XML
         assert symlink.is_symlink()
         assert symlink.read_text() == "new content"
 
@@ -248,13 +208,11 @@ class TestRobotOrchestrator:
         )
         mock_generator.return_value = mock_generator_instance
 
-        # Create mock Robot output files
+        # Create mock Robot output files in robot_results/ (pabot 5.2+ writes directly there)
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
-
-        # Create files at root that need to be moved
-        for filename in ["output.xml", "log.html", "report.html", XUNIT_XML]:
-            (temp_output_dir / filename).write_text(f"Mock {filename}")
+        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
+            (robot_results_dir / filename).write_text(f"Mock {filename}")
 
         stats = orchestrator.run_tests()
 
@@ -330,10 +288,10 @@ class TestRobotOrchestrator:
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
-        output_xml = robot_results_dir / "output.xml"
+        output_xml = robot_results_dir / OUTPUT_XML
         output_xml.write_text("<robot></robot>")
 
-        target_dir = temp_output_dir / "output.xml"
+        target_dir = temp_output_dir / OUTPUT_XML
         target_dir.mkdir()
 
         # Should not raise, but log a warning and skip that symlink
