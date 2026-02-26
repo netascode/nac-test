@@ -317,21 +317,19 @@ def main(
 
     # Merge data files with timing
     start_time = datetime.now()
-    start_timestamp = start_time.strftime("%H:%M:%S")
-    typer.echo(f"\n\n[{start_timestamp}] 📄 Merging data model files...")
+    typer.echo("\n\n📄 Merging data model files...")
 
     merged_data = DataMerger.merge_data_files(data)
     DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
 
     end_time = datetime.now()
-    end_timestamp = end_time.strftime("%H:%M:%S")
     duration = (end_time - start_time).total_seconds()
     duration_str = (
         f"{duration:.1f}s"
         if duration < 60
         else f"{int(duration // 60)}m {duration % 60:.0f}s"
     )
-    typer.echo(f"[{end_timestamp}] ✅ Data model merging completed ({duration_str})")
+    typer.echo(f"✅ Data model merging completed ({duration_str})")
 
     # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
     orchestrator = CombinedOrchestrator(
