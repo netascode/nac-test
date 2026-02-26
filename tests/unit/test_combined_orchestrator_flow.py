@@ -481,10 +481,10 @@ class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
         # Dashboard should NOT be generated
         mock_generator.assert_not_called()
 
-    def test_render_only_propagates_robot_exception(
+    def test_render_only_converts_robot_exception_to_results(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
     ) -> None:
-        """render_only mode should propagate Robot exceptions immediately."""
+        """render_only mode should convert Robot exceptions to TestResults with errors."""
         monkeypatch.setenv("ACI_URL", "https://apic.test.com")
         monkeypatch.setenv("ACI_USERNAME", "admin")
         monkeypatch.setenv("ACI_PASSWORD", "password")
@@ -515,8 +515,14 @@ class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
                 mock_robot.return_value = mock_robot_instance
 
                 with patch("typer.echo"):
-                    with pytest.raises(ValueError, match="Template error"):
-                        orchestrator.run_tests()
+                    # Should not raise exception - should convert to TestResults.from_error()
+                    results = orchestrator.run_tests()
+
+                    # Verify that the error was properly converted to TestResults
+                    assert results.robot is not None
+                    assert results.robot.has_error
+                    assert results.robot.reason is not None
+                    assert "Template error" in results.robot.reason
 
     def test_non_render_only_catches_robot_exception(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
