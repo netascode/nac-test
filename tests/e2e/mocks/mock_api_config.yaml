@@ -373,6 +373,30 @@ endpoints:
           deviceModel: "vedge-C8000V"
           personality: "vedge"
 
+  - name: "SD-WAN Manager vEdges List (numbered endpoints for scale testing)"
+    path_pattern: "^/dataservice/system/device/vedges[0-9]+$"
+    match_type: "regex"
+    method: "GET"
+    status_code: 200
+    response_data:
+      data:
+        - "host-name": "sd-dc-c8kv-01"
+          configuredSystemIP: "10.0.0.1"
+          "managed-by": "vmanage"
+          configStatusMessage: "In Sync"
+          serialNumber: "ABC123DEF"
+          uuid: "uuid-device-1"
+          deviceModel: "vedge-C8000V"
+          personality: "vedge"
+        - "host-name": "sd-dc-c8kv-02"
+          configuredSystemIP: "10.0.0.2"
+          "managed-by": "vmanage"
+          configStatusMessage: "In Sync"
+          serialNumber: "ABC456GHI"
+          uuid: "uuid-device-2"
+          deviceModel: "vedge-C8000V"
+          personality: "vedge"
+
   # Catalyst Center Authentication
   - name: "Catalyst Center Authentication"
     path_pattern: "/dna/system/api/v1/auth/token"

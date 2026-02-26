@@ -55,12 +55,12 @@ for handler in _original_handlers:
 class MockAPIServer:
     """A configurable mock API server for testing."""
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 5555) -> None:
+    def __init__(self, host: str = "127.0.0.1", port: int = 0) -> None:
         """Initialize the mock server.
 
         Args:
             host: Host to bind the server to
-            port: Port to bind the server to
+            port: Port to bind the server to (0 = OS-assigned, for parallel testing)
         """
         self.host = host
         self.port = port
@@ -354,18 +354,19 @@ class MockAPIServer:
     def start(self) -> None:
         """Start the mock server in a background thread.
 
-        Uses port 0 to let the OS assign an available port automatically,
-        avoiding race conditions in parallel test execution.
+        Uses the port specified in __init__, or port 0 to let the OS assign
+        an available port automatically (useful for parallel test execution).
         """
         if self.server_thread and self.server_thread.is_alive():
             logger.warning(f"Server already running on {self.url}")
             return
 
-        logger.info(f"Starting mock server on {self.host} (OS-assigned port)")
+        port_info = f"port {self.port}" if self.port != 0 else "OS-assigned port"
+        logger.info(f"Starting mock server on {self.host} ({port_info})")
         logger.info(f"Configured with {len(self.endpoint_configs)} endpoint(s)")
 
-        # Use port 0 to let OS assign an available port
-        self._server = make_server(self.host, 0, self.app, threaded=True)
+        # Use self.port (0 means OS assigns an available port)
+        self._server = make_server(self.host, self.port, self.app, threaded=True)
 
         # Get the actual assigned port from the server socket
         self.port = self._server.server_address[1]
