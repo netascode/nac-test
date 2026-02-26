@@ -39,7 +39,6 @@ from nac_test.pyats_core.progress import ProgressReporter
 from nac_test.pyats_core.reporting.multi_archive_generator import (
     MultiArchiveReportGenerator,
 )
-from nac_test.pyats_core.reporting.summary_printer import SummaryPrinter
 from nac_test.pyats_core.reporting.utils.archive_aggregator import ArchiveAggregator
 from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
 from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
@@ -137,9 +136,6 @@ class PyATSOrchestrator:
         self.device_executor: DeviceExecutor | None = (
             None  # Will be initialized when needed
         )
-
-        # Initialize reporting components
-        self.summary_printer = SummaryPrinter()
 
     def _calculate_workers(self) -> int:
         """Calculate optimal worker count based on CPU, memory, and test type"""
@@ -574,9 +570,6 @@ class PyATSOrchestrator:
             print("No PyATS test files (*.py) found in test directory")
             return PyATSResults()
 
-        print(f"Discovered {len(test_files)} PyATS test files")
-        print(f"Running with {self.max_workers} parallel workers")
-
         # Categorize tests by type (api/ vs d2d/)
         try:
             api_tests, d2d_tests = self.test_discovery.categorize_tests_by_type(
@@ -585,6 +578,15 @@ class PyATSOrchestrator:
         except ValueError as e:
             print(terminal.error(str(e)))
             raise
+
+        breakdown_parts = []
+        if api_tests:
+            breakdown_parts.append(f"{len(api_tests)} api")
+        if d2d_tests:
+            breakdown_parts.append(f"{len(d2d_tests)} d2d")
+        breakdown = f" ({', '.join(breakdown_parts)})" if breakdown_parts else ""
+        print(f"Discovered {len(test_files)} PyATS test files{breakdown}")
+        print(f"Running with {self.max_workers} parallel workers")
 
         # Initialize progress reporter for output formatting
         self.progress_reporter = ProgressReporter(
@@ -614,7 +616,6 @@ class PyATSOrchestrator:
             tasks = []
 
             if api_tests:
-                print(f"Found {len(api_tests)} API test(s) - using standard execution")
                 tasks.append(self._execute_api_tests_standard(api_tests))
 
             if d2d_tests:
@@ -638,9 +639,6 @@ class PyATSOrchestrator:
                     print()  # Blank line after warnings
 
                 if devices:
-                    print(
-                        f"Found {len(d2d_tests)} D2D test(s) - using device-centric execution"
-                    )
                     tasks.append(
                         self._execute_ssh_tests_device_centric(d2d_tests, devices)
                     )
@@ -699,26 +697,11 @@ class PyATSOrchestrator:
                 else:
                     self.api_test_status[test_name] = test_info
 
-        # Print summary after all tests complete
-        if self.api_test_status or self.d2d_test_status:
-            # Combine all test statuses for summary
-            combined_status = {}
-            combined_status.update(self.api_test_status)
-            combined_status.update(self.d2d_test_status)
-
-            # Print the summary (archives are at base level)
-            self.summary_printer.print_summary(
-                combined_status,
-                self.start_time,
-                output_dir=self.base_output_dir,
-                archive_path=None,
-                api_test_status=getattr(self, "api_test_status", None),
-                d2d_test_status=getattr(self, "d2d_test_status", None),
-                overall_start_time=self.overall_start_time,
-            )
-
         # Generate HTML reports after all test types have completed
-        return await self._generate_html_reports_async()
+        pyats_results = await self._generate_html_reports_async()
+        logger.info(f"PyATS results: {pyats_results}")
+
+        return pyats_results
 
     async def _generate_html_reports_async(
         self,
@@ -730,27 +713,26 @@ class PyATSOrchestrator:
 
         # Collect the latest archive of each type
         archive_paths = []
-        archive_info = []  # Store archive info for display later
 
         if archives["api"]:
             archive_paths.append(archives["api"][0])
-            archive_info.append(f"Found API archive: {archives['api'][0].name}")
+            logger.info(f"Found API archive: {archives['api'][0].name}")
 
         if archives["d2d"]:
             archive_paths.append(archives["d2d"][0])
-            archive_info.append(f"Found D2D archive: {archives['d2d'][0].name}")
+            logger.info(f"Found D2D archive: {archives['d2d'][0].name}")
 
         if not archive_paths and archives["legacy"]:
             # TODO: No longer need this -- remove
             # Fallback to legacy archives for backward compatibility
             archive_paths.append(archives["legacy"][0])
-            archive_info.append(f"Found legacy archive: {archives['legacy'][0].name}")
+            logger.info(f"Found legacy archive: {archives['legacy'][0].name}")
 
         if not archive_paths:
             print("No PyATS job archives found to generate reports from.")
             return PyATSResults()
 
-        print(f"\nGenerating reports from {len(archive_paths)} archive(s)...")
+        logger.info(f"Generating reports from {len(archive_paths)} archive(s)...")
 
         # Use MultiArchiveReportGenerator for all cases (handles single archive too)
         # Pass base directory to avoid double-nesting of pyats_results directories
@@ -760,7 +742,7 @@ class PyATSOrchestrator:
         result = await generator.generate_reports_from_archives(archive_paths)
 
         if result["status"] in ["success", "partial"]:
-            # Format duration (minutes and seconds)
+            # Log report generation timing (procedural info)
             duration = result["duration"]
             if duration < 60:
                 duration_str = f"{duration:.2f} seconds"
@@ -769,26 +751,21 @@ class PyATSOrchestrator:
                 secs = duration % 60
                 duration_str = f"{minutes} minutes {secs:.2f} seconds"
 
-            print(f"{terminal.info('Total report generation time:')} {duration_str}")
+            logger.info(f"Total report generation time: {duration_str}")
 
-            # Print archive info at the bottom
-            for info in archive_info:
-                print(info)
-
-            # Display results based on what was generated
-            print(f"\n{terminal.info('HTML Reports Generated:')}")
-            print("=" * 80)
-
-            # Show individual report directories
+            # Log generated report paths (visible with -v INFO)
             for archive_type, archive_result in result["results"].items():
                 if archive_result.get("status") == "success":
                     report_dir = Path(archive_result.get("report_dir", ""))
                     summary_report = report_dir / SUMMARY_REPORT_FILENAME
+                    logger.info(
+                        f"{archive_type.upper()} summary report: {summary_report}"
+                    )
+                    logger.info(
+                        f"{archive_type.upper()} report directory: {report_dir}"
+                    )
 
-                    print(f"{f'{archive_type.upper()} Summary:'} {summary_report}")
-                    print(f"{f'{archive_type.upper()} Reports:'}  {report_dir}")
-
-            # Report any failures
+            # Report any failures (keep as print - users need to see this)
             failed_archives = [
                 k for k, v in result["results"].items() if v.get("status") != "success"
             ]
