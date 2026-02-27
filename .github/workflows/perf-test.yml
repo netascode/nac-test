@@ -1,0 +1,137 @@
+name: Performance Investigation
+on:
+  workflow_dispatch:
+
+jobs:
+  # Run the performance test ISOLATED (no parallel tests)
+  perf-isolated:
+    name: "Perf Test Isolated"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+        run_number: [1, 2, 3]  # Run 3 times each to see variance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
+
+      - name: Install dependencies
+        run: uv sync --extra dev --extra adapters
+
+      - name: "Run #${{ matrix.run_number }}: Performance test ISOLATED (no parallelism)"
+        run: |
+          echo "=== System Info ==="
+          uname -a
+          cat /proc/cpuinfo | grep "model name" | head -1
+          free -h
+          echo "==================="
+          
+          # Run ONLY the performance test, NO parallelism (-n 0 or omit -n)
+          uv run pytest tests/integration/test_discovery_integration.py::TestDiscoveryPerformance::test_categorization_performance -v -s 2>&1 | tee perf-output-${{ matrix.python }}-${{ matrix.run_number }}.txt
+        
+      - name: Upload results
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: perf-results-${{ matrix.python }}-run${{ matrix.run_number }}
+          path: perf-output-*.txt
+
+  # Run the performance test WITH parallel tests (like normal CI)
+  perf-parallel:
+    name: "Perf Test Parallel"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        python: ["3.10", "3.13"]  # Compare oldest and newest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
+
+      - name: Install dependencies
+        run: uv sync --extra dev --extra adapters
+
+      - name: "Run with parallelism (-n auto)"
+        run: |
+          echo "=== System Info ==="
+          uname -a
+          cat /proc/cpuinfo | grep "model name" | head -1
+          cat /proc/cpuinfo | grep "processor" | wc -l
+          free -h
+          echo "==================="
+          
+          # Run all tests with parallelism (like normal CI)
+          uv run pytest tests/ -n auto --dist loadscope -v 2>&1 | tee parallel-output-${{ matrix.python }}.txt || true
+          
+          # Extract performance test output
+          grep -A 50 "PERFORMANCE TEST DIAGNOSTICS" parallel-output-${{ matrix.python }}.txt || echo "Performance test output not found"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: parallel-results-${{ matrix.python }}
+          path: parallel-output-*.txt
+
+  # Run multiple iterations of JUST the perf test to measure variance
+  perf-variance:
+    name: "Variance Test"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        python: ["3.13"]  # Focus on the problematic version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
+
+      - name: Install dependencies
+        run: uv sync --extra dev --extra adapters
+
+      - name: "Run 10 iterations to measure variance"
+        run: |
+          echo "=== System Info ==="
+          uname -a
+          python --version
+          echo "==================="
+          
+          for i in {1..10}; do
+            echo "=== Iteration $i ==="
+            uv run pytest tests/integration/test_discovery_integration.py::TestDiscoveryPerformance::test_categorization_performance -v -s 2>&1 | tee -a variance-${{ matrix.python }}.txt
+            echo ""
+          done
+          
+          echo "=== SUMMARY: All categorization times ==="
+          grep "categorize_tests_by_type total" variance-${{ matrix.python }}.txt
+
+      - name: Upload results
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: variance-results-${{ matrix.python }}
+          path: variance-*.txt
