@@ -5,18 +5,91 @@ on:
   push:
     branches:
       - main
+      # Temporary: release/pyats-integration-v1.1-beta is the MVP feature branch
+      # that all PyATS integration PRs merge into before eventually going to main.
+      # This ensures CI runs on the integrated state after each merge.
+      # Remove this line once the branch is merged to main.
       - release/pyats-integration-v1.1-beta
 
 jobs:
-  # PERFORMANCE INVESTIGATION: Isolated tests (no parallelism)
-  perf-isolated:
-    name: "Perf Isolated (${{ matrix.python }}) #${{ matrix.run }}"
+  security:
+    name: Security Scan
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install bandit
+        run: uv tool install bandit[toml]
+
+      - name: Run bandit security scan
+        run: bandit -c pyproject.toml -r nac_test/ -ll -f json -o bandit-security-report.json
+        
+      - name: Upload security report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: bandit-security-report
+          path: bandit-security-report.json
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write  # Required for dependabot to push lock file updates
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # For fork PRs, use merge commit; for same-repo PRs, use head ref
+          ref: ${{ github.event.pull_request.head.sha || github.head_ref }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install mypy
+        run: uv tool install mypy
+
+      - name: Update lock file
+        # Only run for dependabot on same-repo PRs (not forks)
+        if: github.actor == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          uv lock
+          if [[ -n $(git status --porcelain uv.lock) ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add uv.lock
+            git commit -m "chore: update uv.lock [dependabot skip]"
+            git push
+          fi
+
+      - name: Check License Headers
+        run: bash scripts/license-headers.sh
+
+      - name: Pre-commit Checks
+        uses: pre-commit/action@v3.0.1
+
+  test:
+    name: Tests (${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
-        python: ["3.10", "3.11", "3.12", "3.13"]
-        run: [1, 2, 3]
+        python:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -29,95 +102,44 @@ jobs:
       - name: Set up Python ${{ matrix.python }}
         run: uv python install ${{ matrix.python }}
 
-      - name: System Info
-        run: |
-          echo "=== System Info ==="
-          uname -a
-          cat /proc/cpuinfo | grep "model name" | head -1
-          cat /proc/cpuinfo | grep "processor" | wc -l
-          free -h
-          echo "==================="
-
       - name: Install dependencies
         run: uv sync --extra dev --extra adapters
 
-      - name: "Performance test (ISOLATED, no parallelism)"
+      - name: Run unit/integration tests (no parallelism)
         run: |
-          uv run pytest tests/integration/test_discovery_integration.py::TestDiscoveryPerformance::test_categorization_performance -v -s
+          uv run pytest tests/unit tests/integration -n 0
 
-  # PERFORMANCE INVESTIGATION: With parallelism 
-  perf-parallel:
-    name: "Perf Parallel (${{ matrix.python }})"
+      - name: Run e2e tests (with parallelism)
+        run: |
+          uv run pytest tests/e2e -n auto --dist loadscope
+
+  notification:
+    name: Notification
+    if: always() && github.event_name != 'pull_request'
+    needs: [security, lint, test]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      matrix:
-        python: ["3.10", "3.13"]
+    timeout-minutes: 5
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-
-      - name: Set up Python ${{ matrix.python }}
-        run: uv python install ${{ matrix.python }}
-
-      - name: System Info
+      - name: Check Job Success
         run: |
-          echo "=== System Info ==="
-          uname -a
-          cat /proc/cpuinfo | grep "model name" | head -1
-          nproc
-          free -h
-          echo "==================="
+          if [ ${{ needs.security.result }} == 'success' ] && [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test.result }} == 'success' ]; then
+            echo "All jobs succeeded"
+            echo "jobSuccess=success" >> $GITHUB_ENV
+          else
+            echo "Not all jobs succeeded"
+            echo "jobSuccess=fail" >> $GITHUB_ENV
+          fi
+        id: print_status
 
-      - name: Install dependencies
-        run: uv sync --extra dev --extra adapters
-
-      - name: "All tests with parallelism (-n auto)"
-        run: |
-          uv run pytest tests/ -n auto --dist loadscope -v 2>&1 | tee output.txt || true
-          echo ""
-          echo "=== PERFORMANCE TEST OUTPUT ==="
-          grep -A 30 "PERFORMANCE TEST DIAGNOSTICS" output.txt || echo "Not found in output"
-
-  # PERFORMANCE INVESTIGATION: Variance test (10 iterations on 3.13)
-  perf-variance:
-    name: "Perf Variance 3.13 (10 runs)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-
-      - name: Set up Python 3.13
-        run: uv python install 3.13
-
-      - name: System Info
-        run: |
-          echo "=== System Info ==="
-          uname -a
-          cat /proc/cpuinfo | grep "model name" | head -1
-          nproc
-          free -h
-          echo "==================="
-
-      - name: Install dependencies
-        run: uv sync --extra dev --extra adapters
-
-      - name: "10 iterations of performance test"
-        run: |
-          echo "Running 10 iterations to measure variance..."
-          for i in {1..10}; do
-            echo ""
-            echo "========== Iteration $i =========="
-            uv run pytest tests/integration/test_discovery_integration.py::TestDiscoveryPerformance::test_categorization_performance -v -s 2>&1 || true
-          done
+      - name: Webex Notification
+        if: always()
+        uses: qsnyder/action-wxt@master
+        env:
+          TOKEN: ${{ secrets.WEBEX_TOKEN }}
+          ROOMID: ${{ secrets.WEBEX_ROOM_ID }}
+          MESSAGE: |
+            [**[${{ env.jobSuccess }}] ${{ github.repository }} #${{ github.run_number }}**](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            * Commit: [${{ github.event.head_commit.message }}](${{ github.event.head_commit.url }})[${{ github.event.pull_request.title }}](${{ github.event.pull_request.html_url }})
+            * Author: ${{ github.event.sender.login }}
+            * Branch: ${{ github.ref }} ${{ github.head_ref }}
+            * Event: ${{ github.event_name }}

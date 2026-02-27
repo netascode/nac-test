@@ -692,17 +692,7 @@ class TestDiscoveryPerformance:
         Creates 50 test files and verifies categorization completes in
         reasonable time (<5 seconds for all files).
         """
-        import sys
         import time
-
-        print(f"\n{'=' * 60}")
-        print("PERFORMANCE TEST DIAGNOSTICS")
-        print(f"Python version: {sys.version}")
-        print(f"tmp_path: {tmp_path}")
-        print(f"{'=' * 60}")
-
-        # Phase 1: File creation timing
-        file_create_start = time.perf_counter()
 
         # Create 50 test files (25 API, 25 D2D)
         test_dir = tmp_path / "test" / "performance"
@@ -732,68 +722,13 @@ class TestD2D{i}(SSHTestBase):
         pass
 """)
 
-        file_create_elapsed = time.perf_counter() - file_create_start
-        print(f"[TIMING] File creation (50 files): {file_create_elapsed:.4f}s")
-
-        # Phase 2: TestDiscovery instantiation
-        discovery_init_start = time.perf_counter()
+        # Time the categorization
         discovery = TestDiscovery(tmp_path)
-        discovery_init_elapsed = time.perf_counter() - discovery_init_start
-        print(f"[TIMING] TestDiscovery.__init__: {discovery_init_elapsed:.4f}s")
-
-        # Phase 3: Test discovery
-        discover_start = time.perf_counter()
         files, _ = discovery.discover_pyats_tests()
-        discover_elapsed = time.perf_counter() - discover_start
-        print(
-            f"[TIMING] discover_pyats_tests ({len(files)} files): {discover_elapsed:.4f}s"
-        )
 
-        # Phase 4: Import TestTypeResolver (lazy import inside categorize_tests_by_type)
-        import_start = time.perf_counter()
-        from nac_test.pyats_core.discovery.test_type_resolver import TestTypeResolver
-
-        import_elapsed = time.perf_counter() - import_start
-        print(f"[TIMING] TestTypeResolver import: {import_elapsed:.4f}s")
-
-        # Phase 5: Categorization with per-file timing
         start_time = time.perf_counter()
-
-        # Manual categorization to get per-file timing
-        resolver = TestTypeResolver(tmp_path)
-        api_tests = []
-        d2d_tests = []
-        file_times = []
-
-        for test_file in files:
-            file_start = time.perf_counter()
-            test_type = resolver.resolve(test_file)
-            file_elapsed = time.perf_counter() - file_start
-            file_times.append(file_elapsed)
-
-            if test_type == "api":
-                api_tests.append(test_file)
-            else:
-                d2d_tests.append(test_file)
-
+        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
         elapsed = time.perf_counter() - start_time
-
-        # Statistics
-        avg_time = sum(file_times) / len(file_times)
-        max_time = max(file_times)
-        min_time = min(file_times)
-        print(f"[TIMING] categorize_tests_by_type total: {elapsed:.4f}s")
-        print(
-            f"[TIMING] Per-file avg: {avg_time:.4f}s, min: {min_time:.4f}s, max: {max_time:.4f}s"
-        )
-
-        # Show slowest 5 files
-        sorted_times = sorted(enumerate(file_times), key=lambda x: x[1], reverse=True)
-        print("[TIMING] Slowest 5 files:")
-        for idx, t in sorted_times[:5]:
-            print(f"         {files[idx].name}: {t:.4f}s")
-
-        print(f"{'=' * 60}")
 
         # Verify results
         assert len(api_tests) == 25
