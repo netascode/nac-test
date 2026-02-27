@@ -698,3 +698,4 @@ nac-test -d ./data -t ./tests -o ./results --pyats --diagnostic
 ```
 
 The diagnostic flag will wrap your nac-test execution and generate a `nac-test-diagnostics-XXXXXX.tar.gz` file containing all diagnostic information with sensitive data automatically masked.
+foo
