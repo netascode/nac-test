@@ -156,22 +156,22 @@ class E2ECombinedTestBase:
         """Verify Robot output.xml exists."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        output_xml = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
+        output_xml = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
         assert output_xml.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/output.xml"
 
     def test_robot_log_html_exists(self, results: E2EResults) -> None:
         """Verify Robot log.html exists."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        log_html = results.output_dir / ROBOT_RESULTS_DIRNAME / "log.html"
-        assert log_html.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/log.html"
+        log_html = results.output_dir / ROBOT_RESULTS_DIRNAME / LOG_HTML
+        assert log_html.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/{LOG_HTML}"
 
     def test_robot_report_html_exists(self, results: E2EResults) -> None:
         """Verify Robot report.html exists."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        report_html = results.output_dir / ROBOT_RESULTS_DIRNAME / "report.html"
-        assert report_html.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/report.html"
+        report_html = results.output_dir / ROBOT_RESULTS_DIRNAME / REPORT_HTML
+        assert report_html.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/{REPORT_HTML}"
 
     def test_robot_summary_report_exists(self, results: E2EResults) -> None:
         """Verify Robot summary_report.html exists."""
@@ -186,7 +186,7 @@ class E2ECombinedTestBase:
         """Verify Robot output.xml is valid XML."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
+        xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
         tree = ET.parse(xml_path)
         root = tree.getroot()
         assert root.tag == "robot", f"Expected root tag 'robot', got '{root.tag}'"
@@ -195,7 +195,7 @@ class E2ECombinedTestBase:
         """Verify Robot test statistics match scenario expectations."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
+        xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
         parser = RobotResultParser(xml_path)
         data = parser.parse()
         stats = data["aggregated_stats"]
@@ -218,7 +218,7 @@ class E2ECombinedTestBase:
         """Verify output.xml symlink exists at root."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        symlink = results.output_dir / "output.xml"
+        symlink = results.output_dir / OUTPUT_XML
         assert symlink.exists(), "Missing output.xml symlink at root"
         assert symlink.is_symlink(), "output.xml is not a symlink"
 
@@ -226,7 +226,7 @@ class E2ECombinedTestBase:
         """Verify symlinks correctly point to robot_results/ subdirectory."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        symlink = results.output_dir / "output.xml"
+        symlink = results.output_dir / OUTPUT_XML
         target = symlink.resolve()
         expected = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
         assert target == expected, (
