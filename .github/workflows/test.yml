@@ -80,7 +80,7 @@ jobs:
         uses: pre-commit/action@v3.0.1
 
   test:
-    name: Tests
+    name: Tests (${{ matrix.python }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -104,9 +104,11 @@ jobs:
 
       - name: Test
         run: |
-          uv sync --extra dev --extra adapters    # --extra adapters will pull in nac-test-pyats-common
-          # Run tests in parallel (--dist loadscope keeps test classes together, this is critical for e2e tests)
-          uv run pytest tests/ -n auto --dist loadscope
+          uv sync --extra dev --extra adapters
+          # Run unit/integration tests without parallelism (pytest-xdist causes ~1500x slowdown on Python 3.13)
+          uv run pytest tests/unit tests/integration -n 0
+          # Run e2e tests with parallelism (--dist loadscope keeps test classes together)
+          uv run pytest tests/e2e -n auto --dist loadscope
 
   notification:
     name: Notification
