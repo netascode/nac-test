@@ -157,7 +157,7 @@ class E2ECombinedTestBase:
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
         output_xml = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
-        assert output_xml.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/output.xml"
+        assert output_xml.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/{OUTPUT_XML}"
 
     def test_robot_log_html_exists(self, results: E2EResults) -> None:
         """Verify Robot log.html exists."""
