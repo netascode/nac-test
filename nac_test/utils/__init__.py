@@ -4,7 +4,10 @@
 """Utility modules for nac-test framework."""
 
 from nac_test.utils.asyncio_utils import get_or_create_event_loop
-from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
+from nac_test.utils.cleanup import (
+    cleanup_pyats_output_dir,
+    cleanup_pyats_runtime,
+)
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.device_validation import (
     REQUIRED_DEVICE_FIELDS,
@@ -22,7 +25,7 @@ __all__ = [
     "SystemResourceCalculator",
     "EnvironmentValidator",
     "cleanup_pyats_runtime",
-    "cleanup_old_test_outputs",
+    "cleanup_pyats_output_dir",
     "configure_logging",
     "VerbosityLevel",
     # Asyncio utilities (cross-version compatibility)
