@@ -36,11 +36,11 @@ def version_callback(value: bool) -> None:
 
 
 Verbosity = Annotated[
-    VerbosityLevel,
+    VerbosityLevel | None,
     typer.Option(
         "-v",
         "--verbosity",
-        help="Verbosity level.",
+        help="Verbosity level. Default: WARNING (or DEBUG if --debug is set).",
         envvar="NAC_VALIDATE_VERBOSITY",
         is_eager=True,
     ),
@@ -285,7 +285,7 @@ def main(
     max_parallel_devices: MaxParallelDevices | None = None,
     minimal_reports: MinimalReports = False,
     testbed: Testbed = None,
-    verbosity: Verbosity = VerbosityLevel.WARNING,
+    verbosity: Verbosity = None,
     version: Version = False,  # noqa: ARG001
     diagnostic: Diagnostic = False,  # noqa: ARG001
     debug: Debug = False,
@@ -298,7 +298,15 @@ def main(
     These are appended to the pabot invocation. Pabot-specific options and test
     files/directories are not supported and will result in an error.
     """
-    configure_logging(verbosity)
+
+    # Resolve verbosity: explicit > debug-implied > default
+    if verbosity is not None:
+        effective_verbosity = verbosity
+    elif debug:
+        effective_verbosity = VerbosityLevel.DEBUG
+    else:
+        effective_verbosity = VerbosityLevel.WARNING
+    configure_logging(effective_verbosity)
 
     check_and_exit_if_unsupported_macos_python()
 
@@ -359,7 +367,7 @@ def main(
         extra_args=ctx.args,
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
-        verbosity=verbosity,
+        verbosity=effective_verbosity,
         dev_pyats_only=pyats,
         dev_robot_only=robot,
         debug=debug,
