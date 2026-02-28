@@ -12,9 +12,10 @@ Tests the fork-safe subprocess authentication mechanism:
 import os
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
+from pytest_mock import MockerFixture
 
 from nac_test.pyats_core.common.subprocess_auth import (
     SubprocessAuthError,
@@ -22,12 +23,9 @@ from nac_test.pyats_core.common.subprocess_auth import (
     execute_auth_subprocess,
 )
 
-if TYPE_CHECKING:
-    from pytest_mock.plugin import MockerFixture
-
 
 @pytest.fixture
-def isolated_tempfile(mocker: "MockerFixture", tmp_path: Path) -> Path:
+def isolated_tempfile(mocker: MockerFixture, tmp_path: Path) -> Path:
     """Redirect tempfile.NamedTemporaryFile to isolated test directory.
 
     Prevents race conditions when tests run in parallel by ensuring each
