@@ -14,8 +14,8 @@ Adapted from BRKXAR-2032-test-automation with significant improvements:
 - Debug mode support
 
 Environment Variables:
-    PYATS_DEBUG: If set, keeps JSON result files and may enable verbose output
-    KEEP_HTML_REPORT_DATA: If set, keeps JSON result files without debug verbosity
+    NAC_TEST_DEBUG: If set, keeps JSON result files and may enable verbose output
+    NAC_TEST_PYATS_KEEP_REPORT_DATA: If set, keeps JSON result files without debug verbosity
 """
 
 import asyncio

@@ -18,9 +18,19 @@ DEFAULT_TEST_TIMEOUT = 21600  # 6 hours per test
 CONNECTION_CLOSE_DELAY = 0.25  # seconds
 
 # Concurrency limits - Can be used by both PyATS and Robot
-# Can be overridden via NAC_API_CONCURRENCY environment variable
-DEFAULT_API_CONCURRENCY = int(os.environ.get("NAC_API_CONCURRENCY", "55"))
-DEFAULT_SSH_CONCURRENCY = int(os.environ.get("NAC_SSH_CONCURRENCY", "20"))
+# Can be overridden via NAC_TEST_PYATS_API_CONCURRENCY environment variable
+DEFAULT_API_CONCURRENCY = int(os.environ.get("NAC_TEST_PYATS_API_CONCURRENCY", "55"))
+DEFAULT_SSH_CONCURRENCY = int(os.environ.get("NAC_TEST_PYATS_SSH_CONCURRENCY", "20"))
+
+# NOTE: The following environment variables remain as undocumented internal tuning
+# knobs, not exposed as CLI flags or documented in README. Consider converting to
+# proper constants with CLI flags in a future release if user demand warrants it:
+# - NAC_TEST_SENTINEL_TIMEOUT
+# - NAC_TEST_PIPE_DRAIN_DELAY
+# - NAC_TEST_PIPE_DRAIN_TIMEOUT
+# - NAC_TEST_BATCH_SIZE
+# - NAC_TEST_BATCH_TIMEOUT
+# - NAC_TEST_QUEUE_SIZE
 
 # Progress reporting
 PROGRESS_UPDATE_INTERVAL = 0.5  # seconds

@@ -36,11 +36,11 @@ def version_callback(value: bool) -> None:
 
 
 Verbosity = Annotated[
-    VerbosityLevel,
+    VerbosityLevel | None,
     typer.Option(
         "-v",
         "--verbosity",
-        help="Verbosity level.",
+        help="Verbosity level. Default: WARNING (or DEBUG if --debug is set).",
         envvar="NAC_VALIDATE_VERBOSITY",
         is_eager=True,
     ),
@@ -242,6 +242,16 @@ Diagnostic = Annotated[
 ]
 
 
+Debug = Annotated[
+    bool,
+    typer.Option(
+        "--debug",
+        help="Enable debug mode: keeps archive files, enables verbose output for both Robot and PyATS.",
+        envvar="NAC_TEST_DEBUG",
+    ),
+]
+
+
 Testbed = Annotated[
     Path | None,
     typer.Option(
@@ -275,9 +285,10 @@ def main(
     max_parallel_devices: MaxParallelDevices | None = None,
     minimal_reports: MinimalReports = False,
     testbed: Testbed = None,
-    verbosity: Verbosity = VerbosityLevel.WARNING,
+    verbosity: Verbosity = None,
     version: Version = False,  # noqa: ARG001
     diagnostic: Diagnostic = False,  # noqa: ARG001
+    debug: Debug = False,
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
@@ -287,7 +298,15 @@ def main(
     These are appended to the pabot invocation. Pabot-specific options and test
     files/directories are not supported and will result in an error.
     """
-    configure_logging(verbosity)
+
+    # Resolve verbosity: explicit > debug-implied > default
+    if verbosity is not None:
+        effective_verbosity = verbosity
+    elif debug:
+        effective_verbosity = VerbosityLevel.DEBUG
+    else:
+        effective_verbosity = VerbosityLevel.WARNING
+    configure_logging(effective_verbosity)
 
     check_and_exit_if_unsupported_macos_python()
 
@@ -348,9 +367,10 @@ def main(
         extra_args=ctx.args,
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
-        verbosity=verbosity,
+        verbosity=effective_verbosity,
         dev_pyats_only=pyats,
         dev_robot_only=robot,
+        debug=debug,
     )
 
     # Track total runtime for benchmarking

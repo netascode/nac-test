@@ -1048,3 +1048,42 @@ class TestE2EPyatsCc(E2ECombinedTestBase):
     def results(self, e2e_pyats_cc_results: E2EResults) -> E2EResults:
         """Provide PyATS Catalyst Center scenario results."""
         return e2e_pyats_cc_results
+
+
+# =============================================================================
+# DEBUG FLAG SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EDebug(E2ECombinedTestBase):
+    """E2E tests for the debug flag scenario.
+
+    Scenario: Robot (1 pass) + PyATS API (1 pass), verifies --debug flag enables DEBUG log level
+    Expected: CLI exits with code 0, debug output visible for nac-test, Robot, and PyATS
+
+    This scenario verifies that when --debug flag is passed:
+    1. Robot Framework is invoked with --loglevel DEBUG
+    2. The Robot test can verify this using Set Log Level keyword
+    3. PyATS verbose output (%EASYPY-INFO) IS enabled (--debug implies DEBUG verbosity)
+    """
+
+    @pytest.fixture
+    def results(self, e2e_debug_results: E2EResults) -> E2EResults:
+        return e2e_debug_results
+
+    def test_debug_log_messages_in_stdout(self, results: E2EResults) -> None:
+        """Verify DEBUG log messages appear (nac-test verbosity=DEBUG)."""
+        assert "DEBUG - Found Robot template files" in results.stdout, (
+            "Missing nac-test DEBUG log message in stdout."
+        )
+
+    def test_pabot_verbose_shows_test_result(self, results: E2EResults) -> None:
+        """Verify pabot --verbose output shows test case result with PASS."""
+        pattern = r"Verify Debug Log Level Is Active\s+\| PASS \|"
+        assert re.search(pattern, results.stdout), (
+            "Missing pabot verbose output showing test result"
+        )
+
+    def test_easypy_info_in_stdout(self, results: E2EResults) -> None:
+        """Verify %EASYPY-INFO appears (PyATS verbose output enabled)."""
+        assert "%EASYPY-INFO" in results.stdout, "Missing %EASYPY-INFO in stdout"
