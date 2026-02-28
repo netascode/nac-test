@@ -55,7 +55,7 @@ class OutputProcessor:
                 self._handle_progress_event(event)
             except json.JSONDecodeError:
                 # If parsing fails, show the line in debug mode
-                if os.environ.get("PYATS_DEBUG"):
+                if os.environ.get("NAC_TEST_DEBUG"):
                     print(f"Failed to parse progress event: {line}")
             except Exception as e:
                 logger.error(f"Error processing progress event: {e}", exc_info=True)
@@ -167,11 +167,11 @@ class OutputProcessor:
             # be called for tests that error during setup
             self._finalize_orphaned_tests(event)
 
-        elif event_type == "section_start" and os.environ.get("PYATS_DEBUG"):
+        elif event_type == "section_start" and os.environ.get("NAC_TEST_DEBUG"):
             # In debug mode, show section progress
             print(f"  -> Section {event['section']} starting")
 
-        elif event_type == "section_end" and os.environ.get("PYATS_DEBUG"):
+        elif event_type == "section_end" and os.environ.get("NAC_TEST_DEBUG"):
             print(f"  -> Section {event['section']} {event['result']}")
 
     def _finalize_orphaned_tests(self, job_end_event: dict[str, Any]) -> None:
@@ -247,7 +247,7 @@ class OutputProcessor:
             True if line should be shown, False otherwise
         """
         # In debug mode, show everything
-        if os.environ.get("PYATS_DEBUG"):
+        if os.environ.get("NAC_TEST_DEBUG"):
             return True
 
         # Always suppress these patterns for clean console output

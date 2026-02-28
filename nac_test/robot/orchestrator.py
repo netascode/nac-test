@@ -57,6 +57,7 @@ class RobotOrchestrator:
         processes: int | None = None,
         extra_args: list[str] | None = None,
         verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+        debug: bool = False,
     ):
         """Initialize the Robot Framework orchestrator.
 
@@ -74,6 +75,7 @@ class RobotOrchestrator:
             processes: Number of parallel processes for test execution
             extra_args: Additional Robot Framework arguments to pass to pabot
             verbosity: Logging verbosity level
+            debug: Enable debug mode - enables verbose output for pabot
         """
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
@@ -95,6 +97,7 @@ class RobotOrchestrator:
         self.processes = processes
         self.extra_args = extra_args or []
         self.verbosity = verbosity
+        self.debug = debug
 
         # Determine if ordering file should be used for test-level parallelization
         if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
@@ -160,7 +163,7 @@ class RobotOrchestrator:
                 exclude=self.exclude_tags,
                 processes=self.processes,
                 dry_run=self.dry_run,
-                verbose=(self.verbosity == VerbosityLevel.DEBUG),
+                verbose=(self.debug or self.verbosity == VerbosityLevel.DEBUG),
                 ordering_file=self.ordering_file,
                 extra_args=self.extra_args,
             )

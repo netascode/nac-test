@@ -55,6 +55,9 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_MINIMAL_REPORTS]  │
 │    --diagnostic                         Wrap execution with diagnostic       │
 │                                         collection script for troubleshooting│
+│    --debug                              Enable debug mode: verbose output,   │
+│                                         keep archive files.                  │
+│                                         [env var: NAC_TEST_DEBUG]            │
 │    --merged-data-file… -m   TEXT        Filename for merged data model.      │
 │                                         [default: merged_data_model_test...] │
 │    --verbosity         -v   [DEBUG|...] Verbosity level. [default: WARNING]  │
@@ -666,6 +669,49 @@ nac-test _mostly_ follows Robot Framework exit code conventions to provide meani
 | **255** | Execution error | Framework crash or infrastructure error |
 
 (we only follow _mostly_ as we deviate in using `2` for invalid nac-test arguments, and don't use `251`).
+
+## Debug Mode
+
+The `--debug` flag enables debug mode for troubleshooting test execution:
+
+```bash
+nac-test -d ./data -t ./tests -o ./results --debug
+```
+
+When enabled, debug mode:
+- Enables verbose output for both Robot Framework (pabot) and PyATS execution
+- Preserves intermediate archive files and JSONL data files that are normally cleaned up
+- Shows additional progress information during PyATS test execution
+
+You can also enable debug mode via the `NAC_TEST_DEBUG` environment variable:
+
+```bash
+export NAC_TEST_DEBUG=1
+nac-test -d ./data -t ./tests -o ./results
+```
+
+## Advanced Environment Variables
+
+In addition to CLI options, `nac-test` supports several environment variables for advanced tuning:
+
+### PyATS Execution Tuning
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NAC_TEST_PYATS_PROCESSES` | Auto (CPU-based) | Number of parallel PyATS worker processes |
+| `NAC_TEST_PYATS_MAX_CONNECTIONS` | Auto (resource-based) | Maximum concurrent API connections |
+| `NAC_TEST_PYATS_API_CONCURRENCY` | 10 | Concurrent API requests per worker |
+| `NAC_TEST_PYATS_SSH_CONCURRENCY` | 5 | Concurrent SSH connections per worker |
+| `NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT` | 10485760 | Output buffer size in bytes (10MB) |
+| `NAC_TEST_PYATS_KEEP_REPORT_DATA` | unset | Keep intermediate JSONL/archive files |
+| `NAC_TEST_PYATS_OVERFLOW_DIR` | /tmp/nac_test_overflow | Directory for overflow files when memory limits exceeded |
+
+### Debug and Development
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NAC_TEST_DEBUG` | unset | Enable debug mode (same as `--debug` flag) |
+| `NAC_TEST_NO_TESTLEVELSPLIT` | unset | Disable test-level parallelization for Robot |
 
 ## Troubleshooting
 

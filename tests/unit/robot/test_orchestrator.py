@@ -298,3 +298,60 @@ class TestRobotOrchestrator:
         orchestrator._create_backward_compat_symlinks()
 
         assert "is a directory" in caplog.text
+
+    def test_debug_flag_defaults_to_false(self, orchestrator) -> None:
+        """Test that debug flag defaults to False."""
+        assert orchestrator.debug is False
+
+    @pytest.mark.parametrize(
+        ("debug", "verbosity", "expected_verbose"),
+        [
+            (True, VerbosityLevel.WARNING, True),
+            (False, VerbosityLevel.DEBUG, True),
+            (False, VerbosityLevel.WARNING, False),
+        ],
+        ids=["debug_true", "verbosity_debug", "no_debug_no_verbose"],
+    )
+    @patch("nac_test.robot.orchestrator.run_pabot")
+    @patch("nac_test.robot.orchestrator.RobotReportGenerator")
+    def test_verbose_flag_passed_to_pabot(
+        self,
+        mock_generator,
+        mock_pabot,
+        mock_data_paths,
+        mock_templates_dir,
+        temp_output_dir,
+        debug,
+        verbosity,
+        expected_verbose,
+    ) -> None:
+        """Test that verbose flag is correctly computed from debug and verbosity."""
+        orchestrator = RobotOrchestrator(
+            data_paths=mock_data_paths,
+            templates_dir=mock_templates_dir,
+            output_dir=temp_output_dir,
+            merged_data_filename="merged.yaml",
+            debug=debug,
+            verbosity=verbosity,
+        )
+        orchestrator.robot_writer.write = MagicMock()
+        orchestrator.robot_writer.write_merged_data_model = MagicMock()
+        mock_pabot.return_value = 0
+
+        mock_generator_instance = MagicMock()
+        mock_generator_instance.generate_summary_report.return_value = (
+            None,
+            TestResults(),
+        )
+        mock_generator.return_value = mock_generator_instance
+
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
+            (robot_results_dir / filename).write_text(f"Mock {filename}")
+
+        orchestrator.run_tests()
+
+        mock_pabot.assert_called_once()
+        call_kwargs = mock_pabot.call_args[1]
+        assert call_kwargs["verbose"] is expected_verbose

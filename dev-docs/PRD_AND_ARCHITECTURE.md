@@ -1314,6 +1314,7 @@ Every CLI flag (except `--version` and `--merged-data-filename`) supports enviro
 | `--robot` | `NAC_TEST_ROBOT` | `bool` | `NAC_TEST_ROBOT=1` |
 | `--max-parallel-devices` | `NAC_TEST_MAX_PARALLEL_DEVICES` | `int` | `NAC_TEST_MAX_PARALLEL_DEVICES=25` |
 | `--minimal-reports` | `NAC_TEST_MINIMAL_REPORTS` | `bool` | `NAC_TEST_MINIMAL_REPORTS=true` |
+| `--debug` | `NAC_TEST_DEBUG` | `bool` | `NAC_TEST_DEBUG=1` |
 | `-v, --verbosity` | `NAC_VALIDATE_VERBOSITY` | `enum` | `NAC_VALIDATE_VERBOSITY=DEBUG` |
 
 **List Type Parsing**:
@@ -1895,7 +1896,7 @@ def _calculate_workers(self) -> int:
         memory_per_worker_gb=MEMORY_PER_WORKER_GB,  # 0.35GB per worker
         cpu_multiplier=DEFAULT_CPU_MULTIPLIER,       # 2x CPU cores
         max_workers=MAX_WORKERS_HARD_LIMIT,         # 100 workers max
-        env_var="PYATS_MAX_WORKERS",                # Override via env var
+        env_var="NAC_TEST_PYATS_PROCESSES",                # Override via env var
     )
     return cpu_workers
 ```
@@ -2036,7 +2037,7 @@ async def execute_job(self, job_file_path: Path, env: Dict[str, str]) -> Optiona
     ]
 
     # Execute with increased buffer limit (10MB)
-    buffer_limit = int(os.environ.get("PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT))
+    buffer_limit = int(os.environ.get("NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT))
     process = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
@@ -2101,7 +2102,7 @@ async def _process_output_realtime(self, process: asyncio.subprocess.Process) ->
 
 **Why Configurable Buffer Limit?**
 
-PyATS tests can generate **extremely large output lines** (100KB+ JSON responses from API calls). asyncio's default 64KB buffer would trigger `LimitOverrunError` and cause nac-test to hang. The 10MB buffer limit (configurable via `PYATS_OUTPUT_BUFFER_LIMIT`) prevents these errors while supporting even the largest API responses.
+PyATS tests can generate **extremely large output lines** (100KB+ JSON responses from API calls). asyncio's default 64KB buffer would trigger `LimitOverrunError` and cause nac-test to hang. The 10MB buffer limit (configurable via `NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT`) prevents these errors while supporting even the largest API responses.
 
 ---
 
@@ -2490,9 +2491,13 @@ Set by system or users for performance tuning:
 
 | Variable | Purpose | Default | Override Example |
 |----------|---------|---------|------------------|
-| `PYATS_MAX_WORKERS` | Override calculated worker count | Calculated (50-100) | `75` |
-| `PYATS_OUTPUT_BUFFER_LIMIT` | Subprocess stdout buffer size | `10485760` (10MB) | `20971520` (20MB) |
-| `PYATS_DEBUG` | Disable archive cleanup for debugging | `false` | `true` |
+| `NAC_TEST_PYATS_PROCESSES` | Override calculated worker count | Calculated (CPU-based) | `75` |
+| `NAC_TEST_PYATS_MAX_CONNECTIONS` | Maximum concurrent API connections | Calculated (resource-based) | `100` |
+| `NAC_TEST_PYATS_API_CONCURRENCY` | Concurrent API requests per worker | `10` | `20` |
+| `NAC_TEST_PYATS_SSH_CONCURRENCY` | Concurrent SSH connections per worker | `5` | `10` |
+| `NAC_TEST_NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT` | Subprocess stdout buffer size | `10485760` (10MB) | `20971520` (20MB) |
+| `NAC_TEST_PYATS_KEEP_REPORT_DATA` | Keep intermediate JSONL/archive files | `false` | `true` |
+| `NAC_TEST_DEBUG` | Enable debug mode (verbose output, keep archives) | `false` | `true` |
 
 **Why Environment Variables Instead of Configuration Files?**
 
@@ -2852,7 +2857,7 @@ def _calculate_workers(self) -> int:
         memory_per_worker_gb=0.35,        # 0.35GB per worker
         cpu_multiplier=2.0,               # 2× CPU cores
         max_workers=100,                  # Safety limit
-        env_var="PYATS_MAX_WORKERS",      # Override mechanism
+        env_var="NAC_TEST_PYATS_PROCESSES",      # Override mechanism
     )
     return cpu_workers
 
@@ -2865,7 +2870,7 @@ def _calculate_workers(self) -> int:
 **Benefits:**
 - ✅ **Memory Safety**: Never exceeds available memory
 - ✅ **CPU Utilization**: Scales with available cores
-- ✅ **Flexibility**: Override via `PYATS_MAX_WORKERS` env var
+- ✅ **Flexibility**: Override via `NAC_TEST_PYATS_PROCESSES` env var
 - ✅ **Portability**: Works on laptop, server, and CI/CD runners
 
 **Real-World Example:**
@@ -3079,7 +3084,7 @@ env:
   ACI_URL: ${{ secrets.ACI_URL }}
   ACI_USERNAME: ${{ secrets.ACI_USERNAME }}
   ACI_PASSWORD: ${{ secrets.ACI_PASSWORD }}
-  PYATS_MAX_WORKERS: 50
+  NAC_TEST_PYATS_PROCESSES: 50
 run: nac-test --data data.yaml --templates templates --output output
 
 # Docker Container
@@ -6171,7 +6176,7 @@ export APIC_PASSWORD="secret"
 export MAX_SSH_CONNECTIONS="100"
 
 # Debug mode
-export PYATS_DEBUG="1"
+export NAC_TEST_DEBUG="1"
 ```
 
 ---
@@ -6869,15 +6874,15 @@ sequenceDiagram
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PYATS_DEBUG` | (unset) | Keep JSONL files, enable verbose output |
-| `KEEP_HTML_REPORT_DATA` | (unset) | Keep JSONL files without debug verbosity |
+| `NAC_TEST_DEBUG` | (unset) | Keep JSONL files, enable verbose output |
+| `NAC_TEST_PYATS_KEEP_REPORT_DATA` | (unset) | Keep JSONL files without debug verbosity |
 | `NAC_TEST_BATCHING_REPORTER` | false | Enable message batching |
 | `NAC_TEST_BATCH_SIZE` | 200 | Messages per batch |
 | `NAC_TEST_BATCH_TIMEOUT` | 0.5 | Seconds before auto-flush |
 | `NAC_TEST_DEBUG` | false | Enable BatchAccumulator debug mode |
 | `NAC_TEST_QUEUE_SIZE` | 5000 | Max overflow queue size |
 | `NAC_TEST_MEMORY_LIMIT_MB` | 500 | Memory limit before disk overflow |
-| `NAC_TEST_OVERFLOW_DIR` | /tmp/nac_test_overflow | Directory for overflow files |
+| `NAC_TEST_PYATS_OVERFLOW_DIR` | /tmp/nac_test_overflow | Directory for overflow files |
 
 ---
 
@@ -7077,7 +7082,7 @@ class TenantVerification(NACTestBase):
 
 3. **Report generation crashed**
    - Check logs for async errors
-   - Run with `PYATS_DEBUG=1` to keep JSONL files
+   - Run with `NAC_TEST_DEBUG=1` to keep JSONL files
 
 #### Issue: Missing Metadata in Reports
 
@@ -7192,10 +7197,10 @@ The system uses **streaming JSONL (JSON Lines)** instead of accumulating all res
 **Source:** `nac_test/pyats_core/reporting/generator.py:137-144`
 
 ```python
-# Clean up JSONL files (unless in debug mode or KEEP_HTML_REPORT_DATA is set)
-if os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA"):
-    if os.environ.get("KEEP_HTML_REPORT_DATA"):
-        logger.info("Keeping JSONL result files (KEEP_HTML_REPORT_DATA is set)")
+# Clean up JSONL files (unless in debug mode or NAC_TEST_PYATS_KEEP_REPORT_DATA is set)
+if os.environ.get("NAC_TEST_DEBUG") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+    if os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+        logger.info("Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)")
     else:
         logger.info("Debug mode enabled - keeping JSONL result files")
 else:
@@ -7211,10 +7216,10 @@ else:
 **To Preserve JSONL Files:**
 ```bash
 # Option 1: Full debug mode (verbose logging + keep files)
-export PYATS_DEBUG=1
+export NAC_TEST_DEBUG=1
 
 # Option 2: Keep files only (no extra logging)
-export KEEP_HTML_REPORT_DATA=1
+export NAC_TEST_PYATS_KEEP_REPORT_DATA=1
 ```
 
 ---
@@ -7273,7 +7278,7 @@ export KEEP_HTML_REPORT_DATA=1
 │     └─> Sorts: FAILED first, then PASSED, then SKIPPED                          │
 │     └─> Renders summary/report.html.j2                                          │
 │                                                                                  │
-│  6. Cleanup (unless PYATS_DEBUG or KEEP_HTML_REPORT_DATA set)                   │
+│  6. Cleanup (unless NAC_TEST_DEBUG or NAC_TEST_PYATS_KEEP_REPORT_DATA set)                   │
 │     └─> Deletes all *.jsonl files                                               │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -9283,7 +9288,7 @@ self.password = os.environ[f"{self.controller_type}_PASSWORD"]
 | `PYATS_LOG_LEVEL` | Orchestrator | PyATS framework | Control PyATS logging verbosity | `ERROR` |
 | `HTTPX_LOG_LEVEL` | Orchestrator | httpx library | Control HTTP client logging | `ERROR` |
 | `PYATS_TASK_WORKER_ID` | PyATS | Progress plugin | Identify worker in parallel execution | `1`, `2`, `3` |
-| `PYATS_DEBUG` | User (optional) | nac-test | Enable debug features (keep files, verbose logs) | `true` or not set |
+| `NAC_TEST_DEBUG` | User (optional) | nac-test | Enable debug features (keep files, verbose logs) | `true` or not set |
 
 **Source Evidence:** `orchestrator.py:199-200`, `progress/plugin.py:49`, `generator.py:138`
 
@@ -9293,8 +9298,8 @@ self.password = os.environ[f"{self.controller_type}_PASSWORD"]
 
 | Variable Name | Set By | Used By | Purpose | Example Value |
 |--------------|--------|---------|---------|---------------|
-| `KEEP_HTML_REPORT_DATA` | User (optional) | Report generator | Prevent JSONL file deletion after report generation | `true` or not set |
-| `PYATS_OUTPUT_BUFFER_LIMIT` | User (optional) | Subprocess runner | Limit stdout/stderr buffer size (bytes) | `10485760` (10MB) |
+| `NAC_TEST_PYATS_KEEP_REPORT_DATA` | User (optional) | Report generator | Prevent JSONL file deletion after report generation | `true` or not set |
+| `NAC_TEST_NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT` | User (optional) | Subprocess runner | Limit stdout/stderr buffer size (bytes) | `10485760` (10MB) |
 
 **Source Evidence:** `generator.py:138-139`, `subprocess_runner.py:98`
 
@@ -9308,7 +9313,7 @@ self.password = os.environ[f"{self.controller_type}_PASSWORD"]
 | `NAC_TEST_QUEUE_SIZE` | User (optional) | Batching reporter | Override default queue size | `500` (default varies by mode) |
 | `NAC_TEST_BATCH_SIZE` | User (optional) | Batching reporter | Override default batch size | `200` |
 | `NAC_TEST_BATCH_TIMEOUT` | User (optional) | Batching reporter | Override batch timeout (seconds) | `0.5` |
-| `NAC_TEST_OVERFLOW_DIR` | User (optional) | Batching reporter | Directory for overflow files | `/tmp/nac_test_overflow` |
+| `NAC_TEST_PYATS_OVERFLOW_DIR` | User (optional) | Batching reporter | Directory for overflow files | `/tmp/nac_test_overflow` |
 | `NAC_TEST_DEBUG` | User (optional) | Batching reporter | Enable debug mode with extensive logging | `true` or not set |
 
 **Source Evidence:** `batching_reporter.py:183-202`, `step_interceptor.py:69`
@@ -10278,7 +10283,7 @@ def calculate_worker_capacity(
     memory_per_worker_gb: float = 0.35,
     cpu_multiplier: float = 2.0,
     max_workers: int = 50,
-    env_var: str = "PYATS_MAX_WORKERS",
+    env_var: str = "NAC_TEST_PYATS_PROCESSES",
 ) -> int:
     """Calculate optimal worker count based on system resources."""
 
@@ -10527,11 +10532,11 @@ if env_var and os.environ.get(env_var):
 
 ```bash
 # Force 10 workers regardless of system resources
-export PYATS_MAX_WORKERS=10
+export NAC_TEST_PYATS_PROCESSES=10
 nac-test --pyats --test-dir ./tests
 
 # Force single-threaded execution for debugging
-export PYATS_MAX_WORKERS=1
+export NAC_TEST_PYATS_PROCESSES=1
 nac-test --pyats --test-dir ./tests
 ```
 
@@ -10604,7 +10609,7 @@ def _calculate_workers(self) -> int:
         memory_per_worker_gb=MEMORY_PER_WORKER_GB,      # 0.35 GB
         cpu_multiplier=DEFAULT_CPU_MULTIPLIER,          # 2.0
         max_workers=MAX_WORKERS_HARD_LIMIT,             # 50
-        env_var="PYATS_MAX_WORKERS",
+        env_var="NAC_TEST_PYATS_PROCESSES",
     )
 
     return cpu_workers
@@ -10648,7 +10653,7 @@ workers = SystemResourceCalculator.calculate_worker_capacity(
 memory_per_worker_gb=0.35,
     cpu_multiplier=2.0,
     max_workers=50,
-    env_var="PYATS_MAX_WORKERS"
+    env_var="NAC_TEST_PYATS_PROCESSES"
 )
 
 print(f"Calculated workers: {workers}")
@@ -10667,10 +10672,10 @@ print(f"Memory workers: {memory_info['available'] / (0.35 * 1024**3):.0f}")
 
 ```bash
 # Set in shell before running
-export PYATS_MAX_WORKERS=10
+export NAC_TEST_PYATS_PROCESSES=10
 
 # Or inline
-PYATS_MAX_WORKERS=4 nac-test --pyats --test-dir ./tests
+NAC_TEST_PYATS_PROCESSES=4 nac-test --pyats --test-dir ./tests
 ```
 
 ---
@@ -10708,7 +10713,7 @@ Conservative 8-worker default prevents overload even if detection fails.
 3. **I/O-bound optimized**: 2x CPU multiplier for network-waiting workloads
 4. **Load-aware**: Halves workers if system already overloaded
 5. **Memory-safe**: Each worker gets 0.35GB, prevents OOM kills
-6. **Override supported**: `PYATS_MAX_WORKERS` env var for manual control
+6. **Override supported**: `NAC_TEST_PYATS_PROCESSES` env var for manual control
 7. **Fallback protection**: Defaults to 4 workers if detection fails
 8. **Hard ceiling**: Never exceeds 50 workers (safety limit)
 
@@ -11011,9 +11016,9 @@ pyats_results/api/html_reports/
 
 ```python
 # generator.py:137-144
-if os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA"):
-    if os.environ.get("KEEP_HTML_REPORT_DATA"):
-        logger.info("Keeping JSONL result files (KEEP_HTML_REPORT_DATA is set)")
+if os.environ.get("NAC_TEST_DEBUG") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+    if os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+        logger.info("Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)")
     else:
         logger.info("Debug mode enabled - keeping JSONL result files")
 else:
@@ -11025,8 +11030,8 @@ else:
 | Environment Variable | JSONL Files | Purpose |
 |---------------------|-------------|---------|
 | *(none)* | **DELETED** | Production mode: minimize disk usage |
-| `PYATS_DEBUG=1` | **KEPT** | Debug mode: preserve all artifacts |
-| `KEEP_HTML_REPORT_DATA=1` | **KEPT** | Keep data without verbose debug logs |
+| `NAC_TEST_DEBUG=1` | **KEPT** | Debug mode: preserve all artifacts |
+| `NAC_TEST_PYATS_KEEP_REPORT_DATA=1` | **KEPT** | Keep data without verbose debug logs |
 
 **When to use each mode:**
 
@@ -11035,12 +11040,12 @@ else:
   - JSONL files are 2-5x larger than HTML
   - Disk space optimization for CI/CD
 
-- **Debug mode (`PYATS_DEBUG=1`):** Keep JSONL files
+- **Debug mode (`NAC_TEST_DEBUG=1`):** Keep JSONL files
   - Enables post-mortem analysis of test data
   - Can regenerate HTML reports with different templates
   - Useful for troubleshooting report generation issues
 
-- **Data preservation (`KEEP_HTML_REPORT_DATA=1`):** Keep JSONL without debug verbosity
+- **Data preservation (`NAC_TEST_PYATS_KEEP_REPORT_DATA=1`):** Keep JSONL without debug verbosity
   - Middle ground: preserve data without excessive logging
   - Useful for audit trails or compliance requirements
 
@@ -11209,7 +11214,7 @@ python -c "from nac_test.pyats_core.reporting.utils.archive_inspector import Arc
 **Development Environment:**
 ```bash
 # Keep all debugging data
-export PYATS_DEBUG=1
+export NAC_TEST_DEBUG=1
 nac-test --test-dir tests/ --data test_data.yaml --output-dir output/
 ```
 
@@ -11225,7 +11230,7 @@ nac-test --test-dir tests/ --data test_data.yaml --output-dir output/
 **Production with Compliance Requirements:**
 ```bash
 # Keep JSONL data for audit trail
-export KEEP_HTML_REPORT_DATA=1
+export NAC_TEST_PYATS_KEEP_REPORT_DATA=1
 nac-test --test-dir tests/ --data test_data.yaml --output-dir output/
 
 # Archive to long-term storage
@@ -11393,7 +11398,7 @@ EOF
 # Scenario: CI/CD with limited disk, only need archives
 
 # Step 1: Execute tests with minimal footprint
-export PYATS_DEBUG=0  # Delete JSONL files after report generation
+export NAC_TEST_DEBUG=0  # Delete JSONL files after report generation
 nac-test --test-dir tests/ --data test_data.yaml --output-dir /tmp/results
 
 # Step 2: Upload archives immediately
@@ -11855,7 +11860,7 @@ def _calculate_workers(self) -> int:
 memory_per_worker_gb=MEMORY_PER_WORKER_GB,  # 0.35 GB
         cpu_multiplier=DEFAULT_CPU_MULTIPLIER,       # 2.0
         max_workers=MAX_WORKERS_HARD_LIMIT,          # 50
-        env_var="PYATS_MAX_WORKERS",
+        env_var="NAC_TEST_PYATS_PROCESSES",
     )
     return cpu_workers
 ```
@@ -17070,7 +17075,7 @@ def post_section(self, section: Any) -> None:
 
 **When to Show Sections:**
 
-Sections are **only shown in debug mode** (`PYATS_DEBUG=1`) because they're too granular for normal output. Each test file has 3 sections: setup → test → cleanup.
+Sections are **only shown in debug mode** (`NAC_TEST_DEBUG=1`) because they're too granular for normal output. Each test file has 3 sections: setup → test → cleanup.
 
 ---
 
@@ -17113,7 +17118,7 @@ class OutputProcessor:
                 self._handle_progress_event(event)
             except json.JSONDecodeError:
                 # If parsing fails, show the line in debug mode
-                if os.environ.get("PYATS_DEBUG"):
+                if os.environ.get("NAC_TEST_DEBUG"):
                     print(f"Failed to parse progress event: {line}")
         else:
             # Show line if it matches our criteria
@@ -17234,7 +17239,7 @@ With 50 tests across 10 workers, test IDs go from 1→50 regardless of which wor
 def _should_show_line(self, line: str) -> bool:
     """Determine if line should be shown to user."""
     # In debug mode, show everything
-    if os.environ.get("PYATS_DEBUG"):
+    if os.environ.get("NAC_TEST_DEBUG"):
         return True
 
     # Always suppress these patterns for clean console output
@@ -17284,7 +17289,7 @@ def _should_show_line(self, line: str) -> bool:
 
 ```
 Line received
-    ├─ PYATS_DEBUG=1? → SHOW (bypass all filters)
+    ├─ NAC_TEST_DEBUG=1? → SHOW (bypass all filters)
     ├─ Matches suppress pattern? → HIDE
     ├─ Matches show pattern? → SHOW (unless PyATS table format)
     └─ Default: HIDE (be conservative)
@@ -17591,12 +17596,12 @@ Tracebacks are **critical information** that must be visible.
 
 #### Example 3: Debug Mode Output
 
-**Scenario**: Running with `PYATS_DEBUG=1` to see all output
+**Scenario**: Running with `NAC_TEST_DEBUG=1` to see all output
 
 **Command:**
 
 ```bash
-PYATS_DEBUG=1 nac-test run --data base.yaml
+NAC_TEST_DEBUG=1 nac-test run --data base.yaml
 ```
 
 **Console Output (excerpt):**
@@ -17743,7 +17748,7 @@ print(f"NAC_PROGRESS:{json.dumps(event)}", flush=True)
 
 1. **Universal**: stdout works across all platforms
 2. **Simple**: No complex IPC mechanisms
-3. **Debuggable**: Can see events in raw output (`PYATS_DEBUG=1`)
+3. **Debuggable**: Can see events in raw output (`NAC_TEST_DEBUG=1`)
 4. **Parseable**: JSON is standard, well-supported
 
 ---
@@ -17839,7 +17844,7 @@ subprocess.run([...], stdout=subprocess.DEVNULL)
 
 1. **Clean by Default**: Noise suppressed
 2. **Errors Visible**: Tracebacks and failures shown
-3. **Debug Available**: `PYATS_DEBUG=1` shows everything
+3. **Debug Available**: `NAC_TEST_DEBUG=1` shows everything
 4. **Controlled**: Orchestrator decides what's important
 
 ---
@@ -20655,10 +20660,10 @@ async def generate_all_reports(self) -> Dict[str, Any]:
         successful_reports, result_files
     )
 
-    # Clean up JSONL files (unless in debug mode or KEEP_HTML_REPORT_DATA is set)
-    if os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA"):
-        if os.environ.get("KEEP_HTML_REPORT_DATA"):
-            logger.info("Keeping JSONL result files (KEEP_HTML_REPORT_DATA is set)")
+    # Clean up JSONL files (unless in debug mode or NAC_TEST_PYATS_KEEP_REPORT_DATA is set)
+    if os.environ.get("NAC_TEST_DEBUG") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+        if os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+            logger.info("Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)")
         else:
             logger.info("Debug mode enabled - keeping JSONL result files")
     else:
@@ -21549,10 +21554,10 @@ Enable debug mode to keep JSONL files for inspection:
 
 ```bash
 # Set environment variable to keep JSONL files
-export PYATS_DEBUG=1
+export NAC_TEST_DEBUG=1
 
-# Or use KEEP_HTML_REPORT_DATA for keeping files without verbose logging
-export KEEP_HTML_REPORT_DATA=1
+# Or use NAC_TEST_PYATS_KEEP_REPORT_DATA for keeping files without verbose logging
+export NAC_TEST_PYATS_KEEP_REPORT_DATA=1
 
 # Run tests
 $ nac-test --data data.yaml --templates templates/ --output output/

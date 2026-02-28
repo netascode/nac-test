@@ -163,6 +163,7 @@ class TestCombinedOrchestratorController:
                     minimal_reports=False,
                     custom_testbed_path=None,
                     controller_type="SDWAN",
+                    debug=False,
                 )
 
                 # Verify run_tests was called on the instance
@@ -313,6 +314,7 @@ class TestCombinedOrchestratorController:
                     minimal_reports=False,
                     custom_testbed_path=None,
                     controller_type="CC",
+                    debug=False,
                 )
 
                 # Verify run_tests was called on the instance

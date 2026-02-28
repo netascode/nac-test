@@ -242,6 +242,16 @@ Diagnostic = Annotated[
 ]
 
 
+Debug = Annotated[
+    bool,
+    typer.Option(
+        "--debug",
+        help="Enable debug mode: keeps archive files, enables verbose output for both Robot and PyATS.",
+        envvar="NAC_TEST_DEBUG",
+    ),
+]
+
+
 Testbed = Annotated[
     Path | None,
     typer.Option(
@@ -278,6 +288,7 @@ def main(
     verbosity: Verbosity = VerbosityLevel.WARNING,
     version: Version = False,  # noqa: ARG001
     diagnostic: Diagnostic = False,  # noqa: ARG001
+    debug: Debug = False,
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
@@ -351,6 +362,7 @@ def main(
         verbosity=verbosity,
         dev_pyats_only=pyats,
         dev_robot_only=robot,
+        debug=debug,
     )
 
     # Track total runtime for benchmarking

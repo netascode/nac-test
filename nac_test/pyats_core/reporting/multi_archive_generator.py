@@ -152,17 +152,18 @@ class MultiArchiveReportGenerator:
             logger.warning("No successful archives to collect stats from")
 
         # Cleanup JSONL files after stats collection
-        # Respects PYATS_DEBUG and KEEP_HTML_REPORT_DATA environment variables
+        # Respects NAC_TEST_DEBUG and NAC_TEST_PYATS_KEEP_REPORT_DATA environment variables
         if not (
-            os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA")
+            os.environ.get("NAC_TEST_DEBUG")
+            or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")
         ):
             logger.info("Cleaning up JSONL files after stats collection")
             await self._cleanup_all_jsonl_files()
         else:
             debug_reason = (
-                "PYATS_DEBUG"
-                if os.environ.get("PYATS_DEBUG")
-                else "KEEP_HTML_REPORT_DATA"
+                "NAC_TEST_DEBUG"
+                if os.environ.get("NAC_TEST_DEBUG")
+                else "NAC_TEST_PYATS_KEEP_REPORT_DATA"
             )
             logger.info(f"Keeping JSONL files ({debug_reason} is set)")
 
