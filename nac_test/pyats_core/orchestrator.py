@@ -62,6 +62,7 @@ class PyATSOrchestrator:
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
+        debug: bool = False,
     ):
         """Initialize the PyATS orchestrator.
 
@@ -74,6 +75,7 @@ class PyATSOrchestrator:
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
                 If not provided, will be detected automatically.
+            debug: Enable debug mode - keeps archive files, enables verbose output
         """
         self.data_paths = data_paths
         self.test_dir = Path(test_dir).resolve()
@@ -86,6 +88,7 @@ class PyATSOrchestrator:
         self.merged_data_filename = merged_data_filename
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
+        self.debug = debug
 
         # Track test status by type for combined summary
         self.api_test_status: dict[str, dict[str, Any]] = {}
@@ -777,7 +780,8 @@ class PyATSOrchestrator:
             # Clean up archives after successful extraction and report generation
             # (unless in debug mode or user wants to keep data)
             if not (
-                os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA")
+                os.environ.get("NAC_TEST_DEBUG")
+                or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")
             ):
                 for archive_path in archive_paths:
                     try:
@@ -789,7 +793,7 @@ class PyATSOrchestrator:
                         )
             else:
                 logger.info(
-                    "Keeping archive files (debug mode or KEEP_HTML_REPORT_DATA is set)"
+                    "Keeping archive files (debug mode or NAC_TEST_PYATS_KEEP_REPORT_DATA is set)"
                 )
 
             # Clean up empty api/ and d2d/ temp parent directories

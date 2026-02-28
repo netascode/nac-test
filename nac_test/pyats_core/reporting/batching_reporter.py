@@ -205,7 +205,7 @@ class OverflowQueue:
         # Overflow to disk
         default_overflow = os.path.join(tempfile.gettempdir(), "nac_test_overflow")
         self.overflow_dir = overflow_dir or Path(
-            os.environ.get("NAC_TEST_OVERFLOW_DIR", default_overflow)
+            os.environ.get("NAC_TEST_PYATS_OVERFLOW_DIR", default_overflow)
         )
         self.overflow_dir.mkdir(parents=True, exist_ok=True)
         self.overflow_file_count = 0

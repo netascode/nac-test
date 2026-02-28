@@ -169,7 +169,9 @@ class SubprocessRunner:
         try:
             # Get buffer limit from environment or use default
             buffer_limit = int(
-                os.environ.get("PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT)
+                os.environ.get(
+                    "NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT
+                )
             )
             logger.debug(
                 f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB"
@@ -281,7 +283,9 @@ class SubprocessRunner:
         try:
             # Get buffer limit from environment or use default
             buffer_limit = int(
-                os.environ.get("PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT)
+                os.environ.get(
+                    "NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT
+                )
             )
             logger.debug(
                 f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB"
