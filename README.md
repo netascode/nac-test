@@ -706,12 +706,17 @@ In addition to CLI options, `nac-test` supports several environment variables fo
 | `NAC_TEST_PYATS_KEEP_REPORT_DATA` | unset | Keep intermediate JSONL/archive files |
 | `NAC_TEST_PYATS_OVERFLOW_DIR` | /tmp/nac_test_overflow | Directory for overflow files when memory limits exceeded |
 
+### Robot Framework Execution
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NAC_TEST_NO_TESTLEVELSPLIT` | unset | Disable test-level parallelization for Robot |
+
 ### Debug and Development
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NAC_TEST_DEBUG` | unset | Enable debug mode (same as `--debug` flag) |
-| `NAC_TEST_NO_TESTLEVELSPLIT` | unset | Disable test-level parallelization for Robot |
+| `NAC_TEST_DEBUG` | unset | Enable debug mode: verbose output and retain intermediate files (see `NAC_TEST_PYATS_KEEP_REPORT_DATA`) |
 
 ## Troubleshooting
 
