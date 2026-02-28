@@ -692,7 +692,7 @@ class TestDiscoveryPerformance:
 
     @pytest.mark.skipif(
         sys.version_info[:2] == (3, 13)
-        and os.environ.get("GITHUB_ACTIONS") == "true"
+        and os.environ.get("GITHUB_ACTIONS") is not None
         and os.environ.get("PYTEST_XDIST_WORKER") is not None,
         reason="pytest-xdist causes inconclusive performance results on Python 3.13 in GitHub Actions CI (see #589)",
     )
