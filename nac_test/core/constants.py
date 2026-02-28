@@ -25,11 +25,12 @@ DEFAULT_SSH_CONCURRENCY = int(os.environ.get("NAC_TEST_PYATS_SSH_CONCURRENCY", "
 # NOTE: The following environment variables remain as undocumented internal tuning
 # knobs, not exposed as CLI flags or documented in README. Consider converting to
 # proper constants with CLI flags in a future release if user demand warrants it:
-# - NAC_TEST_PYATS_API_CONCURRENCY (above)
-# - NAC_TEST_PYATS_SSH_CONCURRENCY (above)
-# - NAC_TEST_PYATS_PROCESSES (in utils/system_resources.py)
-# - NAC_TEST_PYATS_MAX_CONNECTIONS (in utils/system_resources.py)
-# - NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT (in pyats_core/execution/subprocess_runner.py)
+# - NAC_TEST_SENTINEL_TIMEOUT
+# - NAC_TEST_PIPE_DRAIN_DELAY
+# - NAC_TEST_PIPE_DRAIN_TIMEOUT
+# - NAC_TEST_BATCH_SIZE
+# - NAC_TEST_BATCH_TIMEOUT
+# - NAC_TEST_QUEUE_SIZE
 
 # Progress reporting
 PROGRESS_UPDATE_INTERVAL = 0.5  # seconds
