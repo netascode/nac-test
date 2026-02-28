@@ -3,12 +3,8 @@
 
 """Tests for main.py exit code handling."""
 
-from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
-from typer.testing import CliRunner, Result
-
-from nac_test.cli.main import app
 from nac_test.core.constants import (
     EXIT_DATA_ERROR,
     EXIT_ERROR,
@@ -18,27 +14,11 @@ from nac_test.core.constants import (
 )
 from nac_test.core.types import CombinedResults, ErrorType, TestResults
 
+from .conftest import run_cli_with_temp_dirs
+
 
 class TestMainExitCodes:
     """Tests for exit code handling in main.py CLI."""
-
-    def setup_method(self) -> None:
-        """Set up test fixtures."""
-        self.runner = CliRunner()
-
-    def _run_cli_with_temp_dirs(
-        self, additional_args: list[str] | None = None
-    ) -> Result:
-        """Helper method to run CLI with temporary directories."""
-        args = additional_args or []
-        with (
-            TemporaryDirectory() as temp_data,
-            TemporaryDirectory() as temp_templates,
-            TemporaryDirectory() as temp_output,
-        ):
-            return self.runner.invoke(
-                app, ["-d", temp_data, "-t", temp_templates, "-o", temp_output] + args
-            )
 
     @patch("nac_test.cli.main.CombinedOrchestrator")
     def test_exit_code_0_all_tests_passed(self, mock_orchestrator_cls: Mock) -> None:
@@ -49,7 +29,7 @@ class TestMainExitCodes:
         mock_orchestrator.run_tests.return_value = mock_stats
         mock_orchestrator_cls.return_value = mock_orchestrator
 
-        result = self._run_cli_with_temp_dirs()
+        result = run_cli_with_temp_dirs()
 
         assert result.exit_code == 0
 
@@ -62,7 +42,7 @@ class TestMainExitCodes:
         mock_orchestrator.run_tests.return_value = mock_stats
         mock_orchestrator_cls.return_value = mock_orchestrator
 
-        result = self._run_cli_with_temp_dirs()
+        result = run_cli_with_temp_dirs()
 
         assert result.exit_code == 3
 
@@ -77,7 +57,7 @@ class TestMainExitCodes:
         mock_orchestrator.run_tests.return_value = mock_stats
         mock_orchestrator_cls.return_value = mock_orchestrator
 
-        result = self._run_cli_with_temp_dirs()
+        result = run_cli_with_temp_dirs()
 
         assert result.exit_code == EXIT_ERROR
 
@@ -97,7 +77,7 @@ class TestMainExitCodes:
         mock_orchestrator.run_tests.return_value = mock_stats
         mock_orchestrator_cls.return_value = mock_orchestrator
 
-        result = self._run_cli_with_temp_dirs()
+        result = run_cli_with_temp_dirs()
 
         assert result.exit_code == EXIT_DATA_ERROR
 
@@ -110,7 +90,7 @@ class TestMainExitCodes:
         mock_orchestrator.run_tests.return_value = mock_stats
         mock_orchestrator_cls.return_value = mock_orchestrator
 
-        result = self._run_cli_with_temp_dirs()
+        result = run_cli_with_temp_dirs()
 
         assert result.exit_code == EXIT_DATA_ERROR
 
@@ -126,7 +106,7 @@ class TestMainExitCodes:
         mock_orchestrator.run_tests.return_value = mock_stats
         mock_orchestrator_cls.return_value = mock_orchestrator
 
-        result = self._run_cli_with_temp_dirs()
+        result = run_cli_with_temp_dirs()
 
         # Should return 255 (error) not 5 (failures)
         assert result.exit_code == EXIT_ERROR
@@ -148,7 +128,7 @@ class TestMainExitCodes:
         mock_orchestrator.run_tests.return_value = mock_stats
         mock_orchestrator_cls.return_value = mock_orchestrator
 
-        result = self._run_cli_with_temp_dirs()
+        result = run_cli_with_temp_dirs()
 
         # Should return 252 (Robot invalid args) not 255 (generic error)
         assert result.exit_code == EXIT_DATA_ERROR
@@ -162,14 +142,14 @@ class TestMainExitCodes:
         mock_orchestrator.run_tests.return_value = mock_stats
         mock_orchestrator_cls.return_value = mock_orchestrator
 
-        result = self._run_cli_with_temp_dirs()
+        result = run_cli_with_temp_dirs()
 
         # Should be capped at EXIT_FAILURE_CAP
         assert result.exit_code == EXIT_FAILURE_CAP
 
     def test_invalid_flag_combination_exits_2(self) -> None:
         """Test that invalid flag combinations exit with code 2."""
-        result = self._run_cli_with_temp_dirs(["--pyats", "--robot"])
+        result = run_cli_with_temp_dirs(["--pyats", "--robot"])
 
         assert result.exit_code == EXIT_INVALID_ARGS
 
@@ -182,7 +162,7 @@ class TestMainExitCodes:
         mock_orchestrator.run_tests.side_effect = KeyboardInterrupt()
         mock_orchestrator_cls.return_value = mock_orchestrator
 
-        result = self._run_cli_with_temp_dirs()
+        result = run_cli_with_temp_dirs()
 
         assert result.exit_code == EXIT_INTERRUPTED
         assert "interrupted" in result.output.lower()
