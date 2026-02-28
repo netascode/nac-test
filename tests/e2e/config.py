@@ -48,6 +48,7 @@ class E2EScenario:
     architecture: str = (
         ""  # Controller type: "SDWAN", "ACI", "CC" - determines env var prefix
     )
+    is_dry_run: bool = False  # Dry-run mode: validates structure without execution
 
     # Expected CLI behavior
     expected_exit_code: int = 0
@@ -346,32 +347,62 @@ PYATS_CC_SCENARIO = E2EScenario(
     expected_d2d_hostnames=["sd-dc-c8kv-01", "sd-dc-c8kv-02"],
 )
 
+DRY_RUN_SCENARIO = E2EScenario(
+    name="dry_run_robot_pyats",
+    description="Dry-run mode - Robot (2 validated) + PyATS (discovered, not executed)",
+    data_path=f"{_FIXTURE_BASE}/mixed/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/mixed/templates",
+    requires_testbed=True,
+    architecture="SDWAN",
+    is_dry_run=True,
+    expected_exit_code=0,
+    expected_robot_passed=2,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
 
-# All scenarios for parameterized testing
-ALL_SCENARIOS = [
-    SUCCESS_SCENARIO,
-    ALL_FAIL_SCENARIO,
-    MIXED_SCENARIO,
-    ROBOT_ONLY_SCENARIO,
-    PYATS_API_ONLY_SCENARIO,
-    PYATS_D2D_ONLY_SCENARIO,
-    PYATS_CC_SCENARIO,
-]
+DRY_RUN_PYATS_ONLY_SCENARIO = E2EScenario(
+    name="dry_run_pyats_only",
+    description="Dry-run mode - PyATS API only (no Robot tests)",
+    data_path=f"{_FIXTURE_BASE}/pyats_api_only/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/pyats_api_only/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    is_dry_run=True,
+    expected_exit_code=0,
+    expected_robot_passed=0,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
 
-
-def get_scenario_by_name(name: str) -> E2EScenario:
-    """Get a scenario by its name.
-
-    Args:
-        name: The scenario name to look up.
-
-    Returns:
-        The matching E2EScenario.
-
-    Raises:
-        KeyError: If no scenario with that name exists.
-    """
-    for scenario in ALL_SCENARIOS:
-        if scenario.name == name:
-            return scenario
-    raise KeyError(f"No scenario found with name: {name}")
+DRY_RUN_ROBOT_FAIL_SCENARIO = E2EScenario(
+    name="dry_run_robot_fail",
+    description="Dry-run mode - Robot only with non-existent keyword (1 fail)",
+    data_path=f"{_FIXTURE_BASE}/dry_run_robot_fail/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/dry_run_robot_fail/templates",
+    requires_testbed=False,
+    architecture="SDWAN",
+    is_dry_run=True,
+    expected_exit_code=1,
+    expected_robot_passed=0,
+    expected_robot_failed=1,
+    expected_robot_skipped=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)

@@ -83,7 +83,7 @@ class CombinedOrchestrator:
             include_tags: Tags to include (Robot only)
             exclude_tags: Tags to exclude (Robot only)
             render_only: Only render tests without executing (Robot only)
-            dry_run: Dry run mode (Robot only)
+            dry_run: Dry run mode (skips actual test execution)
             processes: Number of parallel processes for Robot test execution (Robot only)
             extra_args: Additional Robot Framework arguments to pass to pabot (Robot only)
             max_parallel_devices: Max parallel devices for PyATS D2D tests
@@ -177,7 +177,8 @@ class CombinedOrchestrator:
         combined_results = CombinedResults()
 
         if has_pyats and not self.render_only:
-            typer.echo("\n🧪 Running PyATS tests...\n")
+            mode_suffix = " (dry-run)" if self.dry_run else ""
+            typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
             self._check_python_version()
 
             pyats_orchestrator = PyATSOrchestrator(
@@ -188,6 +189,7 @@ class CombinedOrchestrator:
                 minimal_reports=self.minimal_reports,
                 custom_testbed_path=self.custom_testbed_path,
                 controller_type=self.controller_type,
+                dry_run=self.dry_run,
             )
             if self.max_parallel_devices is not None:
                 pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
@@ -198,7 +200,8 @@ class CombinedOrchestrator:
             combined_results.d2d = pyats_results.d2d
 
         if has_robot:
-            typer.echo("\n🤖 Running Robot Framework tests...\n")
+            mode_suffix = " (dry-run)" if self.dry_run else ""
+            typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")
 
             robot_orchestrator = RobotOrchestrator(
                 data_paths=self.data_paths,

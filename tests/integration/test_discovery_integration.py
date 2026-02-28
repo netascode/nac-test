@@ -19,7 +19,11 @@ Test Categories:
     - TestExcludePaths: Tests directory exclusion functionality
 """
 
+import os
+import sys
 from pathlib import Path
+
+import pytest
 
 from nac_test.pyats_core.discovery.test_discovery import TestDiscovery
 
@@ -686,6 +690,12 @@ class Test(aetest.Testcase):
 class TestDiscoveryPerformance:
     """Performance tests for the discovery mechanism."""
 
+    @pytest.mark.skipif(
+        sys.version_info[:2] == (3, 13)
+        and os.environ.get("GITHUB_ACTIONS") is not None
+        and os.environ.get("PYTEST_XDIST_WORKER") is not None,
+        reason="pytest-xdist causes inconclusive performance results on Python 3.13 in GitHub Actions CI (see #589)",
+    )
     def test_categorization_performance(self, tmp_path: Path) -> None:
         """Test that categorization completes quickly even with many files.
 
