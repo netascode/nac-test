@@ -1,0 +1,6 @@
+# ACI data for PyATS API test
+apic:
+  version: 6.0
+defaults:
+  apic:
+    version: 6.0

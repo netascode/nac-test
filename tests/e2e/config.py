@@ -346,6 +346,38 @@ PYATS_CC_SCENARIO = E2EScenario(
     expected_d2d_hostnames=["sd-dc-c8kv-01", "sd-dc-c8kv-02"],
 )
 
+DEBUG_SCENARIO = E2EScenario(
+    name="debug",
+    description="Debug flag test - Robot + PyATS API, verifies --debug enables DEBUG log level in nac-test and robot/pabot",
+    data_path=f"{_FIXTURE_BASE}/debug/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/debug/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=0,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+)
+
+DEBUG_ENV_SCENARIO = E2EScenario(
+    name="debug_env",
+    description="Debug env var test - Robot + PyATS API, verifies NAC_TEST_DEBUG=true",
+    data_path=f"{_FIXTURE_BASE}/debug_env/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/debug_env/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=0,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+)
+
 
 # All scenarios for parameterized testing
 ALL_SCENARIOS = [
@@ -356,6 +388,8 @@ ALL_SCENARIOS = [
     PYATS_API_ONLY_SCENARIO,
     PYATS_D2D_ONLY_SCENARIO,
     PYATS_CC_SCENARIO,
+    DEBUG_SCENARIO,
+    DEBUG_ENV_SCENARIO,
 ]
 
 

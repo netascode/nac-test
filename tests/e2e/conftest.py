@@ -116,6 +116,8 @@ def _run_e2e_scenario(
     sdwan_user_testbed: str | None,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
+    extra_cli_args: list[str] | None = None,
+    extra_env_vars: dict[str, str] | None = None,
 ) -> E2EResults:
     """Execute an E2E scenario and return results.
 
@@ -127,23 +129,25 @@ def _run_e2e_scenario(
         sdwan_user_testbed: Path to the testbed YAML (None if not required).
         tmp_path_factory: Pytest temp path factory.
         class_mocker: Class-scoped monkeypatch.
+        extra_cli_args: Additional CLI arguments to pass (e.g., ["--debug"]).
+        extra_env_vars: Additional environment variables to set (e.g., {"NAC_TEST_DEBUG": "true"}).
 
     Returns:
         E2EResults containing all execution results.
     """
-    # Create scenario-specific temp directory
     output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
 
-    # Configure environment - use architecture as env var prefix
-    arch = scenario.architecture  # e.g., "SDWAN", "ACI", "CC"
+    arch = scenario.architecture
     class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
     class_mocker.setenv(f"{arch}_USERNAME", "mock_user")
     class_mocker.setenv(f"{arch}_PASSWORD", "mock_pass")
-    # IOSXE credentials needed for D2D tests (device access)
     class_mocker.setenv("IOSXE_USERNAME", "mock_user")
     class_mocker.setenv("IOSXE_PASSWORD", "mock_pass")
 
-    # Build CLI arguments
+    if extra_env_vars:
+        for key, value in extra_env_vars.items():
+            class_mocker.setenv(key, value)
+
     cli_args = [
         "-d",
         scenario.data_path,
@@ -151,19 +155,17 @@ def _run_e2e_scenario(
         scenario.templates_path,
         "-o",
         str(output_dir),
-        "--verbosity",
-        "DEBUG",
     ]
 
-    # Add testbed argument only if scenario requires it (D2D tests)
     if scenario.requires_testbed and sdwan_user_testbed:
         cli_args.extend(["--testbed", sdwan_user_testbed])
 
-    # Execute CLI
+    if extra_cli_args:
+        cli_args.extend(extra_cli_args)
+
     runner = CliRunner()
     result = runner.invoke(nac_test.cli.main.app, cli_args)
 
-    # Compute filtered stdout (strips logger output lines)
     filtered_stdout = "\n".join(
         line
         for line in result.stdout.split("\n")
@@ -317,7 +319,45 @@ def e2e_pyats_cc_results(
     return _run_e2e_scenario(
         PYATS_CC_SCENARIO,
         mock_api_server,
-        sdwan_user_testbed,  # D2D tests need testbed
+        sdwan_user_testbed,
         tmp_path_factory,
         class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_debug_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the debug scenario with --debug flag and cache results."""
+    from tests.e2e.config import DEBUG_SCENARIO
+
+    return _run_e2e_scenario(
+        DEBUG_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--debug"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_debug_env_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the debug env scenario with NAC_TEST_DEBUG=true and cache results."""
+    from tests.e2e.config import DEBUG_ENV_SCENARIO
+
+    return _run_e2e_scenario(
+        DEBUG_ENV_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_env_vars={"NAC_TEST_DEBUG": "true"},
     )
