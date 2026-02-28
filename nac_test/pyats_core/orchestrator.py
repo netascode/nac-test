@@ -44,6 +44,7 @@ from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspect
 from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.environment import EnvironmentValidator
+from nac_test.utils.logging import VerbosityLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
 
@@ -63,6 +64,7 @@ class PyATSOrchestrator:
         custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
         debug: bool = False,
+        verbosity: VerbosityLevel = VerbosityLevel.WARNING,
     ):
         """Initialize the PyATS orchestrator.
 
@@ -76,6 +78,7 @@ class PyATSOrchestrator:
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
                 If not provided, will be detected automatically.
             debug: Enable debug mode - keeps archive files, enables verbose output
+            verbosity: Verbosity level for PyATS output filtering
         """
         self.data_paths = data_paths
         self.test_dir = Path(test_dir).resolve()
@@ -89,6 +92,7 @@ class PyATSOrchestrator:
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
         self.debug = debug
+        self.verbosity = verbosity
 
         # Track test status by type for combined summary
         self.api_test_status: dict[str, dict[str, Any]] = {}
@@ -603,7 +607,10 @@ class PyATSOrchestrator:
 
         # Initialize execution components now that progress reporter is ready
         self.output_processor = OutputProcessor(
-            self.progress_reporter, self.test_status
+            self.progress_reporter,
+            self.test_status,
+            debug=self.debug,
+            verbosity=self.verbosity,
         )
         # Archives should be stored at base level, not in pyats_results subdirectory
         self.subprocess_runner = SubprocessRunner(

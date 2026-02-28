@@ -5,15 +5,48 @@
 
 import json
 import logging
-import os
 import re
 import time
 from typing import Any
 
 from nac_test.pyats_core.progress import ProgressReporter
+from nac_test.utils.logging import VerbosityLevel
 from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
+
+# Map PyATS log level suffixes to Python logging levels
+PYATS_LEVEL_MAP: dict[str, int] = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
+}
+
+# Pre-compiled regex patterns for output filtering (compiled once at module load)
+# PyATS log format: %COMPONENT-LEVEL: (e.g., %EASYPY-DEBUG:, %AETEST-INFO:)
+_PYATS_LOG_PATTERN = re.compile(r"%\w+-(\w+):")
+
+# Patterns to always suppress (combined into single regex for performance)
+_SUPPRESS_PATTERN = re.compile(
+    r"^(?:"
+    r"\s*$|"  # Empty/whitespace lines
+    r"\+[-=]+\+$|"  # PyATS table borders: +----+ or +====+
+    r"\|.*\|$|"  # PyATS table content: |...|
+    r"[-=]+$|"  # Separator lines: ---- or ====
+    r".*Starting section|"  # Section start messages
+    r".*Starting testcase"  # Test start messages
+    r")"
+)
+
+# Critical patterns to always show (combined into single regex)
+_CRITICAL_PATTERN = re.compile(
+    r"ERROR|FAILED|CRITICAL|Traceback|Exception.*Error|RECOVER[YED]", re.IGNORECASE
+)
+
+# Table formatting indicators (for filtering critical matches inside tables)
+_TABLE_LINE_PATTERN = re.compile(r"^[|+]")
 
 
 class OutputProcessor:
@@ -23,15 +56,24 @@ class OutputProcessor:
         self,
         progress_reporter: ProgressReporter | None = None,
         test_status: dict[str, Any] | None = None,
+        debug: bool = False,
+        verbosity: VerbosityLevel = VerbosityLevel.WARNING,
     ):
         """Initialize output processor.
 
         Args:
             progress_reporter: Progress reporter instance for test progress tracking
             test_status: Dictionary reference for tracking test status
+            debug: Enable debug output (section progress, verbose errors)
+            verbosity: Verbosity level for filtering PyATS log output
         """
         self.progress_reporter = progress_reporter
         self.test_status = test_status or {}
+        self.debug = debug
+        self.verbosity = verbosity
+        self._verbosity_threshold = PYATS_LEVEL_MAP.get(
+            verbosity.value, logging.WARNING
+        )
 
     def process_line(self, line: str) -> None:
         """Process output line, looking for our progress events.
@@ -54,9 +96,7 @@ class OutputProcessor:
 
                 self._handle_progress_event(event)
             except json.JSONDecodeError:
-                # If parsing fails, show the line in debug mode
-                if os.environ.get("NAC_TEST_DEBUG"):
-                    print(f"Failed to parse progress event: {line}")
+                logger.debug(f"Failed to parse progress event: {line}")
             except Exception as e:
                 logger.error(f"Error processing progress event: {e}", exc_info=True)
         else:
@@ -167,11 +207,11 @@ class OutputProcessor:
             # be called for tests that error during setup
             self._finalize_orphaned_tests(event)
 
-        elif event_type == "section_start" and os.environ.get("NAC_TEST_DEBUG"):
-            # In debug mode, show section progress
+        # TODO: Decide whether to keep section progress as print() or convert to logger.debug()
+        elif event_type == "section_start" and self.debug:
             print(f"  -> Section {event['section']} starting")
 
-        elif event_type == "section_end" and os.environ.get("NAC_TEST_DEBUG"):
+        elif event_type == "section_end" and self.debug:
             print(f"  -> Section {event['section']} {event['result']}")
 
     def _finalize_orphaned_tests(self, job_end_event: dict[str, Any]) -> None:
@@ -238,7 +278,8 @@ class OutputProcessor:
     def _should_show_line(self, line: str) -> bool:
         """Determine if line should be shown to user.
 
-        Filter out verbose PyATS output while keeping important information.
+        Optimized for performance with pre-compiled regex and early exits.
+        Called for potentially tens of thousands of lines per test run.
 
         Args:
             line: Output line to check
@@ -246,48 +287,38 @@ class OutputProcessor:
         Returns:
             True if line should be shown, False otherwise
         """
-        # In debug mode, show everything
-        if os.environ.get("NAC_TEST_DEBUG"):
+        # Early exit: DEBUG verbosity shows everything
+        if self._verbosity_threshold <= logging.DEBUG:
             return True
 
-        # Always suppress these patterns for clean console output
-        suppress_patterns = [
-            r"%HTTPX-INFO:",
-            r"%AETEST-INFO:",
-            r"%AETEST-ERROR:",  # We'll show our own error summary
-            r"%EASYPY-INFO:",
-            r"%WARNINGS-WARNING:",
-            r"%GENIE-INFO:",
-            r"%UNICON-INFO:",
-            r"%SCRIPT-INFO:",  # Suppress script-level info logs from tests
-            r"NAC_PROGRESS_PLUGIN:",  # Suppress plugin debug output
-            r"^\s*$",  # Empty lines
-            r"^\+[-=]+\+$",  # PyATS table borders
-            r"^\|.*\|$",  # PyATS table content
-            r"^[-=]+$",  # Separator lines
-            r"Starting section",  # Section start messages
-            r"Starting testcase",  # Test start messages
-        ]
+        # Fast string check: suppress plugin debug output
+        if "NAC_PROGRESS_PLUGIN:" in line:
+            return False
 
-        for pattern in suppress_patterns:
-            if re.search(pattern, line):
+        # Check for PyATS log format: %COMPONENT-LEVEL:
+        pyats_match = _PYATS_LOG_PATTERN.search(line)
+        if pyats_match:
+            # At WARNING (default) or higher, suppress all PyATS logs
+            if self._verbosity_threshold >= logging.WARNING:
                 return False
+            # At INFO verbosity, filter by log level
+            line_level = pyats_match.group(1).upper()
+            line_level_value = PYATS_LEVEL_MAP.get(line_level)
+            if line_level_value is not None:
+                return line_level_value >= self._verbosity_threshold
+            return False
 
-        # Show critical information
-        show_patterns = [
-            r"ERROR",
-            r"FAILED",
-            r"CRITICAL",
-            r"Traceback",
-            r"Exception.*Error",
-            r"RECOVERED",  # Controller recovered messages
-            r"RECOVERY",  # Controller recovery messages
-        ]
+        # At WARNING+ (default), only show critical messages
+        if self._verbosity_threshold >= logging.WARNING:
+            if _CRITICAL_PATTERN.search(line) and not _TABLE_LINE_PATTERN.match(line):
+                return True
+            return False
 
-        for pattern in show_patterns:
-            if re.search(pattern, line, re.IGNORECASE):
-                # But still suppress if it's part of PyATS formatting
-                if not any(re.search(p, line) for p in [r"^\|", r"^\+"]):
-                    return True
+        # At INFO verbosity: suppress formatting noise, show critical info
+        if _SUPPRESS_PATTERN.match(line):
+            return False
+
+        if _CRITICAL_PATTERN.search(line) and not _TABLE_LINE_PATTERN.match(line):
+            return True
 
         return False

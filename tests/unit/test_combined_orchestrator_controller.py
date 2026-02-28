@@ -155,6 +155,8 @@ class TestCombinedOrchestratorController:
                         orchestrator.run_tests()
 
                 # Verify PyATSOrchestrator was called with controller_type
+                from nac_test.utils.logging import VerbosityLevel
+
                 mock_pyats.assert_called_once_with(
                     data_paths=[data_dir],
                     test_dir=templates_dir,
@@ -164,6 +166,7 @@ class TestCombinedOrchestratorController:
                     custom_testbed_path=None,
                     controller_type="SDWAN",
                     debug=False,
+                    verbosity=VerbosityLevel.WARNING,
                 )
 
                 # Verify run_tests was called on the instance
@@ -306,6 +309,8 @@ class TestCombinedOrchestratorController:
                     orchestrator.run_tests()
 
                 # Verify PyATSOrchestrator was called with controller_type
+                from nac_test.utils.logging import VerbosityLevel
+
                 mock_pyats.assert_called_once_with(
                     data_paths=[data_dir],
                     test_dir=templates_dir,
@@ -315,6 +320,7 @@ class TestCombinedOrchestratorController:
                     custom_testbed_path=None,
                     controller_type="CC",
                     debug=False,
+                    verbosity=VerbosityLevel.WARNING,
                 )
 
                 # Verify run_tests was called on the instance
