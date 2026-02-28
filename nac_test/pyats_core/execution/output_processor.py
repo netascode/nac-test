@@ -317,7 +317,6 @@ class OutputProcessor:
         # At INFO verbosity: suppress formatting noise, show critical info
         if _SUPPRESS_PATTERN.match(line):
             return False
-
         if _CRITICAL_PATTERN.search(line) and not _TABLE_LINE_PATTERN.match(line):
             return True
 

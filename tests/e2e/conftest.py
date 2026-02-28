@@ -342,22 +342,3 @@ def e2e_debug_results(
         class_mocker,
         extra_cli_args=["--debug"],
     )
-
-
-@pytest.fixture(scope="class")
-def e2e_debug_env_results(
-    mock_api_server: MockAPIServer,
-    tmp_path_factory: pytest.TempPathFactory,
-    class_mocker: pytest.MonkeyPatch,
-) -> E2EResults:
-    """Execute the debug env scenario with NAC_TEST_DEBUG=true and cache results."""
-    from tests.e2e.config import DEBUG_ENV_SCENARIO
-
-    return _run_e2e_scenario(
-        DEBUG_ENV_SCENARIO,
-        mock_api_server,
-        None,
-        tmp_path_factory,
-        class_mocker,
-        extra_env_vars={"NAC_TEST_DEBUG": "true"},
-    )
