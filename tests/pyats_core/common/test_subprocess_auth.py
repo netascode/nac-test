@@ -12,8 +12,7 @@ Tests the fork-safe subprocess authentication mechanism:
 import os
 import tempfile
 from pathlib import Path
-from typing import Any
-from unittest.mock import patch
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -22,6 +21,37 @@ from nac_test.pyats_core.common.subprocess_auth import (
     _set_secure_permissions,
     execute_auth_subprocess,
 )
+
+if TYPE_CHECKING:
+    from pytest_mock.plugin import MockerFixture
+
+
+@pytest.fixture
+def isolated_tempfile(mocker: "MockerFixture", tmp_path: Path) -> Path:
+    """Redirect tempfile.NamedTemporaryFile to isolated test directory.
+
+    Prevents race conditions when tests run in parallel by ensuring each
+    test's temp files are isolated to its own tmp_path directory.
+    See issue #568 for context.
+
+    Args:
+        mocker: Pytest mocker fixture for creating mocks.
+        tmp_path: Pytest fixture providing a temporary directory.
+
+    Returns:
+        Path to the isolated temp directory for assertions.
+    """
+    original = tempfile.NamedTemporaryFile
+
+    def patched_named_temp_file(*args: Any, **kwargs: Any) -> Any:
+        kwargs.setdefault("dir", str(tmp_path))
+        return original(*args, **kwargs)
+
+    mocker.patch(
+        "nac_test.pyats_core.common.subprocess_auth.tempfile.NamedTemporaryFile",
+        side_effect=patched_named_temp_file,
+    )
+    return tmp_path
 
 
 class TestSetSecurePermissions:
@@ -107,37 +137,20 @@ result = {
 
         assert "did not set result" in str(exc_info.value)
 
-    def test_temp_files_cleaned_up_on_success(self, tmp_path: Path) -> None:
+    def test_temp_files_cleaned_up_on_success(self, isolated_tempfile: Path) -> None:
         """Test that temp files are cleaned up after successful execution."""
-        # Redirect temp files to isolated directory to avoid race conditions
-        # with parallel tests (see issue #568)
-        original = tempfile.NamedTemporaryFile
+        execute_auth_subprocess({"key": "value"}, 'result = {"success": True}')
 
-        def patched_named_temp_file(*args: Any, **kwargs: Any) -> Any:
-            kwargs.setdefault("dir", str(tmp_path))
-            return original(*args, **kwargs)
+        assert list(isolated_tempfile.glob("*_auth_*.json")) == []
+        assert list(isolated_tempfile.glob("*_auth_script.py")) == []
 
-        with patch.object(tempfile, "NamedTemporaryFile", patched_named_temp_file):
-            execute_auth_subprocess({"key": "value"}, 'result = {"success": True}')
-
-        assert list(tmp_path.glob("*_auth_*.json")) == []
-        assert list(tmp_path.glob("*_auth_script.py")) == []
-
-    def test_temp_files_cleaned_up_on_error(self, tmp_path: Path) -> None:
+    def test_temp_files_cleaned_up_on_error(self, isolated_tempfile: Path) -> None:
         """Test that temp files are cleaned up even when script errors."""
-        # Redirect temp files to isolated directory to avoid race conditions
-        # with parallel tests (see issue #568)
-        original = tempfile.NamedTemporaryFile
+        with pytest.raises(SubprocessAuthError):
+            execute_auth_subprocess({}, 'raise Exception("Intentional error")')
 
-        def patched_named_temp_file(*args: Any, **kwargs: Any) -> Any:
-            kwargs.setdefault("dir", str(tmp_path))
-            return original(*args, **kwargs)
-
-        with patch.object(tempfile, "NamedTemporaryFile", patched_named_temp_file):
-            with pytest.raises(SubprocessAuthError):
-                execute_auth_subprocess({}, 'raise Exception("Intentional error")')
-
-        assert list(tmp_path.glob("*_auth_*.json")) == []
+        assert list(isolated_tempfile.glob("*_auth_*.json")) == []
+        assert list(isolated_tempfile.glob("*_auth_script.py")) == []
 
     def test_complex_auth_params(self) -> None:
         """Test with complex nested auth params."""
