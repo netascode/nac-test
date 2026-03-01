@@ -1400,10 +1400,11 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             else:
                 message = f"{test_type} {item_identifier} {status_enum.value.lower()}"
 
-        # Add to result collector
-        self.result_collector.add_result(
-            status_enum, message, test_context=test_context
-        )
+        # Guard: result_collector may be None if setup() failed partway through
+        if self.result_collector is not None:
+            self.result_collector.add_result(
+                status_enum, message, test_context=test_context
+            )
 
     def map_string_status_to_enum(self, status_string: str) -> ResultStatus:
         """Convert string status to ResultStatus enum using centralized mapping.
@@ -2411,11 +2412,12 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         # Add directly to collector - use reason as the complete message
         # This preserves test-provided messages without template wrapping
-        self.result_collector.add_result(
-            status_enum,
-            reason if reason else f"Test completed with status: {status}",
-            test_context=context.get("api_context"),
-        )
+        if self.result_collector is not None:
+            self.result_collector.add_result(
+                status_enum,
+                reason if reason else f"Test completed with status: {status}",
+                test_context=context.get("api_context"),
+            )
 
     @aetest.cleanup  # type: ignore[untyped-decorator]
     def cleanup(self) -> None:
