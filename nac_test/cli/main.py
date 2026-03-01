@@ -19,7 +19,11 @@ from nac_test.core.constants import (
     EXIT_INVALID_ARGS,
 )
 from nac_test.data_merger import DataMerger
-from nac_test.utils.logging import VerbosityLevel, configure_logging
+from nac_test.utils.logging import (
+    DEFAULT_VERBOSITY,
+    VerbosityLevel,
+    configure_logging,
+)
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 
 # Pretty exceptions are verbose but helpful for debugging.
@@ -305,7 +309,7 @@ def main(
     elif debug:
         effective_verbosity = VerbosityLevel.DEBUG
     else:
-        effective_verbosity = VerbosityLevel.WARNING
+        effective_verbosity = DEFAULT_VERBOSITY
     configure_logging(effective_verbosity)
 
     check_and_exit_if_unsupported_macos_python()

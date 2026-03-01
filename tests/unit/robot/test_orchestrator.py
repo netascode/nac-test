@@ -22,7 +22,7 @@ from nac_test.core.constants import (
 )
 from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.orchestrator import RobotOrchestrator
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def orchestrator(
         templates_dir=mock_templates_dir,
         output_dir=temp_output_dir,
         merged_data_filename="merged_data.yaml",
-        verbosity=VerbosityLevel.WARNING,
+        verbosity=DEFAULT_VERBOSITY,
     )
 
 
@@ -77,7 +77,7 @@ class TestRobotOrchestrator:
         assert orchestrator.merged_data_filename == "merged_data.yaml"
         assert orchestrator.render_only is False
         assert orchestrator.dry_run is False
-        assert orchestrator.verbosity == VerbosityLevel.WARNING
+        assert orchestrator.verbosity == DEFAULT_VERBOSITY
 
     def test_initialization_with_optional_params(
         self, mock_data_paths, mock_templates_dir, temp_output_dir

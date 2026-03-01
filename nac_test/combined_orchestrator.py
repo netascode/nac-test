@@ -23,7 +23,7 @@ from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.controller import detect_controller_type
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 from nac_test.utils.terminal import terminal
 from nac_test.utils.xunit_merger import merge_xunit_results
@@ -65,7 +65,7 @@ class CombinedOrchestrator:
         max_parallel_devices: int | None = None,
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
-        verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+        verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
         processes: int | None = None,

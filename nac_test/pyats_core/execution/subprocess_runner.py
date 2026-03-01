@@ -21,7 +21,7 @@ from nac_test.pyats_core.constants import (
     PIPE_DRAIN_DELAY_SECONDS,
     PIPE_DRAIN_TIMEOUT_SECONDS,
 )
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class SubprocessRunner:
         output_dir: Path,
         output_handler: Callable[[str], None],
         plugin_config_path: Path | None = None,
-        verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+        verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
     ):
         """Initialize the subprocess runner.
 

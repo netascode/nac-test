@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from nac_test.core.types import CombinedResults, TestResults
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
 
 from .conftest import run_cli_with_temp_dirs
 
@@ -23,7 +23,7 @@ class TestDebugVerbosityInteraction:
             (["--debug", "--verbosity", "INFO"], VerbosityLevel.INFO, True),
             (["--debug", "--verbosity", "ERROR"], VerbosityLevel.ERROR, True),
             # --verbosity without --debug
-            ([], VerbosityLevel.WARNING, False),
+            ([], DEFAULT_VERBOSITY, False),
             (["--verbosity", "DEBUG"], VerbosityLevel.DEBUG, False),
             (["--verbosity", "INFO"], VerbosityLevel.INFO, False),
         ],

@@ -36,6 +36,9 @@ VERBOSITY_TO_LOGLEVEL: dict[VerbosityLevel, int] = {
     VerbosityLevel.CRITICAL: logging.CRITICAL,
 }
 
+# Default verbosity level for CLI and orchestrators
+DEFAULT_VERBOSITY = VerbosityLevel.WARNING
+
 
 def configure_logging(level: str | VerbosityLevel) -> None:
     """Configure logging for nac-test framework.

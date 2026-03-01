@@ -10,7 +10,11 @@ import time
 from typing import Any
 
 from nac_test.pyats_core.progress import ProgressReporter
-from nac_test.utils.logging import VERBOSITY_TO_LOGLEVEL, VerbosityLevel
+from nac_test.utils.logging import (
+    DEFAULT_VERBOSITY,
+    VERBOSITY_TO_LOGLEVEL,
+    VerbosityLevel,
+)
 from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
@@ -48,7 +52,7 @@ class OutputProcessor:
         progress_reporter: ProgressReporter | None = None,
         test_status: dict[str, Any] | None = None,
         debug: bool = False,
-        verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+        verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
     ):
         """Initialize output processor.
 

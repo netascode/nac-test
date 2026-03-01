@@ -13,6 +13,7 @@ from _pytest.monkeypatch import MonkeyPatch
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import EXIT_ERROR
 from nac_test.core.types import PyATSResults
+from nac_test.utils.logging import DEFAULT_VERBOSITY
 
 PYATS_TEST_FILE_CONTENT = """
 # PyATS test file
@@ -155,7 +156,6 @@ class TestCombinedOrchestratorController:
                         orchestrator.run_tests()
 
                 # Verify PyATSOrchestrator was called with controller_type
-                from nac_test.utils.logging import VerbosityLevel
 
                 mock_pyats.assert_called_once_with(
                     data_paths=[data_dir],
@@ -166,7 +166,7 @@ class TestCombinedOrchestratorController:
                     custom_testbed_path=None,
                     controller_type="SDWAN",
                     debug=False,
-                    verbosity=VerbosityLevel.WARNING,
+                    verbosity=DEFAULT_VERBOSITY,
                 )
 
                 # Verify run_tests was called on the instance
@@ -309,7 +309,6 @@ class TestCombinedOrchestratorController:
                     orchestrator.run_tests()
 
                 # Verify PyATSOrchestrator was called with controller_type
-                from nac_test.utils.logging import VerbosityLevel
 
                 mock_pyats.assert_called_once_with(
                     data_paths=[data_dir],
@@ -320,7 +319,7 @@ class TestCombinedOrchestratorController:
                     custom_testbed_path=None,
                     controller_type="CC",
                     debug=False,
-                    verbosity=VerbosityLevel.WARNING,
+                    verbosity=DEFAULT_VERBOSITY,
                 )
 
                 # Verify run_tests was called on the instance

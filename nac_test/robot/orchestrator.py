@@ -27,7 +27,7 @@ from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class RobotOrchestrator:
         dry_run: bool = False,
         processes: int | None = None,
         extra_args: list[str] | None = None,
-        verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+        verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
         debug: bool = False,
     ):
         """Initialize the Robot Framework orchestrator.

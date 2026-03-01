@@ -44,7 +44,7 @@ from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspect
 from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.environment import EnvironmentValidator
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
 
@@ -64,7 +64,7 @@ class PyATSOrchestrator:
         custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
         debug: bool = False,
-        verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+        verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
     ):
         """Initialize the PyATS orchestrator.
 
