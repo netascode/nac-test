@@ -362,6 +362,22 @@ DEBUG_SCENARIO = E2EScenario(
     expected_pyats_d2d_failed=0,
 )
 
+DEBUG_WITH_INFO_SCENARIO = E2EScenario(
+    name="debug_with_info",
+    description="Debug with INFO verbosity - verifies --debug --verbosity INFO filters PyATS DEBUG output",
+    data_path=f"{_FIXTURE_BASE}/debug/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/debug/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=0,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+)
+
 
 # All scenarios for parameterized testing
 ALL_SCENARIOS = [
@@ -373,6 +389,7 @@ ALL_SCENARIOS = [
     PYATS_D2D_ONLY_SCENARIO,
     PYATS_CC_SCENARIO,
     DEBUG_SCENARIO,
+    DEBUG_WITH_INFO_SCENARIO,
 ]
 
 

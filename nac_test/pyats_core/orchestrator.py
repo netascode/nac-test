@@ -133,7 +133,9 @@ class PyATSOrchestrator:
         )
 
         # Initialize execution components
-        self.job_generator = JobGenerator(self.max_workers, self.output_dir)
+        self.job_generator = JobGenerator(
+            self.max_workers, self.output_dir, verbosity=self.verbosity
+        )
         self.output_processor: OutputProcessor | None = (
             None  # Will be initialized when progress reporter is ready
         )
@@ -322,7 +324,6 @@ class PyATSOrchestrator:
             return archive_path
 
         finally:
-            # Clean up the temporary job file
             if job_file_path and os.path.exists(job_file_path):
                 os.unlink(job_file_path)
 
@@ -614,7 +615,9 @@ class PyATSOrchestrator:
         )
         # Archives should be stored at base level, not in pyats_results subdirectory
         self.subprocess_runner = SubprocessRunner(
-            self.base_output_dir, output_handler=self.output_processor.process_line
+            self.base_output_dir,
+            output_handler=self.output_processor.process_line,
+            verbosity=self.verbosity,
         )
         # Generate the plugin config and pass it to the runner
         with tempfile.TemporaryDirectory() as temp_dir:

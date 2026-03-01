@@ -10,19 +10,10 @@ import time
 from typing import Any
 
 from nac_test.pyats_core.progress import ProgressReporter
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import VERBOSITY_TO_LOGLEVEL, VerbosityLevel
 from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
-
-# Map PyATS log level suffixes to Python logging levels
-PYATS_LEVEL_MAP: dict[str, int] = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "CRITICAL": logging.CRITICAL,
-}
 
 # Pre-compiled regex patterns for output filtering (compiled once at module load)
 # PyATS log format: %COMPONENT-LEVEL: (e.g., %EASYPY-DEBUG:, %AETEST-INFO:)
@@ -40,7 +31,7 @@ _SUPPRESS_PATTERN = re.compile(
     r")"
 )
 
-# Critical patterns to always show (combined into single regex)
+# Critical patterns to show (combined into single regex)
 _CRITICAL_PATTERN = re.compile(
     r"ERROR|FAILED|CRITICAL|Traceback|Exception.*Error|RECOVER(Y|ED)"
 )
@@ -71,8 +62,8 @@ class OutputProcessor:
         self.test_status = test_status or {}
         self.debug = debug
         self.verbosity = verbosity
-        self._verbosity_threshold = PYATS_LEVEL_MAP.get(
-            verbosity.value, logging.WARNING
+        self._verbosity_threshold = VERBOSITY_TO_LOGLEVEL.get(
+            verbosity, logging.WARNING
         )
 
     def process_line(self, line: str) -> None:
@@ -287,7 +278,11 @@ class OutputProcessor:
         Returns:
             True if line should be shown, False otherwise
         """
-        # Early exit: DEBUG verbosity shows everything
+        # Early exits:
+        # - running without --debug flag shows nothing
+        # - DEBUG verbosity shows everything
+        if not self.debug:
+            return False
         if self._verbosity_threshold <= logging.DEBUG:
             return True
 
@@ -298,15 +293,9 @@ class OutputProcessor:
         # Check for PyATS log format: %COMPONENT-LEVEL:
         pyats_match = _PYATS_LOG_PATTERN.search(line)
         if pyats_match:
-            # At WARNING (default) or higher, suppress all PyATS logs
-            if self._verbosity_threshold >= logging.WARNING:
-                return False
-            # At INFO verbosity, filter by log level
-            line_level = pyats_match.group(1).upper()
-            line_level_value = PYATS_LEVEL_MAP.get(line_level)
-            if line_level_value is not None:
-                return line_level_value >= self._verbosity_threshold
-            return False
+            # jobfile execution will now honor nac-test's verbosity levels for PyATS logs,
+            # so we don't need to filter log level here and can just show them
+            return True
 
         # At WARNING+ (default), only show critical messages
         if self._verbosity_threshold >= logging.WARNING:

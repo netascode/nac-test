@@ -679,11 +679,14 @@ nac-test -d ./data -t ./tests -o ./results --debug
 ```
 
 When enabled, debug mode:
+- Sets nac-test verbosity level to DEBUG (can be overriden by setting `--verbosity`)
 - Enables verbose output for `pabot` execution (shows the robot console output) 
 - Sets Robot Framework loglevel to DEBUG for additional debug information in the
-  execution ((you can override via `--loglevel`)) 
-- Shows additional progress information during PyATS test execution
-- Sets nac-test verbosity level to DEBUG (can be overriden by setting `--verbosity`)
+  execution (can be overriden by robot argument `--loglevel`)
+- Shows additional progress information during PyATS test execution. The pyATS
+  loglevel will follow the `--verbosity` setting, so you can reduce the output
+  for example via `--debug --verbosity ERROR` which limits pyATS debugging output
+  to ERROR information
 
 ## Advanced Environment Variables
 

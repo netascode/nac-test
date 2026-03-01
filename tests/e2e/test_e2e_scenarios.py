@@ -1064,7 +1064,7 @@ class TestE2EDebug(E2ECombinedTestBase):
     This scenario verifies that when --debug flag is passed:
     1. Robot Framework is invoked with --loglevel DEBUG
     2. The Robot test can verify this using Set Log Level keyword
-    3. PyATS verbose output (%EASYPY-INFO) IS enabled (--debug implies DEBUG verbosity)
+    3. PyATS verbose output (%EASYPY-INFO and %EASYPY-DEBUG) IS enabled (--debug implies DEBUG verbosity)
     """
 
     @pytest.fixture
@@ -1087,3 +1087,36 @@ class TestE2EDebug(E2ECombinedTestBase):
     def test_easypy_info_in_stdout(self, results: E2EResults) -> None:
         """Verify %EASYPY-INFO appears (PyATS verbose output enabled)."""
         assert "%EASYPY-INFO" in results.stdout, "Missing %EASYPY-INFO in stdout"
+
+    def test_easypy_debug_in_stdout(self, results: E2EResults) -> None:
+        """Verify %EASYPY-DEBUG appears (PyATS verbose output enabled)."""
+        assert "%EASYPY-DEBUG" in results.stdout, "Missing %EASYPY-DEBUG in stdout"
+
+
+# =============================================================================
+# DEBUG WITH INFO VERBOSITY SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EDebugWithInfo(E2ECombinedTestBase):
+    """E2E tests for --debug --verbosity INFO combination.
+
+    Scenario: Robot (1 pass) + PyATS API (1 pass), verifies --verbosity INFO filters PyATS DEBUG
+    Expected: CLI exits with code 0, %EASYPY-INFO visible but %EASYPY-DEBUG filtered out
+    """
+
+    @pytest.fixture
+    def results(self, e2e_debug_with_info_results: E2EResults) -> E2EResults:
+        return e2e_debug_with_info_results
+
+    def test_easypy_debug_not_in_stdout(self, results: E2EResults) -> None:
+        """Verify %EASYPY-DEBUG is filtered out when --verbosity INFO."""
+        assert "%EASYPY-DEBUG" not in results.stdout, (
+            "%EASYPY-DEBUG should be filtered with --verbosity INFO"
+        )
+
+    def test_easypy_info_in_stdout(self, results: E2EResults) -> None:
+        """Verify %EASYPY-INFO still appears with --verbosity INFO."""
+        assert "%EASYPY-INFO" in results.stdout, (
+            "%EASYPY-INFO should be visible with --verbosity INFO"
+        )

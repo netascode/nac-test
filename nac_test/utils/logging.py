@@ -18,21 +18,31 @@ class VerbosityLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
+# Mapping from level name strings to Python logging level values
+LOGLEVEL_NAME_TO_VALUE: dict[str, int] = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
+}
+
+# Mapping from nac-test VerbosityLevel to Python logging level
+VERBOSITY_TO_LOGLEVEL: dict[VerbosityLevel, int] = {
+    VerbosityLevel.DEBUG: logging.DEBUG,
+    VerbosityLevel.INFO: logging.INFO,
+    VerbosityLevel.WARNING: logging.WARNING,
+    VerbosityLevel.ERROR: logging.ERROR,
+    VerbosityLevel.CRITICAL: logging.CRITICAL,
+}
+
+
 def configure_logging(level: str | VerbosityLevel) -> None:
     """Configure logging for nac-test framework.
 
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     """
-    # Map string levels to logging constants
-    level_map = {
-        "DEBUG": logging.DEBUG,
-        "INFO": logging.INFO,
-        "WARNING": logging.WARNING,
-        "ERROR": logging.ERROR,
-        "CRITICAL": logging.CRITICAL,
-    }
-
     # Convert to logging level, defaulting to CRITICAL for unknown levels
     # Handle both enum values and string inputs
     if isinstance(level, VerbosityLevel):
@@ -40,7 +50,7 @@ def configure_logging(level: str | VerbosityLevel) -> None:
     else:
         level_str = str(level).upper()
 
-    log_level = level_map.get(level_str, logging.CRITICAL)
+    log_level = LOGLEVEL_NAME_TO_VALUE.get(level_str, logging.CRITICAL)
 
     # Configure root logger
     logger = logging.getLogger()
