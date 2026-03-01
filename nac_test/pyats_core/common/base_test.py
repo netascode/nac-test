@@ -59,10 +59,14 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
     # Test metadata class variables (enforced in subclasses)
     TEST_TYPE_NAME: str | None = None
 
-    # Explicit attribute types to avoid type comments later
+    # Explicit attribute declarations (avoids hasattr() checks)
     batching_reporter: BatchingReporter | None = None
     step_interceptor: StepInterceptor | None = None
     _current_test_context: str | None = None
+    result_collector: TestResultCollector | None = None
+    output_dir: Path | None = None
+    _controller_recovery_count: int = 0
+    _total_recovery_downtime: float = 0.0
 
     # Status mapping for converting string status to ResultStatus enum
     STATUS_MAPPING: dict[str, ResultStatus] = {
