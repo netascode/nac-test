@@ -837,7 +837,8 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         connection details.
         """
         raise NotImplementedError(
-            "Subclasses must implement get_connection_params() method"
+            f"{self.__class__.__name__} must implement get_connection_params() to return "
+            f"architecture-specific connection details."
         )
 
     def wrap_client_for_tracking(
@@ -1585,7 +1586,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 "subnet": result["context"].get("subnet_ip", "N/A")
             }
         """
-        raise NotImplementedError("Subclasses must implement extract_step_context()")
+        raise NotImplementedError(
+            f"{self.__class__.__name__} must implement extract_step_context() to extract "
+            f"relevant context fields from a verification result for PyATS step creation."
+        )
 
     def format_step_name(self, context: dict[str, Any]) -> str:
         """Format the PyATS step name from extracted context.
@@ -1603,7 +1607,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             return f"Verify BGP peer {context['peer_ip']} on node {context['node']}"
             return f"Verify BD '{context['tenant']}/{context['bd']}' -> Subnet '{context['subnet']}'"
         """
-        raise NotImplementedError("Subclasses must implement format_step_name()")
+        raise NotImplementedError(
+            f"{self.__class__.__name__} must implement format_step_name() to create "
+            f"concise, informative PyATS step names from extracted context."
+        )
 
     def format_step_description(self, context: dict[str, Any]) -> str:
         """Format detailed step description with key verification details.
@@ -1621,7 +1628,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             return f"Tenant: {context['tenant']}, L3Out: {context['l3out']}, Node: {context['node']}"
             return f"Tenant: {context['tenant']}, BD: {context['bd']}, Subnet: {context['subnet']}"
         """
-        raise NotImplementedError("Subclasses must implement format_step_description()")
+        raise NotImplementedError(
+            f"{self.__class__.__name__} must implement format_step_description() to create "
+            f"detailed step descriptions with key verification details."
+        )
 
     def process_results_with_steps(
         self, results: list[VerificationResult], steps: Any
@@ -1815,7 +1825,8 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             return f"RR {context['rr_node']} to Leaf {context['leaf_node']}"
         """
         raise NotImplementedError(
-            "Subclasses must implement build_item_identifier_from_context()"
+            f"{self.__class__.__name__} must implement build_item_identifier_from_context() "
+            f"to create concise identifiers for HTML reporting."
         )
 
     def set_step_status(self, step: Any, result: VerificationResult) -> None:
