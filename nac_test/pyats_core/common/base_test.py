@@ -1965,15 +1965,16 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 }
             ]
 
-        # Validate that test implements verify_group()
-        if not hasattr(self, "verify_group"):
-            error_msg = (
+        # Fail fast if the subclass hasn't overridden verify_group().
+        # This check runs before asyncio.gather() so the NotImplementedError
+        # propagates loudly instead of being silently caught by
+        # gather(return_exceptions=True) and demoted to a FAILED result.
+        if type(self).verify_group is NACTestBase.verify_group:
+            raise NotImplementedError(
                 f"{self.__class__.__name__} returned dict from get_items_to_verify() "
                 f"but does not implement verify_group(). For grouped verification, "
                 f"implement: async def verify_group(self, semaphore, client, group_key, contexts)"
             )
-            self.logger.error(error_msg)
-            raise NotImplementedError(error_msg)
 
         # Set up concurrency control
         from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
@@ -2038,15 +2039,14 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Returns:
             list: List of individual item verification results
         """
-        # Validate that test implements verify_item()
-        if not hasattr(self, "verify_item"):
-            error_msg = (
+        # Fail fast if the subclass hasn't overridden verify_item().
+        # Same rationale as verify_group — see _run_grouped_verification().
+        if type(self).verify_item is NACTestBase.verify_item:
+            raise NotImplementedError(
                 f"{self.__class__.__name__} returned list from get_items_to_verify() "
                 f"but does not implement verify_item(). For item verification, "
                 f"implement: async def verify_item(self, semaphore, client, context)"
             )
-            self.logger.error(error_msg)
-            raise NotImplementedError(error_msg)
 
         # Set up concurrency control
         from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
@@ -2081,6 +2081,64 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 )
 
         return processed_results  # type: ignore[return-value]
+
+    async def verify_group(
+        self,
+        semaphore: asyncio.Semaphore,
+        client: Any,
+        group_key: str,
+        contexts: list[dict[str, Any]],
+    ) -> list[VerificationResult]:
+        """Verify a group of items sharing one API call.
+
+        Subclasses that return a dict from get_items_to_verify() must override
+        this method to implement grouped verification logic.
+
+        Args:
+            semaphore: Concurrency-limiting semaphore.
+            client: HTTP client for API calls.
+            group_key: Key identifying this group.
+            contexts: List of context objects for items in this group.
+
+        Returns:
+            List of verification results for each item in the group.
+
+        Raises:
+            NotImplementedError: Always, unless overridden by a subclass.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} returned dict from get_items_to_verify() "
+            f"but does not implement verify_group(). For grouped verification, "
+            f"implement: async def verify_group(self, semaphore, client, group_key, contexts)"
+        )
+
+    async def verify_item(
+        self,
+        semaphore: asyncio.Semaphore,
+        client: Any,
+        context: dict[str, Any],
+    ) -> VerificationResult:
+        """Verify a single item with its own API call.
+
+        Subclasses that return a list from get_items_to_verify() must override
+        this method to implement item-level verification logic.
+
+        Args:
+            semaphore: Concurrency-limiting semaphore.
+            client: HTTP client for API calls.
+            context: Context object for the item to verify.
+
+        Returns:
+            Verification result for this item.
+
+        Raises:
+            NotImplementedError: Always, unless overridden by a subclass.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} returned list from get_items_to_verify() "
+            f"but does not implement verify_item(). For item verification, "
+            f"implement: async def verify_item(self, semaphore, client, context)"
+        )
 
     def format_mismatch(
         self, attribute: str, expected: Any, actual: Any, context: dict[str, Any]
