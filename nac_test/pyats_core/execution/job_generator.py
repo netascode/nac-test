@@ -68,15 +68,24 @@ class JobGenerator:
         from pyats.easypy import run
         from pyats.log import managed_handlers
 
+        # Test files to execute
         TEST_FILES = [
             {test_files_str}
         ]
 
         def main(runtime):
+            """Main job file entry point"""
+            # Set max workers
             runtime.max_workers = {self.max_workers}
             managed_handlers.screen.setLevel({self.loglevel})
 
+            # Note: runtime.directory is read-only and set by --archive-dir
+            # The output directory is: {str(self.output_dir)}
+
+            # Run all test files
             for idx, test_file in enumerate(TEST_FILES):
+                # Create meaningful task ID from test file name
+                # e.g., "epg_attributes.py" -> "epg_attributes"
                 test_name = Path(test_file).stem
                 run(
                     testscript=test_file,
@@ -117,7 +126,8 @@ class JobGenerator:
         Returns:
             Job file content as a string
         """
-        hostname = device["hostname"]
+        hostname = device["hostname"]  # Required field per nac-test contract
+        # Use absolute paths so device-centric jobs are independent of cwd
         test_files_str = ",\n        ".join(
             [f'"{str(Path(tf).resolve())}"' for tf in test_files]
         )
@@ -133,25 +143,35 @@ class JobGenerator:
         from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
         from nac_test.utils import sanitize_hostname
 
+        # Device being tested (using hostname)
         HOSTNAME = "{hostname}"
         DEVICE_INFO = {json.dumps(device)}
 
+        # Test files to execute
         TEST_FILES = [
             {test_files_str}
         ]
 
         def main(runtime):
+            """Main job file entry point for device-centric execution"""
+            # Set up environment variables that SSHTestBase expects
             os.environ['DEVICE_INFO'] = json.dumps(DEVICE_INFO)
+
+            # Create and attach connection manager to runtime
+            # This will be shared across all tests for this device
             managed_handlers.screen.setLevel({self.loglevel})
             runtime.connection_manager = DeviceConnectionManager(max_concurrent=1)
+
             safe_hostname = sanitize_hostname(HOSTNAME)
 
+            # Run all test files for this device
             for idx, test_file in enumerate(TEST_FILES):
+                # Create meaningful task ID from test file name and hostname
                 test_name = Path(test_file).stem
                 run(
                     testscript=test_file,
                     taskid=f"{{safe_hostname}}_{{test_name}}",
-                    hostname=HOSTNAME,
+                    hostname=HOSTNAME,  # Pass original hostname for progress reporting
                     max_runtime={DEFAULT_TEST_TIMEOUT},
                     testbed=runtime.testbed
                 )
