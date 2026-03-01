@@ -77,7 +77,7 @@ class SSHTestBase(NACTestBase):
         Returns:
             The device object from the testbed if available, None otherwise.
         """
-        if self.testbed and hasattr(self, "hostname"):
+        if self.testbed and self.hostname is not None:
             # Look up device by hostname in the testbed
             if self.hostname in self.testbed.devices:
                 return self.testbed.devices[self.hostname]
@@ -169,9 +169,7 @@ class SSHTestBase(NACTestBase):
 
         # Add hostname to metadata as a separate field for d2d tests
         # Do this BEFORE connection attempt so it's set even if connection fails
-        if hasattr(self, "result_collector") and hasattr(
-            self.result_collector, "metadata"
-        ):
+        if self.result_collector is not None:
             self.result_collector.metadata["hostname"] = hostname
 
         # The rest of the setup is async, we'll run it in the event loop
@@ -340,18 +338,18 @@ class SSHTestBase(NACTestBase):
             command: The command that was executed
             output: The command output
         """
-        if not hasattr(self, "result_collector"):
-            # Safety check - collector might not be initialized in some edge cases
+        if self.result_collector is None or self.device_info is None:
+            # Safety check - collector/device_info might not be initialized in some edge cases
             return
 
         try:
             # Get device name from device info
-            device_name = self.device_info.get(
+            device_name: str = self.device_info.get(
                 "hostname", self.device_info.get("host", "Unknown Device")
             )
 
             # Get current test context if available (set by base class methods)
-            test_context = getattr(self, "_current_test_context", None)
+            test_context = self._current_test_context
 
             # Track the command execution using the base class's result collector
             self.result_collector.add_command_api_execution(
