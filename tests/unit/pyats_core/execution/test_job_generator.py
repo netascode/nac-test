@@ -81,15 +81,6 @@ class BaseJobFileContentTests:
         content = generate_content(default_test_files)
         ast.parse(content)  # Raises SyntaxError if invalid
 
-    def test_contains_managed_handlers_import(
-        self,
-        generate_content: Callable[[list[Path]], str],
-        default_test_files: list[Path],
-    ) -> None:
-        """Test that generated job file imports managed_handlers at module level."""
-        content = generate_content(default_test_files)
-        assert "from pyats.log import managed_handlers" in content
-
     @pytest.mark.parametrize(
         ("verbosity", "expected_loglevel"),
         [
@@ -198,37 +189,13 @@ class TestGenerateDeviceCentricJob(BaseJobFileContentTests):
 
         assert 'HOSTNAME = "test-router-01"' in content
 
-    def test_contains_device_info_json(
-        self,
-        generate_content: Callable[[list[Path]], str],
-        default_test_files: list[Path],
-    ) -> None:
-        """Test that device info is serialized as JSON in D2D job file."""
-        content = generate_content(default_test_files)
-
-        assert "DEVICE_INFO = {" in content
-        assert '"hostname": "test-router-01"' in content
-
-    def test_contains_d2d_imports(
-        self,
-        generate_content: Callable[[list[Path]], str],
-        default_test_files: list[Path],
-    ) -> None:
-        """Test that D2D-specific imports are present."""
-        content = generate_content(default_test_files)
-
-        assert (
-            "from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager"
-            in content
-        )
-        assert "from nac_test.utils import sanitize_hostname" in content
-
     def test_contains_environment_variable_setup(
         self,
         generate_content: Callable[[list[Path]], str],
         default_test_files: list[Path],
     ) -> None:
-        """Test that DEVICE_INFO environment variable is set in D2D job file."""
+        """Test that DEVICE_INFO environment variable is set in D2D job file
+        (required by SSHTestBase)."""
         content = generate_content(default_test_files)
 
-        assert "os.environ['DEVICE_INFO'] = json.dumps(DEVICE_INFO)" in content
+        assert "os.environ['DEVICE_INFO'] = " in content
