@@ -137,10 +137,12 @@ def _run_e2e_scenario(
     """
     output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
 
-    arch = scenario.architecture
+    # Configure environment - use architecture as env var prefix
+    arch = scenario.architecture  # e.g., "SDWAN", "ACI", "CC"
     class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
     class_mocker.setenv(f"{arch}_USERNAME", "mock_user")
     class_mocker.setenv(f"{arch}_PASSWORD", "mock_pass")
+    # IOSXE credentials needed for D2D tests (device access)
     class_mocker.setenv("IOSXE_USERNAME", "mock_user")
     class_mocker.setenv("IOSXE_PASSWORD", "mock_pass")
 
@@ -166,6 +168,7 @@ def _run_e2e_scenario(
     runner = CliRunner()
     result = runner.invoke(nac_test.cli.main.app, cli_args)
 
+    # Compute filtered stdout (strips logger output lines)
     filtered_stdout = "\n".join(
         line
         for line in result.stdout.split("\n")

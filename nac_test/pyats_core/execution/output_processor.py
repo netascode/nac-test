@@ -19,11 +19,10 @@ from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
 
-# Pre-compiled regex patterns for output filtering (compiled once at module load)
 # PyATS log format: %COMPONENT-LEVEL: (e.g., %EASYPY-DEBUG:, %AETEST-INFO:)
 _PYATS_LOG_PATTERN = re.compile(r"%\w+-(\w+):")
 
-# Patterns to always suppress (combined into single regex for performance)
+# Patterns to always suppress
 _SUPPRESS_PATTERN = re.compile(
     r"^(?:"
     r"\s*$|"  # Empty/whitespace lines
@@ -35,7 +34,7 @@ _SUPPRESS_PATTERN = re.compile(
     r")"
 )
 
-# Critical patterns to show (combined into single regex)
+# Critical patterns to show
 _CRITICAL_PATTERN = re.compile(
     r"ERROR|FAILED|CRITICAL|Traceback|Exception.*Error|RECOVER(Y|ED)"
 )
@@ -66,9 +65,7 @@ class OutputProcessor:
         self.test_status = test_status or {}
         self.debug = debug
         self.verbosity = verbosity
-        self._verbosity_threshold = VERBOSITY_TO_LOGLEVEL.get(
-            verbosity, logging.WARNING
-        )
+        self._logging_verbosity = VERBOSITY_TO_LOGLEVEL.get(verbosity, logging.WARNING)
 
     def process_line(self, line: str) -> None:
         """Process output line, looking for our progress events.
@@ -273,9 +270,6 @@ class OutputProcessor:
     def _should_show_line(self, line: str) -> bool:
         """Determine if line should be shown to user.
 
-        Optimized for performance with pre-compiled regex and early exits.
-        Called for potentially tens of thousands of lines per test run.
-
         Args:
             line: Output line to check
 
@@ -287,7 +281,7 @@ class OutputProcessor:
         # - DEBUG verbosity shows everything
         if not self.debug:
             return False
-        if self._verbosity_threshold <= logging.DEBUG:
+        if self.verbosity == VerbosityLevel.DEBUG:
             return True
 
         # Fast string check: suppress plugin debug output
@@ -302,15 +296,15 @@ class OutputProcessor:
             return True
 
         # At WARNING+ (default), only show critical messages
-        if self._verbosity_threshold >= logging.WARNING:
+        # TODO: Would be good to review VerbosityLevel type to enable >= style comparisons
+        if self._logging_verbosity >= logging.WARNING:
             if _CRITICAL_PATTERN.search(line) and not _TABLE_LINE_PATTERN.match(line):
                 return True
-            return False
-
-        # At INFO verbosity: suppress formatting noise, show critical info
-        if _SUPPRESS_PATTERN.match(line):
-            return False
-        if _CRITICAL_PATTERN.search(line) and not _TABLE_LINE_PATTERN.match(line):
-            return True
+        else:
+            # At INFO verbosity: suppress formatting noise, show critical info
+            if _SUPPRESS_PATTERN.match(line):
+                return False
+            if _CRITICAL_PATTERN.search(line) and not _TABLE_LINE_PATTERN.match(line):
+                return True
 
         return False

@@ -44,7 +44,7 @@ Verbosity = Annotated[
     typer.Option(
         "-v",
         "--verbosity",
-        help="Verbosity level. Default: WARNING (or DEBUG if --debug is set).",
+        help=f"Verbosity level. Default: {DEFAULT_VERBOSITY.value} (or DEBUG if --debug is set).",
         envvar="NAC_VALIDATE_VERBOSITY",
         is_eager=True,
     ),

@@ -77,7 +77,7 @@ class PyATSOrchestrator:
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
                 If not provided, will be detected automatically.
-            debug: Enable debug mode - keeps archive files, enables verbose output
+            debug: Enable debug mode - verbose output
             verbosity: Verbosity level for PyATS output filtering
         """
         self.data_paths = data_paths
@@ -134,7 +134,7 @@ class PyATSOrchestrator:
 
         # Initialize execution components
         self.job_generator = JobGenerator(
-            self.max_workers, self.output_dir, verbosity=self.verbosity
+            self.max_workers, self.output_dir, self.verbosity
         )
         self.output_processor: OutputProcessor | None = (
             None  # Will be initialized when progress reporter is ready
@@ -803,7 +803,7 @@ class PyATSOrchestrator:
                         )
             else:
                 logger.info(
-                    "Keeping archive files (debug mode or NAC_TEST_PYATS_KEEP_REPORT_DATA is set)"
+                    "Keeping archive files (NAC_TEST_DEBUG/NAC_TEST_PYATS_KEEP_REPORT_DATA is set)"
                 )
 
             # Clean up empty api/ and d2d/ temp parent directories
