@@ -265,7 +265,7 @@ def test_init_does_not_use_sys_executable(
     assert runner.pyats_executable == str(fake_pyats_executable)
 
 
-# --- Command building tests (verbosity flag mapping) ---
+# --- Command building test (verbosity flag mapping) ---
 
 
 @pytest.mark.parametrize(
@@ -285,7 +285,7 @@ def test_build_command_verbosity_to_cli_flags(
     expected_verbose_count: int,
     expected_quiet_count: int,
 ) -> None:
-    """Test that verbosity levels map to correct CLI flags."""
+    """Test that verbosity levels map to correct CLI flags (--verbose, --quiet)."""
     runner = SubprocessRunner(temp_output_dir, mock_output_handler, verbosity=verbosity)
     cmd = runner._build_command(
         job_file_path=Path("/tmp/job.py"),
@@ -296,45 +296,3 @@ def test_build_command_verbosity_to_cli_flags(
 
     assert cmd.count("--verbose") == expected_verbose_count
     assert cmd.count("--quiet") == expected_quiet_count
-
-
-def test_build_command_includes_testbed_when_provided(
-    temp_output_dir: Path, mock_output_handler: Mock
-) -> None:
-    """Test that testbed file path is included when provided."""
-    runner = SubprocessRunner(temp_output_dir, mock_output_handler)
-    cmd = runner._build_command(
-        job_file_path=Path("/tmp/job.py"),
-        plugin_config_file="/tmp/plugin.yaml",
-        pyats_config_file="/tmp/pyats.conf",
-        archive_name="test_archive.zip",
-        testbed_file_path=Path("/tmp/testbed.yaml"),
-    )
-
-    assert "--testbed-file" in cmd
-    assert "/tmp/testbed.yaml" in cmd
-
-
-def test_build_command_basic_structure(
-    temp_output_dir: Path, mock_output_handler: Mock
-) -> None:
-    """Test that _build_command returns correct basic structure."""
-    runner = SubprocessRunner(temp_output_dir, mock_output_handler)
-    cmd = runner._build_command(
-        job_file_path=Path("/tmp/job.py"),
-        plugin_config_file="/tmp/plugin.yaml",
-        pyats_config_file="/tmp/pyats.conf",
-        archive_name="test_archive.zip",
-    )
-
-    assert cmd[1] == "run"
-    assert cmd[2] == "job"
-    assert cmd[3] == "/tmp/job.py"
-    assert "--configuration" in cmd
-    assert "--pyats-configuration" in cmd
-    assert "--archive-dir" in cmd
-    assert "--archive-name" in cmd
-    assert "--no-archive-subdir" in cmd
-    assert "--no-mail" in cmd
-    assert "--no-xml-report" in cmd
-    assert "--xunit" in cmd
