@@ -304,13 +304,19 @@ class TestRobotOrchestrator:
         assert orchestrator.debug is False
 
     @pytest.mark.parametrize(
-        ("debug", "verbosity", "expected_verbose"),
+        ("debug", "verbosity", "expected_verbose", "expected_loglevel"),
         [
-            (True, VerbosityLevel.WARNING, True),
-            (False, VerbosityLevel.DEBUG, True),
-            (False, VerbosityLevel.WARNING, False),
+            (True, VerbosityLevel.WARNING, True, None),
+            (True, VerbosityLevel.DEBUG, True, "DEBUG"),
+            (False, VerbosityLevel.DEBUG, False, "DEBUG"),
+            (False, VerbosityLevel.WARNING, False, None),
         ],
-        ids=["debug_true", "verbosity_debug", "no_debug_no_verbose"],
+        ids=[
+            "debug_true",
+            "debug_with_verbose_debug",
+            "verbosity_debug",
+            "no_debug_no_verbose",
+        ],
     )
     @patch("nac_test.robot.orchestrator.run_pabot")
     @patch("nac_test.robot.orchestrator.RobotReportGenerator")
@@ -324,8 +330,9 @@ class TestRobotOrchestrator:
         debug,
         verbosity,
         expected_verbose,
+        expected_loglevel,
     ) -> None:
-        """Test that verbose flag is correctly computed from debug and verbosity."""
+        """Test that verbose and loglevel are correctly passed to run_pabot."""
         orchestrator = RobotOrchestrator(
             data_paths=mock_data_paths,
             templates_dir=mock_templates_dir,
@@ -355,3 +362,4 @@ class TestRobotOrchestrator:
         mock_pabot.assert_called_once()
         call_kwargs = mock_pabot.call_args[1]
         assert call_kwargs["verbose"] is expected_verbose
+        assert call_kwargs["loglevel"] == expected_loglevel

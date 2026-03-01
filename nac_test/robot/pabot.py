@@ -93,6 +93,7 @@ def run_pabot(
     processes: int | None = None,
     dry_run: bool = False,
     verbose: bool = False,
+    loglevel: str | None = None,
     ordering_file: Path | None = None,
     extra_args: list[str] | None = None,
 ) -> int:
@@ -143,8 +144,8 @@ def run_pabot(
             return EXIT_DATA_ERROR
         robot_args.extend(validated_extra_args)
 
-    if verbose and "--loglevel" not in robot_args:
-        robot_args.extend(["--loglevel", "DEBUG"])
+    if loglevel and "--loglevel" not in robot_args:
+        robot_args.extend(["--loglevel", loglevel])
 
     args = pabot_args + robot_args + [str(path)]
     logger.info("Running pabot with args: %s", " ".join(args))

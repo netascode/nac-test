@@ -341,6 +341,7 @@ def e2e_debug_results(
         tmp_path_factory,
         class_mocker,
         extra_cli_args=["--debug"],
+        extra_env_vars={"EXPECTED_ROBOT_LOG_LEVEL": "DEBUG"},
     )
 
 
@@ -360,4 +361,5 @@ def e2e_debug_with_info_results(
         tmp_path_factory,
         class_mocker,
         extra_cli_args=["--debug", "--verbosity", "INFO"],
+        extra_env_vars={"EXPECTED_ROBOT_LOG_LEVEL": "INFO"},
     )

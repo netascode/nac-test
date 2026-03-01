@@ -90,3 +90,65 @@ class TestRunPabotErrorHandling:
 
         assert result == 252
         mock_main_program.assert_not_called()
+
+
+class TestRunPabotLoglevel:
+    """Test loglevel handling in run_pabot function.
+
+    Tests the interaction between the computed loglevel parameter and
+    user-provided --loglevel in extra_args. User-provided values should
+    take precedence over computed values.
+    """
+
+    @pytest.mark.parametrize(
+        ("loglevel", "extra_args", "expected_loglevel"),
+        [
+            # No loglevel set anywhere - no --loglevel in final args
+            (None, [], None),
+            # Computed loglevel from --debug --verbosity DEBUG
+            ("DEBUG", [], "DEBUG"),
+            # User explicitly passes --loglevel TRACE via extra_args
+            (None, ["--loglevel", "TRACE"], "TRACE"),
+            # Computed DEBUG but user override with TRACE - user wins
+            ("DEBUG", ["--loglevel", "TRACE"], "TRACE"),
+            # Computed DEBUG but user override with INFO - user wins
+            ("DEBUG", ["--loglevel", "INFO"], "INFO"),
+        ],
+        ids=[
+            "no_loglevel",
+            "computed_debug",
+            "user_explicit_trace",
+            "computed_debug_user_override_trace",
+            "computed_debug_user_override_info",
+        ],
+    )
+    @patch("nac_test.robot.pabot.pabot.pabot.main_program")
+    def test_loglevel_precedence(
+        self,
+        mock_main_program: MagicMock,
+        tmp_path: Path,
+        loglevel: str | None,
+        extra_args: list[str],
+        expected_loglevel: str | None,
+    ) -> None:
+        """Test that user-provided --loglevel in extra_args takes precedence."""
+        mock_main_program.return_value = 0
+
+        run_pabot(tmp_path, loglevel=loglevel, extra_args=extra_args)
+
+        mock_main_program.assert_called_once()
+        call_args = mock_main_program.call_args[0][0]
+
+        if expected_loglevel is None:
+            # --loglevel should not be in args
+            assert "--loglevel" not in call_args
+        else:
+            # Find --loglevel and verify its value
+            assert "--loglevel" in call_args
+            loglevel_idx = call_args.index("--loglevel")
+            actual_loglevel = call_args[loglevel_idx + 1]
+            assert actual_loglevel == expected_loglevel
+
+            # Verify --loglevel appears only once (no duplicates)
+            loglevel_count = call_args.count("--loglevel")
+            assert loglevel_count == 1, f"--loglevel appears {loglevel_count} times"
