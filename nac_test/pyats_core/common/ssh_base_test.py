@@ -29,9 +29,18 @@ class SSHTestBase(NACTestBase):
     """
 
     # Instance variables set during setup (type annotations for mypy)
+    # Optional attributes (may be None before setup completes or if setup fails)
     connection: BrokerCommandExecutor | Any | None = (
         None  # BrokerCommandExecutor or testbed device
     )
+    hostname: str | None = None
+    device_info: dict[str, Any] | None = None
+    device_data: dict[str, Any] | None = None
+    command_cache: CommandCache | None = None
+    execute_command: Callable[[str], Coroutine[Any, Any, str]] | None = None
+
+    # Required attribute — always assigned in setup() before any test method runs.
+    # Intentionally non-optional: accessing before setup() is a programming error.
     broker_client: BrokerClient
 
     @property
