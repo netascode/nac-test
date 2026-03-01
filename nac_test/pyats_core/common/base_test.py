@@ -2428,7 +2428,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         3. Saves collected results to JSON for report generation
         """
         # Clean up batching reporter if it was initialized
-        if hasattr(self, "batching_reporter") and self.batching_reporter:
+        if self.batching_reporter is not None:
             try:
                 # Flush any remaining messages
                 self.logger.debug("Shutting down batching reporter...")
@@ -2441,7 +2441,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 )
 
                 # Uninstall step interceptors
-                if hasattr(self, "step_interceptor") and self.step_interceptor:
+                if self.step_interceptor is not None:
                     self.step_interceptor.uninstall_interceptors()
 
                     # Clear global references
@@ -2453,10 +2453,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 # Don't fail the test due to cleanup issues
 
         # Report controller recovery statistics
-        if (
-            hasattr(self, "_controller_recovery_count")
-            and self._controller_recovery_count > 0
-        ):
+        if self._controller_recovery_count > 0:
             self.logger.warning(
                 f"📊 CONTROLLER RECOVERY SUMMARY: {self._controller_recovery_count} recovery event{'s' if self._controller_recovery_count > 1 else ''} "
                 f"during test execution (total downtime: ~{self._total_recovery_downtime:.1f}s)"
