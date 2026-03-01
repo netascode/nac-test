@@ -156,7 +156,6 @@ class TestCombinedOrchestratorController:
                         orchestrator.run_tests()
 
                 # Verify PyATSOrchestrator was called with controller_type
-
                 mock_pyats.assert_called_once_with(
                     data_paths=[data_dir],
                     test_dir=templates_dir,
