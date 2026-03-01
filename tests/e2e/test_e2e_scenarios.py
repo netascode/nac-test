@@ -1079,7 +1079,7 @@ class TestE2EDebug(E2ECombinedTestBase):
 
     def test_pabot_verbose_shows_test_result(self, results: E2EResults) -> None:
         """Verify pabot --verbose output shows test case result with PASS."""
-        pattern = r"Verify Debug Log Level Is Active\s+\| PASS \|"
+        pattern = r"Verify Log Level\s+\| PASS \|"
         assert re.search(pattern, results.stdout), (
             "Missing pabot verbose output showing test result"
         )
@@ -1108,6 +1108,13 @@ class TestE2EDebugWithInfo(E2ECombinedTestBase):
     @pytest.fixture
     def results(self, e2e_debug_with_info_results: E2EResults) -> E2EResults:
         return e2e_debug_with_info_results
+
+    def test_pabot_verbose_shows_test_result(self, results: E2EResults) -> None:
+        """Verify pabot --verbose output shows test case result with PASS."""
+        pattern = r"Verify Log Level\s+\| PASS \|"
+        assert re.search(pattern, results.stdout), (
+            "Missing pabot verbose output showing test result"
+        )
 
     def test_easypy_debug_not_in_stdout(self, results: E2EResults) -> None:
         """Verify %EASYPY-DEBUG is filtered out when --verbosity INFO."""
