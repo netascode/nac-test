@@ -55,16 +55,16 @@ class SSHTestBase(NACTestBase):
             The PyATS testbed object if available, None otherwise.
         """
         # In PyATS aetest, testbed is passed as an internal parameter
-        if hasattr(self, "parameters"):
-            # Check internal parameters (where PyATS stores testbed)
-            if (
-                hasattr(self.parameters, "internal")
-                and "testbed" in self.parameters.internal
-            ):
-                return self.parameters.internal["testbed"]
-            # Fallback to regular parameters
-            if "testbed" in self.parameters:
-                return self.parameters["testbed"]
+        # self.parameters is always available (PyATS property on TestItem)
+        # Check internal parameters (where PyATS stores testbed)
+        if (
+            hasattr(self.parameters, "internal")
+            and "testbed" in self.parameters.internal
+        ):
+            return self.parameters.internal["testbed"]
+        # Fallback to regular parameters
+        if "testbed" in self.parameters:
+            return self.parameters["testbed"]
         return None
 
     @property
