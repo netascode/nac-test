@@ -479,8 +479,8 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         except ImportError:
             pass
 
-        # Check parent for reporter
-        if hasattr(self, "parent") and hasattr(self.parent, "reporter"):
+        # Check parent for reporter (parent is always set by PyATS, may be None)
+        if self.parent is not None and hasattr(self.parent, "reporter"):
             return self.parent.reporter
 
         return None
