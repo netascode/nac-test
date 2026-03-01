@@ -179,7 +179,7 @@ class TestResultCollector:
             "overall_status": self._determine_overall_status(),
             "result_counts": self.result_counts,
             "command_count": self.command_count,
-            "metadata": self.metadata if hasattr(self, "metadata") else {},
+            "metadata": self.metadata,
         }
         self.jsonl_file.write(json.dumps(summary_record) + "\n")
 
