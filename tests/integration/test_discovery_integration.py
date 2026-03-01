@@ -17,6 +17,7 @@ Test Categories:
     - TestEdgeCases: Tests mixed scenarios and error handling
     - TestRelaxedPathRequirements: Tests for issue #475 - arbitrary directory naming
     - TestExcludePaths: Tests directory exclusion functionality
+    - TestDiscoveryPerformance: Performance tests for discovery mechanism
 """
 
 import os
@@ -694,7 +695,7 @@ class TestDiscoveryPerformance:
         sys.version_info[:2] == (3, 13)
         and os.environ.get("GITHUB_ACTIONS") is not None
         and os.environ.get("PYTEST_XDIST_WORKER") is not None,
-        reason="pytest-xdist causes inconclusive performance results on Python 3.13 in GitHub Actions CI (see #589)",
+        reason="pytest-xdist causes ~1500x AST parse slowdown on Python 3.13 in GitHub Actions; results are inconclusive)",
     )
     def test_categorization_performance(self, tmp_path: Path) -> None:
         """Test that categorization completes quickly even with many files.
