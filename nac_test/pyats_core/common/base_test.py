@@ -463,9 +463,12 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Returns:
             Reporter instance or None if not found
         """
-        # Check if we have a reporter attribute
-        if hasattr(self, "reporter") and self.reporter:
-            return self.reporter
+        # reporter is dynamically injected by the PyATS runner at test execution
+        # time — it is NOT declared on any class in the Testcase MRO, so we
+        # cannot access it directly without risking AttributeError.
+        reporter = getattr(self, "reporter", None)
+        if reporter:
+            return reporter
 
         # Check runtime for reporter
         try:
