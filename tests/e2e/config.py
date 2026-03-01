@@ -364,7 +364,7 @@ DEBUG_SCENARIO = E2EScenario(
 
 DEBUG_WITH_INFO_SCENARIO = E2EScenario(
     name="debug_with_info",
-    description="Debug with INFO verbosity - verifies --debug --verbosity INFO filters PyATS DEBUG output",
+    description="Debug with INFO verbosity - verifies --debug --verbosity INFO filters PyATS DEBUG output and Robot log level",
     data_path=f"{_FIXTURE_BASE}/debug/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/debug/templates",
     requires_testbed=False,
