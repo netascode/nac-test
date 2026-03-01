@@ -17,9 +17,9 @@ from pathlib import Path
 from typing import Any
 
 from nac_test.pyats_core.constants import (
-    DEFAULT_BUFFER_LIMIT,
     PIPE_DRAIN_DELAY_SECONDS,
     PIPE_DRAIN_TIMEOUT_SECONDS,
+    PYATS_OUTPUT_BUFFER_LIMIT,
 )
 from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
 
@@ -179,14 +179,9 @@ class SubprocessRunner:
         logger.info(f"Executing command: {' '.join(cmd)}")
 
         try:
-            # Get buffer limit from environment or use default
-            buffer_limit = int(
-                os.environ.get(
-                    "NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT
-                )
-            )
+            # Use centralized buffer limit from constants (handles env var override)
             logger.debug(
-                f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB"
+                f"Using output buffer limit: {PYATS_OUTPUT_BUFFER_LIMIT / 1024 / 1024:.2f}MB"
             )
 
             # Increase the buffer limit to handle large output lines (default 10MB instead of asyncio's 64KB)
@@ -197,7 +192,7 @@ class SubprocessRunner:
                 stderr=asyncio.subprocess.STDOUT,
                 env={**os.environ, **env},
                 cwd=str(self.output_dir),
-                limit=buffer_limit,
+                limit=PYATS_OUTPUT_BUFFER_LIMIT,
             )
 
             # Process output in real-time if we have a handler
@@ -293,14 +288,9 @@ class SubprocessRunner:
         logger.info(f"Executing command: {' '.join(cmd)}")
 
         try:
-            # Get buffer limit from environment or use default
-            buffer_limit = int(
-                os.environ.get(
-                    "NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT
-                )
-            )
+            # Use centralized buffer limit from constants (handles env var override)
             logger.debug(
-                f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB"
+                f"Using output buffer limit: {PYATS_OUTPUT_BUFFER_LIMIT / 1024 / 1024:.2f}MB"
             )
 
             # Increase the buffer limit to handle large output lines (default 10MB instead of asyncio's 64KB)
@@ -310,7 +300,7 @@ class SubprocessRunner:
                 stderr=asyncio.subprocess.STDOUT,
                 env={**os.environ, **env},
                 cwd=str(self.output_dir),
-                limit=buffer_limit,
+                limit=PYATS_OUTPUT_BUFFER_LIMIT,
             )
 
             # Process output in real-time

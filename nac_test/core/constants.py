@@ -6,6 +6,32 @@
 import os
 import platform
 import sys
+from typing import TypeVar
+
+T = TypeVar("T", int, float)
+
+
+# Helper function for parsing environment variables with positive value validation.
+# Defined here (not in utils/) to avoid circular imports: utils/environment.py imports
+# from core/constants.py, so we can't import back from utils/ at module load time.
+def _get_positive_numeric(env_var: str, default: T, value_type: type[T]) -> T:
+    """Get a positive numeric value from environment variable with fallback.
+
+    Args:
+        env_var: Environment variable name
+        default: Default value if env var is not set or invalid
+        value_type: Type to convert to (int or float)
+
+    Returns:
+        The parsed value from environment or default if invalid/missing/non-positive
+    """
+    env_value = os.getenv(env_var, str(default))
+    try:
+        value = value_type(env_value)
+        return value if value > 0 else default
+    except (ValueError, TypeError):
+        return default
+
 
 # Retry configuration - Generic retry logic used by multiple components
 RETRY_MAX_ATTEMPTS = 3
@@ -18,20 +44,13 @@ DEFAULT_TEST_TIMEOUT = 21600  # 6 hours per test
 CONNECTION_CLOSE_DELAY = 0.25  # seconds
 
 # Concurrency limits - Can be used by both PyATS and Robot
-# Can be overridden via NAC_TEST_PYATS_API_CONCURRENCY environment variable
-DEFAULT_API_CONCURRENCY = int(os.environ.get("NAC_TEST_PYATS_API_CONCURRENCY", "55"))
-DEFAULT_SSH_CONCURRENCY = int(os.environ.get("NAC_TEST_PYATS_SSH_CONCURRENCY", "20"))
-
-# NOTE: The following environment variables remain as undocumented internal tuning
-# knobs, not exposed as CLI flags or documented in README. Consider converting to
-# proper constants with CLI flags in a future release if user demand warrants it:
-# - NAC_TEST_SENTINEL_TIMEOUT
-# - NAC_TEST_PIPE_DRAIN_DELAY
-# - NAC_TEST_PIPE_DRAIN_TIMEOUT
-# - NAC_TEST_BATCH_SIZE
-# - NAC_TEST_BATCH_TIMEOUT
-# - NAC_TEST_QUEUE_SIZE
-
+# Can be overridden via environment variables
+DEFAULT_API_CONCURRENCY = _get_positive_numeric(
+    "NAC_TEST_PYATS_API_CONCURRENCY", 55, int
+)
+DEFAULT_SSH_CONCURRENCY = _get_positive_numeric(
+    "NAC_TEST_PYATS_SSH_CONCURRENCY", 20, int
+)
 # Progress reporting
 PROGRESS_UPDATE_INTERVAL = 0.5  # seconds
 

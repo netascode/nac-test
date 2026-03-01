@@ -35,6 +35,12 @@ from pathlib import Path
 from typing import Any
 
 from nac_test.core.constants import DEBUG_MODE
+from nac_test.pyats_core.constants import (
+    BATCH_SIZE,
+    BATCH_TIMEOUT_SECONDS,
+    OVERFLOW_MEMORY_LIMIT_MB,
+    OVERFLOW_QUEUE_SIZE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -166,10 +172,6 @@ class OverflowQueue:
     - Thread-safe operations
     """
 
-    # Default configuration
-    DEFAULT_MAX_SIZE = 5000  # Maximum queue size
-    DEFAULT_MEMORY_LIMIT_MB = 500  # Maximum memory usage in MB
-
     def __init__(
         self,
         max_size: int | None = None,
@@ -184,14 +186,8 @@ class OverflowQueue:
             overflow_dir: Directory for overflow files (default: /tmp/nac_test_overflow)
         """
         # Configuration
-        self.max_size = max_size or int(
-            os.environ.get("NAC_TEST_QUEUE_SIZE", str(self.DEFAULT_MAX_SIZE))
-        )
-        self.memory_limit_mb = memory_limit_mb or int(
-            os.environ.get(
-                "NAC_TEST_MEMORY_LIMIT_MB", str(self.DEFAULT_MEMORY_LIMIT_MB)
-            )
-        )
+        self.max_size = max_size or OVERFLOW_QUEUE_SIZE
+        self.memory_limit_mb = memory_limit_mb or OVERFLOW_MEMORY_LIMIT_MB
         self.memory_limit_bytes = self.memory_limit_mb * 1024 * 1024
 
         # Queue and memory tracking
@@ -938,12 +934,8 @@ class BatchingReporter:
         self.error_callback = error_callback
 
         # Load configuration from environment with overrides
-        self.batch_size = batch_size or int(
-            os.environ.get("NAC_TEST_BATCH_SIZE", "200")
-        )
-        self.flush_timeout = flush_timeout or float(
-            os.environ.get("NAC_TEST_BATCH_TIMEOUT", "0.5")
-        )
+        self.batch_size = batch_size or BATCH_SIZE
+        self.flush_timeout = flush_timeout or BATCH_TIMEOUT_SECONDS
         self.debug_mode = debug_mode if debug_mode is not None else DEBUG_MODE
 
         # Initialize batch accumulator
