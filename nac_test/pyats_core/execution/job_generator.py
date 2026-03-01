@@ -20,7 +20,7 @@ class JobGenerator:
         self,
         max_workers: int,
         output_dir: Path,
-        verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+        verbosity: VerbosityLevel,
     ):
         """Initialize job generator.
 
