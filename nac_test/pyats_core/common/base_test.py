@@ -613,7 +613,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Args:
             messages: List of messages (may be tuples or dicts)
         """
-        if not hasattr(self, "result_collector"):
+        if self.result_collector is None:
             return  # No collector initialized
 
         try:
@@ -681,7 +681,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
             # Try to use user's output directory first
             dump_file = None
-            if hasattr(self, "output_dir") and self.output_dir:
+            if self.output_dir is not None:
                 try:
                     # Create emergency_dumps subdirectory
                     emergency_dir = self.output_dir / "emergency_dumps"
@@ -1115,7 +1115,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             request_data: Optional request payload for POST/PUT/PATCH
             test_context: Explicit test context for this specific API call (eliminates race conditions)
         """
-        if not hasattr(self, "result_collector"):
+        if self.result_collector is None:
             # Safety check - collector might not be initialized in some edge cases
             return
 
@@ -2470,7 +2470,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             # - Network reliability metrics for reporting
             # Currently commented out - needs testing to ensure proper integration with report generation
             #
-            # if hasattr(self, "result_collector"):
+            # if self.result_collector is not None:
             #     from nac_test.pyats_core.reporting.types import ResultStatus
             #     self.result_collector.add_result(
             #         ResultStatus.INFO,
@@ -2479,7 +2479,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             #     )
 
         # Save test results for HTML report generation
-        if hasattr(self, "result_collector"):
+        if self.result_collector is not None:
             try:
                 output_file = self.result_collector.save_to_file()
                 self.logger.debug(f"Saved test results to: {output_file}")
