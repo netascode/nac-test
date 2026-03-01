@@ -110,7 +110,6 @@ def run_pabot(
         pabot_args.extend(["--processes", str(processes)])
     if verbose:
         pabot_args.append("--verbose")
-        robot_args.extend(["--loglevel", "DEBUG"])
     if dry_run:
         robot_args.append("--dryrun")
     for i in include:
@@ -143,6 +142,9 @@ def run_pabot(
         except (ValueError, DataError):
             return EXIT_DATA_ERROR
         robot_args.extend(validated_extra_args)
+
+    if verbose and "--loglevel" not in robot_args:
+        robot_args.extend(["--loglevel", "DEBUG"])
 
     args = pabot_args + robot_args + [str(path)]
     logger.info("Running pabot with args: %s", " ".join(args))

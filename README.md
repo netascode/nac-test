@@ -55,8 +55,8 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_MINIMAL_REPORTS]  │
 │    --diagnostic                         Wrap execution with diagnostic       │
 │                                         collection script for troubleshooting│
-│    --debug                              Enable debug mode: verbose output,   │
-│                                         keep archive files.                  │
+│    --debug                              Enables debug output for nac-test,   │
+│                                         Robot and PyATS execution.           |
 │                                         [env var: NAC_TEST_DEBUG]            │
 │    --merged-data-file… -m   TEXT        Filename for merged data model.      │
 │                                         [default: merged_data_model_test...] │
@@ -679,16 +679,11 @@ nac-test -d ./data -t ./tests -o ./results --debug
 ```
 
 When enabled, debug mode:
-- Enables verbose output for both Robot Framework (pabot) and PyATS execution
-- Preserves intermediate archive files and JSONL data files that are normally cleaned up
+- Enables verbose output for `pabot` execution (shows the robot console output) 
+- Sets Robot Framework loglevel to DEBUG for additional debug information in the
+  execution ((you can override via `--loglevel`)) 
 - Shows additional progress information during PyATS test execution
-
-You can also enable debug mode via the `NAC_TEST_DEBUG` environment variable:
-
-```bash
-export NAC_TEST_DEBUG=1
-nac-test -d ./data -t ./tests -o ./results
-```
+- Sets nac-test verbosity level to DEBUG (can be overriden by setting `--verbosity`)
 
 ## Advanced Environment Variables
 

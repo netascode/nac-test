@@ -42,7 +42,7 @@ _SUPPRESS_PATTERN = re.compile(
 
 # Critical patterns to always show (combined into single regex)
 _CRITICAL_PATTERN = re.compile(
-    r"ERROR|FAILED|CRITICAL|Traceback|Exception.*Error|RECOVER[YED]", re.IGNORECASE
+    r"ERROR|FAILED|CRITICAL|Traceback|Exception.*Error|RECOVER(Y|ED)"
 )
 
 # Table formatting indicators (for filtering critical matches inside tables)

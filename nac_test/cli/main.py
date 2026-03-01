@@ -246,7 +246,7 @@ Debug = Annotated[
     bool,
     typer.Option(
         "--debug",
-        help="Enable debug mode: keeps archive files, enables verbose output for both Robot and PyATS.",
+        help="Enable debug mode: enables debug output for nac-test, Robot and PyATS execution.",
         envvar="NAC_TEST_DEBUG",
     ),
 ]
