@@ -108,6 +108,10 @@ OVERFLOW_MEMORY_LIMIT_MB: int = _get_positive_numeric(
     "NAC_TEST_PYATS_MEMORY_LIMIT_MB", 500, int
 )
 
+# Overflow directory override: user-specified directory for overflow files
+# Default: system temp directory (tempfile.gettempdir()/nac_test_overflow)
+OVERFLOW_DIR_OVERRIDE: str | None = os.environ.get("NAC_TEST_PYATS_OVERFLOW_DIR")
+
 # Re-export all constants for backward compatibility
 __all__ = [
     # From core
@@ -147,4 +151,5 @@ __all__ = [
     "BATCH_TIMEOUT_SECONDS",
     "OVERFLOW_QUEUE_SIZE",
     "OVERFLOW_MEMORY_LIMIT_MB",
+    "OVERFLOW_DIR_OVERRIDE",
 ]

@@ -38,6 +38,7 @@ from nac_test.core.constants import DEBUG_MODE
 from nac_test.pyats_core.constants import (
     BATCH_SIZE,
     BATCH_TIMEOUT_SECONDS,
+    OVERFLOW_DIR_OVERRIDE,
     OVERFLOW_MEMORY_LIMIT_MB,
     OVERFLOW_QUEUE_SIZE,
 )
@@ -201,7 +202,7 @@ class OverflowQueue:
         # Overflow to disk
         default_overflow = os.path.join(tempfile.gettempdir(), "nac_test_overflow")
         self.overflow_dir = overflow_dir or Path(
-            os.environ.get("NAC_TEST_PYATS_OVERFLOW_DIR", default_overflow)
+            OVERFLOW_DIR_OVERRIDE or default_overflow
         )
         self.overflow_dir.mkdir(parents=True, exist_ok=True)
         self.overflow_file_count = 0
