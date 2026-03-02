@@ -4,13 +4,12 @@
 """PyATS job file generation functionality."""
 
 import json
-import logging
 import textwrap
 from pathlib import Path
 from typing import Any
 
 from nac_test.pyats_core.constants import DEFAULT_TEST_TIMEOUT
-from nac_test.utils.logging import VERBOSITY_TO_LOGLEVEL, VerbosityLevel
+from nac_test.utils.logging import LogLevel
 
 
 class JobGenerator:
@@ -20,19 +19,18 @@ class JobGenerator:
         self,
         max_workers: int,
         output_dir: Path,
-        verbosity: VerbosityLevel,
+        loglevel: LogLevel,
     ):
         """Initialize job generator.
 
         Args:
             max_workers: Maximum number of parallel workers
             output_dir: Directory for output files
-            verbosity: Verbosity level for aetest logging
+            loglevel: Log level for aetest logging
         """
         self.max_workers = max_workers
         self.output_dir = Path(output_dir)
-        self.verbosity = verbosity
-        self.loglevel = VERBOSITY_TO_LOGLEVEL.get(verbosity, logging.WARNING)
+        self.loglevel = loglevel
 
     def generate_job_file_content(self, test_files: list[Path]) -> str:
         """Generate the content for a PyATS job file for API tests.
@@ -63,6 +61,7 @@ class JobGenerator:
         job_content = textwrap.dedent(f'''
         """Auto-generated PyATS job file by nac-test"""
 
+        import logging
         import os
         from pathlib import Path
         from pyats.easypy import run
@@ -77,7 +76,7 @@ class JobGenerator:
             """Main job file entry point"""
             # Set max workers
             runtime.max_workers = {self.max_workers}
-            managed_handlers.screen.setLevel({self.loglevel})
+            managed_handlers.screen.setLevel(logging.{self.loglevel.value})
 
             # Note: runtime.directory is read-only and set by --archive-dir
             # The output directory is: {str(self.output_dir)}
@@ -136,6 +135,7 @@ class JobGenerator:
         """Auto-generated PyATS job file for device {hostname}"""
 
         import json
+        import logging
         import os
         from pathlib import Path
         from pyats.easypy import run
@@ -159,7 +159,7 @@ class JobGenerator:
 
             # Create and attach connection manager to runtime
             # This will be shared across all tests for this device
-            managed_handlers.screen.setLevel({self.loglevel})
+            managed_handlers.screen.setLevel(logging.{self.loglevel.value})
             runtime.connection_manager = DeviceConnectionManager(max_concurrent=1)
 
             safe_hostname = sanitize_hostname(HOSTNAME)

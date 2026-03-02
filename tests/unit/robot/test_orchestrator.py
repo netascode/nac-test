@@ -22,7 +22,7 @@ from nac_test.core.constants import (
 )
 from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.orchestrator import RobotOrchestrator
-from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
+from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def orchestrator(
         templates_dir=mock_templates_dir,
         output_dir=temp_output_dir,
         merged_data_filename="merged_data.yaml",
-        verbosity=DEFAULT_VERBOSITY,
+        loglevel=DEFAULT_LOGLEVEL,
     )
 
 
@@ -77,7 +77,7 @@ class TestRobotOrchestrator:
         assert orchestrator.merged_data_filename == "merged_data.yaml"
         assert orchestrator.render_only is False
         assert orchestrator.dry_run is False
-        assert orchestrator.verbosity == DEFAULT_VERBOSITY
+        assert orchestrator.loglevel == DEFAULT_LOGLEVEL
 
     def test_initialization_with_optional_params(
         self, mock_data_paths, mock_templates_dir, temp_output_dir
@@ -94,7 +94,7 @@ class TestRobotOrchestrator:
             dry_run=True,
             processes=4,
             extra_args=["--exitonfailure"],
-            verbosity=VerbosityLevel.DEBUG,
+            loglevel=LogLevel.DEBUG,
         )
 
         assert orchestrator.include_tags == ["smoke", "regression"]
@@ -103,7 +103,7 @@ class TestRobotOrchestrator:
         assert orchestrator.dry_run is True
         assert orchestrator.processes == 4
         assert orchestrator.extra_args == ["--exitonfailure"]
-        assert orchestrator.verbosity == VerbosityLevel.DEBUG
+        assert orchestrator.loglevel == LogLevel.DEBUG
 
     def test_create_backward_compat_symlinks(
         self, orchestrator, temp_output_dir
@@ -304,18 +304,18 @@ class TestRobotOrchestrator:
         assert orchestrator.verbose is False
 
     @pytest.mark.parametrize(
-        ("verbose", "verbosity", "expected_verbose", "expected_loglevel"),
+        ("verbose", "loglevel", "expected_verbose", "expected_robot_loglevel"),
         [
-            (True, VerbosityLevel.WARNING, True, None),
-            (True, VerbosityLevel.DEBUG, True, "DEBUG"),
-            (False, VerbosityLevel.DEBUG, False, "DEBUG"),
-            (False, VerbosityLevel.WARNING, False, None),
+            (True, LogLevel.WARNING, True, None),
+            (True, LogLevel.DEBUG, True, "DEBUG"),
+            (False, LogLevel.DEBUG, False, "DEBUG"),
+            (False, LogLevel.WARNING, False, None),
         ],
         ids=[
             "verbose_true",
-            "verbose_with_verbosity_debug",
-            "verbosity_debug",
-            "no_verbose_no_verbosity_debug",
+            "verbose_with_loglevel_debug",
+            "loglevel_debug",
+            "no_verbose_no_loglevel_debug",
         ],
     )
     @patch("nac_test.robot.orchestrator.run_pabot")
@@ -328,9 +328,9 @@ class TestRobotOrchestrator:
         mock_templates_dir,
         temp_output_dir,
         verbose,
-        verbosity,
+        loglevel,
         expected_verbose,
-        expected_loglevel,
+        expected_robot_loglevel,
     ) -> None:
         """Test that verbose and loglevel are correctly passed to run_pabot."""
         orchestrator = RobotOrchestrator(
@@ -339,7 +339,7 @@ class TestRobotOrchestrator:
             output_dir=temp_output_dir,
             merged_data_filename="merged.yaml",
             verbose=verbose,
-            verbosity=verbosity,
+            loglevel=loglevel,
         )
         orchestrator.robot_writer.write = MagicMock()
         orchestrator.robot_writer.write_merged_data_model = MagicMock()
@@ -362,4 +362,4 @@ class TestRobotOrchestrator:
         mock_pabot.assert_called_once()
         call_kwargs = mock_pabot.call_args[1]
         assert call_kwargs["verbose"] is expected_verbose
-        assert call_kwargs["loglevel"] == expected_loglevel
+        assert call_kwargs["robot_loglevel"] == expected_robot_loglevel

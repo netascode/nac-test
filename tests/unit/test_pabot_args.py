@@ -92,49 +92,37 @@ class TestRunPabotErrorHandling:
         mock_main_program.assert_not_called()
 
 
-class TestRunPabotLoglevel:
-    """Test loglevel handling in run_pabot function.
+class TestRunPabotRobotLoglevel:
+    """Test robot_loglevel handling in run_pabot function.
 
-    Tests the interaction between the computed loglevel parameter and
-    user-provided --loglevel in extra_args. User-provided values should
-    take precedence over computed values.
+    Tests that robot_loglevel parameter adds --loglevel to robot args.
     """
 
     @pytest.mark.parametrize(
-        ("loglevel", "extra_args", "expected_loglevel"),
+        ("robot_loglevel", "expected_loglevel"),
         [
-            # No loglevel set anywhere - no --loglevel in final args
-            (None, [], None),
-            # Computed loglevel from --verbose --verbosity DEBUG
-            ("DEBUG", [], "DEBUG"),
-            # User explicitly passes --loglevel TRACE via extra_args
-            (None, ["--loglevel", "TRACE"], "TRACE"),
-            # Computed DEBUG but user override with TRACE - user wins
-            ("DEBUG", ["--loglevel", "TRACE"], "TRACE"),
-            # Computed DEBUG but user override with INFO - user wins
-            ("DEBUG", ["--loglevel", "INFO"], "INFO"),
+            # No robot_loglevel set - no --loglevel in final args
+            (None, None),
+            # robot_loglevel set to DEBUG
+            ("DEBUG", "DEBUG"),
         ],
         ids=[
             "no_loglevel",
-            "computed_verbose",
-            "user_explicit_trace",
-            "computed_verbose_user_override_trace",
-            "computed_verbose_user_override_info",
+            "debug_loglevel",
         ],
     )
     @patch("nac_test.robot.pabot.pabot.pabot.main_program")
-    def test_loglevel_precedence(
+    def test_robot_loglevel_adds_arg(
         self,
         mock_main_program: MagicMock,
         tmp_path: Path,
-        loglevel: str | None,
-        extra_args: list[str],
+        robot_loglevel: str | None,
         expected_loglevel: str | None,
     ) -> None:
-        """Test that user-provided --loglevel in extra_args takes precedence."""
+        """Test that robot_loglevel adds --loglevel to robot args."""
         mock_main_program.return_value = 0
 
-        run_pabot(tmp_path, loglevel=loglevel, extra_args=extra_args)
+        run_pabot(tmp_path, robot_loglevel=robot_loglevel)
 
         mock_main_program.assert_called_once()
         call_args = mock_main_program.call_args[0][0]
@@ -148,7 +136,3 @@ class TestRunPabotLoglevel:
             loglevel_idx = call_args.index("--loglevel")
             actual_loglevel = call_args[loglevel_idx + 1]
             assert actual_loglevel == expected_loglevel
-
-            # Verify --loglevel appears only once (no duplicates)
-            loglevel_count = call_args.count("--loglevel")
-            assert loglevel_count == 1, f"--loglevel appears {loglevel_count} times"

@@ -1,46 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Unit tests for JobGenerator.
-
-This module tests the JobGenerator class using a base class pattern for shared
-tests between generate_job_file_content (API) and generate_device_centric_job (D2D).
-"""
+"""Unit tests for JobGenerator."""
 
 import ast
-import logging
 from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from nac_test.pyats_core.execution.job_generator import JobGenerator
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import LogLevel
 
 
 class TestJobGeneratorInit:
     """Tests for JobGenerator initialization."""
-
-    @pytest.mark.parametrize(
-        "verbosity,expected_loglevel",
-        [
-            (VerbosityLevel.DEBUG, logging.DEBUG),
-            (VerbosityLevel.INFO, logging.INFO),
-            (VerbosityLevel.WARNING, logging.WARNING),
-            (VerbosityLevel.ERROR, logging.ERROR),
-            (VerbosityLevel.CRITICAL, logging.CRITICAL),
-        ],
-    )
-    def test_init_verbosity_to_loglevel_mapping(
-        self, tmp_path: Path, verbosity: VerbosityLevel, expected_loglevel: int
-    ) -> None:
-        """Test that verbosity levels are correctly mapped to Python logging levels."""
-        generator = JobGenerator(
-            max_workers=4, output_dir=tmp_path, verbosity=verbosity
-        )
-
-        assert generator.verbosity == verbosity
-        assert generator.loglevel == expected_loglevel
 
     def test_pyats_managed_handlers_import(self) -> None:
         """Verify pyats.log.managed_handlers is importable and has screen attribute.
@@ -82,25 +56,25 @@ class BaseJobFileContentTests:
         ast.parse(content)  # Raises SyntaxError if invalid
 
     @pytest.mark.parametrize(
-        ("verbosity", "expected_loglevel"),
+        ("loglevel", "expected_logging_expr"),
         [
-            (VerbosityLevel.DEBUG, logging.DEBUG),
-            (VerbosityLevel.INFO, logging.INFO),
-            (VerbosityLevel.WARNING, logging.WARNING),
-            (VerbosityLevel.ERROR, logging.ERROR),
-            (VerbosityLevel.CRITICAL, logging.CRITICAL),
+            (LogLevel.DEBUG, "logging.DEBUG"),
+            (LogLevel.INFO, "logging.INFO"),
+            (LogLevel.WARNING, "logging.WARNING"),
+            (LogLevel.ERROR, "logging.ERROR"),
+            (LogLevel.CRITICAL, "logging.CRITICAL"),
         ],
     )
-    def test_verbosity_mapped_to_screen_handler(
+    def test_loglevel_mapped_to_screen_handler(
         self,
         generate_content: Callable[..., str],
         default_test_files: list[Path],
-        verbosity: VerbosityLevel,
-        expected_loglevel: int,
+        loglevel: LogLevel,
+        expected_logging_expr: str,
     ) -> None:
-        """Test that verbosity level is correctly mapped in screen handler setLevel."""
-        content = generate_content(default_test_files, verbosity)
-        assert f"managed_handlers.screen.setLevel({expected_loglevel})" in content
+        """Test that loglevel is correctly used in screen handler setLevel."""
+        content = generate_content(default_test_files, loglevel)
+        assert f"managed_handlers.screen.setLevel({expected_logging_expr})" in content
 
     def test_converts_relative_paths_to_absolute(
         self,
@@ -124,12 +98,12 @@ class TestGenerateJobFileContent(BaseJobFileContentTests):
 
         def _generate(
             test_files: list[Path],
-            verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+            loglevel: LogLevel = LogLevel.WARNING,
         ) -> str:
             generator = JobGenerator(
                 max_workers=4,
                 output_dir=tmp_path,
-                verbosity=verbosity,
+                loglevel=loglevel,
             )
             return generator.generate_job_file_content(test_files)
 
@@ -140,7 +114,7 @@ class TestGenerateJobFileContent(BaseJobFileContentTests):
     ) -> None:
         """Test that max_workers is set in generated job file."""
         generator = JobGenerator(
-            max_workers=8, output_dir=tmp_path, verbosity=VerbosityLevel.WARNING
+            max_workers=8, output_dir=tmp_path, loglevel=LogLevel.WARNING
         )
 
         content = generator.generate_job_file_content(default_test_files)
@@ -168,12 +142,12 @@ class TestGenerateDeviceCentricJob(BaseJobFileContentTests):
 
         def _generate(
             test_files: list[Path],
-            verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+            loglevel: LogLevel = LogLevel.WARNING,
         ) -> str:
             generator = JobGenerator(
                 max_workers=4,
                 output_dir=tmp_path,
-                verbosity=verbosity,
+                loglevel=loglevel,
             )
             return generator.generate_device_centric_job(sample_device, test_files)
 

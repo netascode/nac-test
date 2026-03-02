@@ -60,7 +60,7 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_VERBOSE]          │
 │    --merged-data-file… -m   TEXT        Filename for merged data model.      │
 │                                         [default: merged_data_model_test...] │
-│    --verbosity         -v   [DEBUG|...] Verbosity level. [default: WARNING]  │
+│    --loglevel          -l   [DEBUG|...] Log level. [default: WARNING]        │
 │    --version                            Display version number.              │
 │    --help                               Show this message and exit.          │
 ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -632,7 +632,7 @@ Metadata        Test Concurrency     True
 
 ## Advanced Robot Framework Options
 
-You can pass additional Robot Framework options directly to `nac-test`, which are forwarded to the pabot/Robot Framework execution. This enables advanced use cases like custom variables, listeners, and logging configuration:
+You can pass additional Robot Framework options directly to `nac-test`, which are forwarded to the pabot/Robot Framework execution. This enables advanced use cases like custom variables and listeners:
 
 ```bash
 # Pass custom variables
@@ -641,19 +641,36 @@ nac-test -d data/ -t templates/ -o output/ --variable MY_VAR:value
 # Multiple variables
 nac-test -d data/ -t templates/ -o output/ --variable VAR1:value1 --variable VAR2:value2
 
-# Custom log level
-nac-test -d data/ -t templates/ -o output/ --loglevel DEBUG
-
 # Add a listener
 nac-test -d data/ -t templates/ -o output/ --listener MyListener.py
 
 # Combine multiple options
-nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --loglevel INFO --listener MyListener
+nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --listener MyListener
 ```
 
 **Note:** Only Robot Framework options are supported. Pabot-specific options (like `--testlevelsplit`, `--pabotlib`, etc.) and test file paths are not allowed and will result in an error with exit code 252 (invalid Robot Framework arguments).
 
 See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#command-line-options) for all available options.
+
+### Robot Framework Log Level
+
+**Breaking change in nac-test 2.0:** The `--loglevel` argument is now a nac-test option that controls the overall logging verbosity, not a pass-through Robot Framework argument. Robot Framework's log level is automatically set to `DEBUG` when nac-test's `--loglevel` is set to `DEBUG`; otherwise, Robot uses its default log level.
+
+If you need fine-grained control over Robot Framework's log level (e.g., `TRACE`), implement this within your test suites using one of these approaches:
+
+```bash
+# Pass log level as a Robot variable
+nac-test -d data/ -t templates/ -o output/ --variable MY_LOG_LEVEL:TRACE
+```
+
+Then in your Robot test suite, use the `Set Log Level` keyword:
+
+```robot
+*** Settings ***
+Suite Setup    Set Log Level    ${MY_LOG_LEVEL}
+```
+
+Alternatively, use environment variables to control logging behavior within your test implementation.
 
 ## Exit Codes
 
@@ -679,13 +696,13 @@ nac-test -d ./data -t ./tests -o ./results --verbose
 ```
 
 When enabled, verbose mode:
-- Sets nac-test verbosity level to DEBUG (can be overridden by setting `--verbosity`)
+- Sets nac-test log level to DEBUG (can be overridden by setting `--loglevel`)
 - Enables verbose output for `pabot` execution (shows the Robot console output) 
 - Sets Robot Framework loglevel to DEBUG for additional debug information in the
-  execution (can be overridden by `--verbosity` or Robot argument `--loglevel`)
+  execution (can be overridden by `--loglevel` or Robot argument `--loglevel`)
 - Shows additional progress information and console output during PyATS test execution. 
-  The pyATS loglevel will follow the `--verbosity` setting, so you can reduce the output
-  for example via `--verbose --verbosity ERROR` which limits pyATS debugging output
+  The pyATS loglevel will follow the `--loglevel` setting, so you can reduce the output
+  for example via `--verbose --loglevel ERROR` which limits pyATS debugging output
   to ERROR information
 
 ## Advanced Environment Variables

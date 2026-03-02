@@ -44,7 +44,7 @@ from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspect
 from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.environment import EnvironmentValidator
-from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
+from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
 
@@ -64,7 +64,7 @@ class PyATSOrchestrator:
         custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
         verbose: bool = False,
-        verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
+        loglevel: LogLevel = DEFAULT_LOGLEVEL,
     ):
         """Initialize the PyATS orchestrator.
 
@@ -78,7 +78,7 @@ class PyATSOrchestrator:
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
                 If not provided, will be detected automatically.
             verbose: Enable verbose mode - verbose output
-            verbosity: Verbosity level for PyATS output filtering
+            loglevel: Log level for PyATS output filtering
         """
         self.data_paths = data_paths
         self.test_dir = Path(test_dir).resolve()
@@ -92,7 +92,7 @@ class PyATSOrchestrator:
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
         self.verbose = verbose
-        self.verbosity = verbosity
+        self.loglevel = loglevel
 
         # Track test status by type for combined summary
         self.api_test_status: dict[str, dict[str, Any]] = {}
@@ -134,7 +134,7 @@ class PyATSOrchestrator:
 
         # Initialize execution components
         self.job_generator = JobGenerator(
-            self.max_workers, self.output_dir, self.verbosity
+            self.max_workers, self.output_dir, self.loglevel
         )
         self.output_processor: OutputProcessor | None = (
             None  # Will be initialized when progress reporter is ready
@@ -611,13 +611,13 @@ class PyATSOrchestrator:
             self.progress_reporter,
             self.test_status,
             verbose=self.verbose,
-            verbosity=self.verbosity,
+            loglevel=self.loglevel,
         )
         # Archives should be stored at base level, not in pyats_results subdirectory
         self.subprocess_runner = SubprocessRunner(
             self.base_output_dir,
             output_handler=self.output_processor.process_line,
-            verbosity=self.verbosity,
+            loglevel=self.loglevel,
         )
         # Generate the plugin config and pass it to the runner
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -24,7 +24,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import LogLevel
 
 
 @pytest.fixture
@@ -265,28 +265,28 @@ def test_init_does_not_use_sys_executable(
     assert runner.pyats_executable == str(fake_pyats_executable)
 
 
-# --- Command building test (verbosity flag mapping) ---
+# --- Command building test (loglevel flag mapping) ---
 
 
 @pytest.mark.parametrize(
-    "verbosity,expected_verbose_count,expected_quiet_count",
+    "loglevel,expected_verbose_count,expected_quiet_count",
     [
-        (VerbosityLevel.DEBUG, 1, 0),
-        (VerbosityLevel.INFO, 0, 0),
-        (VerbosityLevel.WARNING, 0, 1),
-        (VerbosityLevel.ERROR, 0, 2),
-        (VerbosityLevel.CRITICAL, 0, 3),
+        (LogLevel.DEBUG, 1, 0),
+        (LogLevel.INFO, 0, 0),
+        (LogLevel.WARNING, 0, 1),
+        (LogLevel.ERROR, 0, 2),
+        (LogLevel.CRITICAL, 0, 3),
     ],
 )
-def test_build_command_verbosity_to_cli_flags(
+def test_build_command_loglevel_to_cli_flags(
     temp_output_dir: Path,
     mock_output_handler: Mock,
-    verbosity: VerbosityLevel,
+    loglevel: LogLevel,
     expected_verbose_count: int,
     expected_quiet_count: int,
 ) -> None:
-    """Test that verbosity levels map to correct CLI flags (--verbose, --quiet)."""
-    runner = SubprocessRunner(temp_output_dir, mock_output_handler, verbosity=verbosity)
+    """Test that loglevel maps to correct CLI flags (--verbose, --quiet)."""
+    runner = SubprocessRunner(temp_output_dir, mock_output_handler, loglevel=loglevel)
     cmd = runner._build_command(
         job_file_path=Path("/tmp/job.py"),
         plugin_config_file="/tmp/plugin.yaml",

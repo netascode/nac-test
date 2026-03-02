@@ -8,8 +8,12 @@ import sys
 from enum import Enum
 
 
-class VerbosityLevel(str, Enum):
-    """Supported logging verbosity levels."""
+class LogLevel(str, Enum):
+    """Supported logging levels for nac-test framework.
+
+    This enum provides standard Python logging levels with comparison operators
+    and helper properties for code generation and logging configuration.
+    """
 
     DEBUG = "DEBUG"
     INFO = "INFO"
@@ -17,45 +21,51 @@ class VerbosityLevel(str, Enum):
     ERROR = "ERROR"
     CRITICAL = "CRITICAL"
 
+    @property
+    def int_value(self) -> int:
+        """Return Python logging integer value (e.g., 10 for DEBUG, 20 for INFO)."""
+        return logging._nameToLevel[self.value]
 
-# Mapping from level name strings to Python logging level values
-LOGLEVEL_NAME_TO_VALUE: dict[str, int] = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "CRITICAL": logging.CRITICAL,
-}
+    def __le__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+        """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
+        return self.int_value <= other.int_value
 
-# Mapping from nac-test VerbosityLevel to Python logging level
-VERBOSITY_TO_LOGLEVEL: dict[VerbosityLevel, int] = {
-    VerbosityLevel.DEBUG: logging.DEBUG,
-    VerbosityLevel.INFO: logging.INFO,
-    VerbosityLevel.WARNING: logging.WARNING,
-    VerbosityLevel.ERROR: logging.ERROR,
-    VerbosityLevel.CRITICAL: logging.CRITICAL,
-}
+    def __lt__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+        """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
+        return self.int_value < other.int_value
 
-# Default verbosity level for CLI and orchestrators
-DEFAULT_VERBOSITY = VerbosityLevel.WARNING
+    def __ge__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+        """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
+        return self.int_value >= other.int_value
+
+    def __gt__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+        """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
+        return self.int_value > other.int_value
 
 
-def configure_logging(level: str | VerbosityLevel) -> None:
+# Backwards compatibility alias (deprecated)
+VerbosityLevel = LogLevel
+
+# Default log level for CLI and orchestrators
+DEFAULT_LOGLEVEL = LogLevel.WARNING
+
+
+def configure_logging(level: str | LogLevel) -> None:
     """Configure logging for nac-test framework.
 
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     """
-    # Convert to logging level, defaulting to CRITICAL for unknown levels
-    # Handle both enum values and string inputs
-    if isinstance(level, VerbosityLevel):
-        level_str = level.value.upper()
+    if isinstance(level, LogLevel):
+        log_level = level.int_value
+        level_str = level.value
     else:
         level_str = str(level).upper()
+        try:
+            log_level = LogLevel(level_str).int_value
+        except ValueError:
+            log_level = logging.CRITICAL
 
-    log_level = LOGLEVEL_NAME_TO_VALUE.get(level_str, logging.CRITICAL)
-
-    # Configure root logger
     logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(logging.Formatter("%(levelname)s - %(message)s"))

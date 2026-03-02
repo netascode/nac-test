@@ -21,7 +21,7 @@ from nac_test.pyats_core.constants import (
     PIPE_DRAIN_TIMEOUT_SECONDS,
     PYATS_OUTPUT_BUFFER_LIMIT,
 )
-from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
+from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class SubprocessRunner:
         output_dir: Path,
         output_handler: Callable[[str], None],
         plugin_config_path: Path | None = None,
-        verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
+        loglevel: LogLevel = DEFAULT_LOGLEVEL,
     ):
         """Initialize the subprocess runner.
 
@@ -42,12 +42,12 @@ class SubprocessRunner:
             output_dir: Directory for test output
             output_handler: Function to process each line of stdout
             plugin_config_path: Path to the PyATS plugin configuration file
-            verbosity: Logging verbosity level to pass to PyATS CLI
+            loglevel: Logging level to pass to PyATS CLI
         """
         self.output_dir = output_dir
         self.output_handler = output_handler
         self.plugin_config_path = plugin_config_path
-        self.verbosity = verbosity
+        self.loglevel = loglevel
 
         # Ensure pyats is in the same environment as nac-test
         pyats_path = Path(sysconfig.get_path("scripts")) / "pyats"
@@ -104,18 +104,18 @@ class SubprocessRunner:
             ]
         )
 
-        # Map nac-test verbosity to PyATS CLI flags
+        # Map nac-test loglevel to PyATS CLI flags
         # PyATS default (no flags) = INFO
         # -v = DEBUG, -q = WARNING, -qq = ERROR, -qqq = CRITICAL
-        if self.verbosity == VerbosityLevel.DEBUG:
+        if self.loglevel == LogLevel.DEBUG:
             cmd.append("--verbose")
-        elif self.verbosity == VerbosityLevel.INFO:
+        elif self.loglevel == LogLevel.INFO:
             pass  # PyATS default is INFO, no flag needed
-        elif self.verbosity == VerbosityLevel.WARNING:
+        elif self.loglevel == LogLevel.WARNING:
             cmd.append("--quiet")
-        elif self.verbosity == VerbosityLevel.ERROR:
+        elif self.loglevel == LogLevel.ERROR:
             cmd.extend(["--quiet", "--quiet"])
-        elif self.verbosity == VerbosityLevel.CRITICAL:
+        elif self.loglevel == LogLevel.CRITICAL:
             cmd.extend(["--quiet", "--quiet", "--quiet"])
         return cmd
 

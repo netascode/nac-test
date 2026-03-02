@@ -364,7 +364,7 @@ VERBOSE_SCENARIO = E2EScenario(
 
 VERBOSE_WITH_INFO_SCENARIO = E2EScenario(
     name="verbose_with_info",
-    description="Verbose with INFO verbosity - verifies --verbose --verbosity INFO filters PyATS DEBUG output and Robot log level",
+    description="Verbose with INFO loglevel - verifies --verbose --loglevel INFO filters PyATS DEBUG output and Robot log level",
     data_path=f"{_FIXTURE_BASE}/verbose/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/verbose/templates",
     requires_testbed=False,

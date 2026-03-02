@@ -10,11 +10,7 @@ import time
 from typing import Any
 
 from nac_test.pyats_core.progress import ProgressReporter
-from nac_test.utils.logging import (
-    DEFAULT_VERBOSITY,
-    VERBOSITY_TO_LOGLEVEL,
-    VerbosityLevel,
-)
+from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
@@ -51,7 +47,7 @@ class OutputProcessor:
         progress_reporter: ProgressReporter | None = None,
         test_status: dict[str, Any] | None = None,
         verbose: bool = False,
-        verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
+        loglevel: LogLevel = DEFAULT_LOGLEVEL,
     ):
         """Initialize output processor.
 
@@ -59,13 +55,12 @@ class OutputProcessor:
             progress_reporter: Progress reporter instance for test progress tracking
             test_status: Dictionary reference for tracking test status
             verbose: Enable verbose output (section progress, verbose errors)
-            verbosity: Verbosity level for filtering PyATS log output
+            loglevel: Log level for filtering PyATS log output
         """
         self.progress_reporter = progress_reporter
         self.test_status = test_status or {}
         self.verbose = verbose
-        self.verbosity = verbosity
-        self._logging_verbosity = VERBOSITY_TO_LOGLEVEL.get(verbosity, logging.WARNING)
+        self.loglevel = loglevel
 
     def process_line(self, line: str) -> None:
         """Process output line, looking for our progress events.
@@ -281,7 +276,7 @@ class OutputProcessor:
         # - DEBUG verbosity shows everything
         if not self.verbose:
             return False
-        if self.verbosity == VerbosityLevel.DEBUG:
+        if self.loglevel == LogLevel.DEBUG:
             return True
 
         # Check for PyATS log format: %COMPONENT-LEVEL:
@@ -292,12 +287,11 @@ class OutputProcessor:
             return True
 
         # At WARNING+ (default), only show critical messages
-        # TODO: Would be good to review VerbosityLevel type to enable >= style comparisons
-        if self._logging_verbosity >= logging.WARNING:
+        if self.loglevel >= LogLevel.WARNING:
             if _CRITICAL_PATTERN.search(line) and not _TABLE_LINE_PATTERN.match(line):
                 return True
         else:
-            # At INFO verbosity: suppress formatting noise, show critical info
+            # At INFO loglevel: suppress formatting noise, show critical info
             if _SUPPRESS_PATTERN.match(line):
                 return False
             if _CRITICAL_PATTERN.search(line) and not _TABLE_LINE_PATTERN.match(line):

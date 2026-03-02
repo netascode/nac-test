@@ -20,8 +20,8 @@ from nac_test.core.constants import (
 )
 from nac_test.data_merger import DataMerger
 from nac_test.utils.logging import (
-    DEFAULT_VERBOSITY,
-    VerbosityLevel,
+    DEFAULT_LOGLEVEL,
+    LogLevel,
     configure_logging,
 )
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
@@ -39,13 +39,24 @@ def version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-Verbosity = Annotated[
-    VerbosityLevel | None,
+# Named "LoglevelOption" (not "Loglevel") to avoid confusion with the LogLevel enum type
+LoglevelOption = Annotated[
+    LogLevel | None,
     typer.Option(
-        "-v",
+        "--loglevel",
+        "-l",
+        help=f"Log level. Default: {DEFAULT_LOGLEVEL.value} (or DEBUG if --verbose is set).",
+        envvar="NAC_TEST_LOGLEVEL",
+        is_eager=True,
+    ),
+]
+
+DeprecatedVerbosity = Annotated[
+    LogLevel | None,
+    typer.Option(
         "--verbosity",
-        help=f"Verbosity level. Default: {DEFAULT_VERBOSITY.value} (or DEBUG if --verbose is set).",
-        envvar="NAC_VALIDATE_VERBOSITY",
+        "-v",
+        hidden=True,
         is_eager=True,
     ),
 ]
@@ -289,7 +300,8 @@ def main(
     max_parallel_devices: MaxParallelDevices | None = None,
     minimal_reports: MinimalReports = False,
     testbed: Testbed = None,
-    verbosity: Verbosity = None,
+    loglevel: LoglevelOption = None,
+    verbosity: DeprecatedVerbosity = None,
     version: Version = False,  # noqa: ARG001
     diagnostic: Diagnostic = False,  # noqa: ARG001
     verbose: Verbose = False,
@@ -303,14 +315,26 @@ def main(
     files/directories are not supported and will result in an error.
     """
 
-    # Resolve verbosity: explicit > verbose-implied > default
+    # Handle deprecated --verbosity option
     if verbosity is not None:
-        effective_verbosity = verbosity
+        typer.echo(
+            typer.style(
+                "Warning: --verbosity is deprecated, use --loglevel instead.",
+                fg=typer.colors.YELLOW,
+            ),
+            err=True,
+        )
+        if loglevel is None:
+            loglevel = verbosity
+
+    # Resolve loglevel: explicit > verbose-implied > default
+    if loglevel is not None:
+        effective_loglevel = loglevel
     elif verbose:
-        effective_verbosity = VerbosityLevel.DEBUG
+        effective_loglevel = LogLevel.DEBUG
     else:
-        effective_verbosity = DEFAULT_VERBOSITY
-    configure_logging(effective_verbosity)
+        effective_loglevel = DEFAULT_LOGLEVEL
+    configure_logging(effective_loglevel)
 
     check_and_exit_if_unsupported_macos_python()
 
@@ -371,7 +395,7 @@ def main(
         extra_args=ctx.args,
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
-        verbosity=effective_verbosity,
+        loglevel=effective_loglevel,
         dev_pyats_only=pyats,
         dev_robot_only=robot,
         verbose=verbose,

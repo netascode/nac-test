@@ -1,3 +1,10 @@
+# 2.0.0
+
+- Add `--verbose` CLI argument to enable verbose output for nac-test, Robot Framework, and PyATS execution
+- Replace `--verbosity` with `--loglevel` CLI argument to control log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- Deprecate `--verbosity` argument (hidden alias for `--loglevel`, will be removed in future version)
+- Remove `NAC_VALIDATE_VERBOSITY` environment variable (was incorrectly named, use `NAC_TEST_LOGLEVEL` instead)
+
 # 1.2.2
 
 - Add NETCONF related packages

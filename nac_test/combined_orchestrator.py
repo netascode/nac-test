@@ -23,7 +23,7 @@ from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.controller import detect_controller_type
-from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
+from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 from nac_test.utils.terminal import terminal
 from nac_test.utils.xunit_merger import merge_xunit_results
@@ -65,7 +65,7 @@ class CombinedOrchestrator:
         max_parallel_devices: int | None = None,
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
-        verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
+        loglevel: LogLevel = DEFAULT_LOGLEVEL,
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
         processes: int | None = None,
@@ -90,7 +90,7 @@ class CombinedOrchestrator:
             max_parallel_devices: Max parallel devices for PyATS D2D tests
             minimal_reports: Only include command outputs for failed/errored tests (PyATS only)
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides (PyATS only)
-            verbosity: Logging verbosity level
+            loglevel: Logging level
             dev_pyats_only: Development mode - run only PyATS tests (skip Robot)
             dev_robot_only: Development mode - run only Robot Framework tests (skip PyATS)
             verbose: Enable verbose mode - keeps archive files, enables verbose output
@@ -114,7 +114,7 @@ class CombinedOrchestrator:
         self.max_parallel_devices = max_parallel_devices
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
-        self.verbosity = verbosity
+        self.loglevel = loglevel
 
         # Development modes
         self.dev_pyats_only = dev_pyats_only
@@ -192,7 +192,7 @@ class CombinedOrchestrator:
                 custom_testbed_path=self.custom_testbed_path,
                 controller_type=self.controller_type,
                 verbose=self.verbose,
-                verbosity=self.verbosity,
+                loglevel=self.loglevel,
             )
             if self.max_parallel_devices is not None:
                 pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
@@ -218,7 +218,7 @@ class CombinedOrchestrator:
                 dry_run=self.dry_run,
                 processes=self.processes,
                 extra_args=self.extra_args,
-                verbosity=self.verbosity,
+                loglevel=self.loglevel,
                 verbose=self.verbose,
             )
             try:
