@@ -23,26 +23,26 @@ class LogLevel(str, Enum):
     ERROR = "ERROR"
     CRITICAL = "CRITICAL"
 
-    @property
-    def _int(self) -> int:
+    def __int__(self) -> int:
         """Return Python logging integer value (e.g., 10 for DEBUG, 20 for INFO)."""
-        return logging._nameToLevel[self.value]
+        level: int = logging.getLevelName(self.value)
+        return level
 
     def __le__(self, other: "LogLevel") -> bool:  # type: ignore[override]
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
-        return self._int <= other._int
+        return int(self) <= int(other)
 
     def __lt__(self, other: "LogLevel") -> bool:  # type: ignore[override]
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
-        return self._int < other._int
+        return int(self) < int(other)
 
     def __ge__(self, other: "LogLevel") -> bool:  # type: ignore[override]
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
-        return self._int >= other._int
+        return int(self) >= int(other)
 
     def __gt__(self, other: "LogLevel") -> bool:  # type: ignore[override]
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
-        return self._int > other._int
+        return int(self) > int(other)
 
 
 # Default log level for CLI and orchestrators
@@ -56,12 +56,12 @@ def configure_logging(level: str | LogLevel) -> None:
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     """
     if isinstance(level, LogLevel):
-        log_level = level._int
+        log_level = int(level)
         level_str = level.value
     else:
         level_str = str(level).upper()
         try:
-            log_level = LogLevel(level_str)._int
+            log_level = int(LogLevel(level_str))
         except ValueError:
             log_level = logging.CRITICAL
 
