@@ -1051,27 +1051,27 @@ class TestE2EPyatsCc(E2ECombinedTestBase):
 
 
 # =============================================================================
-# DEBUG FLAG SCENARIO TESTS
+# VERBOSE FLAG SCENARIO TESTS
 # =============================================================================
 
 
-class TestE2EDebug(E2ECombinedTestBase):
-    """E2E tests for the debug flag scenario.
+class TestE2EVerbose(E2ECombinedTestBase):
+    """E2E tests for the verbose flag scenario.
 
-    Scenario: Robot (1 pass) + PyATS API (1 pass), verifies --debug flag enables DEBUG log level
-    Expected: CLI exits with code 0, debug output visible for nac-test, Robot, and PyATS
+    Scenario: Robot (1 pass) + PyATS API (1 pass), verifies --verbose flag enables DEBUG log level
+    Expected: CLI exits with code 0, verbose output visible for nac-test, Robot, and PyATS
 
-    This scenario verifies that when --debug flag is passed:
+    This scenario verifies that when --verbose flag is passed:
     1. Robot Framework is invoked with --loglevel DEBUG
     2. The Robot test can verify this using Set Log Level keyword
-    3. PyATS verbose output (%EASYPY-INFO and %EASYPY-DEBUG) IS enabled (--debug implies DEBUG verbosity)
+    3. PyATS verbose output (%EASYPY-INFO and %EASYPY-DEBUG) IS enabled (--verbose implies DEBUG verbosity)
     """
 
     @pytest.fixture
-    def results(self, e2e_debug_results: E2EResults) -> E2EResults:
-        return e2e_debug_results
+    def results(self, e2e_verbose_results: E2EResults) -> E2EResults:
+        return e2e_verbose_results
 
-    def test_debug_log_messages_in_stdout(self, results: E2EResults) -> None:
+    def test_verbose_log_messages_in_stdout(self, results: E2EResults) -> None:
         """Verify DEBUG log messages appear (nac-test verbosity=DEBUG)."""
         assert "DEBUG - Found Robot template files" in results.stdout, (
             "Missing nac-test DEBUG log message in stdout."
@@ -1094,20 +1094,20 @@ class TestE2EDebug(E2ECombinedTestBase):
 
 
 # =============================================================================
-# DEBUG WITH INFO VERBOSITY SCENARIO TESTS
+# VERBOSE WITH INFO VERBOSITY SCENARIO TESTS
 # =============================================================================
 
 
-class TestE2EDebugWithInfo(E2ECombinedTestBase):
-    """E2E tests for --debug --verbosity INFO combination.
+class TestE2EVerboseWithInfo(E2ECombinedTestBase):
+    """E2E tests for --verbose --verbosity INFO combination.
 
     Scenario: Robot (1 pass) + PyATS API (1 pass), verifies --verbosity INFO filters PyATS DEBUG
     Expected: CLI exits with code 0, %EASYPY-INFO visible but %EASYPY-DEBUG filtered out
     """
 
     @pytest.fixture
-    def results(self, e2e_debug_with_info_results: E2EResults) -> E2EResults:
-        return e2e_debug_with_info_results
+    def results(self, e2e_verbose_with_info_results: E2EResults) -> E2EResults:
+        return e2e_verbose_with_info_results
 
     def test_pabot_verbose_shows_test_result(self, results: E2EResults) -> None:
         """Verify pabot --verbose output shows test case result with PASS."""

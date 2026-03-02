@@ -10,28 +10,28 @@ from nac_test.utils.logging import DEFAULT_VERBOSITY, VerbosityLevel
 from .conftest import run_cli_with_temp_dirs
 
 
-class TestDebugVerbosityInteraction:
-    """Tests for --debug flag interaction with --verbosity."""
+class TestVerboseVerbosityInteraction:
+    """Tests for --verbose flag interaction with --verbosity."""
 
     @pytest.mark.parametrize(
-        ("cli_args", "expected_verbosity", "expected_debug"),
+        ("cli_args", "expected_verbosity", "expected_verbose"),
         [
-            # --debug alone implies DEBUG verbosity
-            (["--debug"], VerbosityLevel.DEBUG, True),
-            # --debug with explicit verbosity override
-            (["--debug", "--verbosity", "WARNING"], VerbosityLevel.WARNING, True),
-            (["--debug", "--verbosity", "INFO"], VerbosityLevel.INFO, True),
-            (["--debug", "--verbosity", "ERROR"], VerbosityLevel.ERROR, True),
-            # --verbosity without --debug
+            # --verbose alone implies DEBUG verbosity
+            (["--verbose"], VerbosityLevel.DEBUG, True),
+            # --verbose with explicit verbosity override
+            (["--verbose", "--verbosity", "WARNING"], VerbosityLevel.WARNING, True),
+            (["--verbose", "--verbosity", "INFO"], VerbosityLevel.INFO, True),
+            (["--verbose", "--verbosity", "ERROR"], VerbosityLevel.ERROR, True),
+            # --verbosity without --verbose
             ([], DEFAULT_VERBOSITY, False),
             (["--verbosity", "DEBUG"], VerbosityLevel.DEBUG, False),
             (["--verbosity", "INFO"], VerbosityLevel.INFO, False),
         ],
         ids=[
-            "debug_only",
-            "debug_with_warning",
-            "debug_with_info",
-            "debug_with_error",
+            "verbose_only",
+            "verbose_with_warning",
+            "verbose_with_info",
+            "verbose_with_error",
             "default",
             "verbosity_debug",
             "verbosity_info",
@@ -39,15 +39,15 @@ class TestDebugVerbosityInteraction:
     )
     @patch("nac_test.cli.main.configure_logging")
     @patch("nac_test.cli.main.CombinedOrchestrator")
-    def test_debug_verbosity_passed_to_orchestrator(
+    def test_verbose_verbosity_passed_to_orchestrator(
         self,
         mock_orchestrator_cls: Mock,
         mock_configure_logging: Mock,
         cli_args: list[str],
         expected_verbosity: VerbosityLevel,
-        expected_debug: bool,
+        expected_verbose: bool,
     ) -> None:
-        """Test that verbosity and debug are correctly passed to CombinedOrchestrator."""
+        """Test that verbosity and verbose are correctly passed to CombinedOrchestrator."""
         mock_orchestrator = Mock()
         mock_orchestrator.run_tests.return_value = CombinedResults(
             robot=TestResults(passed=1, failed=0, skipped=0)
@@ -61,8 +61,8 @@ class TestDebugVerbosityInteraction:
         # Verify configure_logging called with correct verbosity
         mock_configure_logging.assert_called_once_with(expected_verbosity)
 
-        # Verify CombinedOrchestrator instantiated with correct verbosity and debug
+        # Verify CombinedOrchestrator instantiated with correct verbosity and verbose
         mock_orchestrator_cls.assert_called_once()
         call_kwargs = mock_orchestrator_cls.call_args[1]
         assert call_kwargs["verbosity"] == expected_verbosity
-        assert call_kwargs["debug"] == expected_debug
+        assert call_kwargs["verbose"] == expected_verbose

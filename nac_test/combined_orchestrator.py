@@ -70,7 +70,7 @@ class CombinedOrchestrator:
         dev_robot_only: bool = False,
         processes: int | None = None,
         extra_args: list[str] | None = None,
-        debug: bool = False,
+        verbose: bool = False,
     ):
         """Initialize the combined orchestrator.
 
@@ -93,7 +93,7 @@ class CombinedOrchestrator:
             verbosity: Logging verbosity level
             dev_pyats_only: Development mode - run only PyATS tests (skip Robot)
             dev_robot_only: Development mode - run only Robot Framework tests (skip PyATS)
-            debug: Enable debug mode - keeps archive files, enables verbose output
+            verbose: Enable verbose mode - keeps archive files, enables verbose output
         """
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
@@ -119,7 +119,7 @@ class CombinedOrchestrator:
         # Development modes
         self.dev_pyats_only = dev_pyats_only
         self.dev_robot_only = dev_robot_only
-        self.debug = debug
+        self.verbose = verbose
 
         # Detect controller type early (unless we are in render-only mode, which doesn't require controller access)
         self.controller_type: str | None = None
@@ -191,7 +191,7 @@ class CombinedOrchestrator:
                 minimal_reports=self.minimal_reports,
                 custom_testbed_path=self.custom_testbed_path,
                 controller_type=self.controller_type,
-                debug=self.debug,
+                verbose=self.verbose,
                 verbosity=self.verbosity,
             )
             if self.max_parallel_devices is not None:
@@ -219,7 +219,7 @@ class CombinedOrchestrator:
                 processes=self.processes,
                 extra_args=self.extra_args,
                 verbosity=self.verbosity,
-                debug=self.debug,
+                verbose=self.verbose,
             )
             try:
                 robot_results = robot_orchestrator.run_tests()

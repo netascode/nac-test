@@ -55,9 +55,9 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_MINIMAL_REPORTS]  │
 │    --diagnostic                         Wrap execution with diagnostic       │
 │                                         collection script for troubleshooting│
-│    --debug                              Enables debug output for nac-test,   │
+│    --verbose                            Enables verbose output for nac-test, │
 │                                         Robot and PyATS execution.           |
-│                                         [env var: NAC_TEST_DEBUG]            │
+│                                         [env var: NAC_TEST_VERBOSE]          │
 │    --merged-data-file… -m   TEXT        Filename for merged data model.      │
 │                                         [default: merged_data_model_test...] │
 │    --verbosity         -v   [DEBUG|...] Verbosity level. [default: WARNING]  │
@@ -670,22 +670,22 @@ nac-test _mostly_ follows Robot Framework exit code conventions to provide meani
 
 (we only follow _mostly_ as we deviate in using `2` for invalid nac-test arguments, and don't use `251`).
 
-## Debug Mode
+## Verbose Mode
 
-The `--debug` flag enables debug mode for troubleshooting test execution:
+The `--verbose` flag enables verbose mode for troubleshooting test execution:
 
 ```bash
-nac-test -d ./data -t ./tests -o ./results --debug
+nac-test -d ./data -t ./tests -o ./results --verbose
 ```
 
-When enabled, debug mode:
+When enabled, verbose mode:
 - Sets nac-test verbosity level to DEBUG (can be overridden by setting `--verbosity`)
 - Enables verbose output for `pabot` execution (shows the Robot console output) 
 - Sets Robot Framework loglevel to DEBUG for additional debug information in the
   execution (can be overridden by `--verbosity` or Robot argument `--loglevel`)
 - Shows additional progress information and console output during PyATS test execution. 
   The pyATS loglevel will follow the `--verbosity` setting, so you can reduce the output
-  for example via `--debug --verbosity ERROR` which limits pyATS debugging output
+  for example via `--verbose --verbosity ERROR` which limits pyATS debugging output
   to ERROR information
 
 ## Advanced Environment Variables
@@ -710,11 +710,11 @@ In addition to CLI options, `nac-test` supports several environment variables fo
 |----------|---------|-------------|
 | `NAC_TEST_NO_TESTLEVELSPLIT` | unset | Disable test-level parallelization for Robot |
 
-### Debug and Development
+### Verbose and Development
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NAC_TEST_DEBUG` | unset | Enable debug mode: verbose output and retain intermediate files (see `NAC_TEST_PYATS_KEEP_REPORT_DATA`) |
+| `NAC_TEST_VERBOSE` | unset | Enable verbose mode: verbose output and retain intermediate files (see `NAC_TEST_PYATS_KEEP_REPORT_DATA`) |
 
 ## Troubleshooting
 

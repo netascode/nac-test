@@ -50,7 +50,7 @@ class OutputProcessor:
         self,
         progress_reporter: ProgressReporter | None = None,
         test_status: dict[str, Any] | None = None,
-        debug: bool = False,
+        verbose: bool = False,
         verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
     ):
         """Initialize output processor.
@@ -58,12 +58,12 @@ class OutputProcessor:
         Args:
             progress_reporter: Progress reporter instance for test progress tracking
             test_status: Dictionary reference for tracking test status
-            debug: Enable debug output (section progress, verbose errors)
+            verbose: Enable verbose output (section progress, verbose errors)
             verbosity: Verbosity level for filtering PyATS log output
         """
         self.progress_reporter = progress_reporter
         self.test_status = test_status or {}
-        self.debug = debug
+        self.verbose = verbose
         self.verbosity = verbosity
         self._logging_verbosity = VERBOSITY_TO_LOGLEVEL.get(verbosity, logging.WARNING)
 
@@ -200,10 +200,10 @@ class OutputProcessor:
             self._finalize_orphaned_tests(event)
 
         # TODO: Decide whether to keep section progress as print() or convert to logger.debug()
-        elif event_type == "section_start" and self.debug:
+        elif event_type == "section_start" and self.verbose:
             print(f"  -> Section {event['section']} starting")
 
-        elif event_type == "section_end" and self.debug:
+        elif event_type == "section_end" and self.verbose:
             print(f"  -> Section {event['section']} {event['result']}")
 
     def _finalize_orphaned_tests(self, job_end_event: dict[str, Any]) -> None:
@@ -277,9 +277,9 @@ class OutputProcessor:
             True if line should be shown, False otherwise
         """
         # Early exits:
-        # - running without --debug flag shows nothing
+        # - running without --verbose flag shows nothing
         # - DEBUG verbosity shows everything
-        if not self.debug:
+        if not self.verbose:
             return False
         if self.verbosity == VerbosityLevel.DEBUG:
             return True

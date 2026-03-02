@@ -63,7 +63,7 @@ class PyATSOrchestrator:
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
-        debug: bool = False,
+        verbose: bool = False,
         verbosity: VerbosityLevel = DEFAULT_VERBOSITY,
     ):
         """Initialize the PyATS orchestrator.
@@ -77,7 +77,7 @@ class PyATSOrchestrator:
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
                 If not provided, will be detected automatically.
-            debug: Enable debug mode - verbose output
+            verbose: Enable verbose mode - verbose output
             verbosity: Verbosity level for PyATS output filtering
         """
         self.data_paths = data_paths
@@ -91,7 +91,7 @@ class PyATSOrchestrator:
         self.merged_data_filename = merged_data_filename
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
-        self.debug = debug
+        self.verbose = verbose
         self.verbosity = verbosity
 
         # Track test status by type for combined summary
@@ -610,7 +610,7 @@ class PyATSOrchestrator:
         self.output_processor = OutputProcessor(
             self.progress_reporter,
             self.test_status,
-            debug=self.debug,
+            verbose=self.verbose,
             verbosity=self.verbosity,
         )
         # Archives should be stored at base level, not in pyats_results subdirectory

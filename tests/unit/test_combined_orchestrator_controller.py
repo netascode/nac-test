@@ -164,7 +164,7 @@ class TestCombinedOrchestratorController:
                     minimal_reports=False,
                     custom_testbed_path=None,
                     controller_type="SDWAN",
-                    debug=False,
+                    verbose=False,
                     verbosity=DEFAULT_VERBOSITY,
                 )
 
@@ -317,7 +317,7 @@ class TestCombinedOrchestratorController:
                     minimal_reports=False,
                     custom_testbed_path=None,
                     controller_type="CC",
-                    debug=False,
+                    verbose=False,
                     verbosity=DEFAULT_VERBOSITY,
                 )
 

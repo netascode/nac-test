@@ -436,7 +436,7 @@ echo '--- Insecure/SSL Settings ---'
 echo ''
 
 echo '--- NAC Test PyATS Tuning ---'
-[ -n \"\$NAC_TEST_DEBUG\" ] && echo \"NAC_TEST_DEBUG=\$NAC_TEST_DEBUG\" || echo 'NAC_TEST_DEBUG=(not set)'
+[ -n \"\$NAC_TEST_VERBOSE\" ] && echo \"NAC_TEST_VERBOSE=\$NAC_TEST_VERBOSE\" || echo 'NAC_TEST_VERBOSE=(not set)'
 [ -n \"\$NAC_TEST_PYATS_PROCESSES\" ] && echo \"NAC_TEST_PYATS_PROCESSES=\$NAC_TEST_PYATS_PROCESSES\" || echo 'NAC_TEST_PYATS_PROCESSES=(not set)'
 [ -n \"\$NAC_TEST_PYATS_MAX_CONNECTIONS\" ] && echo \"NAC_TEST_PYATS_MAX_CONNECTIONS=\$NAC_TEST_PYATS_MAX_CONNECTIONS\" || echo 'NAC_TEST_PYATS_MAX_CONNECTIONS=(not set)'
 [ -n \"\$NAC_TEST_PYATS_API_CONCURRENCY\" ] && echo \"NAC_TEST_PYATS_API_CONCURRENCY=\$NAC_TEST_PYATS_API_CONCURRENCY\" || echo 'NAC_TEST_PYATS_API_CONCURRENCY=(not set)'
@@ -625,7 +625,7 @@ log "Output directory: ${CYAN}$OUTPUT_DIR${NC}"
 log ""
 
 # Set debug environment variables for better diagnostics
-export NAC_TEST_DEBUG=true
+export NAC_TEST_VERBOSE=true
 export PYTHONFAULTHANDLER=1
 export PYTHONDEVMODE=1
 
@@ -647,7 +647,7 @@ log ""
     echo "Working directory: $(pwd)"
     echo ""
     echo "=== Environment (debug flags) ==="
-    echo "NAC_TEST_DEBUG=$NAC_TEST_DEBUG"
+    echo "NAC_TEST_VERBOSE=$NAC_TEST_VERBOSE"
     echo "PYTHONFAULTHANDLER=$PYTHONFAULTHANDLER"
     echo "PYTHONDEVMODE=$PYTHONDEVMODE"
     [ -n "$OBJC_DISABLE_INITIALIZE_FORK_SAFETY" ] && echo "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=$OBJC_DISABLE_INITIALIZE_FORK_SAFETY"

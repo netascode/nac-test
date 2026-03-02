@@ -105,7 +105,7 @@ class TestRunPabotLoglevel:
         [
             # No loglevel set anywhere - no --loglevel in final args
             (None, [], None),
-            # Computed loglevel from --debug --verbosity DEBUG
+            # Computed loglevel from --verbose --verbosity DEBUG
             ("DEBUG", [], "DEBUG"),
             # User explicitly passes --loglevel TRACE via extra_args
             (None, ["--loglevel", "TRACE"], "TRACE"),
@@ -116,10 +116,10 @@ class TestRunPabotLoglevel:
         ],
         ids=[
             "no_loglevel",
-            "computed_debug",
+            "computed_verbose",
             "user_explicit_trace",
-            "computed_debug_user_override_trace",
-            "computed_debug_user_override_info",
+            "computed_verbose_user_override_trace",
+            "computed_verbose_user_override_info",
         ],
     )
     @patch("nac_test.robot.pabot.pabot.pabot.main_program")

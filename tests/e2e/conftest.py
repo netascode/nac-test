@@ -329,40 +329,40 @@ def e2e_pyats_cc_results(
 
 
 @pytest.fixture(scope="class")
-def e2e_debug_results(
+def e2e_verbose_results(
     mock_api_server: MockAPIServer,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
-    """Execute the debug scenario with --debug flag and cache results."""
-    from tests.e2e.config import DEBUG_SCENARIO
+    """Execute the verbose scenario with --verbose flag and cache results."""
+    from tests.e2e.config import VERBOSE_SCENARIO
 
     return _run_e2e_scenario(
-        DEBUG_SCENARIO,
+        VERBOSE_SCENARIO,
         mock_api_server,
         None,
         tmp_path_factory,
         class_mocker,
-        extra_cli_args=["--debug"],
+        extra_cli_args=["--verbose"],
         extra_env_vars={"EXPECTED_ROBOT_LOG_LEVEL": "DEBUG"},
     )
 
 
 @pytest.fixture(scope="class")
-def e2e_debug_with_info_results(
+def e2e_verbose_with_info_results(
     mock_api_server: MockAPIServer,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
-    """Execute the debug scenario with --debug --verbosity INFO flags."""
-    from tests.e2e.config import DEBUG_WITH_INFO_SCENARIO
+    """Execute the verbose scenario with --verbose --verbosity INFO flags."""
+    from tests.e2e.config import VERBOSE_WITH_INFO_SCENARIO
 
     return _run_e2e_scenario(
-        DEBUG_WITH_INFO_SCENARIO,
+        VERBOSE_WITH_INFO_SCENARIO,
         mock_api_server,
         None,
         tmp_path_factory,
         class_mocker,
-        extra_cli_args=["--debug", "--verbosity", "INFO"],
+        extra_cli_args=["--verbose", "--verbosity", "INFO"],
         extra_env_vars={"EXPECTED_ROBOT_LOG_LEVEL": "INFO"},
     )

@@ -44,7 +44,7 @@ Verbosity = Annotated[
     typer.Option(
         "-v",
         "--verbosity",
-        help=f"Verbosity level. Default: {DEFAULT_VERBOSITY.value} (or DEBUG if --debug is set).",
+        help=f"Verbosity level. Default: {DEFAULT_VERBOSITY.value} (or DEBUG if --verbose is set).",
         envvar="NAC_VALIDATE_VERBOSITY",
         is_eager=True,
     ),
@@ -246,12 +246,12 @@ Diagnostic = Annotated[
 ]
 
 
-Debug = Annotated[
+Verbose = Annotated[
     bool,
     typer.Option(
-        "--debug",
-        help="Enable debug mode: enables debug output for nac-test, Robot and PyATS execution.",
-        envvar="NAC_TEST_DEBUG",
+        "--verbose",
+        help="Enable verbose mode: enables verbose output for nac-test, Robot and PyATS execution.",
+        envvar="NAC_TEST_VERBOSE",
     ),
 ]
 
@@ -292,7 +292,7 @@ def main(
     verbosity: Verbosity = None,
     version: Version = False,  # noqa: ARG001
     diagnostic: Diagnostic = False,  # noqa: ARG001
-    debug: Debug = False,
+    verbose: Verbose = False,
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
@@ -303,10 +303,10 @@ def main(
     files/directories are not supported and will result in an error.
     """
 
-    # Resolve verbosity: explicit > debug-implied > default
+    # Resolve verbosity: explicit > verbose-implied > default
     if verbosity is not None:
         effective_verbosity = verbosity
-    elif debug:
+    elif verbose:
         effective_verbosity = VerbosityLevel.DEBUG
     else:
         effective_verbosity = DEFAULT_VERBOSITY
@@ -374,7 +374,7 @@ def main(
         verbosity=effective_verbosity,
         dev_pyats_only=pyats,
         dev_robot_only=robot,
-        debug=debug,
+        verbose=verbose,
     )
 
     # Track total runtime for benchmarking

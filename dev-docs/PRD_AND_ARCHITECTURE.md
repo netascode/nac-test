@@ -1314,7 +1314,7 @@ Every CLI flag (except `--version` and `--merged-data-filename`) supports enviro
 | `--robot` | `NAC_TEST_ROBOT` | `bool` | `NAC_TEST_ROBOT=1` |
 | `--max-parallel-devices` | `NAC_TEST_MAX_PARALLEL_DEVICES` | `int` | `NAC_TEST_MAX_PARALLEL_DEVICES=25` |
 | `--minimal-reports` | `NAC_TEST_MINIMAL_REPORTS` | `bool` | `NAC_TEST_MINIMAL_REPORTS=true` |
-| `--debug` | `NAC_TEST_DEBUG` | `bool` | `NAC_TEST_DEBUG=1` |
+| `--verbose` | `NAC_TEST_VERBOSE` | `bool` | `NAC_TEST_VERBOSE=1` |
 | `-v, --verbosity` | `NAC_VALIDATE_VERBOSITY` | `enum` | `NAC_VALIDATE_VERBOSITY=DEBUG` |
 
 **List Type Parsing**:
@@ -2497,7 +2497,7 @@ Set by system or users for performance tuning:
 | `NAC_TEST_PYATS_SSH_CONCURRENCY` | Concurrent SSH connections per worker | `5` | `10` |
 | `NAC_TEST_NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT` | Subprocess stdout buffer size | `10485760` (10MB) | `20971520` (20MB) |
 | `NAC_TEST_PYATS_KEEP_REPORT_DATA` | Keep intermediate JSONL/archive files | `false` | `true` |
-| `NAC_TEST_DEBUG` | Enable debug mode (verbose output, keep archives) | `false` | `true` |
+| `NAC_TEST_VERBOSE` | Enable debug mode (verbose output, keep archives) | `false` | `true` |
 
 **Why Environment Variables Instead of Configuration Files?**
 
@@ -6176,7 +6176,7 @@ export APIC_PASSWORD="secret"
 export MAX_SSH_CONNECTIONS="100"
 
 # Debug mode
-export NAC_TEST_DEBUG="1"
+export NAC_TEST_VERBOSE="1"
 ```
 
 ---
@@ -6874,12 +6874,12 @@ sequenceDiagram
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NAC_TEST_DEBUG` | (unset) | Keep JSONL files, enable verbose output |
+| `NAC_TEST_VERBOSE` | (unset) | Keep JSONL files, enable verbose output |
 | `NAC_TEST_PYATS_KEEP_REPORT_DATA` | (unset) | Keep JSONL files without debug verbosity |
 | `NAC_TEST_BATCHING_REPORTER` | false | Enable message batching |
 | `NAC_TEST_BATCH_SIZE` | 200 | Messages per batch |
 | `NAC_TEST_BATCH_TIMEOUT` | 0.5 | Seconds before auto-flush |
-| `NAC_TEST_DEBUG` | false | Enable BatchAccumulator debug mode |
+| `NAC_TEST_VERBOSE` | false | Enable BatchAccumulator debug mode |
 | `NAC_TEST_QUEUE_SIZE` | 5000 | Max overflow queue size |
 | `NAC_TEST_MEMORY_LIMIT_MB` | 500 | Memory limit before disk overflow |
 | `NAC_TEST_PYATS_OVERFLOW_DIR` | /tmp/nac_test_overflow | Directory for overflow files |
@@ -7082,7 +7082,7 @@ class TenantVerification(NACTestBase):
 
 3. **Report generation crashed**
    - Check logs for async errors
-   - Run with `NAC_TEST_DEBUG=1` to keep JSONL files
+   - Run with `NAC_TEST_VERBOSE=1` to keep JSONL files
 
 #### Issue: Missing Metadata in Reports
 
@@ -7198,7 +7198,7 @@ The system uses **streaming JSONL (JSON Lines)** instead of accumulating all res
 
 ```python
 # Clean up JSONL files (unless in debug mode or NAC_TEST_PYATS_KEEP_REPORT_DATA is set)
-if os.environ.get("NAC_TEST_DEBUG") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+if os.environ.get("NAC_TEST_VERBOSE") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
     if os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
         logger.info("Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)")
     else:
@@ -7216,7 +7216,7 @@ else:
 **To Preserve JSONL Files:**
 ```bash
 # Option 1: Full debug mode (verbose logging + keep files)
-export NAC_TEST_DEBUG=1
+export NAC_TEST_VERBOSE=1
 
 # Option 2: Keep files only (no extra logging)
 export NAC_TEST_PYATS_KEEP_REPORT_DATA=1
@@ -7278,7 +7278,7 @@ export NAC_TEST_PYATS_KEEP_REPORT_DATA=1
 │     └─> Sorts: FAILED first, then PASSED, then SKIPPED                          │
 │     └─> Renders summary/report.html.j2                                          │
 │                                                                                  │
-│  6. Cleanup (unless NAC_TEST_DEBUG or NAC_TEST_PYATS_KEEP_REPORT_DATA set)                   │
+│  6. Cleanup (unless NAC_TEST_VERBOSE or NAC_TEST_PYATS_KEEP_REPORT_DATA set)                   │
 │     └─> Deletes all *.jsonl files                                               │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -7377,7 +7377,7 @@ Test with 1,545 verifications
 | `NAC_TEST_BATCH_TIMEOUT` | 0.5 | Seconds before auto-flush |
 | `NAC_TEST_QUEUE_SIZE` | 5000 | Max overflow queue size |
 | `NAC_TEST_MEMORY_LIMIT_MB` | 500 | Memory limit before disk overflow |
-| `NAC_TEST_DEBUG` | false | Enable detailed memory tracking |
+| `NAC_TEST_VERBOSE` | false | Enable detailed memory tracking |
 
 ---
 
@@ -9288,7 +9288,7 @@ self.password = os.environ[f"{self.controller_type}_PASSWORD"]
 | `PYATS_LOG_LEVEL` | Orchestrator | PyATS framework | Control PyATS logging verbosity | `ERROR` |
 | `HTTPX_LOG_LEVEL` | Orchestrator | httpx library | Control HTTP client logging | `ERROR` |
 | `PYATS_TASK_WORKER_ID` | PyATS | Progress plugin | Identify worker in parallel execution | `1`, `2`, `3` |
-| `NAC_TEST_DEBUG` | User (optional) | nac-test | Enable debug features (keep files, verbose logs) | `true` or not set |
+| `NAC_TEST_VERBOSE` | User (optional) | nac-test | Enable debug features (keep files, verbose logs) | `true` or not set |
 
 **Source Evidence:** `orchestrator.py:199-200`, `progress/plugin.py:49`, `generator.py:138`
 
@@ -9314,7 +9314,7 @@ self.password = os.environ[f"{self.controller_type}_PASSWORD"]
 | `NAC_TEST_BATCH_SIZE` | User (optional) | Batching reporter | Override default batch size | `200` |
 | `NAC_TEST_BATCH_TIMEOUT` | User (optional) | Batching reporter | Override batch timeout (seconds) | `0.5` |
 | `NAC_TEST_PYATS_OVERFLOW_DIR` | User (optional) | Batching reporter | Directory for overflow files | `/tmp/nac_test_overflow` |
-| `NAC_TEST_DEBUG` | User (optional) | Batching reporter | Enable debug mode with extensive logging | `true` or not set |
+| `NAC_TEST_VERBOSE` | User (optional) | Batching reporter | Enable debug mode with extensive logging | `true` or not set |
 
 **Source Evidence:** `batching_reporter.py:183-202`, `step_interceptor.py:69`
 
@@ -11016,7 +11016,7 @@ pyats_results/api/html_reports/
 
 ```python
 # generator.py:137-144
-if os.environ.get("NAC_TEST_DEBUG") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+if os.environ.get("NAC_TEST_VERBOSE") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
     if os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
         logger.info("Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)")
     else:
@@ -11030,7 +11030,7 @@ else:
 | Environment Variable | JSONL Files | Purpose |
 |---------------------|-------------|---------|
 | *(none)* | **DELETED** | Production mode: minimize disk usage |
-| `NAC_TEST_DEBUG=1` | **KEPT** | Debug mode: preserve all artifacts |
+| `NAC_TEST_VERBOSE=1` | **KEPT** | Debug mode: preserve all artifacts |
 | `NAC_TEST_PYATS_KEEP_REPORT_DATA=1` | **KEPT** | Keep data without verbose debug logs |
 
 **When to use each mode:**
@@ -11040,7 +11040,7 @@ else:
   - JSONL files are 2-5x larger than HTML
   - Disk space optimization for CI/CD
 
-- **Debug mode (`NAC_TEST_DEBUG=1`):** Keep JSONL files
+- **Debug mode (`NAC_TEST_VERBOSE=1`):** Keep JSONL files
   - Enables post-mortem analysis of test data
   - Can regenerate HTML reports with different templates
   - Useful for troubleshooting report generation issues
@@ -11214,7 +11214,7 @@ python -c "from nac_test.pyats_core.reporting.utils.archive_inspector import Arc
 **Development Environment:**
 ```bash
 # Keep all debugging data
-export NAC_TEST_DEBUG=1
+export NAC_TEST_VERBOSE=1
 nac-test --test-dir tests/ --data test_data.yaml --output-dir output/
 ```
 
@@ -11398,7 +11398,7 @@ EOF
 # Scenario: CI/CD with limited disk, only need archives
 
 # Step 1: Execute tests with minimal footprint
-export NAC_TEST_DEBUG=0  # Delete JSONL files after report generation
+export NAC_TEST_VERBOSE=0  # Delete JSONL files after report generation
 nac-test --test-dir tests/ --data test_data.yaml --output-dir /tmp/results
 
 # Step 2: Upload archives immediately
@@ -11967,7 +11967,7 @@ Result: Incomplete data - rerun with higher timeout
 # Problem: Want to see what job file nac-test generates
 
 # Step 1: Run nac-test with debug mode to prevent tempfile deletion
-export NAC_TEST_DEBUG=1
+export NAC_TEST_VERBOSE=1
 nac-test --test-dir tests/api/ --data test_data.yaml --output-dir output/
 
 # Step 2: Job file is left in /tmp/ for inspection
@@ -17153,12 +17153,12 @@ Tracebacks and error messages are always shown because they're critical diagnost
 
 #### Example 3: Debug Mode Output
 
-**Scenario**: Running with `NAC_TEST_DEBUG=1` to see all output
+**Scenario**: Running with `NAC_TEST_VERBOSE=1` to see all output
 
 **Command:**
 
 ```bash
-NAC_TEST_DEBUG=1 nac-test run --data base.yaml
+NAC_TEST_VERBOSE=1 nac-test run --data base.yaml
 ```
 
 **Console Output (excerpt):**
@@ -17305,7 +17305,7 @@ print(f"NAC_PROGRESS:{json.dumps(event)}", flush=True)
 
 1. **Universal**: stdout works across all platforms
 2. **Simple**: No complex IPC mechanisms
-3. **Debuggable**: Can see events in raw output (`NAC_TEST_DEBUG=1`)
+3. **Debuggable**: Can see events in raw output (`NAC_TEST_VERBOSE=1`)
 4. **Parseable**: JSON is standard, well-supported
 
 ---
@@ -17401,7 +17401,7 @@ subprocess.run([...], stdout=subprocess.DEVNULL)
 
 1. **Clean by Default**: Noise suppressed
 2. **Errors Visible**: Tracebacks and failures shown
-3. **Debug Available**: `NAC_TEST_DEBUG=1` shows everything
+3. **Debug Available**: `NAC_TEST_VERBOSE=1` shows everything
 4. **Controlled**: Orchestrator decides what's important
 
 ---
@@ -18285,7 +18285,7 @@ def _handle_batching_error(self, error: Exception, messages: List[Any]) -> None:
 | `NAC_TEST_BATCH_TIMEOUT` | `0.5` | Seconds before auto-flush (even if batch incomplete) |
 | `NAC_TEST_QUEUE_SIZE` | `5000` | Maximum overflow queue size |
 | `NAC_TEST_MEMORY_LIMIT_MB` | `500` | Memory limit before disk overflow |
-| `NAC_TEST_DEBUG` | `false` | Enable detailed batching debug logging |
+| `NAC_TEST_VERBOSE` | `false` | Enable detailed batching debug logging |
 
 **Tuning Guidelines**:
 
@@ -18300,7 +18300,7 @@ export NAC_TEST_BATCH_TIMEOUT=0.1
 export NAC_TEST_QUEUE_SIZE=10000
 
 # Enable debug logging to diagnose batching issues
-export NAC_TEST_DEBUG=true
+export NAC_TEST_VERBOSE=true
 ```
 
 ---
@@ -20218,7 +20218,7 @@ async def generate_all_reports(self) -> Dict[str, Any]:
     )
 
     # Clean up JSONL files (unless in debug mode or NAC_TEST_PYATS_KEEP_REPORT_DATA is set)
-    if os.environ.get("NAC_TEST_DEBUG") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+    if os.environ.get("NAC_TEST_VERBOSE") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
         if os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
             logger.info("Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)")
         else:
@@ -21111,7 +21111,7 @@ Enable debug mode to keep JSONL files for inspection:
 
 ```bash
 # Set environment variable to keep JSONL files
-export NAC_TEST_DEBUG=1
+export NAC_TEST_VERBOSE=1
 
 # Or use NAC_TEST_PYATS_KEEP_REPORT_DATA for keeping files without verbose logging
 export NAC_TEST_PYATS_KEEP_REPORT_DATA=1

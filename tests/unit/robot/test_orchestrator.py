@@ -299,12 +299,12 @@ class TestRobotOrchestrator:
 
         assert "is a directory" in caplog.text
 
-    def test_debug_flag_defaults_to_false(self, orchestrator) -> None:
-        """Test that debug flag defaults to False."""
-        assert orchestrator.debug is False
+    def test_verbose_flag_defaults_to_false(self, orchestrator) -> None:
+        """Test that verbose flag defaults to False."""
+        assert orchestrator.verbose is False
 
     @pytest.mark.parametrize(
-        ("debug", "verbosity", "expected_verbose", "expected_loglevel"),
+        ("verbose", "verbosity", "expected_verbose", "expected_loglevel"),
         [
             (True, VerbosityLevel.WARNING, True, None),
             (True, VerbosityLevel.DEBUG, True, "DEBUG"),
@@ -312,10 +312,10 @@ class TestRobotOrchestrator:
             (False, VerbosityLevel.WARNING, False, None),
         ],
         ids=[
-            "debug_true",
-            "debug_with_verbose_debug",
+            "verbose_true",
+            "verbose_with_verbosity_debug",
             "verbosity_debug",
-            "no_debug_no_verbose",
+            "no_verbose_no_verbosity_debug",
         ],
     )
     @patch("nac_test.robot.orchestrator.run_pabot")
@@ -327,7 +327,7 @@ class TestRobotOrchestrator:
         mock_data_paths,
         mock_templates_dir,
         temp_output_dir,
-        debug,
+        verbose,
         verbosity,
         expected_verbose,
         expected_loglevel,
@@ -338,7 +338,7 @@ class TestRobotOrchestrator:
             templates_dir=mock_templates_dir,
             output_dir=temp_output_dir,
             merged_data_filename="merged.yaml",
-            debug=debug,
+            verbose=verbose,
             verbosity=verbosity,
         )
         orchestrator.robot_writer.write = MagicMock()

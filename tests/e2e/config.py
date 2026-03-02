@@ -346,11 +346,11 @@ PYATS_CC_SCENARIO = E2EScenario(
     expected_d2d_hostnames=["sd-dc-c8kv-01", "sd-dc-c8kv-02"],
 )
 
-DEBUG_SCENARIO = E2EScenario(
-    name="debug",
-    description="Debug flag test - Robot + PyATS API, verifies --debug enables DEBUG log level in nac-test and robot/pabot",
-    data_path=f"{_FIXTURE_BASE}/debug/data.yaml",
-    templates_path=f"{_FIXTURE_BASE}/debug/templates",
+VERBOSE_SCENARIO = E2EScenario(
+    name="verbose",
+    description="Verbose flag test - Robot + PyATS API, verifies --verbose enables DEBUG log level in nac-test and robot/pabot",
+    data_path=f"{_FIXTURE_BASE}/verbose/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/verbose/templates",
     requires_testbed=False,
     architecture="ACI",
     expected_exit_code=0,
@@ -362,11 +362,11 @@ DEBUG_SCENARIO = E2EScenario(
     expected_pyats_d2d_failed=0,
 )
 
-DEBUG_WITH_INFO_SCENARIO = E2EScenario(
-    name="debug_with_info",
-    description="Debug with INFO verbosity - verifies --debug --verbosity INFO filters PyATS DEBUG output and Robot log level",
-    data_path=f"{_FIXTURE_BASE}/debug/data.yaml",
-    templates_path=f"{_FIXTURE_BASE}/debug/templates",
+VERBOSE_WITH_INFO_SCENARIO = E2EScenario(
+    name="verbose_with_info",
+    description="Verbose with INFO verbosity - verifies --verbose --verbosity INFO filters PyATS DEBUG output and Robot log level",
+    data_path=f"{_FIXTURE_BASE}/verbose/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/verbose/templates",
     requires_testbed=False,
     architecture="ACI",
     expected_exit_code=0,
@@ -388,8 +388,8 @@ ALL_SCENARIOS = [
     PYATS_API_ONLY_SCENARIO,
     PYATS_D2D_ONLY_SCENARIO,
     PYATS_CC_SCENARIO,
-    DEBUG_SCENARIO,
-    DEBUG_WITH_INFO_SCENARIO,
+    VERBOSE_SCENARIO,
+    VERBOSE_WITH_INFO_SCENARIO,
 ]
 
 
