@@ -45,9 +45,6 @@ class LogLevel(str, Enum):
         return self._int > other._int
 
 
-# Backwards compatibility alias (deprecated)
-VerbosityLevel = LogLevel
-
 # Default log level for CLI and orchestrators
 DEFAULT_LOGLEVEL = LogLevel.WARNING
 

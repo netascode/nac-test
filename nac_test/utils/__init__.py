@@ -12,7 +12,7 @@ from nac_test.utils.device_validation import (
 )
 from nac_test.utils.environment import EnvironmentValidator
 from nac_test.utils.file_discovery import find_data_file
-from nac_test.utils.logging import LogLevel, VerbosityLevel, configure_logging
+from nac_test.utils.logging import LogLevel, configure_logging
 from nac_test.utils.strings import sanitize_hostname
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
@@ -25,7 +25,6 @@ __all__ = [
     "cleanup_old_test_outputs",
     "configure_logging",
     "LogLevel",
-    "VerbosityLevel",  # Deprecated alias for LogLevel
     # Asyncio utilities (cross-version compatibility)
     "get_or_create_event_loop",
     # Device validation utilities (SSH/D2D architecture)
