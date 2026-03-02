@@ -16823,39 +16823,38 @@ The **Progress Reporting System** provides real-time visibility into PyATS test 
 - **ProgressReporterPlugin** (`progress/plugin.py`): PyATS plugin emitting structured JSON events
 - **ProgressReporter** (`progress/reporter.py`): Formats and displays progress in terminal
 - **OutputProcessor** (`execution/output_processor.py`): Processes stdout, filters noise, handles events
+- **SubprocessRunner** (`execution/subprocess_runner.py`): Manages subprocess execution and output capture via `execute_job()`, `_process_output_realtime()`, and `_drain_remaining_buffer_safe()`
 - **TerminalColors** (`utils/terminal.py`): Centralized color formatting utilities
 
 **Architecture:**
 
 ```
-PyATS Test Execution
-    ↓
-ProgressReporterPlugin (hooks into PyATS lifecycle)
-    ↓
-Emits: NAC_PROGRESS:{json} to stdout
-    ↓
-SubprocessRunner captures stdout
-    ↓
-OutputProcessor.process_line()
-    ├─ Is NAC_PROGRESS line? → Parse JSON event
-    │  ├─ task_start → Assign test ID, report start
-    │  ├─ task_end → Report completion with duration
-    │  ├─ section_start/end → Debug mode only
-    │  └─ job_start/end → Track job lifecycle
-    └─ Not progress event? → Filter with _should_show_line()
-           ├─ Suppress: PyATS info logs, empty lines, table borders
-           └─ Show: Errors, failures, critical info
-                ↓
-Terminal Output (colored, timestamped, filtered)
+PyATS Subprocess                          Parent Process (nac-test)
+┌─────────────────────────┐              ┌─────────────────────────────────┐
+│ ProgressReporterPlugin  │              │ SubprocessRunner                │
+│ hooks into PyATS        │   stdout     │ ._process_output_realtime()     │
+│ lifecycle events        │   pipe       │                                 │
+│                         │ ──────────>  │ Reads lines, detects sentinel   │
+│ Emits:                  │              │                                 │
+│ NAC_PROGRESS:{json}     │              │ OutputProcessor.process_line()  │
+│                         │              │ ├─ NAC_PROGRESS: → parse event  │
+│ stream_complete sentinel│              │ │  ├─ task_start/end           │
+│ at job end              │              │ │  ├─ job_start/end            │
+└─────────────────────────┘              │ │  └─ stream_complete          │
+                                         │ └─ Other lines → filter/show    │
+                                         │                                 │
+                                         │ ProgressReporter                │
+                                         │ └─ Terminal output (colored)    │
+                                         └─────────────────────────────────┘
 ```
 
 **File Locations:**
 
-- **Plugin**: `nac_test/pyats_core/progress/plugin.py` (lines 1-269)
-- **Reporter**: `nac_test/pyats_core/progress/reporter.py` (lines 1-94)
-- **Output Processor**: `nac_test/pyats_core/execution/output_processor.py` (lines 1-211)
-- **Terminal Utils**: `nac_test/utils/terminal.py` (lines 1-167)
-- **Integration**: `nac_test/pyats_core/orchestrator.py` (lines 467-484)
+- **Plugin**: `nac_test/pyats_core/progress/plugin.py`
+- **Reporter**: `nac_test/pyats_core/progress/reporter.py`
+- **Output Processor**: `nac_test/pyats_core/execution/output_processor.py`
+- **Subprocess Runner**: `nac_test/pyats_core/execution/subprocess_runner.py`
+- **Terminal Utils**: `nac_test/utils/terminal.py`
 
 ---
 
@@ -16863,37 +16862,16 @@ Terminal Output (colored, timestamped, filtered)
 
 #### 1. ProgressReporterPlugin: PyATS Plugin Integration
 
-The plugin hooks into PyATS's official plugin system to emit structured events:
+The `ProgressReporterPlugin` class hooks into PyATS's official plugin system to emit structured events via stdout.
 
-**Source: `progress/plugin.py` (lines 22-269)**
+**Key Methods:**
 
-```python
-class ProgressReporterPlugin(BasePlugin):
-    """
-    PyATS plugin that emits structured progress events.
-
-    Events are emitted as JSON with a 'NAC_PROGRESS:' prefix for easy parsing.
-    This gives `nac-test` complete control over the format while using PyATS's
-    official extension points.
-    """
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        # Get worker ID from environment or runtime
-        self.worker_id = self._get_worker_id()
-        # Track task start times for duration calculation
-        self.task_start_times: Dict[str, float] = {}
-
-    def _emit_event(self, event: Dict[str, Any]) -> None:
-        """Emit a progress event in the standard format."""
-        print(f"NAC_PROGRESS:{json.dumps(event)}", flush=True)
-```
-
-**Event Emission Format:**
-
-```
-NAC_PROGRESS:{"version":"1.0","event":"task_start","test_name":"operational.tenants.l3out",...}
-```
+| Method | Purpose |
+|--------|---------|
+| `_emit_event()` | Writes JSON event with `NAC_PROGRESS:` prefix to stdout |
+| `pre_job()` / `post_job()` | Job lifecycle hooks (emit `job_start`, `job_end`, `stream_complete`) |
+| `pre_task()` / `post_task()` | Task lifecycle hooks (emit `task_start`, `task_end`) |
+| `_get_test_name()` | Generates dot-notation test name from file path |
 
 **Key Design Points:**
 
@@ -16902,142 +16880,52 @@ NAC_PROGRESS:{"version":"1.0","event":"task_start","test_name":"operational.tena
 - **Schema Versioning**: `version` field enables future event format changes
 - **Flush on Emit**: `flush=True` ensures immediate output (no buffering delays)
 
+**Event Emission Format:**
+
+```
+NAC_PROGRESS:{"version":"1.0","event":"task_start","test_name":"operational.tenants.l3out",...}
+```
+
+**PyATS Multi-Process Architecture:**
+
+PyATS uses a multi-process architecture where tasks run in separate subprocesses:
+- `pre_job`/`post_job` run in the **parent** process
+- `pre_task`/`post_task` run in **task subprocesses**
+- Plugin state is **NOT shared** between parent and task processes
+
+This is why stdout-based IPC is used rather than shared memory or queues.
+
 ---
 
 **Plugin Hooks:**
 
-**A. Job Lifecycle**
+| Hook | When Called | Process | Events Emitted |
+|------|-------------|---------|----------------|
+| `pre_job` | Job starts | Parent | `job_start` |
+| `post_job` | Job completes | Parent | `job_end`, `stream_complete` |
+| `pre_task` | Before each test file | Task subprocess | `task_start` |
+| `post_task` | After each test file | Task subprocess | `task_end` |
+| `pre_section` | Before setup/test/cleanup | Task subprocess | `section_start` |
+| `post_section` | After setup/test/cleanup | Task subprocess | `section_end` |
 
-```python
-def pre_job(self, job: Any) -> None:
-    """Called when the job starts."""
-    event = {
-        "version": EVENT_SCHEMA_VERSION,
-        "event": "job_start",
-        "name": job.name,
-        "timestamp": time.time(),
-        "pid": os.getpid(),
-        "worker_id": self.worker_id,
-    }
-    self._emit_event(event)
+**Event Types and Fields:**
 
-def post_job(self, job: Any) -> None:
-    """Called when the job completes."""
-    # Similar structure with "job_end" event
-```
+| Event | Key Fields | Purpose |
+|-------|-----------|---------|
+| `job_start` | name, pid, worker_id | Job began |
+| `job_end` | name, pid, worker_id | Job completed |
+| `task_start` | taskid, test_name, test_file, test_title, hostname | Test file starting |
+| `task_end` | taskid, test_name, result, duration | Test file completed |
+| `section_start/end` | section (setup/test/cleanup) | Section progress (debug only) |
+| `stream_complete` | event_count | Sentinel for reliable synchronization |
 
-**When Called**: Once per PyATS job (entire test run)
+**D2D Test Support:**
 
----
+For Direct-to-Device (D2D) tests, the `task_start` event includes a `hostname` field identifying which device the test targets. This allows proper identification when the same test runs against multiple devices in parallel.
 
-**B. Task (Test File) Lifecycle**
+**TITLE Extraction:**
 
-```python
-def pre_task(self, task: Any) -> None:
-    """Called before each test file executes."""
-    # Extract clean test name from path
-    test_name = self._get_test_name(task.testscript)
-
-    # Extract TITLE from the test file using AST parsing
-    title = None
-    try:
-        with open(task.testscript, "r") as f:
-            tree = ast.parse(f.read())
-
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "TITLE":
-                        # Extract TITLE value (Python 3.8+ or earlier)
-                        if isinstance(node.value, ast.Constant):
-                            title = node.value.value
-    except Exception:
-        pass
-
-    # If no TITLE found, create descriptive name from path
-    if not title:
-        # Convert: templates/apic/test/operational/tenants/l3out.py
-        # To: apic.test.operational.tenants.l3out
-        test_path = Path(task.testscript)
-        if "templates" in test_path.parts:
-            start_idx = test_path.parts.index("templates") + 1
-            title = ".".join(test_path.parts[start_idx:])
-            if title.endswith(".py"):
-                title = title[:-3]
-
-    # Store task start time for duration calculation
-    self.task_start_times[task.taskid] = time.time()
-
-    event = {
-        "version": EVENT_SCHEMA_VERSION,
-        "event": "task_start",
-        "taskid": task.taskid,
-        "test_name": test_name,
-        "test_file": str(task.testscript),
-        "worker_id": worker_id,
-        "pid": os.getpid(),
-        "timestamp": time.time(),
-        "test_title": title,
-    }
-
-    self._emit_event(event)
-```
-
-**AST Parsing for TITLE Extraction:**
-
-PyATS test files can define a `TITLE` variable:
-
-```python
-# In test file: tests/api/test_apic_tenants.py
-TITLE = "Verify APIC Tenant Configuration"
-```
-
-The plugin uses **AST (Abstract Syntax Tree) parsing** to extract this without executing the file:
-
-1. Parse file into AST with `ast.parse()`
-2. Walk AST nodes with `ast.walk()`
-3. Find `ast.Assign` nodes where target is `ast.Name` with `id == "TITLE"`
-4. Extract value (handles both `ast.Str` for Python <3.8 and `ast.Constant` for >=3.8)
-
-**Fallback Title Generation:**
-
-If no `TITLE` variable exists:
-
-```
-Path: /home/user/templates/apic/test/operational/tenants/l3out.py
-Title: apic.test.operational.tenants.l3out
-```
-
-This matches Robot Framework's dot-notation style for consistency.
-
----
-
-**C. Task Completion**
-
-```python
-def post_task(self, task: Any) -> None:
-    """Called after each test file completes."""
-    # Calculate actual duration
-    start_time = self.task_start_times.get(task.taskid, time.time())
-    duration = time.time() - start_time
-
-    event = {
-        "version": EVENT_SCHEMA_VERSION,
-        "event": "task_end",
-        "taskid": task.taskid,
-        "test_name": test_name,
-        "test_file": str(task.testscript),
-        "worker_id": worker_id,
-        "result": task.result.name,  # PASSED, FAILED, ERRORED, etc.
-        "duration": duration,
-        "timestamp": time.time(),
-        "pid": os.getpid(),
-    }
-    self._emit_event(event)
-
-    # Clean up start time
-    self.task_start_times.pop(task.taskid, None)
-```
+The plugin extracts the `TITLE` variable from test files using AST parsing (no code execution). If no TITLE exists, a descriptive name is generated from the file path (e.g., `apic.test.operational.tenants.l3out`).
 
 **PyATS Result Statuses:**
 
@@ -17050,379 +16938,121 @@ def post_task(self, task: Any) -> None:
 
 ---
 
-**D. Section Lifecycle (Debug Only)**
+#### 2. Sentinel-Based Synchronization
 
-```python
-def pre_section(self, section: Any) -> None:
-    """Called before each test section (setup/test/cleanup)."""
-    # Only emit for actual test sections, not internal ones
-    if hasattr(section, "uid") and hasattr(section.uid, "name"):
-        if section.uid.name in ["setup", "test", "cleanup"]:
-            event = {
-                "version": EVENT_SCHEMA_VERSION,
-                "event": "section_start",
-                "section": section.uid.name,
-                "parent_task": str(section.parent.uid),
-                "timestamp": time.time(),
-                "worker_id": self.worker_id,
-            }
-            self._emit_event(event)
+**The Problem: macOS Pipe Race Condition**
 
-def post_section(self, section: Any) -> None:
-    """Called after each test section completes."""
-    # Similar structure with "section_end" and result
+On macOS, a race condition can occur where the kernel pipe closes (EOF) before all buffered data has been read by the parent process:
+
+1. Subprocess writes final progress events (e.g., `task_end`)
+2. Subprocess exits and kernel closes pipe (EOF signaled)
+3. asyncio's StreamReader detects EOF and stops the read loop
+4. Buffered data in kernel pipe may not yet be transferred
+5. Progress events are lost
+
+**The Solution: stream_complete Sentinel**
+
+The plugin emits a `stream_complete` sentinel event at job end:
+
+```json
+{"event": "stream_complete", "event_count": 42, "timestamp": ...}
 ```
 
-**When to Show Sections:**
+The `SubprocessRunner._process_output_realtime()` method detects this sentinel:
+- **Sentinel received**: All events captured reliably, no additional drain needed
+- **No sentinel (EOF only)**: Fall back to `_drain_remaining_buffer_safe()` with configurable delay
 
-Sections are **only shown in debug mode** (`NAC_TEST_DEBUG=1`) because they're too granular for normal output. Each test file has 3 sections: setup → test → cleanup.
+**Environment Variables for Tuning:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NAC_TEST_SENTINEL_TIMEOUT` | 5.0 | Timeout waiting for sentinel (seconds) |
+| `NAC_TEST_PIPE_DRAIN_DELAY` | 0.1 (macOS), 0.001 (Linux) | Delay before legacy drain |
+| `NAC_TEST_PIPE_DRAIN_TIMEOUT` | 2.0 | Max time for legacy drain (seconds) |
 
 ---
 
-#### 2. OutputProcessor: Event Handling and Output Filtering
+#### 3. OutputProcessor: Event Handling and Output Filtering
 
-The OutputProcessor receives stdout from PyATS subprocesses and:
-1. **Parses** progress events
-2. **Filters** verbose PyATS output
-3. **Routes** events to ProgressReporter
+The `OutputProcessor` class receives stdout lines from the SubprocessRunner and:
 
-**Source: `execution/output_processor.py` (lines 17-211)**
+1. **Parses** progress events (lines starting with `NAC_PROGRESS:`)
+2. **Routes** events to appropriate handlers (ProgressReporter for display)
+3. **Filters** non-progress output based on verbosity settings
+4. **Detects orphaned tests** that started but never completed
 
-```python
-class OutputProcessor:
-    """Processes PyATS test output and handles progress events."""
+**Key Methods:**
 
-    def __init__(
-        self,
-        progress_reporter: Optional[ProgressReporter] = None,
-        test_status: Optional[Dict[str, Any]] = None,
-    ):
-        self.progress_reporter = progress_reporter
-        self.test_status = test_status or {}
-
-    def process_line(self, line: str) -> None:
-        """Process output line, looking for our progress events."""
-        # Look for our structured progress events
-        if line.startswith("NAC_PROGRESS:"):
-            try:
-                # Parse our JSON event
-                event_json = line[13:]  # Remove "NAC_PROGRESS:" prefix
-                event = json.loads(event_json)
-
-                # Validate event schema version
-                if event.get("version", "1.0") != "1.0":
-                    logger.warning(
-                        f"Unknown event schema version: {event.get('version')}"
-                    )
-
-                self._handle_progress_event(event)
-            except json.JSONDecodeError:
-                # If parsing fails, show the line in debug mode
-                if os.environ.get("NAC_TEST_DEBUG"):
-                    print(f"Failed to parse progress event: {line}")
-        else:
-            # Show line if it matches our criteria
-            if self._should_show_line(line):
-                print(line)
-```
-
-**Event Processing Flow:**
-
-```
-Line from stdout
-    ├─ Starts with "NAC_PROGRESS:"?
-    │  ├─ Yes: Parse JSON
-    │  │  ├─ Valid JSON? → _handle_progress_event()
-    │  │  └─ Invalid JSON? → Debug mode shows error
-    │  └─ No: Check _should_show_line()
-    │     ├─ Pass filters? → print(line)
-    │     └─ Suppressed → Drop
-    └─ Terminal output
-```
-
----
+| Method | Purpose |
+|--------|---------|
+| `process_line()` | Main entry point - routes lines to event handling or filtering |
+| `_handle_progress_event()` | Dispatches parsed events to appropriate handlers |
+| `_finalize_orphaned_tests()` | Detects tests that started but never completed |
 
 **Event Handling:**
 
-```python
-def _handle_progress_event(self, event: Dict[str, Any]) -> None:
-    """Handle structured progress event from plugin."""
-    event_type = event.get("event")
+- **task_start**: Assigns a global test ID, tracks test status, reports to ProgressReporter
+- **task_end**: Updates status, calculates duration, displays Robot Framework-style completion line
+- **job_end**: Triggers orphaned test detection for the completed worker
+- **section_start/end**: Displayed only in debug mode
 
-    if event_type == "task_start":
-        # Assign global test ID (unique across all workers)
-        test_id = 0
-        if self.progress_reporter:
-            test_id = self.progress_reporter.get_next_test_id()
+**Test Status Tracking:**
 
-            # Report test starting
-            self.progress_reporter.report_test_start(
-                event["test_name"], event["pid"], event["worker_id"], test_id
-            )
+Tests are tracked by `taskid` (not test name) to handle D2D tests where the same test file runs against multiple devices. Each entry tracks:
+- Start time and duration
+- Assigned global test ID
+- Worker ID and hostname (for D2D)
+- Test title for display
 
-        # Track status with assigned test ID and title
-        self.test_status[event["test_name"]] = {
-            "start_time": event["timestamp"],
-            "status": "EXECUTING",
-            "worker": event["worker_id"],
-            "test_id": test_id,
-            "taskid": event["taskid"],
-            "title": event.get("test_title", event["test_name"]),
-        }
+**Orphaned Test Detection:**
 
-    elif event_type == "task_end":
-        # Retrieve the test ID we assigned at start
-        test_info = self.test_status.get(event["test_name"], {})
-        test_id = test_info.get("test_id", 0)
-
-        # Report test completion
-        if self.progress_reporter:
-            self.progress_reporter.report_test_end(
-                event["test_name"],
-                event["pid"],
-                event["worker_id"],
-                test_id,
-                event["result"],
-                event["duration"],
-            )
-
-        # Update status
-        if event["test_name"] in self.test_status:
-            self.test_status[event["test_name"]].update(
-                {"status": event["result"], "duration": event["duration"]}
-            )
-
-        # Display title line like Robot Framework with colors
-        title = test_info.get("title", event["test_name"])
-        separator = "-" * 78
-
-        result_status = event["result"].lower()
-        if result_status == "errored":
-            status_text = "ERROR"
-        else:
-            status_text = result_status.upper()
-
-        # Color based on status
-        if result_status == "passed":
-            print(terminal.success(separator))
-            print(terminal.success(f"{title:<70} | {status_text} |"))
-            print(terminal.success(separator))
-        elif result_status in ["failed", "errored"]:
-            print(terminal.error(separator))
-            print(terminal.error(f"{title:<70} | {status_text} |"))
-            print(terminal.error(separator))
-        else:
-            print(separator)
-            print(f"{title:<70} | {status_text} |")
-            print(separator)
-```
-
-**Test ID Assignment:**
-
-Test IDs are assigned **globally** by the orchestrator (not by PyATS workers) to ensure uniqueness:
-
-```python
-# In ProgressReporter
-def get_next_test_id(self) -> int:
-    """Get next available test ID - ensures global uniqueness across workers"""
-    self.test_counter += 1
-    return self.test_counter
-```
-
-With 50 tests across 10 workers, test IDs go from 1→50 regardless of which worker executed which test.
-
----
+PyATS may not call `post_task()` for tests that error during setup (due to multi-process architecture). When `job_end` is received, the OutputProcessor checks for tests still in "EXECUTING" status from that worker and marks them as "errored" with synthetic completion events.
 
 **Output Filtering:**
 
-```python
-def _should_show_line(self, line: str) -> bool:
-    """Determine if line should be shown to user."""
-    # In debug mode, show everything
-    if os.environ.get("NAC_TEST_DEBUG"):
-        return True
+Non-progress lines are filtered based on verbosity level:
+- **DEBUG verbosity**: Shows all output
+- **Default (WARNING+)**: Suppresses PyATS info logs, table formatting, empty lines; shows only errors, tracebacks, and critical messages
 
-    # Always suppress these patterns for clean console output
-    suppress_patterns = [
-        r"%HTTPX-INFO:",          # HTTP client info logs
-        r"%AETEST-INFO:",         # PyATS test info logs
-        r"%AETEST-ERROR:",        # We show our own error summary
-        r"%EASYPY-INFO:",         # PyATS runner info logs
-        r"%WARNINGS-WARNING:",    # Python warnings
-        r"%GENIE-INFO:",          # Genie parser info logs
-        r"%UNICON-INFO:",         # Unicon connection info logs
-        r"%SCRIPT-INFO:",         # Script-level info logs
-        r"NAC_PROGRESS_PLUGIN:",  # Plugin debug output
-        r"^\s*$",                 # Empty lines
-        r"^\+[-=]+\+$",           # PyATS table borders
-        r"^\|.*\|$",              # PyATS table content
-        r"^[-=]+$",               # Separator lines
-        r"Starting section",      # Section start messages
-        r"Starting testcase",     # Test start messages
-    ]
-
-    for pattern in suppress_patterns:
-        if re.search(pattern, line):
-            return False
-
-    # Show critical information
-    show_patterns = [
-        r"ERROR",
-        r"FAILED",
-        r"CRITICAL",
-        r"Traceback",
-        r"Exception.*Error",
-        r"RECOVERED",     # Controller recovered messages
-        r"RECOVERY",      # Controller recovery messages
-    ]
-
-    for pattern in show_patterns:
-        if re.search(pattern, line, re.IGNORECASE):
-            # But still suppress if it's part of PyATS formatting
-            if not any(re.search(p, line) for p in [r"^\|", r"^\+"]):
-                return True
-
-    return False
-```
-
-**Filtering Logic:**
-
-```
-Line received
-    ├─ NAC_TEST_DEBUG=1? → SHOW (bypass all filters)
-    ├─ Matches suppress pattern? → HIDE
-    ├─ Matches show pattern? → SHOW (unless PyATS table format)
-    └─ Default: HIDE (be conservative)
-```
-
-**Why Conservative Filtering:**
-
-PyATS generates 1000+ lines per test. Without filtering:
-- Users can't see test status (buried in logs)
-- Console scrollback is exhausted
-- CI/CD logs are huge
-
-With filtering:
-- Clean, readable output (~5-10 lines per test)
-- Critical errors still visible
-- Debug mode available for troubleshooting
+This keeps the console clean while ensuring important diagnostic information is visible.
 
 ---
 
-#### 3. ProgressReporter: Terminal Formatting
+#### 4. ProgressReporter: Terminal Formatting
 
-The ProgressReporter formats events into human-readable terminal output:
+The `ProgressReporter` class formats events into human-readable terminal output matching Robot Framework's style.
 
-**Source: `progress/reporter.py` (lines 15-94)**
+**Key Methods:**
 
-```python
-class ProgressReporter:
-    """Reports PyATS test progress in a format matching Robot Framework output."""
-
-    def __init__(self, total_tests: int = 0, max_workers: int = 1):
-        self.start_time = time.time()
-        self.total_tests = total_tests
-        self.max_workers = max_workers
-        self.test_status: Dict[str, Dict[str, Any]] = {}
-        self.test_counter = 0  # Global test ID counter
-        self.lock = threading.Lock()
-
-    def report_test_start(
-        self, test_name: str, pid: int, worker_id: str, test_id: int
-    ) -> None:
-        """Report that a test has started executing"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-
-        # Use terminal utilities for consistent coloring
-        status_text = terminal.warning("EXECUTING")
-
-        print(
-            f"{timestamp} [PID:{pid}] [{worker_id}] [ID:{test_id}] "
-            f"{status_text} {test_name}"
-        )
-
-        # Track test start in test_status
-        self.test_status[test_name] = {
-            "start_time": time.time(),
-            "status": "EXECUTING",
-            "worker_id": worker_id,
-            "test_id": test_id,
-        }
-```
+| Method | Purpose |
+|--------|---------|
+| `report_test_start()` | Displays EXECUTING line with timestamp, PID, worker ID, test ID |
+| `report_test_end()` | Displays completion line with status, duration, Robot-style separator |
+| `get_next_test_id()` | Thread-safe global test ID assignment |
 
 **Output Format:**
 
 ```
 2025-06-27 18:26:10.123 [PID:893270] [4] [ID:4] EXECUTING operational.tenants.l3out
+2025-06-27 18:26:16.834 [PID:893270] [4] [ID:4] PASSED operational.tenants.l3out in 3.2 seconds
+------------------------------------------------------------------------------
+Verify APIC Tenant Configuration                                   | PASSED |
+------------------------------------------------------------------------------
 ```
 
 **Components:**
 
-- **Timestamp**: Millisecond precision (`%Y-%m-%d %H:%M:%S.%f`)[:-3]
+- **Timestamp**: Millisecond precision
 - **PID**: Process ID of the PyATS worker
-- **Worker ID**: PyATS worker identifier (from runtime)
-- **Test ID**: Global unique ID assigned by orchestrator
-- **Status**: Color-coded status (EXECUTING in yellow)
+- **Worker ID**: PyATS worker identifier
+- **Test ID**: Global unique ID assigned by orchestrator (ensures uniqueness across all workers)
+- **Status**: Color-coded (green=passed, red=failed/error, yellow=executing/skipped)
 - **Test Name**: Dot-notation test name
+- **Duration**: Actual execution time
 
----
+**Global Test ID Assignment:**
 
-**Test Completion:**
-
-```python
-def report_test_end(
-    self,
-    test_name: str,
-    pid: int,
-    worker_id: int,
-    test_id: int,
-    status: str,
-    duration: float,
-) -> None:
-    """Format: 2025-06-27 18:26:16.834 [PID:893270] [4] [ID:4] PASSED ... in 3.2 seconds"""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-
-    # Update test status with duration
-    if test_name in self.test_status:
-        self.test_status[test_name].update({"status": status, "duration": duration})
-
-    # Color based on status
-    if status == "PASSED" or status == "passed":
-        status_text = terminal.success(status.upper())
-    elif status == "FAILED" or status == "failed":
-        status_text = terminal.error(status.upper())
-    elif status == "ERRORED" or status == "errored":
-        status_text = terminal.error("ERROR")  # Show as "ERROR" not "ERRORED"
-    elif status == "SKIPPED" or status == "skipped":
-        status_text = terminal.warning(status.upper())
-    elif status == "ABORTED" or status == "aborted":
-        status_text = terminal.error("ABORTED")
-    elif status == "BLOCKED" or status == "blocked":
-        status_text = terminal.warning("BLOCKED")
-    else:
-        status_text = status.upper()
-
-    print(
-        f"{timestamp} [PID:{pid}] [{worker_id}] [ID:{test_id}] "
-        f"{status_text} {test_name} in {duration:.1f} seconds"
-    )
-```
-
-**Output Examples:**
-
-```
-# Success (green)
-2025-06-27 18:26:16.834 [PID:893270] [4] [ID:4] PASSED operational.tenants.l3out in 3.2 seconds
-
-# Failure (red)
-2025-06-27 18:26:19.456 [PID:893271] [5] [ID:5] FAILED operational.tenants.epg in 2.8 seconds
-
-# Error (red, shows as "ERROR" not "ERRORED")
-2025-06-27 18:26:22.123 [PID:893272] [6] [ID:6] ERROR operational.tenants.bridge_domain in 0.5 seconds
-
-# Skipped (yellow)
-2025-06-27 18:26:25.789 [PID:893273] [7] [ID:7] SKIPPED operational.tenants.contract in 0.1 seconds
-```
+Test IDs are assigned by the orchestrator (not PyATS workers) to ensure uniqueness. With 50 tests across 10 workers, IDs go 1→50 regardless of which worker executed which test.
 
 **Status Color Mapping:**
 
@@ -17437,76 +17067,15 @@ def report_test_end(
 
 ---
 
-#### 4. TerminalColors: Centralized Color Formatting
+#### 5. TerminalColors: Centralized Color Formatting
 
-All color formatting goes through a single utility class for consistency:
+All color formatting uses a centralized `TerminalColors` utility class (`utils/terminal.py`) for consistency across the application.
 
-**Source: `utils/terminal.py` (lines 11-167)**
+**Features:**
 
-```python
-class TerminalColors:
-    """Centralized color scheme for consistent terminal output."""
-
-    # Semantic color mapping
-    ERROR = Fore.RED
-    WARNING = Fore.YELLOW
-    SUCCESS = Fore.GREEN
-    INFO = Fore.CYAN
-    HIGHLIGHT = Fore.MAGENTA
-    RESET = Style.RESET_ALL
-
-    # Check if colors should be disabled (for CI/CD)
-    NO_COLOR = os.environ.get("NO_COLOR") is not None
-
-    @classmethod
-    def error(cls, text: str) -> str:
-        """Format error text in red."""
-        if cls.NO_COLOR:
-            return text
-        return f"{cls.ERROR}{text}{cls.RESET}"
-
-    @classmethod
-    def success(cls, text: str) -> str:
-        """Format success text in green."""
-        if cls.NO_COLOR:
-            return text
-        return f"{cls.SUCCESS}{text}{cls.RESET}"
-
-    @classmethod
-    def warning(cls, text: str) -> str:
-        """Format warning text in yellow."""
-        if cls.NO_COLOR:
-            return text
-        return f"{cls.WARNING}{text}{cls.RESET}"
-```
-
-**NO_COLOR Support:**
-
-The `NO_COLOR` environment variable disables all color formatting:
-
-```bash
-NO_COLOR=1 nac-test run --data base.yaml
-```
-
-**Why NO_COLOR:**
-
-- **CI/CD logs**: ANSI escape codes create noise in log files
-- **Accessibility**: Some terminals/users prefer plain text
-- **Compatibility**: Older terminals may not support ANSI colors
-
-**ANSI Stripping:**
-
-```python
-# Regex pattern to match ANSI escape sequences
-ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
-
-@classmethod
-def strip_ansi(cls, text: str) -> str:
-    """Remove all ANSI escape sequences from text."""
-    return cls.ANSI_ESCAPE_PATTERN.sub("", text)
-```
-
-Used when measuring string length for formatting (ANSI codes don't occupy visual space).
+- Semantic color methods: `error()` (red), `success()` (green), `warning()` (yellow), `info()` (cyan)
+- **NO_COLOR support**: Setting `NO_COLOR=1` disables all ANSI color codes (for CI/CD logs, accessibility)
+- **ANSI stripping**: Utility to remove escape sequences when measuring string length for alignment
 
 ---
 
@@ -17578,19 +17147,7 @@ Verify VRF Route Leaking Configuration                             | ERROR |
 ------------------------------------------------------------------------------
 ```
 
-**Why Traceback is Shown:**
-
-The `_should_show_line()` filter has:
-
-```python
-show_patterns = [
-    r"ERROR",
-    r"Traceback",
-    r"Exception.*Error",
-]
-```
-
-Tracebacks are **critical information** that must be visible.
+Tracebacks and error messages are always shown because they're critical diagnostic information.
 
 ---
 
