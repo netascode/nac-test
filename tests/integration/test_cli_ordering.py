@@ -207,7 +207,7 @@ def test_ordering_file_not_created_when_testlevelsplit_disabled(
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list/"
     templates_path = "tests/integration/fixtures/templates_ordering_1/"
-    monkeypatch.setenv("NAC_TEST_NO_TESTLEVELSPLIT", "1")
+    monkeypatch.setattr("nac_test.robot.orchestrator.NO_TESTLEVELSPLIT", True)
 
     result = runner.invoke(
         nac_test.cli.main.app,

@@ -57,6 +57,12 @@ PROGRESS_UPDATE_INTERVAL = 0.5  # seconds
 # Set NAC_TEST_DEBUG=true for developer-level error context
 DEBUG_MODE = os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"
 
+
+# Test-level parallelization control for Robot Framework
+# Set NAC_TEST_NO_TESTLEVELSPLIT=1 to disable test-level parallelization
+NO_TESTLEVELSPLIT = bool(os.environ.get("NAC_TEST_NO_TESTLEVELSPLIT"))
+
+
 # Exit codes
 # Note: EXIT_SUCCESS (0) is intentionally not defined here - zero is a universal
 # POSIX convention that never changes, so a named constant adds no clarity.
