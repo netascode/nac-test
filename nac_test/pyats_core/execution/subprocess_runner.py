@@ -363,8 +363,8 @@ class SubprocessRunner:
             - Log warnings if data is lost due to timeouts
 
         Environment variables for CI tuning:
-            - NAC_TEST_PIPE_DRAIN_DELAY: Seconds to wait before drain (default: 0.1 on macOS)
-            - NAC_TEST_PIPE_DRAIN_TIMEOUT: Max seconds to wait for drain (default: 2.0)
+            - NAC_TEST_PYATS_PIPE_DRAIN_DELAY: Seconds to wait before drain (default: 0.1 on macOS)
+            - NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT: Max seconds to wait for drain (default: 2.0)
 
         Args:
             stdout: The subprocess stdout stream reader.
@@ -407,7 +407,7 @@ class SubprocessRunner:
         except asyncio.TimeoutError:
             logger.warning(
                 "Timeout after %.2fs draining subprocess buffer - some test output "
-                "may be lost. Consider increasing NAC_TEST_PIPE_DRAIN_TIMEOUT.",
+                "may be lost. Consider increasing NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT.",
                 PIPE_DRAIN_TIMEOUT_SECONDS,
             )
         except Exception as drain_error:

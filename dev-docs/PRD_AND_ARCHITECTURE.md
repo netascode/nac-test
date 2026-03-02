@@ -6546,10 +6546,10 @@ graph TB
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NAC_TEST_BATCH_SIZE` | 200 | Messages per batch |
-| `NAC_TEST_BATCH_TIMEOUT` | 0.5s | Max time before auto-flush |
-| `NAC_TEST_QUEUE_SIZE` | 5000 | Max overflow queue size |
-| `NAC_TEST_MEMORY_LIMIT_MB` | 500 | Memory limit before disk overflow |
+| `NAC_TEST_PYATS_BATCH_SIZE` | 200 | Messages per batch |
+| `NAC_TEST_PYATS_BATCH_TIMEOUT` | 0.5s | Max time before auto-flush |
+| `NAC_TEST_PYATS_QUEUE_SIZE` | 5000 | Max overflow queue size |
+| `NAC_TEST_PYATS_MEMORY_LIMIT_MB` | 500 | Memory limit before disk overflow |
 | `NAC_TEST_BATCHING_REPORTER` | false | Enable batching (set to "true") |
 
 ---
@@ -6877,11 +6877,11 @@ sequenceDiagram
 | `NAC_TEST_VERBOSE` | (unset) | Keep JSONL files, enable verbose output |
 | `NAC_TEST_PYATS_KEEP_REPORT_DATA` | (unset) | Keep JSONL files without debug verbosity |
 | `NAC_TEST_BATCHING_REPORTER` | false | Enable message batching |
-| `NAC_TEST_BATCH_SIZE` | 200 | Messages per batch |
-| `NAC_TEST_BATCH_TIMEOUT` | 0.5 | Seconds before auto-flush |
+| `NAC_TEST_PYATS_BATCH_SIZE` | 200 | Messages per batch |
+| `NAC_TEST_PYATS_BATCH_TIMEOUT` | 0.5 | Seconds before auto-flush |
 | `NAC_TEST_VERBOSE` | false | Enable BatchAccumulator debug mode |
-| `NAC_TEST_QUEUE_SIZE` | 5000 | Max overflow queue size |
-| `NAC_TEST_MEMORY_LIMIT_MB` | 500 | Memory limit before disk overflow |
+| `NAC_TEST_PYATS_QUEUE_SIZE` | 5000 | Max overflow queue size |
+| `NAC_TEST_PYATS_MEMORY_LIMIT_MB` | 500 | Memory limit before disk overflow |
 | `NAC_TEST_PYATS_OVERFLOW_DIR` | /tmp/nac_test_overflow | Directory for overflow files |
 
 ---
@@ -7123,8 +7123,8 @@ class TenantVerification(NACTestBase):
 
 2. **Tune batch settings**
    ```bash
-   export NAC_TEST_BATCH_SIZE=500
-   export NAC_TEST_BATCH_TIMEOUT=1.0
+   export NAC_TEST_PYATS_BATCH_SIZE=500
+   export NAC_TEST_PYATS_BATCH_TIMEOUT=1.0
    ```
 
 ---
@@ -7373,10 +7373,10 @@ Test with 1,545 verifications
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `NAC_TEST_BATCHING_REPORTER` | false | Enable/disable batching |
-| `NAC_TEST_BATCH_SIZE` | 200 | Messages per batch |
-| `NAC_TEST_BATCH_TIMEOUT` | 0.5 | Seconds before auto-flush |
-| `NAC_TEST_QUEUE_SIZE` | 5000 | Max overflow queue size |
-| `NAC_TEST_MEMORY_LIMIT_MB` | 500 | Memory limit before disk overflow |
+| `NAC_TEST_PYATS_BATCH_SIZE` | 200 | Messages per batch |
+| `NAC_TEST_PYATS_BATCH_TIMEOUT` | 0.5 | Seconds before auto-flush |
+| `NAC_TEST_PYATS_QUEUE_SIZE` | 5000 | Max overflow queue size |
+| `NAC_TEST_PYATS_MEMORY_LIMIT_MB` | 500 | Memory limit before disk overflow |
 | `NAC_TEST_VERBOSE` | false | Enable detailed memory tracking |
 
 ---
@@ -9310,9 +9310,9 @@ self.password = os.environ[f"{self.controller_type}_PASSWORD"]
 | Variable Name | Set By | Used By | Purpose | Example Value |
 |--------------|--------|---------|---------|---------------|
 | `NAC_TEST_BATCHING_REPORTER` | Orchestrator | Step interceptor | Enable batching reporter mode | `true` or `false` |
-| `NAC_TEST_QUEUE_SIZE` | User (optional) | Batching reporter | Override default queue size | `500` (default varies by mode) |
-| `NAC_TEST_BATCH_SIZE` | User (optional) | Batching reporter | Override default batch size | `200` |
-| `NAC_TEST_BATCH_TIMEOUT` | User (optional) | Batching reporter | Override batch timeout (seconds) | `0.5` |
+| `NAC_TEST_PYATS_QUEUE_SIZE` | User (optional) | Batching reporter | Override default queue size | `500` (default varies by mode) |
+| `NAC_TEST_PYATS_BATCH_SIZE` | User (optional) | Batching reporter | Override default batch size | `200` |
+| `NAC_TEST_PYATS_BATCH_TIMEOUT` | User (optional) | Batching reporter | Override batch timeout (seconds) | `0.5` |
 | `NAC_TEST_PYATS_OVERFLOW_DIR` | User (optional) | Batching reporter | Directory for overflow files | `/tmp/nac_test_overflow` |
 | `NAC_TEST_VERBOSE` | User (optional) | Batching reporter | Enable debug mode with extensive logging | `true` or not set |
 
@@ -16966,9 +16966,9 @@ The `SubprocessRunner._process_output_realtime()` method detects this sentinel:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NAC_TEST_SENTINEL_TIMEOUT` | 5.0 | Timeout waiting for sentinel (seconds) |
-| `NAC_TEST_PIPE_DRAIN_DELAY` | 0.1 (macOS), 0.001 (Linux) | Delay before legacy drain |
-| `NAC_TEST_PIPE_DRAIN_TIMEOUT` | 2.0 | Max time for legacy drain (seconds) |
+| `NAC_TEST_PYATS_SENTINEL_TIMEOUT` | 5.0 | Timeout waiting for sentinel (seconds) |
+| `NAC_TEST_PYATS_PIPE_DRAIN_DELAY` | 0.1 (macOS), 0.001 (Linux) | Delay before legacy drain |
+| `NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT` | 2.0 | Max time for legacy drain (seconds) |
 
 ---
 
@@ -18281,23 +18281,23 @@ def _handle_batching_error(self, error: Exception, messages: List[Any]) -> None:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `NAC_TEST_BATCHING_REPORTER` | `false` | Enable/disable batching (usually auto-enabled) |
-| `NAC_TEST_BATCH_SIZE` | `200` | Messages per batch before flush |
-| `NAC_TEST_BATCH_TIMEOUT` | `0.5` | Seconds before auto-flush (even if batch incomplete) |
-| `NAC_TEST_QUEUE_SIZE` | `5000` | Maximum overflow queue size |
-| `NAC_TEST_MEMORY_LIMIT_MB` | `500` | Memory limit before disk overflow |
+| `NAC_TEST_PYATS_BATCH_SIZE` | `200` | Messages per batch before flush |
+| `NAC_TEST_PYATS_BATCH_TIMEOUT` | `0.5` | Seconds before auto-flush (even if batch incomplete) |
+| `NAC_TEST_PYATS_QUEUE_SIZE` | `5000` | Maximum overflow queue size |
+| `NAC_TEST_PYATS_MEMORY_LIMIT_MB` | `500` | Memory limit before disk overflow |
 | `NAC_TEST_VERBOSE` | `false` | Enable detailed batching debug logging |
 
 **Tuning Guidelines**:
 
 ```bash
 # Increase batch size for large tests (reduces overhead)
-export NAC_TEST_BATCH_SIZE=500
+export NAC_TEST_PYATS_BATCH_SIZE=500
 
 # Decrease timeout for faster flushing (more real-time)
-export NAC_TEST_BATCH_TIMEOUT=0.1
+export NAC_TEST_PYATS_BATCH_TIMEOUT=0.1
 
 # Increase queue for extreme burst conditions
-export NAC_TEST_QUEUE_SIZE=10000
+export NAC_TEST_PYATS_QUEUE_SIZE=10000
 
 # Enable debug logging to diagnose batching issues
 export NAC_TEST_VERBOSE=true

@@ -181,8 +181,8 @@ class OverflowQueue:
         """Initialize the overflow queue.
 
         Args:
-            max_size: Maximum queue size (env var: NAC_TEST_QUEUE_SIZE)
-            memory_limit_mb: Memory limit in MB (env var: NAC_TEST_MEMORY_LIMIT_MB)
+            max_size: Maximum queue size (env var: NAC_TEST_PYATS_QUEUE_SIZE)
+            memory_limit_mb: Memory limit in MB (env var: NAC_TEST_PYATS_MEMORY_LIMIT_MB)
             overflow_dir: Directory for overflow files (default: /tmp/nac_test_overflow)
         """
         # Configuration
@@ -925,8 +925,8 @@ class BatchingReporter:
         Args:
             send_callback: Function to call when batch is ready to send
             error_callback: Function to call on errors
-            batch_size: Override default batch size (env var: NAC_TEST_BATCH_SIZE)
-            flush_timeout: Override flush timeout (env var: NAC_TEST_BATCH_TIMEOUT)
+            batch_size: Override default batch size (env var: NAC_TEST_PYATS_BATCH_SIZE)
+            flush_timeout: Override flush timeout (env var: NAC_TEST_PYATS_BATCH_TIMEOUT)
             debug_mode: Override debug mode (env var: NAC_TEST_DEBUG)
         """
         # Store callbacks

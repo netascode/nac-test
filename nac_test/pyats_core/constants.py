@@ -52,13 +52,13 @@ JOB_RETRY_ATTEMPTS = 1  # Retry failed jobs once
 # knobs, not exposed as CLI flags or documented in README. Consider converting to
 # proper constants with CLI flags in a future release if user demand warrants it:
 # - NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT
-# - NAC_TEST_SENTINEL_TIMEOUT
-# - NAC_TEST_PIPE_DRAIN_DELAY
-# - NAC_TEST_PIPE_DRAIN_TIMEOUT
-# - NAC_TEST_BATCH_SIZE
-# - NAC_TEST_BATCH_TIMEOUT
-# - NAC_TEST_QUEUE_SIZE
-# - NAC_TEST_MEMORY_LIMIT_MB
+# - NAC_TEST_PYATS_SENTINEL_TIMEOUT
+# - NAC_TEST_PYATS_PIPE_DRAIN_DELAY
+# - NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT
+# - NAC_TEST_PYATS_BATCH_SIZE
+# - NAC_TEST_PYATS_BATCH_TIMEOUT
+# - NAC_TEST_PYATS_QUEUE_SIZE
+# - NAC_TEST_PYATS_MEMORY_LIMIT_MB
 
 # PyATS subprocess output buffer limit
 # PyATS tests can generate extremely large output lines (100KB+ JSON responses from API calls).
@@ -73,7 +73,7 @@ PYATS_OUTPUT_BUFFER_LIMIT: int = _get_positive_numeric(
 # This timeout protects against deadlock if sentinel mechanism fails
 # Default: 5.0 seconds (50x expected latency, should never be hit under normal operation)
 SENTINEL_TIMEOUT_SECONDS: float = _get_positive_numeric(
-    "NAC_TEST_SENTINEL_TIMEOUT", 5.0, float
+    "NAC_TEST_PYATS_SENTINEL_TIMEOUT", 5.0, float
 )
 
 # macOS subprocess pipe drain configuration (secondary fallback for backward compatibility)
@@ -84,28 +84,28 @@ SENTINEL_TIMEOUT_SECONDS: float = _get_positive_numeric(
 # These values can be overridden via environment variables for CI tuning
 _pipe_drain_default = 0.1 if IS_MACOS else 0.001
 PIPE_DRAIN_DELAY_SECONDS: float = _get_positive_numeric(
-    "NAC_TEST_PIPE_DRAIN_DELAY", _pipe_drain_default, float
+    "NAC_TEST_PYATS_PIPE_DRAIN_DELAY", _pipe_drain_default, float
 )
 PIPE_DRAIN_TIMEOUT_SECONDS: float = _get_positive_numeric(
-    "NAC_TEST_PIPE_DRAIN_TIMEOUT", 2.0, float
+    "NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT", 2.0, float
 )
 
 # Batching reporter configuration
 # Controls how PyATS reporter messages are batched for efficient transmission
 # Batch size: number of messages accumulated before flush (default: 200)
-BATCH_SIZE: int = _get_positive_numeric("NAC_TEST_BATCH_SIZE", 200, int)
+BATCH_SIZE: int = _get_positive_numeric("NAC_TEST_PYATS_BATCH_SIZE", 200, int)
 
 # Batch timeout: seconds before auto-flush even if batch incomplete (default: 0.5s)
 BATCH_TIMEOUT_SECONDS: float = _get_positive_numeric(
-    "NAC_TEST_BATCH_TIMEOUT", 0.5, float
+    "NAC_TEST_PYATS_BATCH_TIMEOUT", 0.5, float
 )
 
 # Overflow queue size: maximum overflow queue size for burst handling (default: 5000)
-OVERFLOW_QUEUE_SIZE: int = _get_positive_numeric("NAC_TEST_QUEUE_SIZE", 5000, int)
+OVERFLOW_QUEUE_SIZE: int = _get_positive_numeric("NAC_TEST_PYATS_QUEUE_SIZE", 5000, int)
 
 # Overflow memory limit: maximum memory for overflow queue in MB (default: 500MB)
 OVERFLOW_MEMORY_LIMIT_MB: int = _get_positive_numeric(
-    "NAC_TEST_MEMORY_LIMIT_MB", 500, int
+    "NAC_TEST_PYATS_MEMORY_LIMIT_MB", 500, int
 )
 
 # Re-export all constants for backward compatibility
