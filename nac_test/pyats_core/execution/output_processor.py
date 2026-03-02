@@ -282,8 +282,6 @@ class OutputProcessor:
         # Check for PyATS log format: %COMPONENT-LEVEL:
         pyats_match = _PYATS_LOG_PATTERN.search(line)
         if pyats_match:
-            # jobfile execution will now honor nac-test's verbosity levels for PyATS logs,
-            # so we don't need to filter log level here and can just show them
             return True
 
         # At WARNING+ (default), only show critical messages

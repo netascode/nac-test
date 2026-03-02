@@ -1061,10 +1061,9 @@ class TestE2EVerbose(E2ECombinedTestBase):
     Scenario: Robot (1 pass) + PyATS API (1 pass), verifies --verbose flag enables DEBUG log level
     Expected: CLI exits with code 0, verbose output visible for nac-test, Robot, and PyATS
 
-    This scenario verifies that when --verbose flag is passed:
-    1. Robot Framework is invoked with --loglevel DEBUG
-    2. The Robot test can verify this using Set Log Level keyword
-    3. PyATS verbose output (%EASYPY-INFO and %EASYPY-DEBUG) IS enabled (--verbose implies DEBUG loglevel)
+    This scenario verifies (in addition to all other base class tests) that when --verbose flag is passed:
+    1. Robot Framework is invoked with --loglevel DEBUG (the robot test checks this, we check the passed count)
+    2. PyATS verbose output (%EASYPY-INFO and %EASYPY-DEBUG) IS enabled (--verbose implies DEBUG loglevel)
     """
 
     @pytest.fixture
@@ -1102,7 +1101,7 @@ class TestE2EVerboseWithInfo(E2ECombinedTestBase):
     """E2E tests for --verbose --loglevel INFO combination.
 
     Scenario: Robot (1 pass) + PyATS API (1 pass), verifies --loglevel INFO filters PyATS DEBUG
-    Expected: CLI exits with code 0, %EASYPY-INFO visible but %EASYPY-DEBUG filtered out
+    Expected: CLI exits with code 0, %EASYPY-INFO visible but %EASYPY-DEBUG filtered out, pabot verbose output is shown
     """
 
     @pytest.fixture

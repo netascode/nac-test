@@ -348,7 +348,7 @@ PYATS_CC_SCENARIO = E2EScenario(
 
 VERBOSE_SCENARIO = E2EScenario(
     name="verbose",
-    description="Verbose flag test - Robot + PyATS API, verifies --verbose enables DEBUG log level in nac-test and robot/pabot",
+    description="Verbose flag test - Robot + PyATS API, verifies --verbose enables DEBUG log level in nac-test and PyATS/Robot",
     data_path=f"{_FIXTURE_BASE}/verbose/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/verbose/templates",
     requires_testbed=False,
@@ -364,7 +364,7 @@ VERBOSE_SCENARIO = E2EScenario(
 
 VERBOSE_WITH_INFO_SCENARIO = E2EScenario(
     name="verbose_with_info",
-    description="Verbose with INFO loglevel - verifies --verbose --loglevel INFO filters PyATS DEBUG output and Robot log level",
+    description="Verbose with INFO loglevel - verifies --verbose --loglevel INFO filters PyATS DEBUG output",
     data_path=f"{_FIXTURE_BASE}/verbose/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/verbose/templates",
     requires_testbed=False,

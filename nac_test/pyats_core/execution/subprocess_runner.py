@@ -179,7 +179,6 @@ class SubprocessRunner:
         logger.info(f"Executing command: {' '.join(cmd)}")
 
         try:
-            # Use centralized buffer limit from constants (handles env var override)
             logger.debug(
                 f"Using output buffer limit: {PYATS_OUTPUT_BUFFER_LIMIT / 1024 / 1024:.2f}MB"
             )
@@ -288,7 +287,6 @@ class SubprocessRunner:
         logger.info(f"Executing command: {' '.join(cmd)}")
 
         try:
-            # Use centralized buffer limit from constants (handles env var override)
             logger.debug(
                 f"Using output buffer limit: {PYATS_OUTPUT_BUFFER_LIMIT / 1024 / 1024:.2f}MB"
             )
