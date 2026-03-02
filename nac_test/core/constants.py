@@ -12,8 +12,7 @@ T = TypeVar("T", int, float)
 
 
 # Helper function for parsing environment variables with positive value validation.
-# Defined here (not in utils/) to avoid circular imports: utils/environment.py imports
-# from core/constants.py, so we can't import back from utils/ at module load time.
+# Defined here (not in utils/) to avoid circular imports
 def _get_positive_numeric(env_var: str, default: T, value_type: type[T]) -> T:
     """Get a positive numeric value from environment variable with fallback.
 
@@ -25,7 +24,7 @@ def _get_positive_numeric(env_var: str, default: T, value_type: type[T]) -> T:
     Returns:
         The parsed value from environment or default if invalid/missing/non-positive
     """
-    env_value = os.getenv(env_var, str(default))
+    env_value = os.environ.get(env_var, str(default))
     try:
         value = value_type(env_value)
         return value if value > 0 else default

@@ -284,10 +284,6 @@ class OutputProcessor:
         if self.verbosity == VerbosityLevel.DEBUG:
             return True
 
-        # Fast string check: suppress plugin debug output
-        if "NAC_PROGRESS_PLUGIN:" in line:
-            return False
-
         # Check for PyATS log format: %COMPONENT-LEVEL:
         pyats_match = _PYATS_LOG_PATTERN.search(line)
         if pyats_match:
