@@ -625,7 +625,8 @@ log "Output directory: ${CYAN}$OUTPUT_DIR${NC}"
 log ""
 
 # Set debug environment variables for better diagnostics
-export NAC_TEST_VERBOSE=true
+export NAC_TEST_VERBOSE=true    # --verbose logging and debug loglevel
+export NAC_TEST_DEBUG=true      # enable internal debug mode
 export PYTHONFAULTHANDLER=1
 export PYTHONDEVMODE=1
 
