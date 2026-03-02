@@ -3,30 +3,7 @@
 
 """Unit tests for nac_test.utils.logging module."""
 
-import logging
-
-import pytest
-
 from nac_test.utils.logging import LogLevel
-
-
-class TestLogLevelIntValue:
-    """Tests for LogLevel.int_value property."""
-
-    @pytest.mark.parametrize(
-        ("level", "expected_int"),
-        [
-            (LogLevel.DEBUG, logging.DEBUG),
-            (LogLevel.INFO, logging.INFO),
-            (LogLevel.WARNING, logging.WARNING),
-            (LogLevel.ERROR, logging.ERROR),
-            (LogLevel.CRITICAL, logging.CRITICAL),
-        ],
-    )
-    def test_int_value_matches_logging_module(
-        self, level: LogLevel, expected_int: int
-    ) -> None:
-        assert level.int_value == expected_int
 
 
 class TestLogLevelComparison:

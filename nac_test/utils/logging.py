@@ -11,8 +11,10 @@ from enum import Enum
 class LogLevel(str, Enum):
     """Supported logging levels for nac-test framework.
 
-    This enum provides standard Python logging levels with comparison operators
-    and helper properties for code generation and logging configuration.
+    This enum provides standard Python logging levels with comparison operators.
+
+    Inheriting from (str, Enum) ensures Typer shows the level names in --help
+    and accepts string values from CLI.
     """
 
     DEBUG = "DEBUG"
@@ -22,25 +24,25 @@ class LogLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
     @property
-    def int_value(self) -> int:
+    def _int(self) -> int:
         """Return Python logging integer value (e.g., 10 for DEBUG, 20 for INFO)."""
         return logging._nameToLevel[self.value]
 
     def __le__(self, other: "LogLevel") -> bool:  # type: ignore[override]
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
-        return self.int_value <= other.int_value
+        return self._int <= other._int
 
     def __lt__(self, other: "LogLevel") -> bool:  # type: ignore[override]
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
-        return self.int_value < other.int_value
+        return self._int < other._int
 
     def __ge__(self, other: "LogLevel") -> bool:  # type: ignore[override]
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
-        return self.int_value >= other.int_value
+        return self._int >= other._int
 
     def __gt__(self, other: "LogLevel") -> bool:  # type: ignore[override]
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
-        return self.int_value > other.int_value
+        return self._int > other._int
 
 
 # Backwards compatibility alias (deprecated)
@@ -57,12 +59,12 @@ def configure_logging(level: str | LogLevel) -> None:
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     """
     if isinstance(level, LogLevel):
-        log_level = level.int_value
+        log_level = level._int
         level_str = level.value
     else:
         level_str = str(level).upper()
         try:
-            log_level = LogLevel(level_str).int_value
+            log_level = LogLevel(level_str)._int
         except ValueError:
             log_level = logging.CRITICAL
 
