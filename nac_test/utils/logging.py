@@ -1,15 +1,21 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
-
 """Logging configuration utilities for nac-test framework."""
 
 import logging
 import sys
 from enum import Enum
-from typing import TextIO, cast
+from typing import TYPE_CHECKING, TextIO, cast
+
+# Generic type syntax (StreamHandler[TextIO]) requires Python 3.11+
+# Use TYPE_CHECKING guard for 3.10 compatibility while preserving type info
+if TYPE_CHECKING:
+    _StreamHandlerBase = logging.StreamHandler[TextIO]
+else:
+    _StreamHandlerBase = logging.StreamHandler
 
 
-class CurrentStreamHandler(logging.StreamHandler[TextIO]):
+class CurrentStreamHandler(_StreamHandlerBase):
     """StreamHandler that always uses the current sys.stdout/stderr.
 
     This prevents 'I/O operation on closed file' errors when sys.stdout
