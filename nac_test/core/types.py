@@ -246,11 +246,6 @@ class CombinedResults:
             parts.append(f"Robot: {self.robot}")
         return f"CombinedResults({', '.join(parts) if parts else 'empty'})"
 
-    @property
-    def has_pre_flight_failure(self) -> bool:
-        """Check if a pre-flight failure prevented test execution."""
-        return self.pre_flight_failure is not None
-
     @cached_property
     def _results(self) -> list["TestResults"]:
         """Cached list of non-None results for aggregation.

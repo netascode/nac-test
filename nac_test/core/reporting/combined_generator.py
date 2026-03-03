@@ -135,11 +135,8 @@ class CombinedReportGenerator:
         Returns:
             Path to combined_summary.html, or None if generation fails.
         """
-        if results is not None and results.has_pre_flight_failure:
-            failure = results.pre_flight_failure
-            if failure is None:  # Unreachable, but satisfies mypy without assert
-                return None
-            return self._generate_pre_flight_failure_report(failure)
+        if results is not None and results.pre_flight_failure is not None:
+            return self._generate_pre_flight_failure_report(results.pre_flight_failure)
 
         try:
             test_type_stats: dict[str, dict[str, Any]] = {}
