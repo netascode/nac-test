@@ -176,7 +176,7 @@ class CombinedReportGenerator:
 
             # Write to root-level combined_summary.html
             combined_summary_path = self.output_dir / COMBINED_SUMMARY_FILENAME
-            combined_summary_path.write_text(html_content)
+            combined_summary_path.write_text(html_content, encoding="utf-8")
 
             frameworks_included = ", ".join(test_type_stats.keys())
             logger.info(f"Generated combined dashboard: {combined_summary_path}")
