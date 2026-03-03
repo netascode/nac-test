@@ -328,7 +328,7 @@ def main(
     # Detect controller type from environment variables
     # This is used for pre-flight auth check and passed to orchestrator
     try:
-        controller_type = detect_controller_type()
+        controller_type = cast(ControllerTypeKey, detect_controller_type())
     except ValueError as e:
         # No credentials or multiple credentials configured
         typer.echo(
@@ -367,7 +367,7 @@ def main(
                     if auth_result.reason == AuthOutcome.UNREACHABLE
                     else "auth"
                 ),
-                controller_type=cast(ControllerTypeKey, auth_result.controller_type),
+                controller_type=auth_result.controller_type,
                 controller_url=auth_result.controller_url,
                 detail=auth_result.detail,
             )

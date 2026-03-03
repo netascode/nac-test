@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from nac_test.core.error_classification import AuthOutcome, _classify_auth_error
+from nac_test.core.types import ControllerTypeKey
 from nac_test.pyats_core.common.auth_cache import AuthCache
 
 # Import CONTROLLER_REGISTRY from centralized location
@@ -45,7 +46,7 @@ class AuthCheckResult:
 
     success: bool
     reason: AuthOutcome
-    controller_type: str
+    controller_type: ControllerTypeKey
     controller_url: str
     detail: str
 
@@ -109,7 +110,7 @@ def _get_auth_callable(controller_type: str) -> Callable[[], Any] | None:
     return None
 
 
-def preflight_auth_check(controller_type: str) -> AuthCheckResult:
+def preflight_auth_check(controller_type: ControllerTypeKey) -> AuthCheckResult:
     """Attempt authentication to the detected controller before tests run.
 
     Uses the same auth implementations from nac-test-pyats-common that
