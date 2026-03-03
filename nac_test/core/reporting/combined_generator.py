@@ -93,7 +93,7 @@ def _get_curl_example(controller_type: str, controller_url: str) -> str:
             "No curl template for controller type %s, returning URL only",
             controller_type,
         )
-        return f"{controller_url}"
+        return controller_url
     return f"{controller_url}{template.endpoint} \\\n            {template.options}"
 
 
