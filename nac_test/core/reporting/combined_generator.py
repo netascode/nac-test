@@ -179,14 +179,14 @@ class CombinedReportGenerator:
             combined_summary_path.write_text(html_content, encoding="utf-8")
 
             frameworks_included = ", ".join(test_type_stats.keys())
-            logger.info(f"Generated combined dashboard: {combined_summary_path}")
-            logger.info(f"  Total tests across all frameworks: {overall_stats.total}")
-            logger.info(f"  Frameworks included: {frameworks_included or 'none'}")
+            logger.info("Generated combined dashboard: %s", combined_summary_path)
+            logger.info("  Total tests across all frameworks: %d", overall_stats.total)
+            logger.info("  Frameworks included: %s", frameworks_included or "none")
 
             return combined_summary_path
 
         except Exception as e:
-            logger.error(f"Failed to generate combined summary: {e}")
+            logger.error("Failed to generate combined summary: %s", e)
             return None
 
     def _generate_pre_flight_failure_report(
@@ -236,9 +236,11 @@ class CombinedReportGenerator:
             combined_summary_path = self.output_dir / COMBINED_SUMMARY_FILENAME
             combined_summary_path.write_text(html_content, encoding="utf-8")
 
-            logger.info(f"Generated pre-flight failure report: {combined_summary_path}")
+            logger.info(
+                "Generated pre-flight failure report: %s", combined_summary_path
+            )
             return combined_summary_path
 
         except Exception as e:
-            logger.error(f"Failed to generate pre-flight failure report: {e}")
+            logger.error("Failed to generate pre-flight failure report: %s", e)
             return None
