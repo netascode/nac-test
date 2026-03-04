@@ -47,9 +47,11 @@ class BaseJobFileContentTests:
         raise NotImplementedError
 
     @pytest.fixture
-    def default_test_files(self) -> list[Path]:
+    def default_test_files(self, tmp_path: Path) -> list[Path]:
         """Default test files for tests that don't care about specific paths."""
-        return [Path("/tmp/test.py")]
+        f = tmp_path / "test.py"
+        f.touch()
+        return [f]
 
     def test_generates_valid_python(
         self,
