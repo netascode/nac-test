@@ -65,6 +65,8 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
     _current_test_context: str | None = None
     result_collector: TestResultCollector | None = None
     output_dir: Path | None = None
+
+    # Counters — zero-defaulted, checked for truthiness (not nullability)
     _controller_recovery_count: int = 0
     _total_recovery_downtime: float = 0.0
 
@@ -207,10 +209,6 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         # Initialize batching reporter to prevent reporter bottleneck
         self._initialize_batching_reporter()
-
-        # Initialize recovery tracking for controller connectivity issues
-        self._controller_recovery_count = 0
-        self._total_recovery_downtime = 0.0
 
     def _initialize_result_collector(self) -> None:
         """Initialize the result collector for this test.
@@ -463,9 +461,9 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Returns:
             Reporter instance or None if not found
         """
-        # reporter is dynamically injected by the PyATS runner at test execution
-        # time — it is NOT declared on any class in the Testcase MRO, so we
-        # cannot access it directly without risking AttributeError.
+        # reporter is set to None in TestResultContext.__init__ and may be
+        # replaced at runtime by the PyATS runner — use getattr for safety
+        # with the external framework.
         reporter = getattr(self, "reporter", None)
         if reporter:
             return reporter
@@ -1981,11 +1979,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # propagates loudly instead of being silently caught by
         # gather(return_exceptions=True) and demoted to a FAILED result.
         if type(self).verify_group is NACTestBase.verify_group:
-            raise NotImplementedError(
-                f"{self.__class__.__name__} returned dict from get_items_to_verify() "
-                f"but does not implement verify_group(). For grouped verification, "
-                f"implement: async def verify_group(self, semaphore, client, group_key, contexts)"
-            )
+            raise self._verify_group_not_implemented()
 
         # Set up concurrency control
         from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
@@ -2053,11 +2047,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # Fail fast if the subclass hasn't overridden verify_item().
         # Same rationale as verify_group — see _run_grouped_verification().
         if type(self).verify_item is NACTestBase.verify_item:
-            raise NotImplementedError(
-                f"{self.__class__.__name__} returned list from get_items_to_verify() "
-                f"but does not implement verify_item(). For item verification, "
-                f"implement: async def verify_item(self, semaphore, client, context)"
-            )
+            raise self._verify_item_not_implemented()
 
         # Set up concurrency control
         from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
@@ -2093,6 +2083,22 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         return processed_results  # type: ignore[return-value]
 
+    def _verify_group_not_implemented(self) -> NotImplementedError:
+        """Build NotImplementedError for missing verify_group() override."""
+        return NotImplementedError(
+            f"{self.__class__.__name__} returned dict from get_items_to_verify() "
+            f"but does not implement verify_group(). For grouped verification, "
+            f"implement: async def verify_group(self, semaphore, client, group_key, contexts)"
+        )
+
+    def _verify_item_not_implemented(self) -> NotImplementedError:
+        """Build NotImplementedError for missing verify_item() override."""
+        return NotImplementedError(
+            f"{self.__class__.__name__} returned list from get_items_to_verify() "
+            f"but does not implement verify_item(). For item verification, "
+            f"implement: async def verify_item(self, semaphore, client, context)"
+        )
+
     async def verify_group(
         self,
         semaphore: asyncio.Semaphore,
@@ -2117,11 +2123,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Raises:
             NotImplementedError: Always, unless overridden by a subclass.
         """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} returned dict from get_items_to_verify() "
-            f"but does not implement verify_group(). For grouped verification, "
-            f"implement: async def verify_group(self, semaphore, client, group_key, contexts)"
-        )
+        raise self._verify_group_not_implemented()
 
     async def verify_item(
         self,
@@ -2145,11 +2147,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Raises:
             NotImplementedError: Always, unless overridden by a subclass.
         """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} returned list from get_items_to_verify() "
-            f"but does not implement verify_item(). For item verification, "
-            f"implement: async def verify_item(self, semaphore, client, context)"
-        )
+        raise self._verify_item_not_implemented()
 
     def format_mismatch(
         self, attribute: str, expected: Any, actual: Any, context: dict[str, Any]

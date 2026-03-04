@@ -151,6 +151,8 @@ class SSHTestBase(NACTestBase):
 
         # The BrokerClient communicates with the centralized connection broker
         # We'll attach it to the runtime object for the test's duration
+        # NOTE: hasattr is correct here — self.parent is a PyATS TestItem
+        # (external framework object) with no guaranteed attribute schema.
         if not hasattr(self.parent, "broker_client"):
             self.parent.broker_client = BrokerClient()
         self.broker_client = self.parent.broker_client
@@ -344,8 +346,10 @@ class SSHTestBase(NACTestBase):
 
         try:
             # Get device name from device info
-            device_name: str = self.device_info.get(
-                "hostname", self.device_info.get("host", "Unknown Device")
+            _fallback = "Unknown Device"
+            device_name: str = (
+                self.device_info.get("hostname", self.device_info.get("host", _fallback))
+                or _fallback
             )
 
             # Get current test context if available (set by base class methods)
