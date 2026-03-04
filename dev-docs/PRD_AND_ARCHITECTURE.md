@@ -16966,7 +16966,6 @@ The `SubprocessRunner._process_output_realtime()` method detects this sentinel:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NAC_TEST_PYATS_SENTINEL_TIMEOUT` | 5.0 | Timeout waiting for sentinel (seconds) |
 | `NAC_TEST_PYATS_PIPE_DRAIN_DELAY` | 0.1 (macOS), 0.001 (Linux) | Delay before legacy drain |
 | `NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT` | 2.0 | Max time for legacy drain (seconds) |
 

@@ -52,7 +52,6 @@ JOB_RETRY_ATTEMPTS = 1  # Retry failed jobs once
 # knobs, not exposed as CLI flags or documented in README. Consider converting to
 # proper constants with CLI flags in a future release if user demand warrants it:
 # - NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT
-# - NAC_TEST_PYATS_SENTINEL_TIMEOUT
 # - NAC_TEST_PYATS_PIPE_DRAIN_DELAY
 # - NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT
 # - NAC_TEST_PYATS_BATCH_SIZE
@@ -66,14 +65,6 @@ JOB_RETRY_ATTEMPTS = 1  # Retry failed jobs once
 # Default: 10MB - configurable via NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT environment variable
 PYATS_OUTPUT_BUFFER_LIMIT: int = _get_positive_numeric(
     "NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT", 10 * 1024 * 1024, int
-)
-
-# Sentinel-based IPC synchronization timeout (seconds)
-# Expected sync time: <100ms under normal conditions
-# This timeout protects against deadlock if sentinel mechanism fails
-# Default: 5.0 seconds (50x expected latency, should never be hit under normal operation)
-SENTINEL_TIMEOUT_SECONDS: float = _get_positive_numeric(
-    "NAC_TEST_PYATS_SENTINEL_TIMEOUT", 5.0, float
 )
 
 # macOS subprocess pipe drain configuration (secondary fallback for backward compatibility)
@@ -140,10 +131,9 @@ __all__ = [
     "JOB_RETRY_ATTEMPTS",
     # Subprocess handling
     "PYATS_OUTPUT_BUFFER_LIMIT",
-    # Platform detection, sentinel sync, and pipe drain configuration
+    # Platform detection and pipe drain configuration
     "IS_MACOS",
     "IS_UNSUPPORTED_MACOS_PYTHON",
-    "SENTINEL_TIMEOUT_SECONDS",
     "PIPE_DRAIN_DELAY_SECONDS",
     "PIPE_DRAIN_TIMEOUT_SECONDS",
     # Batching reporter
