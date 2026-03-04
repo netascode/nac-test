@@ -157,7 +157,7 @@ class RobotOrchestrator:
         # Phase 3: Test execution (unless render-only mode)
         if not self.render_only:
             typer.echo("🤖 Executing Robot Framework tests...\n\n")
-            robot_loglevel = "DEBUG" if self.loglevel <= LogLevel.DEBUG else None
+            robot_loglevel = "DEBUG" if self.loglevel == LogLevel.DEBUG else None
             exit_code = run_pabot(
                 path=self.output_dir,
                 include=self.include_tags,
