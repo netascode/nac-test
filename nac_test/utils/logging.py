@@ -53,17 +53,20 @@ def configure_logging(level: str | LogLevel) -> None:
     """Configure logging for nac-test framework.
 
     Args:
-        level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        level: LogLevel enum member or string (DEBUG, INFO, WARNING, ERROR, CRITICAL).
     """
     if isinstance(level, LogLevel):
         log_level = int(level)
         level_str = level.value
     else:
+        # String path: defensive programming, not used in nac-test codebase.
+        # Invalid strings fall back to DEFAULT_LOGLEVEL.
         level_str = str(level).upper()
         try:
             log_level = int(LogLevel(level_str))
         except ValueError:
-            log_level = logging.CRITICAL
+            log_level = int(DEFAULT_LOGLEVEL)
+            level_str = DEFAULT_LOGLEVEL.value
 
     logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
