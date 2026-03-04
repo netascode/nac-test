@@ -20,7 +20,7 @@ class PyATSTestDirs(NamedTuple):
 @pytest.fixture()
 def aci_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Set ACI controller environment variables."""
-    monkeypatch.setenv("ACI_URL", "https://apic.test.com")
+    monkeypatch.setenv("ACI_URL", "https://apic.example.invalid")
     monkeypatch.setenv("ACI_USERNAME", "admin")
     monkeypatch.setenv("ACI_PASSWORD", "password")
 
