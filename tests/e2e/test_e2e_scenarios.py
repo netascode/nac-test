@@ -1108,6 +1108,9 @@ class TestE2EVerboseWithInfo(E2ECombinedTestBase):
     def results(self, e2e_verbose_with_info_results: E2EResults) -> E2EResults:
         return e2e_verbose_with_info_results
 
+    # The following two tests are duplicated from TestE2EVerbose. An intermediate
+    # E2EVerboseTestBase class was considered but rejected: the overhead of an extra
+    # base class outweighs the benefit for just two methods shared by two classes.
     def test_pabot_verbose_shows_test_result(self, results: E2EResults) -> None:
         """Verify pabot --verbose output shows test case result with PASS."""
         pattern = r"Verify Log Level\s+\| PASS \|"
