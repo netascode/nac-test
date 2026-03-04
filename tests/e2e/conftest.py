@@ -22,7 +22,12 @@ import pytest
 from typer.testing import CliRunner
 
 import nac_test.cli.main
-from tests.e2e.config import E2EScenario
+from tests.e2e.config import (
+    DRY_RUN_PYATS_ONLY_SCENARIO,
+    DRY_RUN_ROBOT_FAIL_SCENARIO,
+    DRY_RUN_SCENARIO,
+    E2EScenario,
+)
 from tests.e2e.mocks.mock_server import MockAPIServer
 
 
@@ -166,7 +171,7 @@ def _run_e2e_scenario(
     if mock_api_server:
         class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
     else:
-        class_mocker.setenv(f"{arch}_URL", "<not-set>")
+        class_mocker.setenv(f"{arch}_URL", "http://dry-run.invalid")
     class_mocker.setenv(f"{arch}_USERNAME", "mock_user")
     class_mocker.setenv(f"{arch}_PASSWORD", "mock_pass")
     # IOSXE credentials needed for D2D tests (device access)
@@ -364,8 +369,6 @@ def e2e_dry_run_results(
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
     """Execute the dry-run scenario (mixed fixtures with --dry-run flag)."""
-    from tests.e2e.config import DRY_RUN_SCENARIO
-
     return _run_e2e_scenario(
         DRY_RUN_SCENARIO,
         None,
@@ -382,8 +385,6 @@ def e2e_dry_run_pyats_only_results(
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
     """Execute dry-run with PyATS-only (no Robot tests)."""
-    from tests.e2e.config import DRY_RUN_PYATS_ONLY_SCENARIO
-
     return _run_e2e_scenario(
         DRY_RUN_PYATS_ONLY_SCENARIO,
         None,
@@ -400,8 +401,6 @@ def e2e_dry_run_robot_fail_results(
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
     """Execute dry-run with Robot test that has non-existent keyword (fails dryrun)."""
-    from tests.e2e.config import DRY_RUN_ROBOT_FAIL_SCENARIO
-
     return _run_e2e_scenario(
         DRY_RUN_ROBOT_FAIL_SCENARIO,
         None,

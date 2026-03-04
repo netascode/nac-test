@@ -16,6 +16,7 @@ from typing import Any
 import yaml
 
 from nac_test.core.constants import (
+    DRY_RUN_REASON,
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
@@ -535,9 +536,6 @@ class PyATSOrchestrator:
         Args:
             api_tests: List of discovered API test files
             d2d_tests: List of discovered D2D test files
-
-        Returns:
-            None
         """
         print("\n" + "=" * 70)
         print("🔍 DRY-RUN MODE: Showing tests that would be executed")
@@ -616,8 +614,8 @@ class PyATSOrchestrator:
         # Dry-run mode: print discovered tests and return results without further execution
         if self.dry_run:
             self._print_dry_run_summary(api_tests, d2d_tests)
-            api_result = TestResults.not_run("dry-run mode") if api_tests else None
-            d2d_result = TestResults.not_run("dry-run mode") if d2d_tests else None
+            api_result = TestResults.not_run(DRY_RUN_REASON) if api_tests else None
+            d2d_result = TestResults.not_run(DRY_RUN_REASON) if d2d_tests else None
             return PyATSResults(api=api_result, d2d=d2d_result)
 
         breakdown_parts = []

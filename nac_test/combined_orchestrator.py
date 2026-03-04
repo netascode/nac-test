@@ -175,9 +175,9 @@ class CombinedOrchestrator:
 
         # Build combined results from individual orchestrators
         combined_results = CombinedResults()
+        mode_suffix = " (dry-run)" if self.dry_run else ""
 
         if has_pyats and not self.render_only:
-            mode_suffix = " (dry-run)" if self.dry_run else ""
             typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
             self._check_python_version()
 
@@ -200,7 +200,6 @@ class CombinedOrchestrator:
             combined_results.d2d = pyats_results.d2d
 
         if has_robot:
-            mode_suffix = " (dry-run)" if self.dry_run else ""
             typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")
 
             robot_orchestrator = RobotOrchestrator(

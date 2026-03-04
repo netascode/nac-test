@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
+from nac_test.core.constants import DRY_RUN_REASON
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
 from .conftest import PyATSTestDirs
@@ -35,23 +36,21 @@ class TestOrchestratorDryRun:
             dry_run=True,
         )
 
-        # Mock the discovery to return test files
         mock_api_tests = [api_test]
         mock_d2d_tests: list[Path] = []
 
-        with patch.object(
-            orchestrator.test_discovery, "discover_pyats_tests"
-        ) as mock_discover:
-            mock_discover.return_value = (mock_api_tests, [])
-
-            with patch.object(
+        with (
+            patch.object(
+                orchestrator.test_discovery, "discover_pyats_tests"
+            ) as mock_discover,
+            patch.object(
                 orchestrator.test_discovery, "categorize_tests_by_type"
-            ) as mock_categorize:
-                mock_categorize.return_value = (mock_api_tests, mock_d2d_tests)
-
-                with patch.object(orchestrator, "validate_environment"):
-                    # Run tests - should NOT execute actual tests
-                    result = orchestrator.run_tests()
+            ) as mock_categorize,
+            patch.object(orchestrator, "validate_environment"),
+        ):
+            mock_discover.return_value = (mock_api_tests, [])
+            mock_categorize.return_value = (mock_api_tests, mock_d2d_tests)
+            result = orchestrator.run_tests()
 
         # Verify dry-run output
         captured = capsys.readouterr()
@@ -61,7 +60,7 @@ class TestOrchestratorDryRun:
 
         # Verify results indicate not_run
         assert result.api is not None
-        assert result.api.reason == "dry-run mode"
+        assert result.api.reason == DRY_RUN_REASON
         assert result.d2d is None  # No D2D tests
 
     def test_dry_run_returns_not_run_results_for_api_and_d2d(
@@ -85,24 +84,24 @@ class TestOrchestratorDryRun:
             dry_run=True,
         )
 
-        with patch.object(
-            orchestrator.test_discovery, "discover_pyats_tests"
-        ) as mock_discover:
-            mock_discover.return_value = ([api_test, d2d_test], [])
-
-            with patch.object(
+        with (
+            patch.object(
+                orchestrator.test_discovery, "discover_pyats_tests"
+            ) as mock_discover,
+            patch.object(
                 orchestrator.test_discovery, "categorize_tests_by_type"
-            ) as mock_categorize:
-                mock_categorize.return_value = ([api_test], [d2d_test])
-
-                with patch.object(orchestrator, "validate_environment"):
-                    result = orchestrator.run_tests()
+            ) as mock_categorize,
+            patch.object(orchestrator, "validate_environment"),
+        ):
+            mock_discover.return_value = ([api_test, d2d_test], [])
+            mock_categorize.return_value = ([api_test], [d2d_test])
+            result = orchestrator.run_tests()
 
         # Both API and D2D should have not_run results
         assert result.api is not None
-        assert result.api.reason == "dry-run mode"
+        assert result.api.reason == DRY_RUN_REASON
         assert result.d2d is not None
-        assert result.d2d.reason == "dry-run mode"
+        assert result.d2d.reason == DRY_RUN_REASON
 
     def test_dry_run_does_not_execute_tests(
         self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
@@ -119,21 +118,19 @@ class TestOrchestratorDryRun:
             dry_run=True,
         )
 
-        with patch.object(
-            orchestrator.test_discovery, "discover_pyats_tests"
-        ) as mock_discover:
-            mock_discover.return_value = ([api_test], [])
-
-            with patch.object(
+        with (
+            patch.object(
+                orchestrator.test_discovery, "discover_pyats_tests"
+            ) as mock_discover,
+            patch.object(
                 orchestrator.test_discovery, "categorize_tests_by_type"
-            ) as mock_categorize:
-                mock_categorize.return_value = ([api_test], [])
-
-                with patch.object(orchestrator, "validate_environment"):
-                    with patch.object(
-                        orchestrator, "_execute_api_tests_standard"
-                    ) as mock_execute:
-                        orchestrator.run_tests()
+            ) as mock_categorize,
+            patch.object(orchestrator, "validate_environment"),
+            patch.object(orchestrator, "_execute_api_tests_standard") as mock_execute,
+        ):
+            mock_discover.return_value = ([api_test], [])
+            mock_categorize.return_value = ([api_test], [])
+            orchestrator.run_tests()
 
         mock_execute.assert_not_called()
 
@@ -152,14 +149,14 @@ class TestOrchestratorDryRun:
             dry_run=True,
         )
 
-        with patch.object(
-            orchestrator.test_discovery, "discover_pyats_tests"
-        ) as mock_discover:
-            # No tests discovered
+        with (
+            patch.object(
+                orchestrator.test_discovery, "discover_pyats_tests"
+            ) as mock_discover,
+            patch.object(orchestrator, "validate_environment"),
+        ):
             mock_discover.return_value = ([], [])
-
-            with patch.object(orchestrator, "validate_environment"):
-                result = orchestrator.run_tests()
+            result = orchestrator.run_tests()
 
         # Should return empty results (no tests found message)
         captured = capsys.readouterr()

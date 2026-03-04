@@ -53,7 +53,18 @@ pytestmark = pytest.mark.e2e
 
 
 # =============================================================================
-# BASE TEST CLASS - Common tests for all scenarios
+# BASE TEST CLASS
+#
+# E2ECombinedTestBase holds all assertions that are valid regardless of which
+# frameworks ran or which scenario was executed. Every scenario class — success,
+# failure, Robot-only, PyATS-only, mixed, CC — inherits from it unchanged.
+#
+# The dry-run scenario classes are the one exception: dry-run does not execute
+# tests, so many of the output-file and stats assertions don't apply and would
+# need skip guards. Rather than conditionalising the base class, the dry-run
+# classes inherit it as-is (guards already exist inside each method where
+# needed) and add their own dry-run-specific assertions directly. See the
+# DRY-RUN SCENARIO TESTS section below for the full design rationale.
 # =============================================================================
 
 
@@ -697,30 +708,6 @@ class E2ECombinedTestBase:
             )
 
     # -------------------------------------------------------------------------
-    # Dry-Run Mode Indicator Tests
-    # -------------------------------------------------------------------------
-
-    def test_dry_run_indicator_in_pyats_message(self, results: E2EResults) -> None:
-        """Verify dry-run indicator appears in PyATS startup message."""
-        if not results.scenario.is_dry_run:
-            pytest.skip("Not a dry-run scenario")
-        if not results.scenario.has_pyats_tests:
-            pytest.skip("No PyATS tests in this scenario")
-        assert re.search(
-            r"(running|executing).*pyats.*dry-run", results.stdout, re.I
-        ), "Expected dry-run indicator in PyATS startup message"
-
-    def test_dry_run_indicator_in_robot_message(self, results: E2EResults) -> None:
-        """Verify dry-run indicator appears in Robot Framework startup message."""
-        if not results.scenario.is_dry_run:
-            pytest.skip("Not a dry-run scenario")
-        if not results.scenario.has_robot_tests:
-            pytest.skip("No Robot tests in this scenario")
-        assert re.search(
-            r"(running|executing).*robot.*dry-run", results.stdout, re.I
-        ), "Expected dry-run indicator in Robot Framework startup message"
-
-    # -------------------------------------------------------------------------
     # Merged xunit.xml Tests
     # -------------------------------------------------------------------------
 
@@ -889,6 +876,8 @@ class E2ECombinedTestBase:
         """Verify PyATS discovery output shows consolidated summary."""
         if not results.scenario.has_pyats_tests:
             pytest.skip("No PyATS tests in this scenario")
+        if results.scenario.is_dry_run:
+            pytest.skip("Dry-run prints summary instead of discovery message")
 
         discovery_pattern = r"Discovered \d+ PyATS test files"
         match = re.search(discovery_pattern, results.filtered_stdout)
@@ -1103,6 +1092,20 @@ class TestE2EPyatsCc(E2ECombinedTestBase):
 
 # =============================================================================
 # DRY-RUN SCENARIO TESTS
+#
+# Three classes cover dry-run mode, each testing a distinct scenario:
+#   TestE2EDryRun          — mixed Robot + PyATS (both frameworks active)
+#   TestE2EDryRunPyatsOnly — PyATS API only (no Robot tests)
+#   TestE2EDryRunRobotFail — Robot only, with a test that fails dry-run validation
+#
+# Unlike the earlier scenario classes (which each add no tests beyond the
+# `results` fixture), these classes host their own dry-run-specific assertions.
+# No intermediate DryRunBase was introduced because those assertions diverge
+# quickly: PyATS-only has no Robot startup message, RobotFail has no PyATS at
+# all. Only two assertions are shared between TestE2EDryRun and
+# TestE2EDryRunPyatsOnly (PyATS header + startup message). An intermediate base
+# class would add an abstraction layer to eliminate just those two 3-line
+# methods — the small duplication is the lesser trade-off.
 # =============================================================================
 
 
@@ -1158,6 +1161,18 @@ class TestE2EDryRun(E2ECombinedTestBase):
             "Expected 'no tests executed' message in stdout"
         )
 
+    def test_dry_run_indicator_in_pyats_message(self, results: E2EResults) -> None:
+        """Verify dry-run indicator appears in PyATS startup message."""
+        assert re.search(
+            r"(running|executing).*pyats.*dry-run", results.stdout, re.I
+        ), "Expected dry-run indicator in PyATS startup message"
+
+    def test_dry_run_indicator_in_robot_message(self, results: E2EResults) -> None:
+        """Verify dry-run indicator appears in Robot Framework startup message."""
+        assert re.search(
+            r"(running|executing).*robot.*dry-run", results.stdout, re.I
+        ), "Expected dry-run indicator in Robot Framework startup message"
+
 
 class TestE2EDryRunPyatsOnly(E2ECombinedTestBase):
     """E2E tests for dry-run mode with PyATS-only (no Robot tests).
@@ -1203,8 +1218,7 @@ class TestE2EDryRunPyatsOnly(E2ECombinedTestBase):
     def test_dry_run_indicator_in_pyats_message(self, results: E2EResults) -> None:
         """Verify dry-run indicator appears in PyATS startup message.
 
-        Override: Base class skips this because has_pyats_tests=False (expected
-        counts are 0 in dry-run). But this scenario DOES include PyATS tests.
+        See section comment above for why this is duplicated rather than in a shared base.
         """
         assert re.search(
             r"(running|executing).*pyats.*dry-run", results.stdout, re.I
