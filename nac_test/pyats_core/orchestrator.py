@@ -16,6 +16,7 @@ from typing import Any
 import yaml
 
 from nac_test.core.constants import (
+    DEBUG_MODE,
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
@@ -789,10 +790,7 @@ class PyATSOrchestrator:
 
             # Clean up archives after successful extraction and report generation
             # (unless in debug mode or user wants to keep data)
-            if not (
-                os.environ.get("NAC_TEST_DEBUG")
-                or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")
-            ):
+            if not (DEBUG_MODE or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")):
                 for archive_path in archive_paths:
                     try:
                         archive_path.unlink()
@@ -803,7 +801,7 @@ class PyATSOrchestrator:
                         )
             else:
                 logger.info(
-                    "Keeping archive files (NAC_TEST_DEBUG/NAC_TEST_PYATS_KEEP_REPORT_DATA is set)"
+                    "Keeping archive files (NAC_TEST_DEBUG or NAC_TEST_PYATS_KEEP_REPORT_DATA is set)"
                 )
 
             # Clean up empty api/ and d2d/ temp parent directories

@@ -19,6 +19,7 @@ from typing import Any, cast
 import aiofiles  # type: ignore[import-untyped]
 
 from nac_test.core.constants import (
+    DEBUG_MODE,
     HTML_REPORTS_DIRNAME,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
@@ -153,19 +154,14 @@ class MultiArchiveReportGenerator:
 
         # Cleanup JSONL files after stats collection
         # Respects NAC_TEST_DEBUG and NAC_TEST_PYATS_KEEP_REPORT_DATA environment variables
-        if not (
-            os.environ.get("NAC_TEST_DEBUG")
-            or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")
-        ):
+        if not (DEBUG_MODE or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")):
             logger.info("Cleaning up JSONL files after stats collection")
             await self._cleanup_all_jsonl_files()
         else:
-            debug_reason = (
-                "NAC_TEST_DEBUG"
-                if os.environ.get("NAC_TEST_DEBUG")
-                else "NAC_TEST_PYATS_KEEP_REPORT_DATA"
+            reason = (
+                "NAC_TEST_DEBUG" if DEBUG_MODE else "NAC_TEST_PYATS_KEEP_REPORT_DATA"
             )
-            logger.info(f"Keeping JSONL files ({debug_reason} is set)")
+            logger.info(f"Keeping JSONL files ({reason} is set)")
 
         # Determine overall status
         if not results:
