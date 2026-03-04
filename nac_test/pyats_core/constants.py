@@ -24,7 +24,7 @@ from nac_test.core.constants import (
     RETRY_MAX_ATTEMPTS,
     RETRY_MAX_DELAY,
     # Env var helper
-    _get_positive_numeric,
+    get_positive_numeric_env,
 )
 
 # PyATS-specific worker calculation constants
@@ -63,7 +63,7 @@ JOB_RETRY_ATTEMPTS = 1  # Retry failed jobs once
 # PyATS tests can generate extremely large output lines (100KB+ JSON responses from API calls).
 # asyncio's default 64KB buffer would trigger `LimitOverrunError` and cause nac-test to hang.
 # Default: 10MB - configurable via NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT environment variable
-PYATS_OUTPUT_BUFFER_LIMIT: int = _get_positive_numeric(
+PYATS_OUTPUT_BUFFER_LIMIT: int = get_positive_numeric_env(
     "NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT", 10 * 1024 * 1024, int
 )
 
@@ -74,28 +74,30 @@ PYATS_OUTPUT_BUFFER_LIMIT: int = _get_positive_numeric(
 # Default: 100ms on macOS (balances reliability vs performance), 1ms on Linux
 # These values can be overridden via environment variables for CI tuning
 _pipe_drain_default = 0.1 if IS_MACOS else 0.001
-PIPE_DRAIN_DELAY_SECONDS: float = _get_positive_numeric(
+PIPE_DRAIN_DELAY_SECONDS: float = get_positive_numeric_env(
     "NAC_TEST_PYATS_PIPE_DRAIN_DELAY", _pipe_drain_default, float
 )
-PIPE_DRAIN_TIMEOUT_SECONDS: float = _get_positive_numeric(
+PIPE_DRAIN_TIMEOUT_SECONDS: float = get_positive_numeric_env(
     "NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT", 2.0, float
 )
 
 # Batching reporter configuration
 # Controls how PyATS reporter messages are batched for efficient transmission
 # Batch size: number of messages accumulated before flush (default: 200)
-BATCH_SIZE: int = _get_positive_numeric("NAC_TEST_PYATS_BATCH_SIZE", 200, int)
+BATCH_SIZE: int = get_positive_numeric_env("NAC_TEST_PYATS_BATCH_SIZE", 200, int)
 
 # Batch timeout: seconds before auto-flush even if batch incomplete (default: 0.5s)
-BATCH_TIMEOUT_SECONDS: float = _get_positive_numeric(
+BATCH_TIMEOUT_SECONDS: float = get_positive_numeric_env(
     "NAC_TEST_PYATS_BATCH_TIMEOUT", 0.5, float
 )
 
 # Overflow queue size: maximum overflow queue size for burst handling (default: 5000)
-OVERFLOW_QUEUE_SIZE: int = _get_positive_numeric("NAC_TEST_PYATS_QUEUE_SIZE", 5000, int)
+OVERFLOW_QUEUE_SIZE: int = get_positive_numeric_env(
+    "NAC_TEST_PYATS_QUEUE_SIZE", 5000, int
+)
 
 # Overflow memory limit: maximum memory for overflow queue in MB (default: 500MB)
-OVERFLOW_MEMORY_LIMIT_MB: int = _get_positive_numeric(
+OVERFLOW_MEMORY_LIMIT_MB: int = get_positive_numeric_env(
     "NAC_TEST_PYATS_MEMORY_LIMIT_MB", 500, int
 )
 

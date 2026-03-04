@@ -11,9 +11,8 @@ from typing import TypeVar
 T = TypeVar("T", int, float)
 
 
-# Helper function for parsing environment variables with positive value validation.
-# Defined here (not in utils/) to avoid circular imports
-def _get_positive_numeric(env_var: str, default: T, value_type: type[T]) -> T:
+# Shared env-var helper; lives here (not in utils/) to avoid circular imports
+def get_positive_numeric_env(env_var: str, default: T, value_type: type[T]) -> T:
     """Get a positive numeric value from environment variable with fallback.
 
     Args:
@@ -44,10 +43,10 @@ CONNECTION_CLOSE_DELAY = 0.25  # seconds
 
 # Concurrency limits - Can be used by both PyATS and Robot
 # Can be overridden via environment variables
-DEFAULT_API_CONCURRENCY = _get_positive_numeric(
+DEFAULT_API_CONCURRENCY = get_positive_numeric_env(
     "NAC_TEST_PYATS_API_CONCURRENCY", 55, int
 )
-DEFAULT_SSH_CONCURRENCY = _get_positive_numeric(
+DEFAULT_SSH_CONCURRENCY = get_positive_numeric_env(
     "NAC_TEST_PYATS_SSH_CONCURRENCY", 20, int
 )
 # Progress reporting
