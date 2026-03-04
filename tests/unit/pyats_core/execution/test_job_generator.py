@@ -19,7 +19,12 @@ class TestJobGeneratorInit:
     def test_pyats_managed_handlers_import(self) -> None:
         """Verify pyats.log.managed_handlers is importable and has screen attribute.
         Makes sure we notice if pyats changes their logging structure in a way that
-        would break our generated job files."""
+        would break our generated job files.
+
+        Intentional local import: keeping it here rather than at module level so that
+        a failure surfaces in this specific test with a clear name. A collection-time
+        ImportError would give too little context about what broke and why.
+        """
         from pyats.log import managed_handlers
 
         assert hasattr(managed_handlers, "screen")
