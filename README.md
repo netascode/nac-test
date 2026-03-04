@@ -328,14 +328,17 @@ export IOSXE_USERNAME=admin
 export IOSXE_PASSWORD=devicepassword
 
 # Run all tests (Robot + PyATS combined)
-nac-test -d ./data -t ./tests -o ./results
+nac-test -d ./data -t ./tests -o ./output
 
 # Run only PyATS tests (development mode)
-nac-test -d ./data -t ./tests -o ./results --pyats
+nac-test -d ./data -t ./tests -o ./output --pyats
 
 # Run only Robot Framework tests (development mode)
-nac-test -d ./data -t ./tests -o ./results --robot
+nac-test -d ./data -t ./tests -o ./output --robot
 ```
+
+**Note**: the --pyats and --robot are experimental development arguments which
+might be removed in later versions. 
 
 ### PyATS Output
 
@@ -376,7 +379,7 @@ Before test execution, `nac-test` merges all YAML data files into a single data 
 By default, the merged file is named `merged_data_model_test_variables.yaml`. You can customize this:
 
 ```bash
-nac-test -d ./data -t ./tests -o ./results -m my_custom_data.yaml
+nac-test -d ./data -t ./tests -o ./output -m my_custom_data.yaml
 ```
 
 ### Accessing the Merged Data
@@ -394,7 +397,7 @@ For faster development cycles, you can run only one test framework at a time:
 Run only PyATS tests, skipping Robot Framework:
 
 ```bash
-nac-test -d ./data -t ./tests -o ./results --pyats
+nac-test -d ./data -t ./tests -o ./output --pyats
 ```
 
 This is useful when:
@@ -407,7 +410,7 @@ This is useful when:
 Run only Robot Framework tests, skipping PyATS:
 
 ```bash
-nac-test -d ./data -t ./tests -o ./results --robot
+nac-test -d ./data -t ./tests -o ./output --robot
 ```
 
 This is useful when:
@@ -422,7 +425,7 @@ This is useful when:
 For CI/CD pipelines with artifact size constraints, use the `--minimal-reports` flag:
 
 ```bash
-nac-test -d ./data -t ./tests -o ./results --minimal-reports
+nac-test -d ./data -t ./tests -o ./output --minimal-reports
 ```
 
 This reduces HTML report size by **80-95%** by only including detailed command outputs for failed or errored tests. Passed tests show summary information without full API response bodies.
@@ -433,10 +436,10 @@ For Direct-to-Device (D2D) tests that connect to network devices via SSH, you ca
 
 ```bash
 # Automatically calculate based on system resources (default)
-nac-test -d ./data -t ./tests -o ./results --pyats
+nac-test -d ./data -t ./tests -o ./output --pyats
 
 # Limit to specific number of parallel device connections
-nac-test -d ./data -t ./tests -o ./results --pyats --max-parallel-devices 10
+nac-test -d ./data -t ./tests -o ./output --pyats --max-parallel-devices 10
 ```
 
 The `--max-parallel-devices` option sets an upper limit on concurrent SSH connections to prevent overwhelming network devices or exhausting system resources.
@@ -692,7 +695,7 @@ nac-test _mostly_ follows Robot Framework exit code conventions to provide meani
 The `--verbose` flag enables verbose mode for troubleshooting test execution:
 
 ```bash
-nac-test -d ./data -t ./tests -o ./results --verbose
+nac-test -d ./data -t ./tests -o ./output --verbose
 ```
 
 When enabled, verbose mode:
@@ -760,7 +763,7 @@ export SDWAN_USERNAME=admin
 export SDWAN_PASSWORD=your-password
 
 # 3. Run nac-test with the --diagnostic flag
-nac-test -d ./data -t ./tests -o ./results --pyats --diagnostic
+nac-test -d ./data -t ./tests -o ./output --pyats --diagnostic
 ```
 
 The diagnostic flag will wrap your nac-test execution and generate a `nac-test-diagnostics-XXXXXX.tar.gz` file containing all diagnostic information with sensitive data automatically masked.
