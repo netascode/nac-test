@@ -22,7 +22,18 @@ import pytest
 from typer.testing import CliRunner
 
 import nac_test.cli.main
-from tests.e2e.config import E2EScenario
+from tests.e2e.config import (
+    ALL_FAIL_SCENARIO,
+    MIXED_SCENARIO,
+    PYATS_API_ONLY_SCENARIO,
+    PYATS_CC_SCENARIO,
+    PYATS_D2D_ONLY_SCENARIO,
+    ROBOT_ONLY_SCENARIO,
+    SUCCESS_SCENARIO,
+    VERBOSE_SCENARIO,
+    VERBOSE_WITH_INFO_SCENARIO,
+    E2EScenario,
+)
 from tests.e2e.mocks.mock_server import MockAPIServer
 
 
@@ -199,8 +210,6 @@ def e2e_success_results(
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
     """Execute the success scenario once and cache results for the class."""
-    from tests.e2e.config import SUCCESS_SCENARIO
-
     return _run_e2e_scenario(
         SUCCESS_SCENARIO,
         mock_api_server,
@@ -218,8 +227,6 @@ def e2e_failure_results(
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
     """Execute the all-fail scenario once and cache results for the class."""
-    from tests.e2e.config import ALL_FAIL_SCENARIO
-
     return _run_e2e_scenario(
         ALL_FAIL_SCENARIO,
         mock_api_server,
@@ -237,8 +244,6 @@ def e2e_mixed_results(
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
     """Execute the mixed scenario once and cache results for the class."""
-    from tests.e2e.config import MIXED_SCENARIO
-
     return _run_e2e_scenario(
         MIXED_SCENARIO,
         mock_api_server,
@@ -258,8 +263,6 @@ def e2e_robot_only_results(
 
     Note: This scenario does not require a testbed (no D2D tests).
     """
-    from tests.e2e.config import ROBOT_ONLY_SCENARIO
-
     return _run_e2e_scenario(
         ROBOT_ONLY_SCENARIO,
         mock_api_server,
@@ -279,8 +282,6 @@ def e2e_pyats_api_only_results(
 
     Note: This scenario does not require a testbed (no D2D tests).
     """
-    from tests.e2e.config import PYATS_API_ONLY_SCENARIO
-
     return _run_e2e_scenario(
         PYATS_API_ONLY_SCENARIO,
         mock_api_server,
@@ -298,8 +299,6 @@ def e2e_pyats_d2d_only_results(
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
     """Execute the PyATS D2D-only scenario once and cache results for the class."""
-    from tests.e2e.config import PYATS_D2D_ONLY_SCENARIO
-
     return _run_e2e_scenario(
         PYATS_D2D_ONLY_SCENARIO,
         mock_api_server,
@@ -317,8 +316,6 @@ def e2e_pyats_cc_results(
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
     """Execute the PyATS Catalyst Center (API + D2D) scenario once and cache results."""
-    from tests.e2e.config import PYATS_CC_SCENARIO
-
     return _run_e2e_scenario(
         PYATS_CC_SCENARIO,
         mock_api_server,
@@ -335,8 +332,6 @@ def e2e_verbose_results(
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
     """Execute the verbose scenario with --verbose flag and cache results."""
-    from tests.e2e.config import VERBOSE_SCENARIO
-
     return _run_e2e_scenario(
         VERBOSE_SCENARIO,
         mock_api_server,
@@ -355,8 +350,6 @@ def e2e_verbose_with_info_results(
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
     """Execute the verbose scenario with --verbose --loglevel INFO flags."""
-    from tests.e2e.config import VERBOSE_WITH_INFO_SCENARIO
-
     return _run_e2e_scenario(
         VERBOSE_WITH_INFO_SCENARIO,
         mock_api_server,
