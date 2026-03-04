@@ -63,7 +63,7 @@ class DeviceConnectionManager:
             memory_per_connection_mb=10.0,  # 10MB per SSH connection
             fds_per_connection=5,  # 5 FDs per SSH connection
             max_connections=1000,  # Cap at 1000 connections
-            env_var="MAX_SSH_CONNECTIONS",
+            env_var="NAC_TEST_PYATS_MAX_SSH_CONNECTIONS",
         )
 
     async def get_connection(

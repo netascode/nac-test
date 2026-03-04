@@ -152,7 +152,7 @@ class PyATSOrchestrator:
             memory_per_worker_gb=MEMORY_PER_WORKER_GB,
             cpu_multiplier=DEFAULT_CPU_MULTIPLIER,
             max_workers=MAX_WORKERS_HARD_LIMIT,
-            env_var="PYATS_MAX_WORKERS",
+            env_var="NAC_TEST_PYATS_PROCESSES",
         )
 
         return cpu_workers

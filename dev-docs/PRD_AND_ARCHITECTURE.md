@@ -999,7 +999,7 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 **`-v, --verbosity`** (OPTIONAL)
 - **Type**: `VerbosityLevel` (enum)
 - **Values**: `CRITICAL`, `ERROR`, `WARNING` (default), `INFO`, `DEBUG`
-- **Environment Variable**: `NAC_VALIDATE_VERBOSITY`
+- **Environment Variable**: `NAC_TEST_LOGLEVEL`
 - **Eager**: `True` (processed before other options for early logging configuration)
 - **Purpose**: Control logging output granularity
 - **Behavior**:
@@ -1315,7 +1315,7 @@ Every CLI flag (except `--version` and `--merged-data-filename`) supports enviro
 | `--max-parallel-devices` | `NAC_TEST_MAX_PARALLEL_DEVICES` | `int` | `NAC_TEST_MAX_PARALLEL_DEVICES=25` |
 | `--minimal-reports` | `NAC_TEST_MINIMAL_REPORTS` | `bool` | `NAC_TEST_MINIMAL_REPORTS=true` |
 | `--verbose` | `NAC_TEST_VERBOSE` | `bool` | `NAC_TEST_VERBOSE=1` |
-| `-v, --verbosity` | `NAC_VALIDATE_VERBOSITY` | `enum` | `NAC_VALIDATE_VERBOSITY=DEBUG` |
+| `-v, --verbosity` | `NAC_TEST_LOGLEVEL` | `enum` | `NAC_TEST_LOGLEVEL=DEBUG` |
 
 **List Type Parsing**:
 
@@ -1349,7 +1349,7 @@ test_aci_fabric:
     NAC_TEST_TEMPLATES: "templates/aci"
     NAC_TEST_OUTPUT: "output"
     NAC_TEST_MINIMAL_REPORTS: "true"
-    NAC_VALIDATE_VERBOSITY: "INFO"
+    NAC_TEST_LOGLEVEL: "INFO"
   script:
     - uv pip install -e .
     - nac-test  # All config from env vars
@@ -1487,7 +1487,7 @@ export NAC_TEST_DATA="config/base.yaml:config/ci.yaml"
 export NAC_TEST_TEMPLATES="templates/aci"
 export NAC_TEST_OUTPUT="output/ci-$(date +%Y%m%d-%H%M%S)"
 export NAC_TEST_MINIMAL_REPORTS=1
-export NAC_VALIDATE_VERBOSITY=INFO
+export NAC_TEST_LOGLEVEL=INFO
 
 # Execute with env var config (no CLI flags needed)
 nac-test
@@ -2453,7 +2453,7 @@ Set by `main.py` and read by orchestrators:
 
 | Variable | Purpose | Example Value |
 |----------|---------|---------------|
-| `NAC_VALIDATE_VERBOSITY` | Logging verbosity level | `WARNING`, `INFO`, `DEBUG` |
+| `NAC_TEST_LOGLEVEL` | Logging verbosity level | `WARNING`, `INFO`, `DEBUG` |
 | `NAC_TEST_DATA` | Data file paths | `/path/to/data.yaml` |
 | `NAC_TEST_TEMPLATES` | Templates directory | `/path/to/templates` |
 | `NAC_TEST_OUTPUT` | Output directory | `/path/to/output` |
@@ -2495,7 +2495,7 @@ Set by system or users for performance tuning:
 | `NAC_TEST_PYATS_MAX_CONNECTIONS` | Maximum concurrent API connections | Calculated (resource-based) | `100` |
 | `NAC_TEST_PYATS_API_CONCURRENCY` | Concurrent API requests per worker | `10` | `20` |
 | `NAC_TEST_PYATS_SSH_CONCURRENCY` | Concurrent SSH connections per worker | `5` | `10` |
-| `NAC_TEST_NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT` | Subprocess stdout buffer size | `10485760` (10MB) | `20971520` (20MB) |
+| `NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT` | Subprocess stdout buffer size | `10485760` (10MB) | `20971520` (20MB) |
 | `NAC_TEST_PYATS_KEEP_REPORT_DATA` | Keep intermediate JSONL/archive files | `false` | `true` |
 | `NAC_TEST_VERBOSE` | Enable debug mode (verbose output, keep archives) | `false` | `true` |
 
@@ -6035,7 +6035,7 @@ class SystemResourceCalculator:
         memory_per_connection_mb: float = 10.0,
         fds_per_connection: int = 5,
         max_connections: int = 1000,
-        env_var: str = "MAX_SSH_CONNECTIONS"
+        env_var: str = "NAC_TEST_PYATS_MAX_SSH_CONNECTIONS"
     ) -> int:
 ```
 
@@ -6173,7 +6173,7 @@ export APIC_USERNAME="admin"
 export APIC_PASSWORD="secret"
 
 # Resource limits
-export MAX_SSH_CONNECTIONS="100"
+export NAC_TEST_PYATS_MAX_SSH_CONNECTIONS="100"
 
 # Debug mode
 export NAC_TEST_VERBOSE="1"
@@ -9299,7 +9299,7 @@ self.password = os.environ[f"{self.controller_type}_PASSWORD"]
 | Variable Name | Set By | Used By | Purpose | Example Value |
 |--------------|--------|---------|---------|---------------|
 | `NAC_TEST_PYATS_KEEP_REPORT_DATA` | User (optional) | Report generator | Prevent JSONL file deletion after report generation | `true` or not set |
-| `NAC_TEST_NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT` | User (optional) | Subprocess runner | Limit stdout/stderr buffer size (bytes) | `10485760` (10MB) |
+| `NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT` | User (optional) | Subprocess runner | Limit stdout/stderr buffer size (bytes) | `10485760` (10MB) |
 
 **Source Evidence:** `generator.py:138-139`, `subprocess_runner.py:98`
 
@@ -9324,9 +9324,9 @@ self.password = os.environ[f"{self.controller_type}_PASSWORD"]
 
 | Variable Name | Set By | Used By | Purpose | Example Value |
 |--------------|--------|---------|---------|---------------|
-| `MAX_SSH_CONNECTIONS` | User (optional) | Connection manager | Override calculated SSH connection limit | `100` |
-| `NAC_API_CONCURRENCY` | User (optional) | Constants | Override default API concurrency | `55` |
-| `NAC_SSH_CONCURRENCY` | User (optional) | Constants | Override default SSH concurrency | `20` |
+| `NAC_TEST_PYATS_MAX_SSH_CONNECTIONS` | User (optional) | Connection manager | Override calculated SSH connection limit | `100` |
+| `NAC_TEST_PYATS_API_CONCURRENCY` | User (optional) | Constants | Override default API concurrency | `55` |
+| `NAC_TEST_PYATS_SSH_CONCURRENCY` | User (optional) | Constants | Override default SSH concurrency | `20` |
 
 **Source Evidence:** `connection_manager.py:63`, `constants.py:19-20`
 
@@ -10553,7 +10553,7 @@ def calculate_connection_capacity(
     memory_per_connection_mb: float = 10.0,    # SSH connection: 10MB
     fds_per_connection: int = 5,                # File descriptors per SSH
     max_connections: int = 1000,                # Safety ceiling
-    env_var: str = "MAX_SSH_CONNECTIONS",
+    env_var: str = "NAC_TEST_PYATS_MAX_SSH_CONNECTIONS",
 ) -> int:
     """Calculate optimal SSH connection count."""
 
@@ -14660,7 +14660,7 @@ async with pool.get_client(...) as client:
 
 2. Reduce concurrency:
 ```bash
-export NAC_API_CONCURRENCY=30  # Default is 55
+export NAC_TEST_PYATS_API_CONCURRENCY=30  # Default is 55
 ```
 
 ---
@@ -18762,7 +18762,7 @@ Verbosity = Annotated[
         "-v",
         "--verbosity",
         help="Verbosity level.",
-        envvar="NAC_VALIDATE_VERBOSITY",
+        envvar="NAC_TEST_LOGLEVEL",
         is_eager=True,
     ),
 ]
@@ -18792,7 +18792,7 @@ nac-test run --data base.yaml --verbosity DEBUG
 nac-test run --data base.yaml -v DEBUG
 
 # Environment variable
-NAC_VALIDATE_VERBOSITY=DEBUG nac-test run --data base.yaml
+NAC_TEST_LOGLEVEL=DEBUG nac-test run --data base.yaml
 ```
 
 **`is_eager=True`:**
