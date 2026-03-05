@@ -80,6 +80,26 @@ UNICODE_BOX_STYLE = BoxStyle(
 )
 
 
+def _wrap_url_lines(prefix: str, url: str, indent: str = "") -> list[str]:
+    """Wrap a prefix + URL into one or two lines to fit banner width.
+
+    If the combined line fits within BANNER_CONTENT_WIDTH, returns a single line.
+    Otherwise, the prefix goes on one line and the URL on the next (indented).
+
+    Args:
+        prefix: The text before the URL (e.g., "Could not connect to APIC at").
+        url: The URL string.
+        indent: Leading whitespace for both lines (e.g., "  " for indented commands).
+
+    Returns:
+        A list of one or two strings that fit within the banner width.
+    """
+    single_line = f"{indent}{prefix} {url}"
+    if len(single_line) <= BANNER_CONTENT_WIDTH:
+        return [single_line]
+    return [f"{indent}{prefix}", f"{indent}  {url}"]
+
+
 def _get_box_style(no_color: bool) -> BoxStyle:
     """Return ASCII or Unicode box style based on color mode."""
     return ASCII_BOX_STYLE if no_color else UNICODE_BOX_STYLE
