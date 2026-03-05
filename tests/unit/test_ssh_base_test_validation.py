@@ -31,7 +31,10 @@ class TestSSHTestBaseValidation:
             temp_file = f.name
 
         try:
-            # Setup environment
+            # Setup environment with controller credentials (required by NACTestBase.setup)
+            os.environ["IOSXE_URL"] = "https://test.example.com"
+            os.environ["IOSXE_USERNAME"] = "test_user"
+            os.environ["IOSXE_PASSWORD"] = "test_pass"
             os.environ["DEVICE_INFO"] = json.dumps(valid_device)
             os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = temp_file
 
@@ -77,7 +80,10 @@ class TestSSHTestBaseValidation:
             temp_file = f.name
 
         try:
-            # Setup environment
+            # Setup environment with controller credentials (required by NACTestBase.setup)
+            os.environ["IOSXE_URL"] = "https://test.example.com"
+            os.environ["IOSXE_USERNAME"] = "test_user"
+            os.environ["IOSXE_PASSWORD"] = "test_pass"
             os.environ["DEVICE_INFO"] = json.dumps(invalid_device)
             os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = temp_file
 
@@ -120,6 +126,10 @@ class TestSSHTestBaseValidation:
             temp_file = f.name
 
         try:
+            # Setup environment with controller credentials (required by NACTestBase.setup)
+            os.environ["IOSXE_URL"] = "https://test.example.com"
+            os.environ["IOSXE_USERNAME"] = "test_user"
+            os.environ["IOSXE_PASSWORD"] = "test_pass"
             # Setup environment with invalid JSON
             os.environ["DEVICE_INFO"] = "not valid json"
             os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = temp_file
