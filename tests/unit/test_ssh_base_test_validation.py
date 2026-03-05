@@ -61,6 +61,15 @@ class TestSSHTestBaseValidation:
             # Verify device_info was set correctly
             assert test_instance.device_info == valid_device
         finally:
+            # Clean up environment variables
+            for key in [
+                "IOSXE_URL",
+                "IOSXE_USERNAME",
+                "IOSXE_PASSWORD",
+                "DEVICE_INFO",
+                "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH",
+            ]:
+                os.environ.pop(key, None)
             # Clean up temp file
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
@@ -114,6 +123,15 @@ class TestSSHTestBaseValidation:
                     in error_msg
                 )
         finally:
+            # Clean up environment variables
+            for key in [
+                "IOSXE_URL",
+                "IOSXE_USERNAME",
+                "IOSXE_PASSWORD",
+                "DEVICE_INFO",
+                "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH",
+            ]:
+                os.environ.pop(key, None)
             # Clean up temp file
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
@@ -161,6 +179,15 @@ class TestSSHTestBaseValidation:
                 error_msg = test_instance.failed.call_args[0][0]
                 assert "Could not parse device info JSON" in error_msg
         finally:
+            # Clean up environment variables
+            for key in [
+                "IOSXE_URL",
+                "IOSXE_USERNAME",
+                "IOSXE_PASSWORD",
+                "DEVICE_INFO",
+                "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH",
+            ]:
+                os.environ.pop(key, None)
             # Clean up temp file
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
