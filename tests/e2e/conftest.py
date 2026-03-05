@@ -36,6 +36,7 @@ class E2EResults:
         exit_code: CLI exit code.
         stdout: CLI standard output.
         stderr: CLI standard error.
+        filtered_stdout: Stdout with logger lines (INFO -, DEBUG -, etc.) removed.
         cli_result: The full CliRunner result object.
     """
 
@@ -44,6 +45,7 @@ class E2EResults:
     exit_code: int
     stdout: str
     stderr: str
+    filtered_stdout: str
     cli_result: Any  # typer.testing.Result
 
 
@@ -161,12 +163,20 @@ def _run_e2e_scenario(
     runner = CliRunner()
     result = runner.invoke(nac_test.cli.main.app, cli_args)
 
+    # Compute filtered stdout (strips logger output lines)
+    filtered_stdout = "\n".join(
+        line
+        for line in result.stdout.split("\n")
+        if not line.startswith(("INFO -", "DEBUG -", "WARNING -", "ERROR -"))
+    )
+
     return E2EResults(
         scenario=scenario,
         output_dir=output_dir,
         exit_code=result.exit_code,
         stdout=result.stdout,
         stderr=result.stderr if hasattr(result, "stderr") else "",
+        filtered_stdout=filtered_stdout,
         cli_result=result,
     )
 

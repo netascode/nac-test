@@ -7,7 +7,6 @@ import asyncio
 import json
 import logging
 import os
-import re
 import sys
 import tempfile
 import time
@@ -42,6 +41,7 @@ from nac_test.pyats_core.reporting.batching_reporter import BatchingReporter
 from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
+from nac_test.utils import sanitize_hostname
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.formatting import format_file_timestamp_ms
 
@@ -63,10 +63,16 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
     # Test metadata class variables (enforced in subclasses)
     TEST_TYPE_NAME: str | None = None
 
-    # Explicit attribute types to avoid type comments later
+    # Explicit attribute declarations (avoids hasattr() checks)
     batching_reporter: BatchingReporter | None = None
     step_interceptor: StepInterceptor | None = None
     _current_test_context: str | None = None
+    result_collector: TestResultCollector | None = None
+    output_dir: Path | None = None
+
+    # Counters — zero-defaulted, checked for truthiness (not nullability)
+    _controller_recovery_count: int = 0
+    _total_recovery_downtime: float = 0.0
 
     # Status mapping for converting string status to ResultStatus enum
     STATUS_MAPPING: dict[str, ResultStatus] = {
@@ -207,10 +213,6 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         # Initialize batching reporter to prevent reporter bottleneck
         self._initialize_batching_reporter()
-
-        # Initialize recovery tracking for controller connectivity issues
-        self._controller_recovery_count = 0
-        self._total_recovery_downtime = 0.0
 
     def _initialize_result_collector(self) -> None:
         """Initialize the result collector for this test.
@@ -463,21 +465,22 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Returns:
             Reporter instance or None if not found
         """
-        # Check if we have a reporter attribute
-        if hasattr(self, "reporter") and self.reporter:
-            return self.reporter
+        # reporter is set to None in TestResultContext.__init__ and may be
+        # replaced at runtime by the PyATS runner — use getattr for safety
+        # with the external framework.
+        reporter = getattr(self, "reporter", None)
+        if reporter:
+            return reporter
 
         # Check runtime for reporter
         try:
-            from pyats import aetest
-
             if hasattr(aetest, "runtime") and hasattr(aetest.runtime, "reporter"):
                 return aetest.runtime.reporter
         except ImportError:
             pass
 
-        # Check parent for reporter
-        if hasattr(self, "parent") and hasattr(self.parent, "reporter"):
+        # Check parent for reporter (parent is always set by PyATS, may be None)
+        if self.parent is not None and hasattr(self.parent, "reporter"):
             return self.parent.reporter
 
         return None
@@ -610,7 +613,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Args:
             messages: List of messages (may be tuples or dicts)
         """
-        if not hasattr(self, "result_collector"):
+        if self.result_collector is None:
             return  # No collector initialized
 
         try:
@@ -678,7 +681,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
             # Try to use user's output directory first
             dump_file = None
-            if hasattr(self, "output_dir") and self.output_dir:
+            if self.output_dir is not None:
                 try:
                     # Create emergency_dumps subdirectory
                     emergency_dir = self.output_dir / "emergency_dumps"
@@ -779,8 +782,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # The HOSTNAME environment variable is set by device_executor for d2d tests
         hostname = os.environ.get("HOSTNAME")
         if hostname:
-            # Sanitize hostname for safe filename use - replace non-alphanumeric chars with underscore
-            safe_hostname = re.sub(r"[^a-zA-Z0-9]", "_", hostname).lower()
+            safe_hostname = sanitize_hostname(hostname)
             return f"{class_name}_{safe_hostname}_{timestamp}"
 
         return f"{class_name}_{timestamp}"
@@ -833,7 +835,8 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         connection details.
         """
         raise NotImplementedError(
-            "Subclasses must implement get_connection_params() method"
+            f"{self.__class__.__name__} must implement get_connection_params() to return "
+            f"architecture-specific connection details."
         )
 
     def wrap_client_for_tracking(
@@ -1111,7 +1114,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             request_data: Optional request payload for POST/PUT/PATCH
             test_context: Explicit test context for this specific API call (eliminates race conditions)
         """
-        if not hasattr(self, "result_collector"):
+        if self.result_collector is None:
             # Safety check - collector might not be initialized in some edge cases
             return
 
@@ -1396,10 +1399,15 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             else:
                 message = f"{test_type} {item_identifier} {status_enum.value.lower()}"
 
-        # Add to result collector
-        self.result_collector.add_result(
-            status_enum, message, test_context=test_context
-        )
+        # Guard: result_collector may be None if setup() failed partway through
+        if self.result_collector is not None:
+            self.result_collector.add_result(
+                status_enum, message, test_context=test_context
+            )
+        else:
+            self.logger.warning(
+                "result_collector is None — skipping verification result: %s", message
+            )
 
     def map_string_status_to_enum(self, status_string: str) -> ResultStatus:
         """Convert string status to ResultStatus enum using centralized mapping.
@@ -1580,7 +1588,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 "subnet": result["context"].get("subnet_ip", "N/A")
             }
         """
-        raise NotImplementedError("Subclasses must implement extract_step_context()")
+        raise NotImplementedError(
+            f"{self.__class__.__name__} must implement extract_step_context() to extract "
+            f"relevant context fields from a verification result for PyATS step creation."
+        )
 
     def format_step_name(self, context: dict[str, Any]) -> str:
         """Format the PyATS step name from extracted context.
@@ -1598,7 +1609,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             return f"Verify BGP peer {context['peer_ip']} on node {context['node']}"
             return f"Verify BD '{context['tenant']}/{context['bd']}' -> Subnet '{context['subnet']}'"
         """
-        raise NotImplementedError("Subclasses must implement format_step_name()")
+        raise NotImplementedError(
+            f"{self.__class__.__name__} must implement format_step_name() to create "
+            f"concise, informative PyATS step names from extracted context."
+        )
 
     def format_step_description(self, context: dict[str, Any]) -> str:
         """Format detailed step description with key verification details.
@@ -1616,7 +1630,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             return f"Tenant: {context['tenant']}, L3Out: {context['l3out']}, Node: {context['node']}"
             return f"Tenant: {context['tenant']}, BD: {context['bd']}, Subnet: {context['subnet']}"
         """
-        raise NotImplementedError("Subclasses must implement format_step_description()")
+        raise NotImplementedError(
+            f"{self.__class__.__name__} must implement format_step_description() to create "
+            f"detailed step descriptions with key verification details."
+        )
 
     def process_results_with_steps(
         self, results: list[VerificationResult], steps: Any
@@ -1810,7 +1827,8 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             return f"RR {context['rr_node']} to Leaf {context['leaf_node']}"
         """
         raise NotImplementedError(
-            "Subclasses must implement build_item_identifier_from_context()"
+            f"{self.__class__.__name__} must implement build_item_identifier_from_context() "
+            f"to create concise identifiers for HTML reporting."
         )
 
     def set_step_status(self, step: Any, result: VerificationResult) -> None:
@@ -1960,15 +1978,12 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 }
             ]
 
-        # Validate that test implements verify_group()
-        if not hasattr(self, "verify_group"):
-            error_msg = (
-                f"{self.__class__.__name__} returned dict from get_items_to_verify() "
-                f"but does not implement verify_group(). For grouped verification, "
-                f"implement: async def verify_group(self, semaphore, client, group_key, contexts)"
-            )
-            self.logger.error(error_msg)
-            raise NotImplementedError(error_msg)
+        # Fail fast if the subclass hasn't overridden verify_group().
+        # This check runs before asyncio.gather() so the NotImplementedError
+        # propagates loudly instead of being silently caught by
+        # gather(return_exceptions=True) and demoted to a FAILED result.
+        if type(self).verify_group is NACTestBase.verify_group:
+            raise self._verify_group_not_implemented()
 
         # Set up concurrency control
         from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
@@ -2033,15 +2048,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Returns:
             list: List of individual item verification results
         """
-        # Validate that test implements verify_item()
-        if not hasattr(self, "verify_item"):
-            error_msg = (
-                f"{self.__class__.__name__} returned list from get_items_to_verify() "
-                f"but does not implement verify_item(). For item verification, "
-                f"implement: async def verify_item(self, semaphore, client, context)"
-            )
-            self.logger.error(error_msg)
-            raise NotImplementedError(error_msg)
+        # Fail fast if the subclass hasn't overridden verify_item().
+        # Same rationale as verify_group — see _run_grouped_verification().
+        if type(self).verify_item is NACTestBase.verify_item:
+            raise self._verify_item_not_implemented()
 
         # Set up concurrency control
         from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
@@ -2076,6 +2086,72 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 )
 
         return processed_results  # type: ignore[return-value]
+
+    def _verify_group_not_implemented(self) -> NotImplementedError:
+        """Build NotImplementedError for missing verify_group() override."""
+        return NotImplementedError(
+            f"{self.__class__.__name__} returned dict from get_items_to_verify() "
+            f"but does not implement verify_group(). For grouped verification, "
+            f"implement: async def verify_group(self, semaphore, client, group_key, contexts)"
+        )
+
+    def _verify_item_not_implemented(self) -> NotImplementedError:
+        """Build NotImplementedError for missing verify_item() override."""
+        return NotImplementedError(
+            f"{self.__class__.__name__} returned list from get_items_to_verify() "
+            f"but does not implement verify_item(). For item verification, "
+            f"implement: async def verify_item(self, semaphore, client, context)"
+        )
+
+    async def verify_group(
+        self,
+        semaphore: asyncio.Semaphore,
+        client: Any,
+        group_key: str,
+        contexts: list[dict[str, Any]],
+    ) -> list[VerificationResult]:
+        """Verify a group of items sharing one API call.
+
+        Subclasses that return a dict from get_items_to_verify() must override
+        this method to implement grouped verification logic.
+
+        Args:
+            semaphore: Concurrency-limiting semaphore.
+            client: HTTP client for API calls.
+            group_key: Key identifying this group.
+            contexts: List of context objects for items in this group.
+
+        Returns:
+            List of verification results for each item in the group.
+
+        Raises:
+            NotImplementedError: Always, unless overridden by a subclass.
+        """
+        raise self._verify_group_not_implemented()
+
+    async def verify_item(
+        self,
+        semaphore: asyncio.Semaphore,
+        client: Any,
+        context: dict[str, Any],
+    ) -> VerificationResult:
+        """Verify a single item with its own API call.
+
+        Subclasses that return a list from get_items_to_verify() must override
+        this method to implement item-level verification logic.
+
+        Args:
+            semaphore: Concurrency-limiting semaphore.
+            client: HTTP client for API calls.
+            context: Context object for the item to verify.
+
+        Returns:
+            Verification result for this item.
+
+        Raises:
+            NotImplementedError: Always, unless overridden by a subclass.
+        """
+        raise self._verify_item_not_implemented()
 
     def format_mismatch(
         self, attribute: str, expected: Any, actual: Any, context: dict[str, Any]
@@ -2407,11 +2483,17 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         # Add directly to collector - use reason as the complete message
         # This preserves test-provided messages without template wrapping
-        self.result_collector.add_result(
-            status_enum,
-            reason if reason else f"Test completed with status: {status}",
-            test_context=context.get("api_context"),
-        )
+        if self.result_collector is not None:
+            self.result_collector.add_result(
+                status_enum,
+                reason if reason else f"Test completed with status: {status}",
+                test_context=context.get("api_context"),
+            )
+        else:
+            self.logger.warning(
+                "result_collector is None — skipping step result: %s",
+                reason if reason else f"Test completed with status: {status}",
+            )
 
     @aetest.cleanup  # type: ignore[untyped-decorator]
     def cleanup(self) -> None:
@@ -2424,7 +2506,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         3. Saves collected results to JSON for report generation
         """
         # Clean up batching reporter if it was initialized
-        if hasattr(self, "batching_reporter") and self.batching_reporter:
+        if self.batching_reporter is not None:
             try:
                 # Flush any remaining messages
                 self.logger.debug("Shutting down batching reporter...")
@@ -2437,7 +2519,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 )
 
                 # Uninstall step interceptors
-                if hasattr(self, "step_interceptor") and self.step_interceptor:
+                if self.step_interceptor is not None:
                     self.step_interceptor.uninstall_interceptors()
 
                     # Clear global references
@@ -2449,10 +2531,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 # Don't fail the test due to cleanup issues
 
         # Report controller recovery statistics
-        if (
-            hasattr(self, "_controller_recovery_count")
-            and self._controller_recovery_count > 0
-        ):
+        if self._controller_recovery_count > 0:
             self.logger.warning(
                 f"📊 CONTROLLER RECOVERY SUMMARY: {self._controller_recovery_count} recovery event{'s' if self._controller_recovery_count > 1 else ''} "
                 f"during test execution (total downtime: ~{self._total_recovery_downtime:.1f}s)"
@@ -2466,7 +2545,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             # - Network reliability metrics for reporting
             # Currently commented out - needs testing to ensure proper integration with report generation
             #
-            # if hasattr(self, "result_collector"):
+            # if self.result_collector is not None:
             #     from nac_test.pyats_core.reporting.types import ResultStatus
             #     self.result_collector.add_result(
             #         ResultStatus.INFO,
@@ -2475,7 +2554,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             #     )
 
         # Save test results for HTML report generation
-        if hasattr(self, "result_collector"):
+        if self.result_collector is not None:
             try:
                 output_file = self.result_collector.save_to_file()
                 self.logger.debug(f"Saved test results to: {output_file}")

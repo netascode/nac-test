@@ -46,6 +46,15 @@ CONSOLE_TIME_FORMAT: str = "%H:%M:%S"
 ROBOT_TIMESTAMP_FORMAT: str = "%Y%m%d %H:%M:%S.%f"
 ROBOT_TIMESTAMP_FORMAT_NO_MS: str = "%Y%m%d %H:%M:%S"
 
+# Exit codes
+# Note: EXIT_SUCCESS (0) is intentionally not defined here - zero is a universal
+# POSIX convention that never changes, so a named constant adds no clarity.
+EXIT_INVALID_ARGS = 2  # Invalid nac-test arguments (aligns with POSIX/Typer convention)
+EXIT_FAILURE_CAP = 250  # Maximum failure count reported (1-250)
+EXIT_DATA_ERROR = 252  # Invalid Robot Framework arguments OR no tests found (matches Robot Framework naming)
+EXIT_INTERRUPTED = 253  # Execution was interrupted (Ctrl+C, etc.)
+EXIT_ERROR = 255  # Infrastructure/execution errors occurred
+
 # Output directory structure - single source of truth for directory layout
 # These define the standardized paths for test results and reports
 PYATS_RESULTS_DIRNAME = "pyats_results"
@@ -53,6 +62,10 @@ ROBOT_RESULTS_DIRNAME = "robot_results"
 HTML_REPORTS_DIRNAME = "html_reports"
 SUMMARY_REPORT_FILENAME = "summary_report.html"
 COMBINED_SUMMARY_FILENAME = "combined_summary.html"
+OUTPUT_XML = "output.xml"
+LOG_HTML = "log.html"
+REPORT_HTML = "report.html"
+XUNIT_XML = "xunit.xml"
 
 # HTTP status code range boundaries
 HTTP_STATUS_SUCCESS_MIN: int = 200

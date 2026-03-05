@@ -715,6 +715,44 @@ The CLI (`cli/main.py`) is nac-test's **user-facing gateway**, providing a type-
 
 ---
 
+#### CLI Exit Code Strategy
+
+nac-test implements graduated exit codes following Robot Framework conventions to provide meaningful feedback for CI/CD systems:
+
+**Exit Code Semantics:**
+
+| Exit Code | Meaning | Usage in nac-test |
+|-----------|---------|-------------------|
+| **0** | Success | All tests passed across all frameworks |
+| **1-250** | Test failures | Exact count of failed tests (capped at 250) |
+| **252** | Invalid arguments or no tests | Robot Framework argument errors or no tests found |
+| **253** | Execution interrupted | Test execution was interrupted (Ctrl+C, etc.) |
+| **255** | Infrastructure errors | Framework crashes, controller auth failures, etc. |
+
+**Implementation Details:**
+
+- **CombinedResults.exit_code**: Aggregated exit code across all frameworks (single source of truth)
+- **Priority Order**: Infrastructure errors (255) > Invalid arguments (252) > Test failures (1-250) > Success (0)
+- **Failure Aggregation**: Sums failures across all frameworks, capped at 250 per Robot Framework spec
+- **Special Cases**:
+  - Intentionally skipped execution (render-only mode) returns 0
+  - Empty results (no tests found) returns 252
+
+**CI/CD Integration Benefits:**
+
+```bash
+# Distinguish between test failures and infrastructure issues
+nac-test -d config/ -t templates/ -o output/
+case $? in
+  0) echo "✅ All tests passed" ;;
+  [1-9]|[1-9][0-9]|[12][0-4][0-9]|250) echo "❌ $? test(s) failed" ;;
+  252) echo "⚠️ No tests found or invalid arguments" ;;
+  255) echo "💥 Infrastructure error" ;;
+esac
+```
+
+---
+
 #### Complete CLI Flag Reference
 
 nac-test provides 13 CLI flags covering data input, template configuration, execution control, output management, and development modes.
@@ -3358,7 +3396,15 @@ devices:
         protocol: ssh
         ip: {host}
         port: 22
+        settings:
+          GRACEFUL_DISCONNECT_WAIT_SEC: 0
+          POST_DISCONNECT_WAIT_SEC: 0
 ```
+
+**Performance Note (Disconnect Cooldown):**
+
+- Generated testbeds now include `GRACEFUL_DISCONNECT_WAIT_SEC: 0` and `POST_DISCONNECT_WAIT_SEC: 0` for **all** connections (including `command`-based) to skip Unicon's default 1s/10s disconnect cooldowns.
+- This reduces overall test runtime by **~11 seconds per device disconnect**, which scales linearly with device count and disconnect frequency when using the connection broker.
 
 #### Progress Module (`pyats_core/progress/`)
 
@@ -3564,21 +3610,24 @@ nac_test/
 ```
 {output_dir}/
 ├── combined_summary.html                  # Root-level combined dashboard ✨
+├── xunit.xml                              # Merged xUnit XML (Robot + PyATS) ✨
 ├── robot_results/                         # Robot Framework results
 │   ├── output.xml                        # Robot results XML
 │   ├── log.html                          # Robot log
 │   ├── report.html                       # Robot report
-│   ├── xunit.xml                         # Robot xUnit XML
+│   ├── xunit.xml                         # Robot xUnit XML (source)
 │   └── summary_report.html               # Robot summary (PyATS style)
 ├── output.xml → robot_results/output.xml  # Backward-compat symlink
 ├── log.html → robot_results/log.html      # Backward-compat symlink
 ├── report.html → robot_results/report.html # Backward-compat symlink
-├── xunit.xml → robot_results/xunit.xml    # Backward-compat symlink
 └── pyats_results/                         # PyATS results
     ├── api/
+    │   ├── xunit.xml                     # PyATS API xUnit XML (source)
     │   └── html_reports/
     │       └── summary_report.html        # API summary with breadcrumb
     └── d2d/
+        ├── <device>/
+        │   └── xunit.xml                 # PyATS D2D xUnit XML per device (source)
         └── html_reports/
             └── summary_report.html        # D2D summary with breadcrumb
 ```
@@ -3847,7 +3896,8 @@ Robot results are output to `robot_results/` subdirectory, with symlinks at root
 - `output.xml` → `robot_results/output.xml`
 - `log.html` → `robot_results/log.html`
 - `report.html` → `robot_results/report.html`
-- `xunit.xml` → `robot_results/xunit.xml`
+
+The root-level `xunit.xml` is a **merged file** (not a symlink) containing combined results from Robot Framework and PyATS. See [XUnit Merger](#xunit-merger) for details.
 
 This ensures existing tools and scripts that expect Robot files at root continue to work.
 
@@ -3862,6 +3912,55 @@ All framework-specific summary reports include breadcrumb navigation:
 ```
 
 This allows users to easily navigate from any report back to the unified dashboard.
+
+#### XUnit Merger
+
+The xunit merger (`utils/xunit_merger.py`) combines xunit.xml files from Robot Framework and PyATS into a single file for CI/CD integration (Jenkins, GitLab).
+
+**Source Files:**
+
+- `robot_results/xunit.xml` - Robot Framework results
+- `pyats_results/api/xunit.xml` - PyATS API test results
+- `pyats_results/d2d/<device>/xunit.xml` - PyATS D2D results per device
+
+**Output:**
+
+- `{output_dir}/xunit.xml` - Merged file at root
+
+**Merge Behavior:**
+
+- Preserves full testsuite hierarchy (Robot's nested testsuites remain nested)
+- Prefixes outermost testsuite `name` attribute with source identifier (`robot: `, `pyats_api: `, `pyats_d2d/<device>: `)
+- Test case names remain unchanged
+- Aggregates statistics (tests, failures, errors, skipped, time) into root `<testsuites>` element
+
+**Example Output:**
+
+```xml
+<?xml version='1.0' encoding='unicode'?>
+<testsuites tests="150" failures="2" errors="0" skipped="5" time="245.123">
+  <testsuite name="robot: Nac-Test" tests="100" ...>
+    <testsuite name="Verify Fabric">...</testsuite>
+  </testsuite>
+  <testsuite name="pyats_api: api_tests" tests="30" ...>
+    <testcase name="verify_tenant_config" .../>
+  </testsuite>
+  <testsuite name="pyats_d2d/switch-01: d2d_tests" tests="20" ...>
+    <testcase name="verify_interface_status" .../>
+  </testsuite>
+</testsuites>
+```
+
+**Integration:**
+
+Called by `CombinedOrchestrator` after test execution completes:
+
+```python
+from nac_test.utils.xunit_merger import merge_xunit_results
+
+# After PyATS and Robot execution
+merge_xunit_results(output_dir)  # Creates {output_dir}/xunit.xml
+```
 
 ---
 
