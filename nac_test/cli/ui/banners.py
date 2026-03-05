@@ -291,10 +291,10 @@ def display_unreachable_banner(
     )
     content_lines = [
         "",
-        f"Could not connect to {display_name} at {controller_url}",
+        *_wrap_url_lines(f"Could not connect to {display_name} at", controller_url),
         "",
         "Verify the controller is reachable and the URL is correct:",
-        f"  curl -k {controller_url}",
+        *_wrap_url_lines("curl -k", controller_url, indent="  "),
         f"  ping {host}",
         "",
     ]
