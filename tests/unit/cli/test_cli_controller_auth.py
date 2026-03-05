@@ -274,7 +274,7 @@ class TestPreflightCacheInvalidation:
                 side_effect=mock_invalidate,
             ) as patched_invalidate,
         ):
-            result = preflight_auth_check(controller_type)
+            result = preflight_auth_check(controller_type)  # type: ignore[arg-type]
 
         assert result.success is True
         patched_invalidate.assert_called_once_with(
