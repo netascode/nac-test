@@ -25,40 +25,8 @@ from nac_test.pyats_core.common.defaults_resolver import (
 )
 
 # =============================================================================
-# Fixtures
+# Fixtures (apic_data_model and sdwan_data_model are in conftest.py)
 # =============================================================================
-
-
-@pytest.fixture
-def apic_data_model() -> dict[str, Any]:
-    """Sample APIC data model with defaults block."""
-    return {
-        "defaults": {
-            "apic": {
-                "tenants": {
-                    "l3outs": {
-                        "nodes": {"pod": 1},
-                        "bgp_peers": {"admin_state": "enabled"},
-                    }
-                },
-                "fabric": {"name": "test-fabric"},
-            }
-        }
-    }
-
-
-@pytest.fixture
-def sdwan_data_model() -> dict[str, Any]:
-    """Sample SD-WAN data model with defaults block."""
-    return {
-        "defaults": {
-            "sdwan": {
-                "global": {"timeout": 30, "retry_count": 3},
-                "device": {"os": "iosxe", "connection_timeout": 60},
-                "features": {"bgp": {"enabled": True}, "ospf": {"area": 0}},
-            }
-        }
-    }
 
 
 @pytest.fixture
