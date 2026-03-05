@@ -29,9 +29,18 @@ class SSHTestBase(NACTestBase):
     """
 
     # Instance variables set during setup (type annotations for mypy)
+    # Optional attributes (may be None before setup completes or if setup fails)
     connection: BrokerCommandExecutor | Any | None = (
         None  # BrokerCommandExecutor or testbed device
     )
+    hostname: str | None = None
+    device_info: dict[str, Any] | None = None
+    device_data: dict[str, Any] | None = None
+    command_cache: CommandCache | None = None
+    execute_command: Callable[[str], Coroutine[Any, Any, str]] | None = None
+
+    # Required attribute — always assigned in setup() before any test method runs.
+    # Intentionally non-optional: accessing before setup() is a programming error.
     broker_client: BrokerClient
 
     @property
@@ -46,16 +55,16 @@ class SSHTestBase(NACTestBase):
             The PyATS testbed object if available, None otherwise.
         """
         # In PyATS aetest, testbed is passed as an internal parameter
-        if hasattr(self, "parameters"):
-            # Check internal parameters (where PyATS stores testbed)
-            if (
-                hasattr(self.parameters, "internal")
-                and "testbed" in self.parameters.internal
-            ):
-                return self.parameters.internal["testbed"]
-            # Fallback to regular parameters
-            if "testbed" in self.parameters:
-                return self.parameters["testbed"]
+        # self.parameters is always available (PyATS property on TestItem)
+        # Check internal parameters (where PyATS stores testbed)
+        if (
+            hasattr(self.parameters, "internal")
+            and "testbed" in self.parameters.internal
+        ):
+            return self.parameters.internal["testbed"]
+        # Fallback to regular parameters
+        if "testbed" in self.parameters:
+            return self.parameters["testbed"]
         return None
 
     @property
@@ -68,7 +77,7 @@ class SSHTestBase(NACTestBase):
         Returns:
             The device object from the testbed if available, None otherwise.
         """
-        if self.testbed and hasattr(self, "hostname"):
+        if self.testbed and self.hostname is not None:
             # Look up device by hostname in the testbed
             if self.hostname in self.testbed.devices:
                 return self.testbed.devices[self.hostname]
@@ -142,6 +151,8 @@ class SSHTestBase(NACTestBase):
 
         # The BrokerClient communicates with the centralized connection broker
         # We'll attach it to the runtime object for the test's duration
+        # NOTE: hasattr is correct here — self.parent is a PyATS TestItem
+        # (external framework object) with no guaranteed attribute schema.
         if not hasattr(self.parent, "broker_client"):
             self.parent.broker_client = BrokerClient()
         self.broker_client = self.parent.broker_client
@@ -160,9 +171,7 @@ class SSHTestBase(NACTestBase):
 
         # Add hostname to metadata as a separate field for d2d tests
         # Do this BEFORE connection attempt so it's set even if connection fails
-        if hasattr(self, "result_collector") and hasattr(
-            self.result_collector, "metadata"
-        ):
+        if self.result_collector is not None:
             self.result_collector.metadata["hostname"] = hostname
 
         # The rest of the setup is async, we'll run it in the event loop
@@ -331,18 +340,22 @@ class SSHTestBase(NACTestBase):
             command: The command that was executed
             output: The command output
         """
-        if not hasattr(self, "result_collector"):
-            # Safety check - collector might not be initialized in some edge cases
+        if self.result_collector is None or self.device_info is None:
+            # Safety check - collector/device_info might not be initialized in some edge cases
             return
 
         try:
             # Get device name from device info
-            device_name = self.device_info.get(
-                "hostname", self.device_info.get("host", "Unknown Device")
+            _fallback = "Unknown Device"
+            device_name: str = (
+                self.device_info.get(
+                    "hostname", self.device_info.get("host", _fallback)
+                )
+                or _fallback
             )
 
             # Get current test context if available (set by base class methods)
-            test_context = getattr(self, "_current_test_context", None)
+            test_context = self._current_test_context
 
             # Track the command execution using the base class's result collector
             self.result_collector.add_command_api_execution(
