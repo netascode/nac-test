@@ -29,7 +29,6 @@ from pyats import aetest
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
 from nac_test.core.constants import (
     FILE_TIMESTAMP_FORMAT,
-    FILE_TIMESTAMP_MS_FORMAT,
     PYATS_RESULTS_DIRNAME,
 )
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
@@ -44,6 +43,7 @@ from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.utils.controller import detect_controller_type
+from nac_test.utils.formatting import format_file_timestamp_ms
 
 T = TypeVar("T")
 
@@ -773,9 +773,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             - API tests: classname_YYYYMMDD_HHMMSS_mmm
         """
         class_name = self.__class__.__name__.lower()
-        timestamp = datetime.now().strftime(FILE_TIMESTAMP_MS_FORMAT)[
-            :-3
-        ]  # Millisecond precision
+        timestamp = format_file_timestamp_ms()
 
         # For D2D tests, include hostname in test_id for clearer filenames
         # The HOSTNAME environment variable is set by device_executor for d2d tests
