@@ -19,6 +19,7 @@ from nac_test.cli.validators.controller_auth import (
     _get_controller_url,
     preflight_auth_check,
 )
+from nac_test.core.error_classification import extract_http_status_code
 
 
 class TestControllerRegistry:
@@ -344,3 +345,30 @@ class TestPreflightAuthCheck:
 
         assert result.success is True
         assert "skipped" in result.detail.lower()
+
+
+class TestExtractHttpStatusCode:
+    """Tests for extract_http_status_code utility function."""
+
+    def test_extracts_401(self) -> None:
+        """Extracts 401 from an HTTP error message."""
+        assert extract_http_status_code(Exception("HTTP 401: Unauthorized")) == 401
+
+    def test_extracts_403(self) -> None:
+        """Extracts 403 from an HTTP error message."""
+        assert extract_http_status_code(Exception("HTTP 403: Forbidden")) == 403
+
+    def test_extracts_500(self) -> None:
+        """Extracts 500 from a server error message."""
+        assert (
+            extract_http_status_code(Exception("HTTP 500: Internal Server Error"))
+            == 500
+        )
+
+    def test_returns_none_for_no_status_code(self) -> None:
+        """Returns None when no HTTP status code is present."""
+        assert extract_http_status_code(Exception("Connection timed out")) is None
+
+    def test_returns_none_for_non_http_message(self) -> None:
+        """Returns None for generic error messages."""
+        assert extract_http_status_code(Exception("Something went wrong")) is None
