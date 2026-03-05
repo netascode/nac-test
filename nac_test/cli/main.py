@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
+
+"""CLI entry point for nac-test."""
+
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -34,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 def version_callback(value: bool) -> None:
+    """Print version and exit when --version is passed."""
     if value:
         typer.echo(f"nac-test, version {nac_test.__version__}")
         raise typer.Exit()
