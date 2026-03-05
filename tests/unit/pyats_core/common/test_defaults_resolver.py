@@ -851,3 +851,28 @@ class TestEdgeCases:
         )
 
         assert apic_data_model == original
+
+    def test_empty_string_path_raises_jmespath_error(self) -> None:
+        """Empty string path produces a malformed JMESPath and raises ParseError.
+
+        When an empty string "" is passed as a default_path, the full
+        JMESPath expression becomes "defaults.apic." (trailing dot),
+        which is syntactically invalid. JMESPath raises a ParseError.
+
+        This test documents the behavior so callers know that passing
+        an empty path is not silently treated as "root lookup" — it is
+        a hard error, which is the correct behavior since an empty path
+        is almost certainly a bug at the call site.
+        """
+        import jmespath.exceptions
+
+        data_model: dict[str, Any] = {"defaults": {"apic": {"key": "value"}}}
+
+        # Empty path becomes "defaults.apic." which is invalid JMESPath
+        with pytest.raises(jmespath.exceptions.ParseError):
+            get_default_value(
+                data_model,
+                "",
+                defaults_prefix="defaults.apic",
+                missing_error="APIC defaults missing.",
+            )
