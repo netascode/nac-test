@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated
 
 import errorhandler
 import typer
@@ -23,7 +23,7 @@ from nac_test.cli.validators import (
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import CONSOLE_TIME_FORMAT, DEBUG_MODE
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
-from nac_test.core.types import CombinedResults, ControllerTypeKey, PreFlightFailure
+from nac_test.core.types import CombinedResults, PreFlightFailure
 from nac_test.data_merger import DataMerger
 from nac_test.utils.controller import detect_controller_type, get_env_var_prefix
 from nac_test.utils.formatting import format_duration
@@ -328,7 +328,7 @@ def main(
     # Detect controller type from environment variables
     # This is used for pre-flight auth check and passed to orchestrator
     try:
-        controller_type = cast(ControllerTypeKey, detect_controller_type())
+        controller_type = detect_controller_type()
     except ValueError as e:
         # No credentials or multiple credentials configured
         typer.echo(
