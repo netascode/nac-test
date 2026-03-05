@@ -22,7 +22,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from nac_test.core.error_classification import AuthOutcome, _classify_auth_error
+from nac_test.core.error_classification import (
+    AuthOutcome,
+    _classify_auth_error,
+    extract_http_status_code,
+)
 from nac_test.core.types import ControllerTypeKey
 from nac_test.pyats_core.common.auth_cache import AuthCache
 
@@ -194,6 +198,7 @@ def preflight_auth_check(controller_type: ControllerTypeKey) -> AuthCheckResult:
     except Exception as e:
         # Authentication failed - classify the error
         reason, detail = _classify_auth_error(e)
+        status_code = extract_http_status_code(e)
         logger.debug(
             "Pre-flight auth check failed for %s: %s (%s)",
             display_name,
@@ -206,4 +211,5 @@ def preflight_auth_check(controller_type: ControllerTypeKey) -> AuthCheckResult:
             controller_type=controller_type,
             controller_url=controller_url,
             detail=detail,
+            status_code=status_code,
         )
