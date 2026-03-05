@@ -28,6 +28,9 @@ from pyats import aetest
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
 from nac_test.core.constants import PYATS_RESULTS_DIRNAME
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
+from nac_test.pyats_core.common.defaults_resolver import (
+    get_default_value as _resolve,
+)
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
 from nac_test.pyats_core.common.types import (
     ApiDetails,
@@ -868,10 +871,6 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 f"{self.__class__.__name__} does not support defaults resolution. "
                 f"Set DEFAULTS_PREFIX class attribute to enable this feature."
             )
-
-        from nac_test.pyats_core.common.defaults_resolver import (
-            get_default_value as _resolve,
-        )
 
         return _resolve(
             self.data_model,
