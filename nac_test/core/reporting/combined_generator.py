@@ -23,7 +23,7 @@ from nac_test.core.constants import (
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
-from nac_test.core.types import CombinedResults, PreFlightFailure
+from nac_test.core.types import CombinedResults, ControllerTypeKey, PreFlightFailure
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
 from nac_test.utils.controller import get_display_name, get_env_var_prefix
 from nac_test.utils.url import extract_host
@@ -60,7 +60,7 @@ class _CurlTemplate(NamedTuple):
 
 
 # Curl command templates for manual auth testing, keyed by controller type.
-_CURL_TEMPLATES: dict[str, _CurlTemplate] = {
+_CURL_TEMPLATES: dict[ControllerTypeKey, _CurlTemplate] = {
     "ACI": _CurlTemplate(
         endpoint="/api/aaaLogin.json",
         options='-X POST -H "Content-Type: application/json" \\\n'
@@ -77,7 +77,7 @@ _CURL_TEMPLATES: dict[str, _CurlTemplate] = {
 }
 
 
-def _get_curl_example(controller_type: str, controller_url: str) -> str:
+def _get_curl_example(controller_type: ControllerTypeKey, controller_url: str) -> str:
     """Generate a curl command example for manual auth testing.
 
     Args:
