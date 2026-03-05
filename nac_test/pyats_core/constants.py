@@ -27,24 +27,24 @@ from nac_test.core.constants import (
 )
 
 # PyATS-specific worker calculation constants
-MIN_WORKERS = 2
-MAX_WORKERS = 32
-MAX_WORKERS_HARD_LIMIT = 50
-MEMORY_PER_WORKER_GB = 0.35
-DEFAULT_CPU_MULTIPLIER = 2
-LOAD_AVERAGE_THRESHOLD = 0.8
+MIN_WORKERS: int = 2
+MAX_WORKERS: int = 32
+MAX_WORKERS_HARD_LIMIT: int = 50
+MEMORY_PER_WORKER_GB: float = 0.35
+DEFAULT_CPU_MULTIPLIER: int = 2
+LOAD_AVERAGE_THRESHOLD: float = 0.8
 
 # PyATS-specific file paths
-AUTH_CACHE_DIR = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
+AUTH_CACHE_DIR: str = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
 
 # pushed to pyats device connection settings to speed up disconnects (default is 10s/1s)
 PYATS_POST_DISCONNECT_WAIT_SECONDS: int = 0
 PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS: int = 0
 
 # Multi-job execution configuration (to avoid reporter crashes)
-TESTS_PER_JOB = 15  # Reduced from 20 for safety margin - each test ~1500 steps
-MAX_PARALLEL_JOBS = 2  # Conservative parallelism to avoid resource exhaustion
-JOB_RETRY_ATTEMPTS = 1  # Retry failed jobs once
+TESTS_PER_JOB: int = 15  # Reduced from 20 for safety margin - each test ~1500 steps
+MAX_PARALLEL_JOBS: int = 2  # Conservative parallelism to avoid resource exhaustion
+JOB_RETRY_ATTEMPTS: int = 1  # Retry failed jobs once
 
 
 # NOTE: The following environment variables remain as undocumented internal tuning
