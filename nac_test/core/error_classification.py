@@ -113,3 +113,21 @@ def _classify_auth_error(error: Exception) -> tuple[AuthOutcome, str]:
 
     # Unknown error pattern
     return AuthOutcome.UNEXPECTED_ERROR, error_msg
+
+
+def extract_http_status_code(error: Exception) -> int | None:
+    """Extract the HTTP status code from an exception message, if present.
+
+    Uses the same regex pattern as ``_classify_auth_error`` to reliably
+    extract 3-digit HTTP status codes from error messages.
+
+    Args:
+        error: The exception to inspect.
+
+    Returns:
+        The HTTP status code as an integer, or None if no code is found.
+    """
+    status_match = _HTTP_STATUS_CODE_PATTERN.search(str(error))
+    if status_match:
+        return int(status_match.group(1))
+    return None
