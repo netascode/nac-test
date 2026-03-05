@@ -11,7 +11,6 @@ import typer
 
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
-    EXIT_ERROR,
     HTML_REPORTS_DIRNAME,
     PYATS_RESULTS_DIRNAME,
     ROBOT_RESULTS_DIRNAME,
@@ -118,21 +117,6 @@ class CombinedOrchestrator:
         self.dev_pyats_only = dev_pyats_only
         self.dev_robot_only = dev_robot_only
 
-        # Detect controller type early (unless we are in render-only mode, which doesn't require controller access)
-        self.controller_type: str | None = None
-        if not self.render_only:
-            try:
-                self.controller_type = detect_controller_type()
-                logger.info(f"Controller type detected: {self.controller_type}")
-            except ValueError as e:
-                # Exit gracefully if controller detection fails
-                typer.secho(
-                    f"\n❌ Controller detection failed:\n{e}",
-                    fg=typer.colors.RED,
-                    err=True,
-                )
-                raise typer.Exit(EXIT_ERROR) from None
-
     def run_tests(self) -> CombinedResults:
         """Main entry point for combined test execution.
 
@@ -179,25 +163,53 @@ class CombinedOrchestrator:
 
         if has_pyats and not self.render_only:
             typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
-            self._check_python_version()
 
-            pyats_orchestrator = PyATSOrchestrator(
-                data_paths=self.data_paths,
-                test_dir=self.templates_dir,
-                output_dir=self.output_dir,
-                merged_data_filename=self.merged_data_filename,
-                minimal_reports=self.minimal_reports,
-                custom_testbed_path=self.custom_testbed_path,
-                controller_type=self.controller_type,
-                dry_run=self.dry_run,
-            )
-            if self.max_parallel_devices is not None:
-                pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
+            # Controller detection: required for actual test execution, skip for dry-run
+            controller_type: str | None = None
+            controller_error = False
 
-            # PyATS returns PyATSResults with .api and .d2d attributes
-            pyats_results = pyats_orchestrator.run_tests()
-            combined_results.api = pyats_results.api
-            combined_results.d2d = pyats_results.d2d
+            if not self.dry_run:
+                try:
+                    controller_type = detect_controller_type()
+                    logger.info(f"Controller type detected: {controller_type}")
+                except ValueError as e:
+                    typer.secho(
+                        f"\n❌ Controller detection failed:\n{e}",
+                        fg=typer.colors.RED,
+                        err=True,
+                    )
+                    controller_error = True
+                    # We favour early detection over accurate failure stats for this use case.
+                    # Setting error on both api and d2d may be inaccurate (e.g., if only API
+                    # tests exist), but catching credential issues early is more valuable than
+                    # precise per-type error attribution.
+                    combined_results.api = TestResults.from_error(
+                        "Controller detection failed"
+                    )
+                    combined_results.d2d = TestResults.from_error(
+                        "Controller detection failed"
+                    )
+
+            if not controller_error:
+                self._check_python_version()
+
+                pyats_orchestrator = PyATSOrchestrator(
+                    data_paths=self.data_paths,
+                    test_dir=self.templates_dir,
+                    output_dir=self.output_dir,
+                    merged_data_filename=self.merged_data_filename,
+                    minimal_reports=self.minimal_reports,
+                    custom_testbed_path=self.custom_testbed_path,
+                    controller_type=controller_type,
+                    dry_run=self.dry_run,
+                )
+                if self.max_parallel_devices is not None:
+                    pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
+
+                # PyATS returns PyATSResults with .api and .d2d attributes
+                pyats_results = pyats_orchestrator.run_tests()
+                combined_results.api = pyats_results.api
+                combined_results.d2d = pyats_results.d2d
 
         if has_robot:
             typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")

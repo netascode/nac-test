@@ -19,21 +19,6 @@ from nac_test.core.constants import EXIT_DATA_ERROR
 pytestmark = pytest.mark.integration
 
 
-@pytest.fixture(scope="function", autouse=True)
-def setup_bogus_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set up environment variables for a bogus ACI controller.
-
-    Uses monkeypatch for safe, automatic cleanup that preserves
-    original environment state even if tests fail.
-
-    Args:
-        monkeypatch: Pytest monkeypatch fixture for safe environment manipulation.
-    """
-    monkeypatch.setenv("ACI_URL", "foo")
-    monkeypatch.setenv("ACI_USERNAME", "foo")
-    monkeypatch.setenv("ACI_PASSWORD", "foo")
-
-
 def test_extra_args_with_valid_variable_and_separator_succeeds(tmp_path: Path) -> None:
     """Test that valid Robot Framework variables with -- separator succeed.
 

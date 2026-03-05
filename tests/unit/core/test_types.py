@@ -290,7 +290,9 @@ class TestCombinedResultsAggregation:
             d2d=TestResults(passed=5),  # no error
             robot=TestResults.from_error("Robot error"),
         )
-        assert result.errors == ["API error", "Robot error"]
+        assert len(result.errors) == 2
+        assert "API error" in result.errors
+        assert "Robot error" in result.errors
 
     def test_errors_includes_not_run_reason(self) -> None:
         """errors includes reason from not_run() results."""
@@ -299,6 +301,14 @@ class TestCombinedResultsAggregation:
             robot=TestResults.not_run("render-only mode"),
         )
         assert result.errors == ["render-only mode"]
+
+    def test_errors_deduplicates_identical_reasons(self) -> None:
+        """errors removes duplicate reasons."""
+        result = CombinedResults(
+            api=TestResults.from_error("Controller detection failed"),
+            d2d=TestResults.from_error("Controller detection failed"),
+        )
+        assert result.errors == ["Controller detection failed"]
 
 
 class TestCombinedResultsSuccessRate:

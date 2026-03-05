@@ -17,9 +17,16 @@ from .conftest import PyATSTestDirs
 class TestOrchestratorDryRun:
     """Tests for PyATSOrchestrator dry_run parameter and behavior."""
 
+    @pytest.fixture(autouse=True)
+    def _clean_env(self, clean_controller_env: None) -> None:
+        """Apply shared clean_controller_env fixture to all tests in this class.
+
+        Dry-run mode does not require controller credentials, so we ensure
+        tests run with a clean environment to verify this behavior.
+        """
+
     def test_dry_run_prints_summary_and_skips_execution(
         self,
-        aci_controller_env: None,
         pyats_test_dirs: PyATSTestDirs,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -46,7 +53,6 @@ class TestOrchestratorDryRun:
             patch.object(
                 orchestrator.test_discovery, "categorize_tests_by_type"
             ) as mock_categorize,
-            patch.object(orchestrator, "validate_environment"),
         ):
             mock_discover.return_value = (mock_api_tests, [])
             mock_categorize.return_value = (mock_api_tests, mock_d2d_tests)
@@ -64,7 +70,7 @@ class TestOrchestratorDryRun:
         assert result.d2d is None  # No D2D tests
 
     def test_dry_run_returns_not_run_results_for_api_and_d2d(
-        self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
+        self, pyats_test_dirs: PyATSTestDirs
     ) -> None:
         """Test that dry_run returns not_run results for both API and D2D tests."""
         d2d_dir = pyats_test_dirs.test_dir / "d2d"
@@ -91,7 +97,6 @@ class TestOrchestratorDryRun:
             patch.object(
                 orchestrator.test_discovery, "categorize_tests_by_type"
             ) as mock_categorize,
-            patch.object(orchestrator, "validate_environment"),
         ):
             mock_discover.return_value = ([api_test, d2d_test], [])
             mock_categorize.return_value = ([api_test], [d2d_test])
@@ -104,7 +109,7 @@ class TestOrchestratorDryRun:
         assert result.d2d.reason == DRY_RUN_REASON
 
     def test_dry_run_does_not_execute_tests(
-        self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
+        self, pyats_test_dirs: PyATSTestDirs
     ) -> None:
         """Test that dry_run mode does not execute tests."""
         api_test = pyats_test_dirs.test_dir / "test_api.py"
@@ -125,7 +130,6 @@ class TestOrchestratorDryRun:
             patch.object(
                 orchestrator.test_discovery, "categorize_tests_by_type"
             ) as mock_categorize,
-            patch.object(orchestrator, "validate_environment"),
             patch.object(orchestrator, "_execute_api_tests_standard") as mock_execute,
         ):
             mock_discover.return_value = ([api_test], [])
@@ -136,7 +140,6 @@ class TestOrchestratorDryRun:
 
     def test_dry_run_empty_test_lists(
         self,
-        aci_controller_env: None,
         pyats_test_dirs: PyATSTestDirs,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -149,12 +152,9 @@ class TestOrchestratorDryRun:
             dry_run=True,
         )
 
-        with (
-            patch.object(
-                orchestrator.test_discovery, "discover_pyats_tests"
-            ) as mock_discover,
-            patch.object(orchestrator, "validate_environment"),
-        ):
+        with patch.object(
+            orchestrator.test_discovery, "discover_pyats_tests"
+        ) as mock_discover:
             mock_discover.return_value = ([], [])
             result = orchestrator.run_tests()
 

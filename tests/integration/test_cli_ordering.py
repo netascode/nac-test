@@ -38,21 +38,6 @@ def temp_cwd_dir() -> Generator[str, None, None]:
         shutil.rmtree(temp_dir)
 
 
-@pytest.fixture(scope="function", autouse=True)
-def setup_bogus_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set up environment variables for a bogus ACI controller.
-
-    Uses monkeypatch for safe, automatic cleanup that preserves
-    original environment state even if tests fail.
-
-    Args:
-        monkeypatch: Pytest monkeypatch fixture for safe environment manipulation.
-    """
-    monkeypatch.setenv("ACI_URL", "foo")
-    monkeypatch.setenv("ACI_USERNAME", "foo")
-    monkeypatch.setenv("ACI_PASSWORD", "foo")
-
-
 @pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_cwd_dir"])
 def test_ordering_file_contains_concurrent_tests_and_non_concurrent_suites(
     request: pytest.FixtureRequest, fixture_name: str

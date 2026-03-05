@@ -4,74 +4,17 @@
 """Environment variable utilities for nac-test framework."""
 
 import os
-import sys
-from collections.abc import Callable
 
-from nac_test.core.constants import EXIT_ERROR
+from nac_test.utils.controller import CREDENTIAL_PATTERNS
 from nac_test.utils.terminal import terminal
 
 
 class EnvironmentValidator:
-    """Generic environment variable validation utilities."""
+    """Environment variable validation utilities.
 
-    @staticmethod
-    def check_required_vars(
-        required_vars: list[str],
-        exit_on_missing: bool = True,
-        custom_formatter: Callable[[list[str]], str] | None = None,
-    ) -> list[str]:
-        """Check for required environment variables.
-
-        Args:
-            required_vars: List of required environment variable names
-            exit_on_missing: Whether to exit if variables are missing
-            custom_formatter: Optional custom error formatter function
-
-        Returns:
-            List of missing variable names (empty if all present)
-
-        Raises:
-            SystemExit: If exit_on_missing is True and variables are missing
-        """
-        missing = [var for var in required_vars if not os.environ.get(var)]
-
-        if missing and exit_on_missing:
-            # Use custom formatter or default
-            if custom_formatter:
-                error_msg = custom_formatter(missing)
-            else:
-                error_msg = EnvironmentValidator.format_missing_vars_error(missing)
-
-            print(error_msg)
-            sys.exit(EXIT_ERROR)
-
-        return missing
-
-    @staticmethod
-    def format_missing_vars_error(missing_vars: list[str]) -> str:
-        """Format a generic error message for missing environment variables.
-
-        Args:
-            missing_vars: List of missing environment variable names
-
-        Returns:
-            Formatted error message
-        """
-        lines = []
-        lines.append(terminal.header("ERROR: Missing environment variable(s)"))
-        lines.append("")
-
-        for var in missing_vars:
-            lines.append(f"  • {terminal.error(var)}")
-
-        lines.append("")
-        lines.append(
-            terminal.info(
-                "Please set the required environment variables before running."
-            )
-        )
-
-        return "\n".join(lines)
+    Provides methods for validating and retrieving environment variables,
+    including controller-specific credential validation.
+    """
 
     @staticmethod
     def get_with_default(var_name: str, default: str) -> str:
@@ -119,27 +62,52 @@ class EnvironmentValidator:
             return default
 
     @staticmethod
-    def validate_controller_env(controller_type: str = "ACI") -> None:
-        """Validate controller-specific environment variables.
-
-        This is a convenience method for validating controller credentials.
+    def get_missing_controller_vars(controller_type: str) -> list[str]:
+        """Return list of missing credential environment variables for a controller.
 
         Args:
-            controller_type: Type of controller (ACI, CC, etc.)
+            controller_type: Controller type (e.g., "ACI", "SDWAN", "CC")
+
+        Returns:
+            List of missing environment variable names (empty if all present)
 
         Raises:
-            SystemExit: If required variables are missing
+            ValueError: If controller_type is unknown
         """
-        required_vars = [
-            f"{controller_type}_URL",
-            f"{controller_type}_USERNAME",
-            f"{controller_type}_PASSWORD",
-        ]
+        if controller_type not in CREDENTIAL_PATTERNS:
+            raise ValueError(f"Unknown controller type: {controller_type}")
+        required = CREDENTIAL_PATTERNS[controller_type]
+        return [var for var in required if not os.environ.get(var)]
 
-        # Use terminal's controller-specific formatter
-        def controller_formatter(missing: list[str]) -> str:
-            return terminal.format_env_var_error(missing, controller_type)
+    @staticmethod
+    def format_missing_credentials_error(
+        controller_type: str, missing_vars: list[str]
+    ) -> str:
+        """Format user-friendly error message for missing controller credentials.
 
-        EnvironmentValidator.check_required_vars(
-            required_vars, exit_on_missing=True, custom_formatter=controller_formatter
-        )
+        Args:
+            controller_type: Controller type (e.g., "ACI", "SDWAN", "CC")
+            missing_vars: List of missing environment variable names
+
+        Returns:
+            Formatted error message suitable for terminal display
+        """
+        return terminal.format_env_var_error(missing_vars, controller_type)
+
+    @staticmethod
+    def validate_controller_env(controller_type: str) -> list[str]:
+        """Validate controller-specific environment variables.
+
+        Checks that all required credential environment variables are set
+        for the specified controller type.
+
+        Args:
+            controller_type: Type of controller (ACI, SDWAN, CC, etc.)
+
+        Returns:
+            List of missing environment variable names (empty if all present)
+
+        Raises:
+            ValueError: If controller_type is unknown
+        """
+        return EnvironmentValidator.get_missing_controller_vars(controller_type)
