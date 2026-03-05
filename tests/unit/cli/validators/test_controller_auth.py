@@ -310,9 +310,37 @@ class TestPreflightAuthCheck:
 
         assert result.controller_url == "https://apic.lab.local"
 
+    def test_propagates_http_status_code(self, monkeypatch: MonkeyPatch) -> None:
+        """Auth result includes the HTTP status code from the error."""
+        monkeypatch.setenv("ACI_URL", "https://apic.lab.local")
+
+        mock_auth = MagicMock(side_effect=Exception("HTTP 403: Forbidden"))
+        with patch(
+            "nac_test.cli.validators.controller_auth._get_auth_callable",
+            return_value=mock_auth,
+        ):
+            result = preflight_auth_check("ACI")
+
+        assert result.status_code == 403
+
+    def test_status_code_none_for_non_http_errors(
+        self, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Auth result has None status_code for non-HTTP failures."""
+        monkeypatch.setenv("SDWAN_URL", "https://sdwan.example.com")
+
+        mock_auth = MagicMock(side_effect=Exception("Connection timed out"))
+        with patch(
+            "nac_test.cli.validators.controller_auth._get_auth_callable",
+            return_value=mock_auth,
+        ):
+            result = preflight_auth_check("SDWAN")
+
+        assert result.status_code is None
+
     def test_handles_unknown_controller_type(self) -> None:
         """Unknown controller types are handled gracefully (skipped)."""
-        result = preflight_auth_check("UNKNOWN_CONTROLLER")
+        result = preflight_auth_check("UNKNOWN_CONTROLLER")  # type: ignore[arg-type]
 
         assert result.success is True
         assert "skipped" in result.detail.lower()
