@@ -38,44 +38,8 @@ def mock_pyats() -> Any:
 
 
 # =============================================================================
-# Fixtures
-# =============================================================================
-
-
-@pytest.fixture
-def apic_data_model() -> dict[str, Any]:
-    """Sample APIC data model with defaults block."""
-    return {
-        "defaults": {
-            "apic": {
-                "tenants": {
-                    "l3outs": {
-                        "nodes": {"pod": 1},
-                        "bgp_peers": {"admin_state": "enabled"},
-                    }
-                },
-                "fabric": {"name": "test-fabric"},
-            }
-        }
-    }
-
-
-@pytest.fixture
-def sdwan_data_model() -> dict[str, Any]:
-    """Sample SD-WAN data model with defaults block."""
-    return {
-        "defaults": {
-            "sdwan": {
-                "global": {"timeout": 30, "retry_count": 3},
-                "device": {"os": "iosxe", "connection_timeout": 60},
-                "features": {"bgp": {"enabled": True}, "ospf": {"area": 0}},
-            }
-        }
-    }
-
-
-# =============================================================================
 # TestNACTestBaseDefaults
+# (apic_data_model and sdwan_data_model fixtures are in conftest.py)
 # =============================================================================
 
 
