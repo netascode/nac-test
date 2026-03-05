@@ -35,7 +35,7 @@ def format_duration(duration_seconds: float | int | None) -> str:
 
     Uses smart formatting to display durations in the most readable way:
     - Less than 1 second: ``"< 1s"``
-    - 1–59 seconds: ``"X.Xs"`` (e.g., ``"2.5s"``, ``"45.2s"``)
+    - 1–59 seconds: ``"X.XXs"`` (e.g., ``"2.50s"``, ``"45.20s"``)
     - 1–59 minutes: ``"Xm Xs"`` (e.g., ``"1m 23s"``, ``"15m 8s"``)
     - 1+ hours: ``"Xh Xm"`` (e.g., ``"1h 5m"``, ``"2h 45m"``)
 
@@ -54,7 +54,7 @@ def format_duration(duration_seconds: float | int | None) -> str:
         return "< 1s"
 
     if duration < 60:
-        return f"{duration:.1f}s"
+        return f"{duration:.2f}s"
 
     if duration < 3600:
         minutes = int(duration // 60)
