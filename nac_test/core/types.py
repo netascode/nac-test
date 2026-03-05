@@ -205,12 +205,15 @@ class PreFlightFailure:
         controller_type: Controller identifier ("ACI", "SDWAN", "CC").
         controller_url: URL that was tested.
         detail: Human-readable error description.
+        status_code: HTTP status code from the failed request, or None for
+            non-HTTP failures (e.g., connection timeout, DNS failure).
     """
 
     failure_type: Literal["auth", "unreachable"]
     controller_type: ControllerTypeKey
     controller_url: str
     detail: str
+    status_code: int | None = None
 
 
 @dataclass
