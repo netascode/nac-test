@@ -470,8 +470,6 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         # Check runtime for reporter
         try:
-            from pyats import aetest
-
             if hasattr(aetest, "runtime") and hasattr(aetest.runtime, "reporter"):
                 return aetest.runtime.reporter
         except ImportError:
@@ -1403,6 +1401,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         if self.result_collector is not None:
             self.result_collector.add_result(
                 status_enum, message, test_context=test_context
+            )
+        else:
+            self.logger.warning(
+                "result_collector is None — skipping verification result: %s", message
             )
 
     def map_string_status_to_enum(self, status_string: str) -> ResultStatus:
@@ -2484,6 +2486,11 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 status_enum,
                 reason if reason else f"Test completed with status: {status}",
                 test_context=context.get("api_context"),
+            )
+        else:
+            self.logger.warning(
+                "result_collector is None — skipping step result: %s",
+                reason if reason else f"Test completed with status: {status}",
             )
 
     @aetest.cleanup  # type: ignore[untyped-decorator]

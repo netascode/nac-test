@@ -348,7 +348,9 @@ class SSHTestBase(NACTestBase):
             # Get device name from device info
             _fallback = "Unknown Device"
             device_name: str = (
-                self.device_info.get("hostname", self.device_info.get("host", _fallback))
+                self.device_info.get(
+                    "hostname", self.device_info.get("host", _fallback)
+                )
                 or _fallback
             )
 
