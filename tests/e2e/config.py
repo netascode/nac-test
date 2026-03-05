@@ -45,9 +45,7 @@ class E2EScenario:
     data_path: str
     templates_path: str
     requires_testbed: bool = True  # D2D tests require testbed, Robot/API-only don't
-    architecture: str = (
-        ""  # Controller type: "SDWAN", "ACI", "CC" - determines env var prefix
-    )
+    architecture: str | None = None
     is_dry_run: bool = False  # Dry-run mode: validates structure without execution
 
     # Expected CLI behavior
@@ -273,11 +271,11 @@ MIXED_SCENARIO = E2EScenario(
 
 ROBOT_ONLY_SCENARIO = E2EScenario(
     name="robot_only",
-    description="Robot Framework only - 1 passing test, no PyATS tests",
+    description="Robot Framework only - 1 passing test, no PyATS tests (no controller credentials)",
     data_path=f"{_FIXTURE_BASE}/robot_only/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/robot_only/templates",
     requires_testbed=False,  # No D2D tests, no testbed needed
-    architecture="SDWAN",
+    architecture=None,  # No controller - tests run without credentials
     expected_exit_code=0,
     expected_robot_passed=1,
     expected_robot_failed=0,

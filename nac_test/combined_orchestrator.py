@@ -181,6 +181,8 @@ class CombinedOrchestrator:
         # Pre-flight: detect controller and validate credentials for PyATS path only.
         # Robot path stays generic — it may not need controller access at all.
         # Dry-run mode skips auth — it validates test structure, not execution.
+        preflight_failed = False
+
         if has_pyats and not self.render_only and not self.dry_run:
             try:
                 self.controller_type = detect_controller_type()
@@ -223,16 +225,13 @@ class CombinedOrchestrator:
                     detail=auth_result.detail,
                     status_code=auth_result.status_code,
                 )
+                # Mark pre-flight as failed but continue to Robot block
+                preflight_failed = True
 
-                # Generate report and bail — no PyATS execution possible
-                generator = CombinedReportGenerator(self.output_dir)
-                report_path = generator.generate_combined_summary(combined_results)
-                if report_path is not None:
-                    typer.echo(f"Report: {report_path}")
-                return combined_results
-
-        if has_pyats and not self.render_only:
+        # Run PyATS tests only if pre-flight passed
+        if has_pyats and not self.render_only and not preflight_failed:
             typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
+
             self._check_python_version()
 
             pyats_orchestrator = PyATSOrchestrator(

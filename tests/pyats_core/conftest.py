@@ -17,6 +17,31 @@ from _pytest.monkeypatch import MonkeyPatch
 
 CONTROLLER_ENV_PREFIXES = ("ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_")
 
+# D2D test file (IOSXETestBase -> d2d test type)
+PYATS_TEST_FILE_CONTENT = """
+# PyATS D2D test file
+from pyats import aetest
+from nac_test_pyats_common.iosxe import IOSXETestBase
+class Test(IOSXETestBase):
+    @aetest.test
+    def test(self):
+        pass
+"""
+
+# Alias for clarity - D2D tests use IOSXETestBase
+PYATS_D2D_TEST_FILE_CONTENT = PYATS_TEST_FILE_CONTENT
+
+# API test file (APICTestBase -> api test type)
+PYATS_API_TEST_FILE_CONTENT = """
+# PyATS API test file
+from pyats import aetest
+from nac_test_pyats_common.aci.test_base import APICTestBase
+class Test(APICTestBase):
+    @aetest.test
+    def test(self):
+        pass
+"""
+
 
 class PyATSTestDirs(NamedTuple):
     """Directory structure for PyATS orchestrator tests."""

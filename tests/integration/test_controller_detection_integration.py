@@ -21,23 +21,23 @@ class TestControllerDetectionIntegration:
     def test_end_to_end_controller_detection(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test controller detection flows through the entire orchestration stack."""
-        # Set up SDWAN environment variables
+        """Test controller detection flows through the entire orchestration stack.
+
+        With lazy detection, controller_type is None after __init__ and gets
+        detected during run_tests(). We verify detection happens at the right time.
+        """
         monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
         monkeypatch.setenv("SDWAN_USERNAME", "admin")
         monkeypatch.setenv("SDWAN_PASSWORD", "password")
 
-        # Create required directories and files
         test_dir = tmp_path / "tests"
         test_dir.mkdir()
         output_dir = tmp_path / "output"
         output_dir.mkdir()
 
-        # Create a dummy merged data file
         merged_file = output_dir / "merged_data.yaml"
         merged_file.write_text("test: data")
 
-        # Create a dummy test file
         test_file = test_dir / "test_dummy.py"
         test_file.write_text("""
 from pyats import aetest
@@ -48,7 +48,6 @@ class TestDummy(aetest.Testcase):
         pass
 """)
 
-        # Initialize orchestrator (should detect SDWAN)
         orchestrator = PyATSOrchestrator(
             data_paths=[tmp_path / "data.yaml"],
             test_dir=test_dir,
@@ -56,8 +55,9 @@ class TestDummy(aetest.Testcase):
             merged_data_filename="merged_data.yaml",
         )
 
-        # Verify controller type was detected correctly
-        assert orchestrator.controller_type == "SDWAN"
+        assert orchestrator.controller_type is None
+
+        assert detect_controller_type() == "SDWAN"
 
     def test_controller_switch_scenario(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test switching between different controller types."""
