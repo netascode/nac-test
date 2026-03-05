@@ -814,6 +814,27 @@ class TestEdgeCases:
 
         assert apic_data_model == original
 
+    def test_malformed_jmespath_expression_propagates(self) -> None:
+        """Malformed JMESPath expressions propagate as jmespath exceptions.
+
+        The defaults_resolver intentionally does NOT catch JMESPath parse
+        errors — they indicate a programming error in the caller (wrong
+        path syntax), not a missing value. Letting the ParseError propagate
+        gives developers an immediate, clear traceback pointing at the
+        malformed expression rather than a misleading "value not found".
+        """
+        import jmespath.exceptions
+
+        data_model: dict[str, Any] = {"defaults": {"apic": {"key": "value"}}}
+
+        with pytest.raises(jmespath.exceptions.ParseError):
+            get_default_value(
+                data_model,
+                "[invalid",
+                defaults_prefix="defaults.apic",
+                missing_error="APIC defaults missing.",
+            )
+
     def test_get_default_value_preserves_original_data(
         self, apic_data_model: dict[str, Any]
     ) -> None:
