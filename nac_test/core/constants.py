@@ -6,30 +6,8 @@
 import os
 import platform
 import sys
-from typing import TypeVar
 
-T = TypeVar("T", int, float)
-
-
-# Shared env-var helper; lives here (not in utils/) to avoid circular imports
-def get_positive_numeric_env(env_var: str, default: T, value_type: type[T]) -> T:
-    """Get a positive numeric value from environment variable with fallback.
-
-    Args:
-        env_var: Environment variable name
-        default: Default value if env var is not set or invalid
-        value_type: Type to convert to (int or float)
-
-    Returns:
-        The parsed value from environment or default if invalid/missing/non-positive
-    """
-    env_value = os.environ.get(env_var, str(default))
-    try:
-        value = value_type(env_value)
-        return value if value > 0 else default
-    except (ValueError, TypeError):
-        return default
-
+from nac_test._env import get_positive_numeric_env
 
 # Retry configuration - Generic retry logic used by multiple components
 RETRY_MAX_ATTEMPTS = 3

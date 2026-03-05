@@ -6,6 +6,7 @@
 import os
 import tempfile
 
+from nac_test._env import get_positive_numeric_env
 from nac_test.core.constants import (
     CONNECTION_CLOSE_DELAY,
     # Concurrency
@@ -23,8 +24,6 @@ from nac_test.core.constants import (
     # Retry configuration
     RETRY_MAX_ATTEMPTS,
     RETRY_MAX_DELAY,
-    # Env var helper
-    get_positive_numeric_env,
 )
 
 # PyATS-specific worker calculation constants

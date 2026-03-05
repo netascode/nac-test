@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Unit tests for core/constants.py helpers."""
+"""Unit tests for nac_test._env module."""
+
+import logging
 
 import pytest
 
-from nac_test.core.constants import get_positive_numeric_env
+from nac_test._env import get_positive_numeric_env
 
 
 class TestGetPositiveNumericEnv:
@@ -39,3 +41,42 @@ class TestGetPositiveNumericEnv:
             "NAC_TEST_TEST_HELPER_VALUE", default, value_type
         )
         assert result == expected
+
+    def test_warns_on_invalid_value(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        monkeypatch.setenv("NAC_TEST_TEST_VAR", "not_a_number")
+        with caplog.at_level(logging.WARNING):
+            result = get_positive_numeric_env("NAC_TEST_TEST_VAR", 42, int)
+        assert result == 42
+        assert "NAC_TEST_TEST_VAR=not_a_number" in caplog.text
+        assert "not a valid int" in caplog.text
+
+    def test_warns_on_non_positive_value(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        monkeypatch.setenv("NAC_TEST_TEST_VAR", "-5")
+        with caplog.at_level(logging.WARNING):
+            result = get_positive_numeric_env("NAC_TEST_TEST_VAR", 42, int)
+        assert result == 42
+        assert "NAC_TEST_TEST_VAR=-5" in caplog.text
+        assert "not positive" in caplog.text
+
+    def test_no_warning_when_disabled(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        monkeypatch.setenv("NAC_TEST_TEST_VAR", "invalid")
+        with caplog.at_level(logging.WARNING):
+            result = get_positive_numeric_env(
+                "NAC_TEST_TEST_VAR", 42, int, warn_on_invalid=False
+            )
+        assert result == 42
+        assert caplog.text == ""
+
+    def test_no_warning_when_env_not_set(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        with caplog.at_level(logging.WARNING):
+            result = get_positive_numeric_env("NAC_TEST_UNSET_VAR", 99, int)
+        assert result == 99
+        assert caplog.text == ""
