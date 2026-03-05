@@ -9,11 +9,28 @@ across CLI output, progress reporting, HTML reports, and file naming.
 
 from datetime import datetime
 
-from nac_test.core.constants import PROGRESS_TIMESTAMP_FORMAT
+from nac_test.core.constants import FILE_TIMESTAMP_MS_FORMAT, PROGRESS_TIMESTAMP_FORMAT
 
 # Microsecond-to-millisecond slice — strftime %f yields 6 digits,
 # slicing off the last 3 gives millisecond precision.
 _MICROSECOND_TRIM: int = -3
+
+
+def format_file_timestamp_ms(dt: datetime | None = None) -> str:
+    """Format a datetime as a file-safe timestamp with millisecond precision.
+
+    Produces strings like ``"20250627_182616_834"`` suitable for
+    embedding in filenames (archive names, test IDs, etc.).
+
+    Args:
+        dt: Datetime to format. Defaults to now.
+
+    Returns:
+        Timestamp string like ``"20250627_182616_834"``.
+    """
+    if dt is None:
+        dt = datetime.now()
+    return dt.strftime(FILE_TIMESTAMP_MS_FORMAT)[:_MICROSECOND_TRIM]
 
 
 def format_timestamp_ms(dt: datetime | None = None) -> str:
