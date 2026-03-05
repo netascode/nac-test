@@ -294,6 +294,7 @@ class TestPreFlightFailureReport:
             controller_type="ACI",
             controller_url="https://apic.test.local",
             detail="HTTP 401: Unauthorized",
+            status_code=401,
         )
         results = CombinedResults(pre_flight_failure=failure)
         generator = CombinedReportGenerator(tmp_path)
@@ -315,6 +316,7 @@ class TestPreFlightFailureReport:
             controller_type="ACI",
             controller_url="https://apic.test.local",
             detail="HTTP 401: Unauthorized",
+            status_code=401,
         )
         results = CombinedResults(pre_flight_failure=failure)
         generator = CombinedReportGenerator(tmp_path)
@@ -352,6 +354,7 @@ class TestPreFlightFailureReport:
             controller_type="CC",
             controller_url="https://catc.test.local",
             detail="HTTP 403: Forbidden",
+            status_code=403,
         )
         results = CombinedResults(pre_flight_failure=failure)
         generator = CombinedReportGenerator(tmp_path)
@@ -372,6 +375,7 @@ class TestPreFlightFailureReport:
             controller_type="ACI",
             controller_url="https://apic.test.local",
             detail="HTTP 401: Unauthorized",
+            status_code=401,
         )
         results = CombinedResults(pre_flight_failure=failure)
         generator = CombinedReportGenerator(tmp_path)
@@ -400,6 +404,7 @@ class TestPreFlightFailureReport:
             controller_type="ACI",
             controller_url="https://apic.test.local",
             detail="HTTP 401: Unauthorized",
+            status_code=401,
         )
         results = CombinedResults(pre_flight_failure=failure)
         report_path = generator.generate_combined_summary(results)
