@@ -10,6 +10,8 @@ from io import StringIO
 from unittest.mock import patch
 
 from nac_test.cli.ui.banners import (
+    BANNER_CONTENT_WIDTH,
+    _wrap_url_lines,
     display_aci_defaults_banner,
     display_auth_failure_banner,
     display_unreachable_banner,
@@ -234,3 +236,43 @@ class TestDisplayUnreachableBanner:
         assert "!!!" in content, "ASCII title markers '!!!' not found"
         assert "UNREACHABLE" in content
         assert "⛔" not in content, "Emoji '⛔' found in NO_COLOR mode"
+
+
+class TestWrapUrlLines:
+    """Tests for the _wrap_url_lines helper."""
+
+    def test_short_url_stays_on_one_line(self) -> None:
+        """A prefix + URL that fits within BANNER_CONTENT_WIDTH stays on one line."""
+        result = _wrap_url_lines("Could not connect to APIC at", "https://apic.local")
+        assert len(result) == 1
+        assert "Could not connect to APIC at https://apic.local" == result[0]
+
+    def test_long_url_wraps_to_two_lines(self) -> None:
+        """A prefix + URL that exceeds BANNER_CONTENT_WIDTH wraps to two lines."""
+        long_url = "https://sandboxdnacultramegaultralong.cisco.com"
+        prefix = "Could not connect to Catalyst Center at"
+        combined = f"{prefix} {long_url}"
+        # Verify our test data actually exceeds the width
+        assert len(combined) > BANNER_CONTENT_WIDTH
+
+        result = _wrap_url_lines(prefix, long_url)
+        assert len(result) == 2
+        assert result[0] == prefix
+        assert result[1] == f"  {long_url}"
+
+    def test_indent_applied_to_both_lines_when_wrapping(self) -> None:
+        """Indent is applied to both the prefix and URL lines."""
+        long_url = "https://this-is-a-really-long-controller-hostname-that-exceeds-width.example.com"
+        # Verify our test data actually triggers wrapping with indent
+        assert len(f"  curl -k {long_url}") > BANNER_CONTENT_WIDTH
+
+        result = _wrap_url_lines("curl -k", long_url, indent="  ")
+        assert len(result) == 2
+        assert result[0] == "  curl -k"
+        assert result[1] == f"    {long_url}"
+
+    def test_indent_applied_when_single_line(self) -> None:
+        """Indent is applied when content fits on one line."""
+        result = _wrap_url_lines("curl -k", "https://short.local", indent="  ")
+        assert len(result) == 1
+        assert result[0] == "  curl -k https://short.local"
