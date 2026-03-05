@@ -11,7 +11,6 @@ import typer
 
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
-    EXIT_ERROR,
     HTML_REPORTS_DIRNAME,
     PYATS_RESULTS_DIRNAME,
     ROBOT_RESULTS_DIRNAME,
@@ -22,7 +21,6 @@ from nac_test.core.types import CombinedResults, TestResults
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
-from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.logging import VerbosityLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 from nac_test.utils.terminal import terminal
@@ -118,21 +116,6 @@ class CombinedOrchestrator:
         self.dev_pyats_only = dev_pyats_only
         self.dev_robot_only = dev_robot_only
 
-        # Detect controller type early (unless we are in render-only mode, which doesn't require controller access)
-        self.controller_type: str | None = None
-        if not self.render_only:
-            try:
-                self.controller_type = detect_controller_type()
-                logger.info(f"Controller type detected: {self.controller_type}")
-            except ValueError as e:
-                # Exit gracefully if controller detection fails
-                typer.secho(
-                    f"\n❌ Controller detection failed:\n{e}",
-                    fg=typer.colors.RED,
-                    err=True,
-                )
-                raise typer.Exit(EXIT_ERROR) from None
-
     def run_tests(self) -> CombinedResults:
         """Main entry point for combined test execution.
 
@@ -188,7 +171,6 @@ class CombinedOrchestrator:
                 merged_data_filename=self.merged_data_filename,
                 minimal_reports=self.minimal_reports,
                 custom_testbed_path=self.custom_testbed_path,
-                controller_type=self.controller_type,
                 dry_run=self.dry_run,
             )
             if self.max_parallel_devices is not None:

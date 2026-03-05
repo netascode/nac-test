@@ -168,15 +168,15 @@ def _run_e2e_scenario(
     output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
 
     arch = scenario.architecture
-    if mock_api_server:
-        class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
-    else:
-        class_mocker.setenv(f"{arch}_URL", "http://dry-run.invalid")
-    class_mocker.setenv(f"{arch}_USERNAME", "mock_user")
-    class_mocker.setenv(f"{arch}_PASSWORD", "mock_pass")
-    # IOSXE credentials needed for D2D tests (device access)
-    class_mocker.setenv("IOSXE_USERNAME", "mock_user")
-    class_mocker.setenv("IOSXE_PASSWORD", "mock_pass")
+    if arch:
+        if mock_api_server:
+            class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
+        else:
+            class_mocker.setenv(f"{arch}_URL", "http://dry-run.invalid")
+        class_mocker.setenv(f"{arch}_USERNAME", "mock_user")
+        class_mocker.setenv(f"{arch}_PASSWORD", "mock_pass")
+        class_mocker.setenv("IOSXE_USERNAME", "mock_user")
+        class_mocker.setenv("IOSXE_PASSWORD", "mock_pass")
 
     # Build CLI arguments
     cli_args = [
