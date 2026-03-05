@@ -35,6 +35,11 @@ class TestCurrentStreamHandler:
         handler.stream = io.StringIO()
         assert handler.stream is sys.stdout
 
+    def test_invalid_stream_name_raises_value_error(self) -> None:
+        """Verify invalid stream_name raises ValueError at construction."""
+        with pytest.raises(ValueError, match="must be 'stdout' or 'stderr'"):
+            CurrentStreamHandler("invalid")  # type: ignore[arg-type]
+
     def test_no_io_error_on_closed_stdout(self) -> None:
         """Verify no I/O error when previous stdout is closed (regression test for #487)."""
         handler = CurrentStreamHandler("stdout")
