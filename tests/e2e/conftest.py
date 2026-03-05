@@ -144,6 +144,31 @@ devices:
 # =============================================================================
 
 
+def _reset_pabot_writer() -> None:
+    """Reset the pabot writer singleton to ensure test isolation.
+
+    NOTE: This is a temporary workaround. Will be removed when E2E tests are
+    refactored to use subprocess instead of CliRunner. See #611.
+
+    The pabot writer module maintains a singleton MessageWriter that captures stdout
+    at creation time. When running multiple E2E scenarios sequentially, the first
+    scenario creates this singleton, and subsequent scenarios reuse it - but the
+    stdout reference becomes stale after pytest's CliRunner context changes.
+
+    This function stops the existing writer and resets the singleton so the next
+    scenario gets a fresh writer with the correct stdout reference.
+    """
+    try:
+        import pabot.writer as pabot_writer
+
+        if pabot_writer._writer_instance is not None:
+            pabot_writer._writer_instance.stop()
+            pabot_writer._writer_instance = None
+    except (ImportError, AttributeError):
+        # pabot not installed or writer module structure changed
+        pass
+
+
 def _run_e2e_scenario(
     scenario: E2EScenario,
     mock_api_server: MockAPIServer | None,
@@ -172,6 +197,10 @@ def _run_e2e_scenario(
     Raises:
         ValueError: If scenario configuration is invalid (via scenario.validate()).
     """
+    # Reset pabot writer singleton to ensure test isolation
+    # This prevents stdout capture issues when running multiple scenarios sequentially
+    _reset_pabot_writer()
+
     # Validate scenario configuration before execution
     scenario.validate()
 
