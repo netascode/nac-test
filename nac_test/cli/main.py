@@ -370,6 +370,7 @@ def main(
                 controller_type=auth_result.controller_type,
                 controller_url=auth_result.controller_url,
                 detail=auth_result.detail,
+                status_code=auth_result.status_code,
             )
             results = CombinedResults(pre_flight_failure=failure)
             generator = CombinedReportGenerator(output)
