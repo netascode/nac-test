@@ -6,7 +6,7 @@
 import os
 import tempfile
 
-from nac_test._env import get_positive_numeric_env
+from nac_test._env import get_bool_env, get_positive_numeric_env
 from nac_test.core.constants import (
     CONNECTION_CLOSE_DELAY,
     # Concurrency
@@ -82,6 +82,11 @@ PIPE_DRAIN_TIMEOUT_SECONDS: float = get_positive_numeric_env(
 
 # Batching reporter configuration
 # Controls how PyATS reporter messages are batched for efficient transmission
+
+# Enable batching reporter: buffers step messages instead of sending immediately
+# Set NAC_TEST_BATCHING_REPORTER=true to enable (experimental)
+BATCHING_REPORTER_ENABLED: bool = get_bool_env("NAC_TEST_BATCHING_REPORTER")
+
 # Batch size: number of messages accumulated before flush (default: 200)
 BATCH_SIZE: int = get_positive_numeric_env("NAC_TEST_PYATS_BATCH_SIZE", 200, int)
 
@@ -138,6 +143,7 @@ __all__ = [
     "PIPE_DRAIN_DELAY_SECONDS",
     "PIPE_DRAIN_TIMEOUT_SECONDS",
     # Batching reporter
+    "BATCHING_REPORTER_ENABLED",
     "BATCH_SIZE",
     "BATCH_TIMEOUT_SECONDS",
     "OVERFLOW_QUEUE_SIZE",
