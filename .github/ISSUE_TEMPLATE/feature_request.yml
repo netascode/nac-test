@@ -1,0 +1,139 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for nac-test
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Is This the Right Template?
+
+        **Use this template if**:
+        - You want to request a new capability
+        - You have an idea to improve existing functionality
+        - You want to propose CLI or report enhancements
+
+        **Use a DIFFERENT template if**:
+        - Something is broken → Use **"Bug Report"**
+        - HTML reports have bugs → Use **"HTML Reporting Issue"**
+        - You need help → Use **"How-To / Usage Question"**
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? Describe the pain point or limitation.
+      placeholder: "When running tests across multiple architectures, I have to manually..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Describe how you'd like this feature to work from a user's perspective.
+    validations:
+      required: true
+
+  - type: textarea
+    id: cli-interface
+    attributes:
+      label: CLI Interface (if applicable)
+      description: Example of how the new feature might be invoked.
+      render: bash
+      placeholder: "nac-test --new-flag value --data ./data --templates ./tests"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: feature-category
+    attributes:
+      label: Feature Category
+      description: What area(s) of nac-test does this feature affect?
+      options:
+        - label: CLI (command-line interface, arguments, options)
+        - label: Test Discovery (finding and loading tests)
+        - label: Test Execution (running PyATS or Robot tests)
+        - label: Data Model (YAML merging, Jinja templating)
+        - label: Reporting (HTML reports, JSON output, summaries)
+        - label: D2D/SSH (direct-to-device testing)
+        - label: Parallelization (concurrent test execution)
+        - label: Authentication (token caching, credential handling)
+        - label: Cross-Platform (macOS/Linux compatibility)
+
+  - type: dropdown
+    id: test-framework
+    attributes:
+      label: Test Framework
+      description: Which test framework(s) would this feature apply to?
+      options:
+        - PyATS only
+        - Robot Framework only
+        - Both frameworks
+        - Framework-agnostic
+    validations:
+      required: true
+
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Network as Code (NaC) Architecture
+      description: Is this feature specific to a particular NaC architecture? See https://netascode.cisco.com for supported architectures.
+      options:
+        - ACI (APIC)
+        - NDO (Nexus Dashboard Orchestrator)
+        - NDFC / VXLAN-EVPN (Nexus Dashboard Fabric Controller)
+        - Catalyst SD-WAN (SDWAN Manager / vManage)
+        - Catalyst Center (DNA Center)
+        - ISE (Identity Services Engine)
+        - FMC (Firepower Management Center)
+        - Meraki (Cloud-managed)
+        - NX-OS (Nexus Direct-to-Device)
+        - IOS-XE (Direct-to-Device)
+        - IOS-XR (Direct-to-Device)
+        - Hyperfabric
+        - All architectures
+        - Architecture-agnostic
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered alternative approaches? Why is your proposed solution better?
+    validations:
+      required: false
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: User Impact & Use Cases
+      description: Why is this feature important? Provide specific use cases.
+      placeholder: |
+        1. Use Case 1: ...
+        2. Use Case 2: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: What are the minimal requirements for this feature to be complete?
+      placeholder: |
+        - [ ] Criteria 1
+        - [ ] Criteria 2
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        - Similar features in other tools?
+        - Constraints or considerations?
+        - Would you contribute to implementing this?
+    validations:
+      required: false

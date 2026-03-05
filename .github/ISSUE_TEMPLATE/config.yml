@@ -1,0 +1,7 @@
+# .github/ISSUE_TEMPLATE/config.yml
+
+blank_issues_enabled: false
+contact_links:
+  - name: "Network as Code (NaC) Documentation"
+    url: "https://netascode.cisco.com/"
+    about: "Complete NaC documentation including data models, guides, examples, and best practices."
