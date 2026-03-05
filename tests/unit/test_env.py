@@ -7,7 +7,7 @@ import logging
 
 import pytest
 
-from nac_test._env import get_positive_numeric_env
+from nac_test._env import get_bool_env, get_positive_numeric_env
 
 
 class TestGetPositiveNumericEnv:
@@ -80,3 +80,35 @@ class TestGetPositiveNumericEnv:
             result = get_positive_numeric_env("NAC_TEST_UNSET_VAR", 99, int)
         assert result == 99
         assert caplog.text == ""
+
+
+class TestGetBoolEnv:
+    """Tests for get_bool_env()."""
+
+    @pytest.mark.parametrize(
+        ("env_value", "expected"),
+        [
+            ("true", True),
+            ("True", True),
+            ("TRUE", True),
+            ("yes", True),
+            ("Yes", True),
+            ("YES", True),
+            ("1", True),
+            ("false", False),
+            ("False", False),
+            ("no", False),
+            ("0", False),
+            ("", False),
+            ("random", False),
+        ],
+    )
+    def test_returns_expected(
+        self, monkeypatch: pytest.MonkeyPatch, env_value: str, expected: bool
+    ) -> None:
+        monkeypatch.setenv("NAC_TEST_TEST_BOOL", env_value)
+        assert get_bool_env("NAC_TEST_TEST_BOOL") == expected
+
+    def test_returns_default_when_not_set(self) -> None:
+        assert get_bool_env("NAC_TEST_UNSET_BOOL_VAR") is False
+        assert get_bool_env("NAC_TEST_UNSET_BOOL_VAR", default=True) is True

@@ -24,6 +24,23 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", int, float)
 
 
+def get_bool_env(env_var: str, default: bool = False) -> bool:
+    """Get a boolean value from environment variable.
+
+    Args:
+        env_var: Environment variable name
+        default: Default value if env var is not set (default: False)
+
+    Returns:
+        True if env var value (lowercased) is in ("true", "yes", "1"),
+        False if env var is not set or has any other value.
+    """
+    env_value = os.environ.get(env_var)
+    if env_value is None:
+        return default
+    return env_value.lower() in ("true", "yes", "1")
+
+
 def get_positive_numeric_env(
     env_var: str,
     default: T,

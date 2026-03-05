@@ -630,7 +630,7 @@ Metadata        Test Concurrency     True
 
 **Implementation:** `nac-test` checks the rendered robot files for the `Metadata` setting and instructs pabot to run each test within the respective suite in parallel (using pabot's `--testlevelsplit --ordering ordering.txt` arguments). You can inspect the `ordering.txt` file in the output directory.
 
-**Disabling test-level parallelization:** Set the environment variable `NAC_TEST_NO_TESTLEVELSPLIT=1` to disable this feature.
+**Disabling test-level parallelization:** Set the environment variable `NAC_TEST_DISABLE_TESTLEVELSPLIT=true` to disable this feature.
 
 
 ## Advanced Robot Framework Options
@@ -728,7 +728,7 @@ In addition to CLI options, `nac-test` supports several environment variables fo
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NAC_TEST_NO_TESTLEVELSPLIT` | unset | Disable test-level parallelization for Robot |
+| `NAC_TEST_DISABLE_TESTLEVELSPLIT` | unset | Disable test-level parallelization for Robot |
 
 ### Verbose and Development
 

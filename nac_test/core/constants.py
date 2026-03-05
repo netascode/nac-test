@@ -3,11 +3,10 @@
 
 """Core constants shared across the nac-test framework."""
 
-import os
 import platform
 import sys
 
-from nac_test._env import get_positive_numeric_env
+from nac_test._env import get_bool_env, get_positive_numeric_env
 
 # Retry configuration - Generic retry logic used by multiple components
 RETRY_MAX_ATTEMPTS: int = 3
@@ -32,12 +31,12 @@ PROGRESS_UPDATE_INTERVAL: float = 0.5  # seconds
 
 # Debug mode - enables progressive disclosure of error details
 # Set NAC_TEST_DEBUG=true for developer-level error context
-DEBUG_MODE: bool = os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"
+DEBUG_MODE: bool = get_bool_env("NAC_TEST_DEBUG")
 
 
 # Test-level parallelization control for Robot Framework
-# Set NAC_TEST_NO_TESTLEVELSPLIT=1 to disable test-level parallelization
-NO_TESTLEVELSPLIT: bool = bool(os.environ.get("NAC_TEST_NO_TESTLEVELSPLIT"))
+# Set NAC_TEST_DISABLE_TESTLEVELSPLIT=true to disable test-level parallelization
+DISABLE_TESTLEVELSPLIT: bool = get_bool_env("NAC_TEST_DISABLE_TESTLEVELSPLIT")
 
 
 # Exit codes

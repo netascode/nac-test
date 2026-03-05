@@ -4,6 +4,7 @@
 - Replace `--verbosity` with `--loglevel` CLI argument to control log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 - Deprecate `--verbosity` argument (hidden alias for `--loglevel`, will be removed in future version)
 - Remove `NAC_VALIDATE_VERBOSITY` environment variable (was incorrectly named, use `NAC_TEST_LOGLEVEL` instead)
+- Rename `NO_TESTLEVELSPLIT` to `NAC_TEST_DISABLE_TESTLEVELSPLIT`; now requires explicit `true`/`yes`/`1` to disable (previously any non-empty value would disable)
 
 # 1.2.2
 

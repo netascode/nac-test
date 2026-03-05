@@ -14,11 +14,11 @@ from pathlib import Path
 import typer
 
 from nac_test.core.constants import (
+    DISABLE_TESTLEVELSPLIT,
     EXIT_DATA_ERROR,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
     LOG_HTML,
-    NO_TESTLEVELSPLIT,
     OUTPUT_XML,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
@@ -100,7 +100,7 @@ class RobotOrchestrator:
         self.verbose = verbose
 
         # Determine if ordering file should be used for test-level parallelization
-        if not NO_TESTLEVELSPLIT:
+        if not DISABLE_TESTLEVELSPLIT:
             self.ordering_file: Path | None = self.output_dir / "ordering.txt"
         else:
             self.ordering_file = None
