@@ -204,10 +204,7 @@ class CombinedReportGenerator:
         try:
             self.output_dir.mkdir(parents=True, exist_ok=True)
 
-            is_403 = (
-                str(HTTP_FORBIDDEN_CODE) in failure.detail
-                or "Forbidden" in failure.detail
-            )
+            is_403 = failure.status_code == HTTP_FORBIDDEN_CODE
             display_name = get_display_name(failure.controller_type)
             env_var_prefix = get_env_var_prefix(failure.controller_type)
             host = extract_host(failure.controller_url)
