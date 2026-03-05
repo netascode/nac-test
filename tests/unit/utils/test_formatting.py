@@ -21,10 +21,10 @@ class TestFormatDuration:
         assert format_duration(0.5) == "< 1s"
 
     def test_one_second(self) -> None:
-        assert format_duration(1.0) == "1.0s"
+        assert format_duration(1.0) == "1.00s"
 
     def test_seconds_range(self) -> None:
-        assert format_duration(45.2) == "45.2s"
+        assert format_duration(45.2) == "45.20s"
 
     def test_exactly_sixty_shows_minutes(self) -> None:
         assert format_duration(60) == "1m 0s"
@@ -39,7 +39,7 @@ class TestFormatDuration:
         assert format_duration(7500) == "2h 5m"
 
     def test_integer_input(self) -> None:
-        assert format_duration(30) == "30.0s"
+        assert format_duration(30) == "30.00s"
 
 
 class TestFormatTimestampMs:
