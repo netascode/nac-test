@@ -252,7 +252,9 @@ def display_auth_failure_banner(
     )
     content_lines = [
         "",
-        f"Could not authenticate to {display_name} at {controller_url}",
+        *_wrap_url_lines(
+            f"Could not authenticate to {display_name} at", controller_url
+        ),
         "",
         "Verify your credentials:",
         f"  export {env_var_prefix}_USERNAME=<username>",
