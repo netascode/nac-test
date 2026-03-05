@@ -17,6 +17,7 @@ import yaml
 
 from nac_test.core.constants import (
     DEBUG_MODE,
+    DRY_RUN_REASON,
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
@@ -64,6 +65,7 @@ class PyATSOrchestrator:
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
+        dry_run: bool = False,
         verbose: bool = False,
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
     ):
@@ -78,6 +80,7 @@ class PyATSOrchestrator:
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
                 If not provided, will be detected automatically.
+            dry_run: If True, validate test structure without executing tests
             verbose: Enable verbose mode - verbose output
             loglevel: Log level for PyATS output filtering
         """
@@ -92,6 +95,7 @@ class PyATSOrchestrator:
         self.merged_data_filename = merged_data_filename
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
+        self.dry_run = dry_run
         self.verbose = verbose
         self.loglevel = loglevel
 
@@ -533,6 +537,35 @@ class PyATSOrchestrator:
 
         return PyATSResults(api=api_results, d2d=d2d_results)
 
+    def _print_dry_run_summary(
+        self, api_tests: list[Path], d2d_tests: list[Path]
+    ) -> None:
+        """Print dry-run summary showing tests that would be executed.
+
+        Args:
+            api_tests: List of discovered API test files
+            d2d_tests: List of discovered D2D test files
+        """
+        print("\n" + "=" * 70)
+        print("🔍 DRY-RUN MODE: Showing tests that would be executed")
+        print("=" * 70)
+
+        if api_tests:
+            print(f"\n📋 API Tests ({len(api_tests)}):")
+            for test_file in sorted(api_tests):
+                rel_path = test_file.relative_to(self.test_dir)
+                print(f"   • {rel_path}")
+
+        if d2d_tests:
+            print(f"\n📋 D2D/SSH Tests ({len(d2d_tests)}):")
+            for test_file in sorted(d2d_tests):
+                rel_path = test_file.relative_to(self.test_dir)
+                print(f"   • {rel_path}")
+
+        print("\n" + "=" * 70)
+        print("✅ PyATS dry-run complete (no tests executed)")
+        print("=" * 70 + "\n")
+
     def run_tests(self) -> PyATSResults:
         """Main entry point - triggers the async execution flow.
 
@@ -568,7 +601,6 @@ class PyATSOrchestrator:
 
         # Pre-flight check and setup
         self.validate_environment()
-        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Note: Merged data file created by main.py (single source of truth)
 
@@ -588,6 +620,13 @@ class PyATSOrchestrator:
             print(terminal.error(str(e)))
             raise
 
+        # Dry-run mode: print discovered tests and return results without further execution
+        if self.dry_run:
+            self._print_dry_run_summary(api_tests, d2d_tests)
+            api_result = TestResults.not_run(DRY_RUN_REASON) if api_tests else None
+            d2d_result = TestResults.not_run(DRY_RUN_REASON) if d2d_tests else None
+            return PyATSResults(api=api_result, d2d=d2d_result)
+
         breakdown_parts = []
         if api_tests:
             breakdown_parts.append(f"{len(api_tests)} api")
@@ -596,6 +635,9 @@ class PyATSOrchestrator:
         breakdown = f" ({', '.join(breakdown_parts)})" if breakdown_parts else ""
         print(f"Discovered {len(test_files)} PyATS test files{breakdown}")
         print(f"Running with {self.max_workers} parallel workers")
+
+        # Create output directory only when actually executing tests (not in dry-run mode)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize progress reporter for output formatting
         self.progress_reporter = ProgressReporter(

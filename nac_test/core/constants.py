@@ -50,6 +50,9 @@ EXIT_DATA_ERROR: int = 252  # Invalid Robot Framework arguments OR no tests foun
 EXIT_INTERRUPTED: int = 253  # Execution was interrupted (Ctrl+C, etc.)
 EXIT_ERROR: int = 255  # Infrastructure/execution errors occurred
 
+# Reason string used in TestResults.not_run() for dry-run
+DRY_RUN_REASON = "dry-run mode"
+
 # Output directory structure - single source of truth for directory layout
 # These define the standardized paths for test results and reports
 PYATS_RESULTS_DIRNAME: str = "pyats_results"
