@@ -276,3 +276,45 @@ class TestWrapUrlLines:
         result = _wrap_url_lines("curl -k", "https://short.local", indent="  ")
         assert len(result) == 1
         assert result[0] == "  curl -k https://short.local"
+
+
+class TestLongUrlBannerRendering:
+    """Tests that banners with long URLs render within box borders."""
+
+    def test_unreachable_banner_long_url_fits_in_box(self) -> None:
+        """Long URLs in unreachable banner wrap so all lines fit within borders."""
+        long_url = "https://sandboxdnacultramdeupURL.cisco.com"
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_unreachable_banner(
+                controller_type="CC",
+                controller_url=long_url,
+                detail="Connection timed out",
+            )
+
+        lines = output.getvalue().splitlines()
+        # Every bordered line should be exactly BANNER_CONTENT_WIDTH + 2 (for ║ on each side)
+        expected_line_width = BANNER_CONTENT_WIDTH + 2
+        for line in lines:
+            assert len(line) <= expected_line_width, (
+                f"Line overflows box ({len(line)} > {expected_line_width}): {line!r}"
+            )
+
+    def test_auth_failure_banner_long_url_fits_in_box(self) -> None:
+        """Long URLs in auth failure banner wrap so all lines fit within borders."""
+        long_url = "https://sandboxdnacultramdeupURL.cisco.com"
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_auth_failure_banner(
+                controller_type="CC",
+                controller_url=long_url,
+                detail="HTTP 401: Unauthorized",
+                env_var_prefix="CC",
+            )
+
+        lines = output.getvalue().splitlines()
+        expected_line_width = BANNER_CONTENT_WIDTH + 2
+        for line in lines:
+            assert len(line) <= expected_line_width, (
+                f"Line overflows box ({len(line)} > {expected_line_width}): {line!r}"
+            )
