@@ -14,6 +14,9 @@ ambiguous test execution contexts.
 import logging
 import os
 from dataclasses import dataclass
+from typing import cast
+
+from nac_test.core.types import ControllerTypeKey
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +100,7 @@ CREDENTIAL_PATTERNS: dict[str, list[str]] = {
 }
 
 
-def detect_controller_type() -> str:
+def detect_controller_type() -> ControllerTypeKey:
     """Detect the controller type based on environment variables.
 
     This function examines environment variables to determine which network controller
@@ -158,7 +161,9 @@ def detect_controller_type() -> str:
         raise ValueError(error_message)
 
     # Exactly one complete set found - success
-    controller_type = complete_sets[0]
+    # complete_sets come from CONTROLLER_REGISTRY keys, which are always valid
+    # ControllerTypeKey values, but mypy can't infer this from dict iteration.
+    controller_type = cast(ControllerTypeKey, complete_sets[0])
     logger.info(f"Detected controller type: {controller_type}")
     return controller_type
 
