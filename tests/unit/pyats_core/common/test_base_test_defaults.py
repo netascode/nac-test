@@ -1,121 +1,93 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Integration tests for NACTestBase.get_default_value() method.
+"""Tests for NACTestBase.get_default_value() delegation to defaults_resolver.
 
-This module tests the defaults resolution wrapper method on NACTestBase,
-which delegates to the defaults_resolver utility functions while providing
-architecture-specific configuration through class attributes.
+This module verifies that the get_default_value() instance method on NACTestBase:
+- Guards against missing DEFAULTS_PREFIX with NotImplementedError
+- Delegates to defaults_resolver.get_default_value with correct arguments
+- Threads through DEFAULTS_PREFIX and DEFAULTS_MISSING_ERROR class attributes
 
-Test Structure:
-    - TestNACTestBaseDefaults: Tests for the get_default_value() instance method
-        - DEFAULTS_PREFIX handling (set vs None)
-        - Custom error message usage
-        - Subclass override behavior
-        - Cascade behavior through the base class method
-        - Optional (required=False) lookup behavior
+Note:
+    Cascade behavior, falsy value handling, error messages, and edge cases
+    are thoroughly tested in test_defaults_resolver.py. These tests focus
+    exclusively on the delegation contract between NACTestBase and the
+    defaults_resolver utility.
 """
 
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, sentinel
 
 import pytest
 
 # Mock PyATS before importing NACTestBase
 # This is necessary because NACTestBase inherits from aetest.Testcase
+# and step_interceptor imports from pyats.aetest.steps.implementation.
+# The mock hierarchy must be wired so `from pyats import aetest` resolves
+# the same mock that `import pyats.aetest` would.
 _mock_aetest = MagicMock()
 _mock_aetest.Testcase = object  # Make Testcase a simple object for inheritance
 _mock_aetest.setup = lambda f: f  # Decorator that returns the function unchanged
+_mock_aetest_steps = MagicMock()
+_mock_aetest_steps_impl = MagicMock()
+
+# Wire the hierarchy: pyats.aetest -> _mock_aetest
+_mock_pyats_pkg = MagicMock()
+_mock_pyats_pkg.aetest = _mock_aetest
 
 
 @pytest.fixture(autouse=True)
 def mock_pyats() -> Any:
     """Mock PyATS module to avoid import errors in test environment."""
     with patch.dict(
-        "sys.modules", {"pyats": MagicMock(), "pyats.aetest": _mock_aetest}
+        "sys.modules",
+        {
+            "pyats": _mock_pyats_pkg,
+            "pyats.aetest": _mock_aetest,
+            "pyats.aetest.steps": _mock_aetest_steps,
+            "pyats.aetest.steps.implementation": _mock_aetest_steps_impl,
+        },
     ):
         yield
 
 
+@pytest.fixture
+def nac_test_base_class() -> Any:
+    """Import and return the real NACTestBase class (with PyATS mocked)."""
+    import sys
+
+    # Clear cached module to force reimport with mocked pyats
+    for mod_name in list(sys.modules):
+        if "base_test" in mod_name or "step_interceptor" in mod_name:
+            del sys.modules[mod_name]
+
+    from nac_test.pyats_core.common.base_test import NACTestBase
+
+    return NACTestBase
+
+
 # =============================================================================
 # TestNACTestBaseDefaults
-# (apic_data_model and sdwan_data_model fixtures are in conftest.py)
 # =============================================================================
 
 
 class TestNACTestBaseDefaults:
-    """Integration tests for NACTestBase.get_default_value() method.
+    """Tests for NACTestBase.get_default_value() delegation contract.
 
-    These tests verify that the instance method on NACTestBase correctly
-    delegates to the defaults_resolver utility while providing proper
-    architecture-specific configuration.
+    These tests verify that the instance method correctly guards on
+    DEFAULTS_PREFIX and delegates to defaults_resolver.get_default_value
+    with the proper arguments from class attributes.
     """
 
-    def _create_test_instance(
+    def test_prefix_none_raises_not_implemented(
         self,
-        data_model: dict[str, Any],
-        defaults_prefix: str | None = None,
-        missing_error: str | None = None,
-    ) -> Any:
-        """Create a NACTestBase-like instance for testing.
-
-        Since NACTestBase requires PyATS infrastructure, we create a minimal
-        class that has the same get_default_value method implementation.
-
-        Args:
-            data_model: The data model to attach to the instance.
-            defaults_prefix: DEFAULTS_PREFIX class attribute value.
-            missing_error: DEFAULTS_MISSING_ERROR class attribute value.
-
-        Returns:
-            A test instance with the get_default_value method.
-        """
-        from nac_test.pyats_core.common.defaults_resolver import (
-            get_default_value as _resolve,
-        )
-
-        class TestableNACTestBase:
-            """Minimal testable version of NACTestBase defaults functionality."""
-
-            DEFAULTS_PREFIX: str | None = defaults_prefix
-            DEFAULTS_MISSING_ERROR: str = missing_error or (
-                "Defaults block not found in data model. "
-                "Ensure the defaults file is passed to nac-test."
-            )
-
-            def __init__(self, data: dict[str, Any]) -> None:
-                self.data_model = data
-
-            def get_default_value(
-                self,
-                *default_paths: str,
-                required: bool = True,
-            ) -> Any | None:
-                """Read default value(s) from defaults block with cascade support."""
-                if self.DEFAULTS_PREFIX is None:
-                    raise NotImplementedError(
-                        f"{self.__class__.__name__} does not support defaults resolution. "
-                        f"Set DEFAULTS_PREFIX class attribute to enable this feature."
-                    )
-
-                return _resolve(
-                    self.data_model,
-                    *default_paths,
-                    defaults_prefix=self.DEFAULTS_PREFIX,
-                    missing_error=self.DEFAULTS_MISSING_ERROR,
-                    required=required,
-                )
-
-        return TestableNACTestBase(data_model)
-
-    def test_get_default_value_without_prefix_raises(
-        self, apic_data_model: dict[str, Any]
+        nac_test_base_class: Any,
+        apic_data_model: dict[str, Any],
     ) -> None:
-        """Test that get_default_value raises NotImplementedError when DEFAULTS_PREFIX is None."""
-        instance = self._create_test_instance(
-            data_model=apic_data_model,
-            defaults_prefix=None,  # Explicitly no prefix
-        )
+        """get_default_value raises NotImplementedError when DEFAULTS_PREFIX is None."""
+        instance = nac_test_base_class.__new__(nac_test_base_class)
+        instance.data_model = apic_data_model
+        # DEFAULTS_PREFIX is None by default on NACTestBase
 
         with pytest.raises(NotImplementedError) as exc_info:
             instance.get_default_value("fabric.name")
@@ -124,190 +96,142 @@ class TestNACTestBaseDefaults:
         assert "does not support defaults resolution" in error_message
         assert "Set DEFAULTS_PREFIX" in error_message
 
-    def test_get_default_value_with_prefix_set(
-        self, apic_data_model: dict[str, Any]
+    def test_class_name_in_not_implemented_error(
+        self,
+        nac_test_base_class: Any,
+        apic_data_model: dict[str, Any],
     ) -> None:
-        """Test that get_default_value works when DEFAULTS_PREFIX is set."""
-        instance = self._create_test_instance(
-            data_model=apic_data_model,
-            defaults_prefix="defaults.apic",
-        )
+        """NotImplementedError includes the concrete subclass name."""
 
-        result = instance.get_default_value("fabric.name")
-        assert result == "test-fabric"
+        class MyConcreteTest(nac_test_base_class):  # type: ignore[misc]
+            pass  # DEFAULTS_PREFIX is still None
 
-    def test_custom_error_message_used(self) -> None:
-        """Test that class DEFAULTS_MISSING_ERROR is used when defaults block missing."""
-        empty_data_model: dict[str, Any] = {}
-        custom_error = "Custom APIC error: Please provide defaults.yaml file."
+        instance = MyConcreteTest.__new__(MyConcreteTest)
+        instance.data_model = apic_data_model
 
-        instance = self._create_test_instance(
-            data_model=empty_data_model,
-            defaults_prefix="defaults.apic",
-            missing_error=custom_error,
-        )
-
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(NotImplementedError) as exc_info:
             instance.get_default_value("some.path")
 
-        assert custom_error in str(exc_info.value)
+        assert "MyConcreteTest" in str(exc_info.value)
 
-    def test_subclass_overrides_prefix(
+    def test_delegates_to_resolver_with_correct_args(
         self,
+        nac_test_base_class: Any,
         apic_data_model: dict[str, Any],
-        sdwan_data_model: dict[str, Any],
     ) -> None:
-        """Test that subclass can set different prefix and error message."""
-        # APIC subclass
-        apic_instance = self._create_test_instance(
-            data_model=apic_data_model,
+        """get_default_value delegates to _resolve with all arguments threaded through."""
+
+        class APICTestBase(nac_test_base_class):  # type: ignore[misc]
+            DEFAULTS_PREFIX = "defaults.apic"
+            DEFAULTS_MISSING_ERROR = "APIC defaults required."
+
+        instance = APICTestBase.__new__(APICTestBase)
+        instance.data_model = apic_data_model
+
+        with patch(
+            "nac_test.pyats_core.common.base_test._resolve",
+            return_value=sentinel.result,
+        ) as mock_resolve:
+            result = instance.get_default_value(
+                "fabric.name", "fallback.name", required=False
+            )
+
+        mock_resolve.assert_called_once_with(
+            apic_data_model,
+            "fabric.name",
+            "fallback.name",
             defaults_prefix="defaults.apic",
             missing_error="APIC defaults required.",
-        )
-
-        # SD-WAN subclass
-        sdwan_instance = self._create_test_instance(
-            data_model=sdwan_data_model,
-            defaults_prefix="defaults.sdwan",
-            missing_error="SD-WAN defaults required.",
-        )
-
-        # Each should work with their respective data models
-        apic_result = apic_instance.get_default_value("fabric.name")
-        assert apic_result == "test-fabric"
-
-        sdwan_result = sdwan_instance.get_default_value("global.timeout")
-        assert sdwan_result == 30
-
-    def test_cascade_behavior_through_base(
-        self, sdwan_data_model: dict[str, Any]
-    ) -> None:
-        """Test that cascade/fallback works through NACTestBase method."""
-        instance = self._create_test_instance(
-            data_model=sdwan_data_model,
-            defaults_prefix="defaults.sdwan",
-        )
-
-        # First path doesn't exist, should fall back to second
-        result = instance.get_default_value(
-            "nonexistent.timeout",
-            "global.timeout",
-        )
-        assert result == 30
-
-        # First path exists, should return that value
-        result = instance.get_default_value(
-            "global.timeout",
-            "device.connection_timeout",
-        )
-        assert result == 30  # First path wins, not 60
-
-    def test_required_false_returns_none(
-        self, sdwan_data_model: dict[str, Any]
-    ) -> None:
-        """Test that optional lookup returns None through base class."""
-        instance = self._create_test_instance(
-            data_model=sdwan_data_model,
-            defaults_prefix="defaults.sdwan",
-        )
-
-        result = instance.get_default_value(
-            "nonexistent.path",
             required=False,
         )
-        assert result is None
+        assert result is sentinel.result
 
-    def test_nested_path_lookup(self, apic_data_model: dict[str, Any]) -> None:
-        """Test deeply nested path lookups work correctly."""
-        instance = self._create_test_instance(
-            data_model=apic_data_model,
-            defaults_prefix="defaults.apic",
-        )
-
-        result = instance.get_default_value("tenants.l3outs.nodes.pod")
-        assert result == 1
-
-        result = instance.get_default_value("tenants.l3outs.bgp_peers.admin_state")
-        assert result == "enabled"
-
-    def test_required_true_raises_for_missing(
-        self, sdwan_data_model: dict[str, Any]
+    def test_default_error_message_threaded_through(
+        self,
+        nac_test_base_class: Any,
+        apic_data_model: dict[str, Any],
     ) -> None:
-        """Test that required=True (default) raises ValueError for missing values."""
-        instance = self._create_test_instance(
-            data_model=sdwan_data_model,
-            defaults_prefix="defaults.sdwan",
+        """Default DEFAULTS_MISSING_ERROR value is passed when not overridden."""
+
+        class TestBase(nac_test_base_class):  # type: ignore[misc]
+            DEFAULTS_PREFIX = "defaults.apic"
+            # Don't override DEFAULTS_MISSING_ERROR — use base class default
+
+        instance = TestBase.__new__(TestBase)
+        instance.data_model = apic_data_model
+
+        with patch(
+            "nac_test.pyats_core.common.base_test._resolve",
+        ) as mock_resolve:
+            instance.get_default_value("some.path")
+
+        _, kwargs = mock_resolve.call_args
+        assert "Defaults block not found in data model" in kwargs["missing_error"]
+        assert (
+            "Ensure the defaults file is passed to nac-test" in kwargs["missing_error"]
         )
 
-        with pytest.raises(ValueError) as exc_info:
-            instance.get_default_value("nonexistent.path")
-
-        assert "Required default value not found" in str(exc_info.value)
-
-    def test_cascade_all_missing_optional(
-        self, sdwan_data_model: dict[str, Any]
+    def test_required_defaults_to_true(
+        self,
+        nac_test_base_class: Any,
+        apic_data_model: dict[str, Any],
     ) -> None:
-        """Test cascade with all paths missing and required=False returns None."""
-        instance = self._create_test_instance(
-            data_model=sdwan_data_model,
-            defaults_prefix="defaults.sdwan",
-        )
+        """required parameter defaults to True when not explicitly passed."""
 
-        result = instance.get_default_value(
-            "missing.path1",
-            "missing.path2",
-            "missing.path3",
-            required=False,
-        )
-        assert result is None
+        class TestBase(nac_test_base_class):  # type: ignore[misc]
+            DEFAULTS_PREFIX = "defaults.apic"
 
-    def test_falsy_values_returned_correctly(self) -> None:
-        """Test that falsy values (False, 0, empty string) are returned correctly."""
-        data_model: dict[str, Any] = {
-            "defaults": {
-                "apic": {
-                    "settings": {
-                        "enabled": False,
-                        "count": 0,
-                        "name": "",
-                    }
-                }
-            }
-        }
+        instance = TestBase.__new__(TestBase)
+        instance.data_model = apic_data_model
 
-        instance = self._create_test_instance(
-            data_model=data_model,
-            defaults_prefix="defaults.apic",
-        )
+        with patch(
+            "nac_test.pyats_core.common.base_test._resolve",
+        ) as mock_resolve:
+            instance.get_default_value("some.path")
 
-        # False should be returned, not treated as missing
-        result = instance.get_default_value("settings.enabled")
-        assert result is False
+        _, kwargs = mock_resolve.call_args
+        assert kwargs["required"] is True
 
-        # 0 should be returned, not treated as missing
-        result = instance.get_default_value("settings.count")
-        assert result == 0
+    def test_subclass_prefix_overrides_base(
+        self,
+        nac_test_base_class: Any,
+        sdwan_data_model: dict[str, Any],
+    ) -> None:
+        """Subclass DEFAULTS_PREFIX and DEFAULTS_MISSING_ERROR override base values."""
 
-        # Empty string should be returned, not treated as missing
-        result = instance.get_default_value("settings.name")
-        assert result == ""
+        class SDWANTestBase(nac_test_base_class):  # type: ignore[misc]
+            DEFAULTS_PREFIX = "defaults.sdwan"
+            DEFAULTS_MISSING_ERROR = "SD-WAN defaults required."
 
-    def test_dict_value_returned(self, apic_data_model: dict[str, Any]) -> None:
-        """Test that dict values are returned correctly."""
-        instance = self._create_test_instance(
-            data_model=apic_data_model,
-            defaults_prefix="defaults.apic",
-        )
+        instance = SDWANTestBase.__new__(SDWANTestBase)
+        instance.data_model = sdwan_data_model
 
-        result = instance.get_default_value("tenants.l3outs.nodes")
-        assert result == {"pod": 1}
+        with patch(
+            "nac_test.pyats_core.common.base_test._resolve",
+        ) as mock_resolve:
+            instance.get_default_value("global.timeout")
 
-    def test_no_paths_raises_type_error(self, sdwan_data_model: dict[str, Any]) -> None:
-        """Test that calling with no paths raises TypeError."""
-        instance = self._create_test_instance(
-            data_model=sdwan_data_model,
-            defaults_prefix="defaults.sdwan",
-        )
+        _, kwargs = mock_resolve.call_args
+        assert kwargs["defaults_prefix"] == "defaults.sdwan"
+        assert kwargs["missing_error"] == "SD-WAN defaults required."
 
-        with pytest.raises(TypeError, match="requires at least one default_path"):
-            instance.get_default_value()
+    def test_data_model_passed_to_resolver(
+        self,
+        nac_test_base_class: Any,
+    ) -> None:
+        """The instance's data_model is passed as the first positional argument."""
+        data_model = {"defaults": {"apic": {"key": "value"}}}
+
+        class TestBase(nac_test_base_class):  # type: ignore[misc]
+            DEFAULTS_PREFIX = "defaults.apic"
+
+        instance = TestBase.__new__(TestBase)
+        instance.data_model = data_model
+
+        with patch(
+            "nac_test.pyats_core.common.base_test._resolve",
+        ) as mock_resolve:
+            instance.get_default_value("key")
+
+        args, _ = mock_resolve.call_args
+        assert args[0] is data_model
