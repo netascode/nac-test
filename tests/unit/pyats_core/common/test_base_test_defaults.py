@@ -16,9 +16,6 @@ Test Structure:
         - Optional (required=False) lookup behavior
 """
 
-import json
-import os
-import tempfile
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -43,18 +40,6 @@ def mock_pyats() -> Any:
 # =============================================================================
 # Fixtures
 # =============================================================================
-
-
-@pytest.fixture
-def temp_data_model_file() -> Any:
-    """Create a temporary data model file for tests."""
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump({"test": "data"}, f)
-        temp_file = f.name
-    yield temp_file
-    # Cleanup
-    if os.path.exists(temp_file):
-        os.unlink(temp_file)
 
 
 @pytest.fixture
