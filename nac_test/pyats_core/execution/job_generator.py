@@ -9,20 +9,28 @@ from pathlib import Path
 from typing import Any
 
 from nac_test.pyats_core.constants import DEFAULT_TEST_TIMEOUT
+from nac_test.utils.logging import LogLevel
 
 
 class JobGenerator:
     """Generates PyATS job files for test execution."""
 
-    def __init__(self, max_workers: int, output_dir: Path):
+    def __init__(
+        self,
+        max_workers: int,
+        output_dir: Path,
+        loglevel: LogLevel,
+    ):
         """Initialize job generator.
 
         Args:
             max_workers: Maximum number of parallel workers
             output_dir: Directory for output files
+            loglevel: Log level for aetest logging
         """
         self.max_workers = max_workers
         self.output_dir = Path(output_dir)
+        self.loglevel = loglevel
 
     def generate_job_file_content(self, test_files: list[Path]) -> str:
         """Generate the content for a PyATS job file for API tests.
@@ -33,6 +41,11 @@ class JobGenerator:
         The testbed parameter is passed to run() for consistency and to support
         future extensions, even though API tests typically don't require device
         connections or Genie parsers.
+
+        Note: We set managed_handlers.screen.setLevel() directly in the generated
+        job file because other approaches don't work:
+        - logging.getLogger('pyats.aetest').setLevel() gets overwritten by aetest's configure_logging()
+        - loglevel param to run() gets overwritten by CLI argument parsing
 
         Args:
             test_files: List of API test files to include in the job
@@ -48,9 +61,11 @@ class JobGenerator:
         job_content = textwrap.dedent(f'''
         """Auto-generated PyATS job file by nac-test"""
 
+        import logging
         import os
         from pathlib import Path
         from pyats.easypy import run
+        from pyats.log import managed_handlers
 
         # Test files to execute
         TEST_FILES = [
@@ -61,6 +76,7 @@ class JobGenerator:
             """Main job file entry point"""
             # Set max workers
             runtime.max_workers = {self.max_workers}
+            managed_handlers.screen.setLevel(logging.{self.loglevel.value})
 
             # Note: runtime.directory is read-only and set by --archive-dir
             # The output directory is: {str(self.output_dir)}
@@ -97,6 +113,11 @@ class JobGenerator:
         This job file sets up the environment for SSH tests to run against a single device.
         It ensures the SSHTestBase has access to device info and the data model.
 
+        Note: We set managed_handlers.screen.setLevel() directly in the generated
+        job file because other approaches don't work:
+        - logging.getLogger('pyats.aetest').setLevel() gets overwritten by aetest's configure_logging()
+        - loglevel param to run() gets overwritten by CLI argument parsing
+
         Args:
             device: Device dictionary with connection information
             test_files: List of D2D/SSH test files to run on this device
@@ -118,6 +139,7 @@ class JobGenerator:
         import os
         from pathlib import Path
         from pyats.easypy import run
+        from pyats.log import managed_handlers
         from nac_test.pyats_core.ssh.connection_manager import DeviceConnectionManager
         from nac_test.utils import sanitize_hostname
 
@@ -137,6 +159,7 @@ class JobGenerator:
 
             # Create and attach connection manager to runtime
             # This will be shared across all tests for this device
+            managed_handlers.screen.setLevel(logging.{self.loglevel.value})
             runtime.connection_manager = DeviceConnectionManager(max_concurrent=1)
 
             safe_hostname = sanitize_hostname(HOSTNAME)

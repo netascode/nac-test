@@ -38,8 +38,14 @@ class CurrentStreamHandler(_StreamHandlerBase):
         pass
 
 
-class VerbosityLevel(str, Enum):
-    """Supported logging verbosity levels."""
+class LogLevel(str, Enum):
+    """Supported logging levels for nac-test framework.
+
+    This enum provides standard Python logging levels with comparison operators.
+
+    Inheriting from (str, Enum) ensures Typer shows the level names in --help
+    and accepts string values from CLI.
+    """
 
     DEBUG = "DEBUG"
     INFO = "INFO"
@@ -47,32 +53,51 @@ class VerbosityLevel(str, Enum):
     ERROR = "ERROR"
     CRITICAL = "CRITICAL"
 
+    def __int__(self) -> int:
+        """Return Python logging integer value (e.g., 10 for DEBUG, 20 for INFO)."""
+        level: int = logging.getLevelName(self.value)
+        return level
 
-def configure_logging(level: str | VerbosityLevel) -> None:
+    def __le__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+        """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
+        return int(self) <= int(other)
+
+    def __lt__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+        """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
+        return int(self) < int(other)
+
+    def __ge__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+        """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
+        return int(self) >= int(other)
+
+    def __gt__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+        """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
+        return int(self) > int(other)
+
+
+# Default log level for CLI and orchestrators
+DEFAULT_LOGLEVEL = LogLevel.WARNING
+
+
+def configure_logging(level: str | LogLevel) -> None:
     """Configure logging for nac-test framework.
 
     Args:
-        level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        level: LogLevel enum member or string (DEBUG, INFO, WARNING, ERROR, CRITICAL).
     """
-    # Map string levels to logging constants
-    level_map = {
-        "DEBUG": logging.DEBUG,
-        "INFO": logging.INFO,
-        "WARNING": logging.WARNING,
-        "ERROR": logging.ERROR,
-        "CRITICAL": logging.CRITICAL,
-    }
-
-    # Convert to logging level, defaulting to CRITICAL for unknown levels
-    # Handle both enum values and string inputs
-    if isinstance(level, VerbosityLevel):
-        level_str = level.value.upper()
+    if isinstance(level, LogLevel):
+        log_level = int(level)
+        level_str = level.value
     else:
+        # String path: defensive programming, not used in nac-test codebase.
+        # Invalid strings fall back to DEFAULT_LOGLEVEL.
         level_str = str(level).upper()
+        try:
+            log_level = int(LogLevel(level_str))
+        except ValueError:
+            log_level = int(DEFAULT_LOGLEVEL)
+            level_str = DEFAULT_LOGLEVEL.value
 
-    log_level = level_map.get(level_str, logging.CRITICAL)
-
-    # Configure root logger
     logger = logging.getLogger()
 
     # Only remove StreamHandlers pointing to stdout/stderr

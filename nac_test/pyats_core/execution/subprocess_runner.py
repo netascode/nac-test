@@ -17,10 +17,11 @@ from pathlib import Path
 from typing import Any
 
 from nac_test.pyats_core.constants import (
-    DEFAULT_BUFFER_LIMIT,
     PIPE_DRAIN_DELAY_SECONDS,
     PIPE_DRAIN_TIMEOUT_SECONDS,
+    PYATS_OUTPUT_BUFFER_LIMIT,
 )
+from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class SubprocessRunner:
         output_dir: Path,
         output_handler: Callable[[str], None],
         plugin_config_path: Path | None = None,
+        loglevel: LogLevel = DEFAULT_LOGLEVEL,
     ):
         """Initialize the subprocess runner.
 
@@ -40,10 +42,12 @@ class SubprocessRunner:
             output_dir: Directory for test output
             output_handler: Function to process each line of stdout
             plugin_config_path: Path to the PyATS plugin configuration file
+            loglevel: Logging level to pass to PyATS CLI
         """
         self.output_dir = output_dir
         self.output_handler = output_handler
         self.plugin_config_path = plugin_config_path
+        self.loglevel = loglevel
 
         # Ensure pyats is in the same environment as nac-test
         pyats_path = Path(sysconfig.get_path("scripts")) / "pyats"
@@ -100,11 +104,19 @@ class SubprocessRunner:
             ]
         )
 
-        if logger.isEnabledFor(logging.DEBUG):
+        # Map nac-test loglevel to PyATS CLI flags
+        # PyATS default (no flags) = INFO
+        # -v = DEBUG, -q = WARNING, -qq = ERROR, -qqq = CRITICAL
+        if self.loglevel == LogLevel.DEBUG:
             cmd.append("--verbose")
-        else:
+        elif self.loglevel == LogLevel.INFO:
+            pass  # PyATS default is INFO, no flag needed
+        elif self.loglevel == LogLevel.WARNING:
             cmd.append("--quiet")
-
+        elif self.loglevel == LogLevel.ERROR:
+            cmd.extend(["--quiet", "--quiet"])
+        elif self.loglevel == LogLevel.CRITICAL:
+            cmd.extend(["--quiet", "--quiet", "--quiet"])
         return cmd
 
     async def execute_job(
@@ -167,12 +179,8 @@ class SubprocessRunner:
         logger.info(f"Executing command: {' '.join(cmd)}")
 
         try:
-            # Get buffer limit from environment or use default
-            buffer_limit = int(
-                os.environ.get("PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT)
-            )
             logger.debug(
-                f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB"
+                f"Using output buffer limit: {PYATS_OUTPUT_BUFFER_LIMIT / 1024 / 1024:.2f}MB"
             )
 
             # Increase the buffer limit to handle large output lines (default 10MB instead of asyncio's 64KB)
@@ -183,7 +191,7 @@ class SubprocessRunner:
                 stderr=asyncio.subprocess.STDOUT,
                 env={**os.environ, **env},
                 cwd=str(self.output_dir),
-                limit=buffer_limit,
+                limit=PYATS_OUTPUT_BUFFER_LIMIT,
             )
 
             # Process output in real-time if we have a handler
@@ -279,12 +287,8 @@ class SubprocessRunner:
         logger.info(f"Executing command: {' '.join(cmd)}")
 
         try:
-            # Get buffer limit from environment or use default
-            buffer_limit = int(
-                os.environ.get("PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT)
-            )
             logger.debug(
-                f"Using output buffer limit: {buffer_limit / 1024 / 1024:.2f}MB"
+                f"Using output buffer limit: {PYATS_OUTPUT_BUFFER_LIMIT / 1024 / 1024:.2f}MB"
             )
 
             # Increase the buffer limit to handle large output lines (default 10MB instead of asyncio's 64KB)
@@ -294,7 +298,7 @@ class SubprocessRunner:
                 stderr=asyncio.subprocess.STDOUT,
                 env={**os.environ, **env},
                 cwd=str(self.output_dir),
-                limit=buffer_limit,
+                limit=PYATS_OUTPUT_BUFFER_LIMIT,
             )
 
             # Process output in real-time
@@ -357,8 +361,8 @@ class SubprocessRunner:
             - Log warnings if data is lost due to timeouts
 
         Environment variables for CI tuning:
-            - NAC_TEST_PIPE_DRAIN_DELAY: Seconds to wait before drain (default: 0.1 on macOS)
-            - NAC_TEST_PIPE_DRAIN_TIMEOUT: Max seconds to wait for drain (default: 2.0)
+            - NAC_TEST_PYATS_PIPE_DRAIN_DELAY: Seconds to wait before drain (default: 0.1 on macOS)
+            - NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT: Max seconds to wait for drain (default: 2.0)
 
         Args:
             stdout: The subprocess stdout stream reader.
@@ -401,7 +405,7 @@ class SubprocessRunner:
         except asyncio.TimeoutError:
             logger.warning(
                 "Timeout after %.2fs draining subprocess buffer - some test output "
-                "may be lost. Consider increasing NAC_TEST_PIPE_DRAIN_TIMEOUT.",
+                "may be lost. Consider increasing NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT.",
                 PIPE_DRAIN_TIMEOUT_SECONDS,
             )
         except Exception as drain_error:

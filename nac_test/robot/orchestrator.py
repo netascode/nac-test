@@ -9,12 +9,12 @@ pattern as PyATSOrchestrator.
 """
 
 import logging
-import os
 from pathlib import Path
 
 import typer
 
 from nac_test.core.constants import (
+    DISABLE_TESTLEVELSPLIT,
     EXIT_DATA_ERROR,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
@@ -27,7 +27,7 @@ from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,8 @@ class RobotOrchestrator:
         dry_run: bool = False,
         processes: int | None = None,
         extra_args: list[str] | None = None,
-        verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+        loglevel: LogLevel = DEFAULT_LOGLEVEL,
+        verbose: bool = False,
     ):
         """Initialize the Robot Framework orchestrator.
 
@@ -73,7 +74,8 @@ class RobotOrchestrator:
             dry_run: If True, run tests in dry-run mode
             processes: Number of parallel processes for test execution
             extra_args: Additional Robot Framework arguments to pass to pabot
-            verbosity: Logging verbosity level
+            loglevel: Log level
+            verbose: Enable verbose mode - enables verbose output for pabot
         """
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
@@ -94,10 +96,11 @@ class RobotOrchestrator:
         self.dry_run = dry_run
         self.processes = processes
         self.extra_args = extra_args or []
-        self.verbosity = verbosity
+        self.loglevel = loglevel
+        self.verbose = verbose
 
         # Determine if ordering file should be used for test-level parallelization
-        if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
+        if not DISABLE_TESTLEVELSPLIT:
             self.ordering_file: Path | None = self.output_dir / "ordering.txt"
         else:
             self.ordering_file = None
@@ -154,13 +157,15 @@ class RobotOrchestrator:
         # Phase 3: Test execution (unless render-only mode)
         if not self.render_only:
             typer.echo("🤖 Executing Robot Framework tests...\n\n")
+            robot_loglevel = "DEBUG" if self.loglevel == LogLevel.DEBUG else None
             exit_code = run_pabot(
                 path=self.output_dir,
                 include=self.include_tags,
                 exclude=self.exclude_tags,
                 processes=self.processes,
                 dry_run=self.dry_run,
-                verbose=(self.verbosity == VerbosityLevel.DEBUG),
+                verbose=self.verbose,
+                robot_loglevel=robot_loglevel,
                 ordering_file=self.ordering_file,
                 extra_args=self.extra_args,
             )

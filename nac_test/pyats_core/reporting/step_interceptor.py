@@ -15,7 +15,6 @@ The interceptor:
 """
 
 import logging
-import os
 from collections.abc import Callable
 from functools import wraps
 from types import TracebackType
@@ -23,6 +22,7 @@ from typing import Any
 
 from pyats.aetest.steps.implementation import Step
 
+from nac_test.pyats_core.constants import BATCHING_REPORTER_ENABLED
 from nac_test.pyats_core.reporting.batching_reporter import BatchingReporter
 
 logger = logging.getLogger(__name__)
@@ -66,14 +66,9 @@ class StepInterceptor:
         Returns:
             True if batching should be used, False for original behavior
         """
-        # Check environment variable
         # FIXME: There's a bug here perhaps.
-        env_enabled = (
-            os.environ.get("NAC_TEST_BATCHING_REPORTER", "false").lower() == "true"
-        )
-
         # Also check our internal enabled flag (for fallback scenarios)
-        return env_enabled and self.enabled
+        return BATCHING_REPORTER_ENABLED and self.enabled
 
     def wrap_step_enter(self, original_enter: Callable[..., Any]) -> Callable[..., Any]:
         """Create wrapper for Step.__enter__ method.

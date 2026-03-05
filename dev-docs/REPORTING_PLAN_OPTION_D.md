@@ -1248,11 +1248,11 @@ async def generate_reports_from_archives(
             pyats_stats = await self._collect_pyats_stats(results)
         finally:
             # Clean up JSONL files after collecting stats
-            os.environ.pop("KEEP_HTML_REPORT_DATA", None)
+            os.environ.pop("NAC_TEST_PYATS_KEEP_REPORT_DATA", None)
             await self._cleanup_all_jsonl_files()
     elif len(archive_paths) > 1:
         # Multiple archives were requested but not all succeeded, still clean up
-        os.environ.pop("KEEP_HTML_REPORT_DATA", None)
+        os.environ.pop("NAC_TEST_PYATS_KEEP_REPORT_DATA", None)
         await self._cleanup_all_jsonl_files()
 
     # Determine overall status
