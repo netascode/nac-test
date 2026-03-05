@@ -1078,12 +1078,13 @@ wheels = [
 
 [[package]]
 name = "nac-test"
-version = "1.2.2"
+version = "1.2.3"
 source = { editable = "." }
 dependencies = [
     { name = "asyncssh" },
     { name = "jinja2" },
     { name = "jmespath" },
+    { name = "jsonpath-ng" },
     { name = "nac-yaml" },
     { name = "restinstance" },
     { name = "robotframework" },
@@ -1118,6 +1119,7 @@ requires-dist = [
     { name = "bandit", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=1.8.6" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "jmespath", specifier = ">=1.0.1" },
+    { name = "jsonpath-ng", specifier = "!=1.8.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
     { name = "nac-yaml", specifier = ">=1.1.1" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.3.0" },

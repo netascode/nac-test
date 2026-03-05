@@ -1,4 +1,4 @@
-# Unreleased
+# 1.2.3
 
 - Exclude jsonpath-ng 1.8.0 due to upstream regression (#603)
 
