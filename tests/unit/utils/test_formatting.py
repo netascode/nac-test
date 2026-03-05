@@ -5,7 +5,11 @@
 
 from datetime import datetime
 
-from nac_test.utils.formatting import format_duration, format_timestamp_ms
+from nac_test.utils.formatting import (
+    format_duration,
+    format_file_timestamp_ms,
+    format_timestamp_ms,
+)
 
 
 class TestFormatDuration:
@@ -71,3 +75,34 @@ class TestFormatTimestampMs:
         result = format_timestamp_ms(dt)
         # "YYYY-MM-DD HH:MM:SS.mmm" = 23 chars
         assert len(result) == 23
+
+
+class TestFormatFileTimestampMs:
+    """Tests for format_file_timestamp_ms utility function."""
+
+    def test_known_datetime_formats_correctly(self) -> None:
+        dt = datetime(2025, 6, 27, 18, 26, 16, 834000)
+        result = format_file_timestamp_ms(dt)
+        assert result == "20250627_182616_834"
+
+    def test_millisecond_precision_trims_microseconds(self) -> None:
+        dt = datetime(2025, 1, 1, 0, 0, 0, 123456)
+        result = format_file_timestamp_ms(dt)
+        # strftime %f -> "123456", trim last 3 -> "123"
+        assert result.endswith("_123")
+
+    def test_none_defaults_to_now(self) -> None:
+        before = datetime.now()
+        result = format_file_timestamp_ms()
+        after = datetime.now()
+
+        # Result should be parseable as a file timestamp
+        parsed = datetime.strptime(result, "%Y%m%d_%H%M%S_%f")
+        assert before.replace(microsecond=0) <= parsed.replace(microsecond=0)
+        assert parsed.replace(microsecond=0) <= after.replace(microsecond=0)
+
+    def test_output_format_has_expected_length(self) -> None:
+        dt = datetime(2025, 12, 31, 23, 59, 59, 999000)
+        result = format_file_timestamp_ms(dt)
+        # "YYYYMMDD_HHMMSS_mmm" = 19 chars
+        assert len(result) == 19
