@@ -42,6 +42,8 @@ class AuthCheckResult:
         controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
         controller_url: The URL of the controller that was checked.
         detail: Human-readable detail about the result (e.g., "HTTP 401: Unauthorized").
+        status_code: HTTP status code from the failed request, or None for
+            non-HTTP failures (e.g., connection timeout, DNS failure) and successes.
     """
 
     success: bool
@@ -49,6 +51,7 @@ class AuthCheckResult:
     controller_type: ControllerTypeKey
     controller_url: str
     detail: str
+    status_code: int | None = None
 
 
 def _get_controller_url(controller_type: str) -> str:
