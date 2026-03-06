@@ -328,21 +328,20 @@ def main(
         typer.echo("")
         raise typer.Exit(1)
 
-    # Detect controller type from environment variables
-    # This is used for pre-flight auth check and passed to orchestrator
-    try:
-        controller_type = detect_controller_type()
-    except ValueError as e:
-        # No credentials or multiple credentials configured
-        typer.echo(
-            typer.style(f"Error: {e}", fg=typer.colors.RED),
-            err=True,
-        )
-        raise typer.Exit(1) from None
+    # Detect controller type and pre-flight auth check
+    # Skip for render-only and dry-run modes since they don't need controller access
+    controller_type: str | None = None
+    if not render_only and not dry_run:
+        try:
+            controller_type = detect_controller_type()
+        except ValueError as e:
+            # No credentials or multiple credentials configured
+            typer.echo(
+                typer.style(f"Error: {e}", fg=typer.colors.RED),
+                err=True,
+            )
+            raise typer.Exit(1) from None
 
-    # Pre-flight auth check: validate credentials before any test execution
-    # Skip for render-only mode since we don't need controller access
-    if not render_only:
         auth_result = preflight_auth_check(controller_type)
         if not auth_result.success:
             typer.echo("")

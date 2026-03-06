@@ -118,9 +118,9 @@ class CombinedOrchestrator:
         self.dev_pyats_only = dev_pyats_only
         self.dev_robot_only = dev_robot_only
 
-        # Detect controller type early (unless we are in render-only mode, which doesn't require controller access)
+        # Detect controller type early (unless render-only or dry-run, which don't require controller access)
         self.controller_type: str | None = None
-        if not self.render_only:
+        if not self.render_only and not self.dry_run:
             try:
                 self.controller_type = detect_controller_type()
                 logger.info(f"Controller type detected: {self.controller_type}")
