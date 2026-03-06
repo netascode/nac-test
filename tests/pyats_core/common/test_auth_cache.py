@@ -1067,10 +1067,12 @@ class TestAuthCacheInvalidate:
         mock_time: Mock,
         sample_auth_func: Mock,
     ) -> None:
-        """Invalidate removes both the cache file and the lock file.
+        """Invalidate leaves no cache or lock artifacts behind.
 
-        This test does NOT mock FileLock so that a real .lock file is
-        created on disk, verifying end-to-end cleanup.
+        This test does NOT mock FileLock so that real file locking occurs.
+        Note: filelock >= 3.13 (UnixFileLock) auto-deletes lock files on
+        release, so the .lock file may not persist between calls. This test
+        verifies the end state — no artifacts remain after invalidation.
 
         Args:
             mock_auth_cache_dir: Mocked auth cache directory path.
@@ -1080,7 +1082,7 @@ class TestAuthCacheInvalidate:
         controller_type = "ACI"
         url = "https://apic.example.com"
 
-        # Populate cache (using real FileLock so .lock file is created)
+        # Populate cache (using real FileLock)
         AuthCache._cache_auth_data(
             controller_type=controller_type,
             url=url,
@@ -1088,16 +1090,14 @@ class TestAuthCacheInvalidate:
             extract_token=True,
         )
 
-        # Verify both files exist
+        # Cache file must exist after population
         json_files = list(mock_auth_cache_dir.glob("*.json"))
-        lock_files = list(mock_auth_cache_dir.glob("*.lock"))
         assert len(json_files) == 1
-        assert len(lock_files) == 1
 
         # Invalidate
         AuthCache.invalidate(controller_type, url)
 
-        # Both files should be removed
+        # No cache or lock artifacts should remain
         assert len(list(mock_auth_cache_dir.glob("*.json"))) == 0
         assert len(list(mock_auth_cache_dir.glob("*.lock"))) == 0
 
