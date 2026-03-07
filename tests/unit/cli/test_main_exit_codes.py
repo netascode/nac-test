@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 from typer.testing import CliRunner, Result
 
 from nac_test.cli.main import app
+from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
 from nac_test.core.constants import (
     EXIT_DATA_ERROR,
     EXIT_ERROR,
@@ -17,6 +18,15 @@ from nac_test.core.constants import (
     EXIT_INVALID_ARGS,
 )
 from nac_test.core.types import CombinedResults, ErrorType, TestResults
+
+# Successful auth result used to bypass pre-flight check in unit tests
+_AUTH_SUCCESS = AuthCheckResult(
+    success=True,
+    reason=AuthOutcome.SUCCESS,
+    controller_type="ACI",
+    controller_url="https://apic.example.com",
+    detail="OK",
+)
 
 
 class TestMainExitCodes:
@@ -40,8 +50,12 @@ class TestMainExitCodes:
                 app, ["-d", temp_data, "-t", temp_templates, "-o", temp_output] + args
             )
 
+    @patch("nac_test.cli.main.preflight_auth_check", return_value=_AUTH_SUCCESS)
+    @patch("nac_test.cli.main.detect_controller_type", return_value="ACI")
     @patch("nac_test.cli.main.CombinedOrchestrator")
-    def test_exit_code_0_all_tests_passed(self, mock_orchestrator_cls: Mock) -> None:
+    def test_exit_code_0_all_tests_passed(
+        self, mock_orchestrator_cls: Mock, _detect: Mock, _auth: Mock
+    ) -> None:
         """Test exit code 0 when all tests pass."""
         # Mock orchestrator with successful results
         mock_orchestrator = Mock()
@@ -53,8 +67,12 @@ class TestMainExitCodes:
 
         assert result.exit_code == 0
 
+    @patch("nac_test.cli.main.preflight_auth_check", return_value=_AUTH_SUCCESS)
+    @patch("nac_test.cli.main.detect_controller_type", return_value="ACI")
     @patch("nac_test.cli.main.CombinedOrchestrator")
-    def test_exit_code_equals_failure_count(self, mock_orchestrator_cls: Mock) -> None:
+    def test_exit_code_equals_failure_count(
+        self, mock_orchestrator_cls: Mock, _detect: Mock, _auth: Mock
+    ) -> None:
         """Test exit code equals number of test failures."""
         # Mock orchestrator with 3 test failures
         mock_orchestrator = Mock()
@@ -66,9 +84,11 @@ class TestMainExitCodes:
 
         assert result.exit_code == 3
 
+    @patch("nac_test.cli.main.preflight_auth_check", return_value=_AUTH_SUCCESS)
+    @patch("nac_test.cli.main.detect_controller_type", return_value="ACI")
     @patch("nac_test.cli.main.CombinedOrchestrator")
     def test_exit_code_255_for_execution_errors(
-        self, mock_orchestrator_cls: Mock
+        self, mock_orchestrator_cls: Mock, _detect: Mock, _auth: Mock
     ) -> None:
         """Test exit code 255 when execution errors occur."""
         # Mock orchestrator with execution error
@@ -81,9 +101,11 @@ class TestMainExitCodes:
 
         assert result.exit_code == EXIT_ERROR
 
+    @patch("nac_test.cli.main.preflight_auth_check", return_value=_AUTH_SUCCESS)
+    @patch("nac_test.cli.main.detect_controller_type", return_value="ACI")
     @patch("nac_test.cli.main.CombinedOrchestrator")
     def test_exit_code_252_for_robot_invalid_args(
-        self, mock_orchestrator_cls: Mock
+        self, mock_orchestrator_cls: Mock, _detect: Mock, _auth: Mock
     ) -> None:
         """Test exit code 252 for Robot Framework invalid arguments."""
         # Mock orchestrator with Robot invalid args
@@ -101,8 +123,12 @@ class TestMainExitCodes:
 
         assert result.exit_code == EXIT_DATA_ERROR
 
+    @patch("nac_test.cli.main.preflight_auth_check", return_value=_AUTH_SUCCESS)
+    @patch("nac_test.cli.main.detect_controller_type", return_value="ACI")
     @patch("nac_test.cli.main.CombinedOrchestrator")
-    def test_exit_code_252_for_empty_results(self, mock_orchestrator_cls: Mock) -> None:
+    def test_exit_code_252_for_empty_results(
+        self, mock_orchestrator_cls: Mock, _detect: Mock, _auth: Mock
+    ) -> None:
         """Test exit code 252 when no tests are executed."""
         # Mock orchestrator with empty results
         mock_orchestrator = Mock()
@@ -114,8 +140,12 @@ class TestMainExitCodes:
 
         assert result.exit_code == EXIT_DATA_ERROR
 
+    @patch("nac_test.cli.main.preflight_auth_check", return_value=_AUTH_SUCCESS)
+    @patch("nac_test.cli.main.detect_controller_type", return_value="ACI")
     @patch("nac_test.cli.main.CombinedOrchestrator")
-    def test_priority_errors_over_failures(self, mock_orchestrator_cls: Mock) -> None:
+    def test_priority_errors_over_failures(
+        self, mock_orchestrator_cls: Mock, _detect: Mock, _auth: Mock
+    ) -> None:
         """Test that errors (255) are prioritized over failures (1-250)."""
         # Mock orchestrator with both errors and failures
         mock_orchestrator = Mock()
@@ -131,9 +161,11 @@ class TestMainExitCodes:
         # Should return 255 (error) not 5 (failures)
         assert result.exit_code == EXIT_ERROR
 
+    @patch("nac_test.cli.main.preflight_auth_check", return_value=_AUTH_SUCCESS)
+    @patch("nac_test.cli.main.detect_controller_type", return_value="ACI")
     @patch("nac_test.cli.main.CombinedOrchestrator")
     def test_priority_robot_invalid_args_over_other_errors(
-        self, mock_orchestrator_cls: Mock
+        self, mock_orchestrator_cls: Mock, _detect: Mock, _auth: Mock
     ) -> None:
         """Test that Robot invalid args (252) are prioritized over other errors (255)."""
         # Mock orchestrator with Robot invalid args and other error
@@ -153,8 +185,12 @@ class TestMainExitCodes:
         # Should return 252 (Robot invalid args) not 255 (generic error)
         assert result.exit_code == EXIT_DATA_ERROR
 
+    @patch("nac_test.cli.main.preflight_auth_check", return_value=_AUTH_SUCCESS)
+    @patch("nac_test.cli.main.detect_controller_type", return_value="ACI")
     @patch("nac_test.cli.main.CombinedOrchestrator")
-    def test_failure_count_capped_at_250(self, mock_orchestrator_cls: Mock) -> None:
+    def test_failure_count_capped_at_250(
+        self, mock_orchestrator_cls: Mock, _detect: Mock, _auth: Mock
+    ) -> None:
         """Test that failure count is capped at 250."""
         # Mock orchestrator with 300 failures
         mock_orchestrator = Mock()
@@ -173,9 +209,11 @@ class TestMainExitCodes:
 
         assert result.exit_code == EXIT_INVALID_ARGS
 
+    @patch("nac_test.cli.main.preflight_auth_check", return_value=_AUTH_SUCCESS)
+    @patch("nac_test.cli.main.detect_controller_type", return_value="ACI")
     @patch("nac_test.cli.main.CombinedOrchestrator")
     def test_exit_code_253_for_keyboard_interrupt(
-        self, mock_orchestrator_cls: Mock
+        self, mock_orchestrator_cls: Mock, _detect: Mock, _auth: Mock
     ) -> None:
         """Test exit code 253 when execution is interrupted by Ctrl+C."""
         mock_orchestrator = Mock()

@@ -45,12 +45,32 @@ def setup_bogus_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
     Uses monkeypatch for safe, automatic cleanup that preserves
     original environment state even if tests fail.
 
+    Also mocks the preflight auth check and controller detection so that
+    these Robot ordering integration tests are not blocked by
+    unreachable controller credentials.
+
     Args:
         monkeypatch: Pytest monkeypatch fixture for safe environment manipulation.
     """
+    from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
+
     monkeypatch.setenv("ACI_URL", "foo")
     monkeypatch.setenv("ACI_USERNAME", "foo")
     monkeypatch.setenv("ACI_PASSWORD", "foo")
+
+    # Bypass preflight auth check — these tests validate Robot ordering behavior,
+    # not controller authentication.
+    monkeypatch.setattr("nac_test.cli.main.detect_controller_type", lambda: "ACI")
+    monkeypatch.setattr(
+        "nac_test.cli.main.preflight_auth_check",
+        lambda _: AuthCheckResult(
+            success=True,
+            reason=AuthOutcome.SUCCESS,
+            controller_type="ACI",
+            controller_url="foo",
+            detail="OK",
+        ),
+    )
 
 
 @pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_cwd_dir"])

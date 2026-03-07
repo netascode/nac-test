@@ -14,6 +14,14 @@ Design Note:
     banners, progress indicators, or table formatters.
 """
 
-from nac_test.cli.ui.banners import display_aci_defaults_banner
+from nac_test.cli.ui.banners import (
+    display_aci_defaults_banner,
+    display_auth_failure_banner,
+    display_unreachable_banner,
+)
 
-__all__ = ["display_aci_defaults_banner"]
+__all__ = [
+    "display_aci_defaults_banner",
+    "display_auth_failure_banner",
+    "display_unreachable_banner",
+]

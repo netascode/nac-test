@@ -6,6 +6,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from functools import cached_property
+from typing import Literal
 
 from nac_test.core.constants import (
     EXIT_DATA_ERROR,
@@ -13,6 +14,10 @@ from nac_test.core.constants import (
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
 )
+
+# Type alias for supported controller type keys.
+# Matches the keys of CONTROLLER_REGISTRY in nac_test.utils.controller.
+ControllerTypeKey = Literal["ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"]
 
 
 class ExecutionState(str, Enum):
@@ -193,6 +198,30 @@ class PyATSResults:
         return f"PyATSResults({', '.join(parts) if parts else 'empty'})"
 
 
+@dataclass(frozen=True)
+class PreFlightFailure:
+    """Pre-execution failure that prevented all test execution.
+
+    Represents conditions detected before any tests run (auth failure,
+    controller unreachable, etc.). When present on CombinedResults,
+    all test counts will be zero.
+
+    Attributes:
+        failure_type: Category of failure - constrained to "auth" or "unreachable".
+        controller_type: Controller identifier ("ACI", "SDWAN", "CC").
+        controller_url: URL that was tested.
+        detail: Human-readable error description.
+        status_code: HTTP status code from the failed request, or None for
+            non-HTTP failures (e.g., connection timeout, DNS failure).
+    """
+
+    failure_type: Literal["auth", "unreachable"]
+    controller_type: ControllerTypeKey
+    controller_url: str
+    detail: str
+    status_code: int | None = None
+
+
 @dataclass
 class CombinedResults:
     """Combined test results from all frameworks.
@@ -204,14 +233,19 @@ class CombinedResults:
         api: Results from PyATS API tests (controller API validation)
         d2d: Results from PyATS D2D tests (device-to-device validation)
         robot: Results from Robot Framework tests
+        pre_flight_failure: Pre-execution failure that prevented testing
     """
 
     api: TestResults | None = None
     d2d: TestResults | None = None
     robot: TestResults | None = None
+    pre_flight_failure: PreFlightFailure | None = None
 
     def __str__(self) -> str:
         """Concise string: CombinedResults(API: t/p/f/s, D2D: t/p/f/s, Robot: t/p/f/s)."""
+        if self.pre_flight_failure is not None:
+            pf = self.pre_flight_failure
+            return f"CombinedResults(pre_flight_failure={pf.failure_type}: {pf.detail})"
         parts = []
         if self.api is not None:
             parts.append(f"API: {self.api}")

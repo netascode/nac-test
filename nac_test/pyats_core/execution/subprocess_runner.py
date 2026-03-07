@@ -12,7 +12,6 @@ import tempfile
 import textwrap
 import time
 from collections.abc import Callable
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +20,7 @@ from nac_test.pyats_core.constants import (
     PIPE_DRAIN_DELAY_SECONDS,
     PIPE_DRAIN_TIMEOUT_SECONDS,
 )
+from nac_test.utils.formatting import format_file_timestamp_ms
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +157,7 @@ class SubprocessRunner:
             return None
 
         # Generate archive name with timestamp
-        job_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+        job_timestamp = format_file_timestamp_ms()
         archive_name = f"nac_test_job_{job_timestamp}.zip"
 
         cmd = self._build_command(

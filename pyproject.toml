@@ -84,6 +84,7 @@ dev = [
     "pre-commit>=4.3.0",
     "pytest>=8.4.2",
     "pytest-cov~=4.1",  # Genie dependency does not support pytest-cov 6.x yet
+    "pytest-httpserver>=1.1.5",
     "pytest-mock>=3.15.0",
     "pytest-xdist>=3.5.0",  # Parallel test execution
     "ruff>=0.12.12",

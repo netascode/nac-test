@@ -13,6 +13,7 @@ from pathlib import Path
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     OUTPUT_XML,
+    REPORT_TIMESTAMP_FORMAT,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
@@ -110,7 +111,7 @@ class RobotReportGenerator:
             # Render template (reuse PyATS summary template)
             template = self.env.get_template("summary/report.html.j2")
             html_content = template.render(
-                generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                generation_time=datetime.now().strftime(REPORT_TIMESTAMP_FORMAT),
                 stats=stats,
                 results=results,
                 breadcrumb_link=f"../{COMBINED_SUMMARY_FILENAME}",  # 1 level up from robot_results/
