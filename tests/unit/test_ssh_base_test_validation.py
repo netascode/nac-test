@@ -31,7 +31,10 @@ class TestSSHTestBaseValidation:
             temp_file = f.name
 
         try:
-            # Setup environment
+            # Setup environment with controller credentials (required by NACTestBase.setup)
+            os.environ["IOSXE_URL"] = "https://test.example.com"
+            os.environ["IOSXE_USERNAME"] = "test_user"
+            os.environ["IOSXE_PASSWORD"] = "test_pass"
             os.environ["DEVICE_INFO"] = json.dumps(valid_device)
             os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = temp_file
 
@@ -58,6 +61,15 @@ class TestSSHTestBaseValidation:
             # Verify device_info was set correctly
             assert test_instance.device_info == valid_device
         finally:
+            # Clean up environment variables
+            for key in [
+                "IOSXE_URL",
+                "IOSXE_USERNAME",
+                "IOSXE_PASSWORD",
+                "DEVICE_INFO",
+                "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH",
+            ]:
+                os.environ.pop(key, None)
             # Clean up temp file
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
@@ -77,7 +89,10 @@ class TestSSHTestBaseValidation:
             temp_file = f.name
 
         try:
-            # Setup environment
+            # Setup environment with controller credentials (required by NACTestBase.setup)
+            os.environ["IOSXE_URL"] = "https://test.example.com"
+            os.environ["IOSXE_USERNAME"] = "test_user"
+            os.environ["IOSXE_PASSWORD"] = "test_pass"
             os.environ["DEVICE_INFO"] = json.dumps(invalid_device)
             os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = temp_file
 
@@ -108,6 +123,15 @@ class TestSSHTestBaseValidation:
                     in error_msg
                 )
         finally:
+            # Clean up environment variables
+            for key in [
+                "IOSXE_URL",
+                "IOSXE_USERNAME",
+                "IOSXE_PASSWORD",
+                "DEVICE_INFO",
+                "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH",
+            ]:
+                os.environ.pop(key, None)
             # Clean up temp file
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
@@ -120,6 +144,10 @@ class TestSSHTestBaseValidation:
             temp_file = f.name
 
         try:
+            # Setup environment with controller credentials (required by NACTestBase.setup)
+            os.environ["IOSXE_URL"] = "https://test.example.com"
+            os.environ["IOSXE_USERNAME"] = "test_user"
+            os.environ["IOSXE_PASSWORD"] = "test_pass"
             # Setup environment with invalid JSON
             os.environ["DEVICE_INFO"] = "not valid json"
             os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = temp_file
@@ -151,6 +179,15 @@ class TestSSHTestBaseValidation:
                 error_msg = test_instance.failed.call_args[0][0]
                 assert "Could not parse device info JSON" in error_msg
         finally:
+            # Clean up environment variables
+            for key in [
+                "IOSXE_URL",
+                "IOSXE_USERNAME",
+                "IOSXE_PASSWORD",
+                "DEVICE_INFO",
+                "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH",
+            ]:
+                os.environ.pop(key, None)
             # Clean up temp file
             if os.path.exists(temp_file):
                 os.unlink(temp_file)

@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-import aiofiles  # type: ignore[import-untyped]
+import aiofiles
 
 from nac_test.core.constants import (
     HTML_REPORTS_DIRNAME,
