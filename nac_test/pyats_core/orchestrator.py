@@ -6,7 +6,6 @@
 import asyncio
 import logging
 import os
-import sys
 import tempfile
 import zipfile
 from datetime import datetime
@@ -17,7 +16,6 @@ import yaml
 
 from nac_test.core.constants import (
     DRY_RUN_REASON,
-    EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
@@ -62,7 +60,6 @@ class PyATSOrchestrator:
         merged_data_filename: str,
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
-        controller_type: str | None = None,
         dry_run: bool = False,
     ):
         """Initialize the PyATS orchestrator.
@@ -74,8 +71,6 @@ class PyATSOrchestrator:
             merged_data_filename: Name of the merged data model file
             minimal_reports: Only include command outputs for failed/errored tests in reports
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
-            controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
-                If not provided, will be detected automatically.
             dry_run: If True, validate test structure without executing tests
         """
         self.data_paths = data_paths
@@ -99,21 +94,8 @@ class PyATSOrchestrator:
         # Track test status (initialized to None, populated during test execution)
         self.test_status: dict[str, Any] | None = None
 
-        # Use provided controller type or detect it
-        if controller_type:
-            # Controller type provided by caller (e.g., CombinedOrchestrator)
-            self.controller_type = controller_type
-            logger.info(f"Using provided controller type: {self.controller_type}")
-        else:
-            # Fallback to auto-detection for standalone usage
-            try:
-                self.controller_type = detect_controller_type()
-                logger.info(f"Controller type detected: {self.controller_type}")
-            except ValueError as e:
-                # Exit gracefully if controller detection fails
-                logger.error(f"Controller detection failed: {e}")
-                print(terminal.error(f"Controller detection failed:\n{e}"))
-                sys.exit(EXIT_ERROR)
+        # Controller type: detected lazily in run_tests()
+        self.controller_type: str | None = None
 
         # Calculate max workers based on system resources
         self.max_workers = self._calculate_workers()
@@ -497,7 +479,8 @@ class PyATSOrchestrator:
         Raises:
             SystemExit: If required environment variables are missing
         """
-        # Use the detected controller type
+        if self.controller_type is None:
+            raise RuntimeError("Controller type must be detected before validation")
         EnvironmentValidator.validate_controller_env(self.controller_type)
 
     def _extract_pyats_stats(
@@ -590,9 +573,6 @@ class PyATSOrchestrator:
         if os.environ.get("CI"):
             cleanup_old_test_outputs(self.output_dir, days=3)
 
-        # Pre-flight check and setup
-        self.validate_environment()
-
         # Note: Merged data file created by main.py (single source of truth)
 
         # Test Discovery
@@ -617,6 +597,20 @@ class PyATSOrchestrator:
             api_result = TestResults.not_run(DRY_RUN_REASON) if api_tests else None
             d2d_result = TestResults.not_run(DRY_RUN_REASON) if d2d_tests else None
             return PyATSResults(api=api_result, d2d=d2d_result)
+
+        # Detect controller type (lazy - only when actually running tests)
+        try:
+            self.controller_type = detect_controller_type()
+            logger.info(f"Controller type detected: {self.controller_type}")
+        except ValueError as e:
+            print(terminal.error(f"Controller detection failed:\n{e}"))
+            return PyATSResults(
+                api=TestResults.from_error("Controller detection failed"),
+                d2d=TestResults.from_error("Controller detection failed"),
+            )
+
+        # Pre-flight check: validate environment variables for detected controller
+        self.validate_environment()
 
         breakdown_parts = []
         if api_tests:

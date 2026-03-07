@@ -71,7 +71,6 @@ def detect_controller_type() -> str:
     # Check for no credentials at all
     if not complete_sets and not partial_sets:
         error_message = _format_no_credentials_error(partial_sets)
-        logger.error("No controller credentials found in environment")
         raise ValueError(error_message)
 
     # Check for incomplete credentials
