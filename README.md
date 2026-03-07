@@ -78,7 +78,7 @@ For Robot Framework tests, [Pabot](https://pabot.org/) executes test suites in p
 **Platform Requirements:**
 
 - **Linux**: Python 3.10 or higher
-- **macOS**: Python 3.12 or higher (earlier versions have known incompatibilities). Note: Initial pyATS execution can incur a startup delay exceeding 3 minutes as Python byte-compiles pyATS/genie packages; subsequent runs won't have this overhead.
+- **macOS**: Python 3.12 or higher (earlier versions have known incompatibilities)
 - **Windows**: Not supported in nac-test 2.x
 
 Don't have the right Python version? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/), or install using:
