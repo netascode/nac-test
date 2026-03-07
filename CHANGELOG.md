@@ -1,6 +1,8 @@
-# 1.2.3
+# 2.0.0
 
-- Exclude jsonpath-ng 1.8.0 due to upstream regression (#603)
+- nac-test 2.0 no longer supports Windows as the pyats libraries are not
+  available on this platform. Please use WSL2 (Windows Subsystem for Linux)
+  as an alternative runtime on Windows devices.
 
 # 1.2.2
 

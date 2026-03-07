@@ -75,23 +75,25 @@ For Robot Framework tests, [Pabot](https://pabot.org/) executes test suites in p
 
 ## Installation
 
-**Python Requirements:**
-- **Linux / Windows**: Python 3.10 or higher
+**Platform Requirements:**
+
+- **Linux**: Python 3.10 or higher
 - **macOS**: Python 3.12 or higher (earlier versions have known incompatibilities)
+- **Windows**: Not supported in nac-test 2.x
 
 Don't have the right Python version? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/), or install using:
 - `brew install python@3.12`
 - `uv python install 3.12`
 - `pyenv install 3.12`
 
-`nac-validate` can be installed in a virtual environment using `pip` or `uv`:
+`nac-test` can be installed in a virtual environment using `pip` or `uv`:
 
 ```bash
 # Using pip
 pip install nac-test
 
-# Using uv (recommended)
-uv tools install nac-test
+# Using uv (recommended, also for install performance reasons)
+uv tool install nac-test
 ```
 
 The following Robot libraries are included with `nac-test`:
