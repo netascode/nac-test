@@ -21,7 +21,6 @@ from typing import (
 )
 
 import httpx
-import markdown  # type: ignore[import-untyped]
 import yaml  # type: ignore[import-untyped]
 from pyats import aetest
 
@@ -40,6 +39,7 @@ from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.utils import sanitize_hostname
 from nac_test.utils.controller import detect_controller_type
+from nac_test.utils.strings import markdown_to_html
 
 T = TypeVar("T")
 
@@ -134,49 +134,13 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         return {
             "title": getattr(module, "TITLE", cls.__name__),
-            "description_html": cls._render_html(getattr(module, "DESCRIPTION", "")),
-            "setup_html": cls._render_html(getattr(module, "SETUP", "")),
-            "procedure_html": cls._render_html(getattr(module, "PROCEDURE", "")),
-            "criteria_html": cls._render_html(
+            "description_html": markdown_to_html(getattr(module, "DESCRIPTION", "")),
+            "setup_html": markdown_to_html(getattr(module, "SETUP", "")),
+            "procedure_html": markdown_to_html(getattr(module, "PROCEDURE", "")),
+            "criteria_html": markdown_to_html(
                 getattr(module, "PASS_FAIL_CRITERIA", "")
             ),
         }
-
-    @staticmethod
-    def _render_html(text: str) -> str:
-        """Convert Markdown text to HTML using the markdown library.
-
-        Converts Markdown-formatted text to HTML with support for:
-        - Lists (ordered and unordered, including nested)
-        - Bold text (**text**)
-        - Italic text (*text*)
-        - Code blocks (inline and fenced)
-        - Headings
-        - Links
-        - And more standard Markdown features
-
-        Args:
-            text: Markdown-formatted text to convert to HTML
-
-        Returns:
-            HTML formatted text
-        """
-        if not text:
-            return ""
-
-        # Configure markdown with useful extensions
-        md = markdown.Markdown(
-            extensions=[
-                "extra",  # Includes tables, footnotes, abbreviations, etc.
-                "nl2br",  # Converts newlines to <br> tags
-                "sane_lists",  # Better list handling
-            ]
-        )
-
-        # Convert markdown to HTML
-        html = str(md.convert(text))
-
-        return html
 
     @aetest.setup  # type: ignore[untyped-decorator]
     def setup(self) -> None:

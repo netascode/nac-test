@@ -5,6 +5,33 @@
 
 import re
 
+import markdown  # type: ignore[import-untyped]
+
+
+def markdown_to_html(text: str | None) -> str:
+    """Convert Markdown text to HTML.
+
+    Converts Markdown-formatted text to HTML with support for:
+    - Lists (ordered and unordered, including nested)
+    - Bold text (**text**)
+    - Italic text (*text*)
+    - Code blocks (inline and fenced)
+    - Headings
+    - Links
+    - Tables, footnotes, abbreviations (via 'extra' extension)
+    - Newlines converted to <br> tags (via 'nl2br' extension)
+
+    Args:
+        text: Markdown-formatted text to convert.
+
+    Returns:
+        HTML formatted text, or empty string if input is empty.
+    """
+    if not text:
+        return ""
+    md = markdown.Markdown(extensions=["extra", "nl2br", "sane_lists"])
+    return str(md.convert(text))
+
 
 def sanitize_hostname(hostname: str) -> str:
     """Sanitize a hostname for use in filenames and identifiers.

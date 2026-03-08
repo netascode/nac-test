@@ -15,6 +15,7 @@ from nac_test.utils.controller import (
     _format_multiple_credentials_error,
     _format_no_credentials_error,
     detect_controller_type,
+    get_detection_error_message,
 )
 
 
@@ -380,3 +381,73 @@ class TestEdgeCases:
 
         result = detect_controller_type()
         assert result == "SDWAN"
+
+
+class TestGetDetectionErrorMessage:
+    """Tests for get_detection_error_message() function."""
+
+    @pytest.fixture(autouse=True)
+    def clean_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> Generator[None, None, None]:
+        """Clean environment variables before and after each test."""
+        for controller_vars in CREDENTIAL_PATTERNS.values():
+            for var in controller_vars:
+                monkeypatch.delenv(var, raising=False)
+        yield
+
+    def test_no_credentials_returns_markdown_message(self) -> None:
+        """Test message for no controller credentials."""
+        message = get_detection_error_message()
+
+        assert "**No controller credentials found**" in message
+        assert "`<TYPE>_URL`" in message
+        assert "`<TYPE>_USERNAME`" in message
+        assert "`<TYPE>_PASSWORD`" in message
+        assert "**Supported controller types:**" in message
+
+    def test_multiple_credentials_returns_markdown_message(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test message for multiple controller credentials."""
+        monkeypatch.setenv("ACI_URL", "https://apic.example.com")
+        monkeypatch.setenv("ACI_USERNAME", "admin")
+        monkeypatch.setenv("ACI_PASSWORD", "password")
+        monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
+        monkeypatch.setenv("SDWAN_USERNAME", "admin")
+        monkeypatch.setenv("SDWAN_PASSWORD", "password")
+
+        message = get_detection_error_message()
+
+        assert "**Multiple controller credentials detected**" in message
+        assert "`ACI, SDWAN`" in message or "`SDWAN, ACI`" in message
+        assert "**Remediation:**" in message
+        assert "Unset credentials" in message
+
+    def test_incomplete_credentials_returns_markdown_message(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test message for incomplete controller credentials."""
+        monkeypatch.setenv("ACI_URL", "https://apic.example.com")
+        monkeypatch.setenv("ACI_USERNAME", "admin")
+
+        message = get_detection_error_message()
+
+        assert "**Incomplete credentials for ACI**" in message
+        assert "**Missing:**" in message
+        assert "`ACI_PASSWORD`" in message
+        assert "**Present:**" in message
+        assert "`ACI_URL`" in message
+        assert "`ACI_USERNAME`" in message
+
+    def test_incomplete_credentials_multiple_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test message when multiple credentials are missing."""
+        monkeypatch.setenv("CC_URL", "https://cc.example.com")
+
+        message = get_detection_error_message()
+
+        assert "**Incomplete credentials for CC**" in message
+        assert "`CC_USERNAME`" in message
+        assert "`CC_PASSWORD`" in message

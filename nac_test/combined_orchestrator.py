@@ -17,11 +17,14 @@ from nac_test.core.constants import (
     SUMMARY_REPORT_FILENAME,
 )
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
-from nac_test.core.types import CombinedResults, TestResults
+from nac_test.core.types import CombinedResults, ErrorType, TestResults
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
-from nac_test.utils.controller import detect_controller_type
+from nac_test.utils.controller import (
+    detect_controller_type,
+    get_detection_error_message,
+)
 from nac_test.utils.logging import VerbosityLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 from nac_test.utils.terminal import terminal
@@ -179,15 +182,20 @@ class CombinedOrchestrator:
                         err=True,
                     )
                     controller_error = True
+                    verbose_message = get_detection_error_message()
                     # We favour early detection over accurate failure stats for this use case.
                     # Setting error on both api and d2d may be inaccurate (e.g., if only API
                     # tests exist), but catching credential issues early is more valuable than
                     # precise per-type error attribution.
                     combined_results.api = TestResults.from_error(
-                        "Controller detection failed"
+                        "Controller detection failed",
+                        ErrorType.CONTROLLER_DETECTION,
+                        verbose_message=verbose_message,
                     )
                     combined_results.d2d = TestResults.from_error(
-                        "Controller detection failed"
+                        "Controller detection failed",
+                        ErrorType.CONTROLLER_DETECTION,
+                        verbose_message=verbose_message,
                     )
 
             if not controller_error:

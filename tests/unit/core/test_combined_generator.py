@@ -3,6 +3,7 @@
 
 """Unit tests for CombinedReportGenerator."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -245,3 +246,42 @@ def test_combined_report_template_receives_stats_objects(tmp_path: Path) -> None
     assert "<h3>12</h3>" in content
     assert "<h3>3</h3>" in content
     assert "80.0%" in content
+
+
+def test_combined_report_verbose_message_rendered_as_html(tmp_path: Path) -> None:
+    """Test that verbose_message (markdown) is converted to HTML in the report."""
+    generator = CombinedReportGenerator(tmp_path)
+
+    verbose_md = "**Error details**\n\n- Missing `ACI_PASSWORD`"
+    results = CombinedResults(
+        api=TestResults.from_error(
+            "Controller detection failed",
+            verbose_message=verbose_md,
+        ),
+        robot=TestResults(passed=5, failed=0, skipped=0),
+    )
+
+    report_path = generator.generate_combined_summary(results)
+    assert report_path is not None
+
+    content = report_path.read_text()
+    assert "<strong>Error details</strong>" in content
+    assert "<code>ACI_PASSWORD</code>" in content
+
+
+def test_combined_report_has_errors_shows_dash_for_success_rate(tmp_path: Path) -> None:
+    """Test that success rate shows '--' in red when has_errors is True."""
+    generator = CombinedReportGenerator(tmp_path)
+
+    results = CombinedResults(
+        api=TestResults.from_error("Detection failed"),
+        d2d=TestResults.from_error("Detection failed"),
+    )
+
+    report_path = generator.generate_combined_summary(results)
+    assert report_path is not None
+
+    content = report_path.read_text()
+    # Regex: element with inline danger color style containing "--"
+    pattern = r'<\w+[^>]*style="[^"]*var\(--danger\)[^"]*"[^>]*>\s*--\s*</\w+>'
+    assert re.search(pattern, content), "Expected '--' in red-styled element not found"

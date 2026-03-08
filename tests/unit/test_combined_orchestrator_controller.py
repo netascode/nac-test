@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.core.types import ExecutionState, PyATSResults, TestResults
+from nac_test.core.types import ErrorType, ExecutionState, PyATSResults, TestResults
 
 from .conftest import (
     PYATS_TEST_FILE_CONTENT,
@@ -165,8 +165,13 @@ class TestCombinedOrchestratorController:
         mock_robot.assert_called_once()
         assert result.api is not None
         assert result.api.state == ExecutionState.ERROR
+        assert result.api.error_type == ErrorType.CONTROLLER_DETECTION
+        assert result.api.verbose_message is not None
+        assert "**No controller credentials found**" in result.api.verbose_message
         assert result.d2d is not None
         assert result.d2d.state == ExecutionState.ERROR
+        assert result.d2d.error_type == ErrorType.CONTROLLER_DETECTION
+        assert result.d2d.verbose_message is not None
         assert result.robot is not None
         assert result.robot.passed == 1
 
@@ -248,7 +253,12 @@ class TestCombinedOrchestratorController:
         mock_robot.assert_called_once()
         assert result.api is not None
         assert result.api.state == ExecutionState.ERROR
+        assert result.api.verbose_message is not None
+        assert (
+            "**Multiple controller credentials detected**" in result.api.verbose_message
+        )
         assert result.d2d is not None
         assert result.d2d.state == ExecutionState.ERROR
+        assert result.d2d.verbose_message is not None
         assert result.robot is not None
         assert result.robot.passed == 1
