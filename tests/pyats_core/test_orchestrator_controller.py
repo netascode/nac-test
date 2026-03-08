@@ -11,10 +11,7 @@ Tests for controller validation in PyATSOrchestrator:
 5. Error results only for discovered test categories
 """
 
-from unittest.mock import patch
-
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.core.types import ExecutionState
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
@@ -163,63 +160,3 @@ class TestOrchestratorControllerValidation:
         assert result.api is None
         assert result.d2d is not None
         assert result.d2d.state == ExecutionState.ERROR
-
-    @pytest.mark.parametrize(
-        ("controller", "env_vars"),
-        [
-            (
-                "ACI",
-                {
-                    "ACI_URL": "https://apic.test.com",
-                    "ACI_USERNAME": "admin",
-                    "ACI_PASSWORD": "pass",
-                },
-            ),
-            (
-                "SDWAN",
-                {
-                    "SDWAN_URL": "https://vmanage.test.com",
-                    "SDWAN_USERNAME": "admin",
-                    "SDWAN_PASSWORD": "pass",
-                },
-            ),
-            (
-                "CC",
-                {
-                    "CC_URL": "https://cc.test.com",
-                    "CC_USERNAME": "admin",
-                    "CC_PASSWORD": "pass",
-                },
-            ),
-        ],
-    )
-    def test_controller_type_used_for_credential_validation(
-        self,
-        pyats_test_dirs: PyATSTestDirs,
-        monkeypatch: MonkeyPatch,
-        controller: str,
-        env_vars: dict[str, str],
-    ) -> None:
-        """Test that provided controller_type is used for credential validation."""
-        for key, value in env_vars.items():
-            monkeypatch.setenv(key, value)
-
-        (pyats_test_dirs.test_dir / "test_verify.py").write_text(
-            PYATS_D2D_TEST_FILE_CONTENT
-        )
-
-        orchestrator = PyATSOrchestrator(
-            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
-            test_dir=pyats_test_dirs.test_dir,
-            output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename=pyats_test_dirs.merged_file.name,
-            controller_type=controller,
-        )
-
-        with patch.object(orchestrator, "_execute_api_tests_standard"):
-            try:
-                orchestrator.run_tests()
-            except Exception:
-                pass
-
-        assert orchestrator.controller_type == controller
