@@ -29,6 +29,7 @@ from nac_test.core.types import (
     PreFlightFailure,
     TestResults,
 )
+from nac_test.exceptions import ControllerDetectionError
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
@@ -187,7 +188,7 @@ class CombinedOrchestrator:
             try:
                 self.controller_type = detect_controller_type()
                 logger.info(f"Controller type detected: {self.controller_type}")
-            except ValueError as e:
+            except (ValueError, ControllerDetectionError) as e:
                 typer.secho(
                     f"\n❌ Controller detection failed:\n{e}",
                     fg=typer.colors.RED,

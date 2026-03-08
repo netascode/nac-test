@@ -89,6 +89,7 @@ class TestOrchestratorControllerValidation:
         assert result.api is not None
         assert result.api.state == ExecutionState.ERROR
         assert "controller_type is required" in (result.api.reason or "")
+        assert result.d2d is None  # only api test files were created
 
     def test_provided_controller_type_missing_credentials_returns_error(
         self, pyats_test_dirs: PyATSTestDirs

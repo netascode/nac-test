@@ -606,9 +606,10 @@ class PyATSOrchestrator:
             return PyATSResults(api=api_result, d2d=d2d_result)
 
         if self.controller_type is None:
-            raise ValueError(
-                "controller_type is required for test execution. "
-                "CombinedOrchestrator must detect and provide the controller type."
+            reason = "controller_type is required for test execution"
+            return PyATSResults(
+                api=TestResults.from_error(reason) if api_tests else None,
+                d2d=TestResults.from_error(reason) if d2d_tests else None,
             )
 
         missing_vars = EnvironmentValidator.get_missing_controller_vars(
