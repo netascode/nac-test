@@ -44,6 +44,7 @@ class ErrorType(Enum):
     """
 
     GENERIC = "generic"
+    CONTROLLER_DETECTION = "controller_detection"
     INVALID_ROBOT_ARGS = "invalid_robot_args"
     INTERRUPTED = "interrupted"
 
@@ -87,6 +88,7 @@ class TestResults:
     reason: str | None = None
     state: ExecutionState = ExecutionState.SUCCESS
     error_type: ErrorType | None = None
+    verbose_message: str | None = None
 
     @property
     def total(self) -> int:
@@ -115,7 +117,10 @@ class TestResults:
 
     @classmethod
     def from_error(
-        cls, reason: str, error_type: ErrorType = ErrorType.GENERIC
+        cls,
+        reason: str,
+        error_type: ErrorType = ErrorType.GENERIC,
+        verbose_message: str | None = None,
     ) -> "TestResults":
         """Create TestResults representing an execution error.
 
@@ -125,11 +130,17 @@ class TestResults:
         Args:
             reason: Error message describing what went wrong
             error_type: Category of error for exit code determination
+            verbose_message: Optional detailed message (markdown) for error reporting
 
         Returns:
             TestResults with zero counts, reason recorded, and ERROR state
         """
-        return cls(reason=reason, state=ExecutionState.ERROR, error_type=error_type)
+        return cls(
+            reason=reason,
+            state=ExecutionState.ERROR,
+            error_type=error_type,
+            verbose_message=verbose_message,
+        )
 
     @property
     def success_rate(self) -> float:

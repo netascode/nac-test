@@ -153,10 +153,19 @@ class CombinedReportGenerator:
                         continue
 
                     metadata = FRAMEWORK_METADATA.get(framework_key, {})
+                    error_details_html = None
+                    if test_results.verbose_message:
+                        error_details_html = markdown_to_html(
+                            test_results.verbose_message
+                        )
+
                     test_type_stats[framework_key] = {
                         "title": metadata.get("title", framework_key),
                         "stats": test_results,
                         "report_path": metadata.get("report_path", "#"),
+                        "is_error": test_results.is_error,
+                        "error_reason": test_results.reason,
+                        "error_details_html": error_details_html,
                     }
 
             overall_stats = results if results is not None else CombinedResults()

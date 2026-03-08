@@ -17,7 +17,7 @@ import pytest
 import typer
 from _pytest.monkeypatch import MonkeyPatch
 
-from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
+from nac_test.cli.validators import AuthCheckResult, AuthOutcome
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import EXIT_ERROR
 from nac_test.core.types import PyATSResults, TestResults
@@ -127,7 +127,7 @@ class TestCombinedOrchestratorController:
 
         auth_failure = AuthCheckResult(
             success=False,
-            reason=AuthOutcome.AUTH_FAILED,
+            reason=AuthOutcome.BAD_CREDENTIALS,
             controller_type="ACI",
             controller_url="https://apic.test.com",
             detail="Invalid credentials",

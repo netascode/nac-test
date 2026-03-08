@@ -21,15 +21,11 @@ from typing import (
 )
 
 import httpx
-import markdown  # type: ignore[import-untyped]
 import yaml  # type: ignore[import-untyped]
 from pyats import aetest
 
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
-from nac_test.core.constants import (
-    FILE_TIMESTAMP_FORMAT,
-    PYATS_RESULTS_DIRNAME,
-)
+from nac_test.core.constants import PYATS_RESULTS_DIRNAME
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
 from nac_test.pyats_core.common.types import (
@@ -43,7 +39,7 @@ from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.utils import sanitize_hostname
 from nac_test.utils.controller import detect_controller_type
-from nac_test.utils.formatting import format_file_timestamp_ms
+from nac_test.utils.strings import markdown_to_html
 
 T = TypeVar("T")
 
@@ -138,49 +134,13 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         return {
             "title": getattr(module, "TITLE", cls.__name__),
-            "description_html": cls._render_html(getattr(module, "DESCRIPTION", "")),
-            "setup_html": cls._render_html(getattr(module, "SETUP", "")),
-            "procedure_html": cls._render_html(getattr(module, "PROCEDURE", "")),
-            "criteria_html": cls._render_html(
+            "description_html": markdown_to_html(getattr(module, "DESCRIPTION", "")),
+            "setup_html": markdown_to_html(getattr(module, "SETUP", "")),
+            "procedure_html": markdown_to_html(getattr(module, "PROCEDURE", "")),
+            "criteria_html": markdown_to_html(
                 getattr(module, "PASS_FAIL_CRITERIA", "")
             ),
         }
-
-    @staticmethod
-    def _render_html(text: str) -> str:
-        """Convert Markdown text to HTML using the markdown library.
-
-        Converts Markdown-formatted text to HTML with support for:
-        - Lists (ordered and unordered, including nested)
-        - Bold text (**text**)
-        - Italic text (*text*)
-        - Code blocks (inline and fenced)
-        - Headings
-        - Links
-        - And more standard Markdown features
-
-        Args:
-            text: Markdown-formatted text to convert to HTML
-
-        Returns:
-            HTML formatted text
-        """
-        if not text:
-            return ""
-
-        # Configure markdown with useful extensions
-        md = markdown.Markdown(
-            extensions=[
-                "extra",  # Includes tables, footnotes, abbreviations, etc.
-                "nl2br",  # Converts newlines to <br> tags
-                "sane_lists",  # Better list handling
-            ]
-        )
-
-        # Convert markdown to HTML
-        html = str(md.convert(text))
-
-        return html
 
     @aetest.setup  # type: ignore[untyped-decorator]
     def setup(self) -> None:
@@ -675,7 +635,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         try:
             # Generate unique filename
             test_name = self.__class__.__name__
-            timestamp = datetime.now().strftime(FILE_TIMESTAMP_FORMAT)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             pid = os.getpid()
             filename = f"pyats_recovery_{test_name}_{pid}_{timestamp}.json"
 
@@ -776,7 +736,9 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             - API tests: classname_YYYYMMDD_HHMMSS_mmm
         """
         class_name = self.__class__.__name__.lower()
-        timestamp = format_file_timestamp_ms()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[
+            :-3
+        ]  # Millisecond precision
 
         # For D2D tests, include hostname in test_id for clearer filenames
         # The HOSTNAME environment variable is set by device_executor for d2d tests
@@ -879,7 +841,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             *args: Any,
             **kwargs: Any,
         ) -> Any:
-            """Execute HTTP method with aggressive retry logic for controller recovery.
+            """Execute HTTP method with aggressive retry logic for APIC recovery.
 
             Handles all HTTP errors including:
             - Connection timeouts (network issues)
@@ -990,7 +952,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
                     self.logger.warning(
                         f"⏳ BACKING OFF: {method_name} {url} failed ({error_type}), "
-                        f"attempt {attempt + 1}/{MAX_RETRIES}, waiting {delay}s for controller recovery..."
+                        f"attempt {attempt + 1}/{MAX_RETRIES}, waiting {delay}s for APIC recovery..."
                     )
 
                     # Ensure connection is closed before retry
@@ -1001,11 +963,11 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                             pass  # Best effort cleanup
 
                     # For server disconnections, add extra delay on first few retries
-                    # This gives controllers more time to recover from stress
+                    # This gives APIC/controllers more time to recover from stress
                     if isinstance(e, httpx.RemoteProtocolError) and attempt < 3:
                         extra_delay = 10  # Add 10 seconds for server recovery
                         self.logger.info(
-                            f"Adding {extra_delay}s extra delay for controller recovery"
+                            f"Adding {extra_delay}s extra delay for APIC recovery"
                         )
                         await asyncio.sleep(extra_delay)
 

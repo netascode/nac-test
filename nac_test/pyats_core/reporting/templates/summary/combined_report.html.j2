@@ -340,6 +340,76 @@
             display: none !important;
         }
 
+        /* Error banner styles */
+        .error-banner {
+            background: linear-gradient(135deg, var(--danger), #c0392b);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .error-banner strong {
+            font-weight: 600;
+        }
+
+        .error-icon {
+            font-size: 1.5rem;
+        }
+
+        /* Collapsible error details */
+        .error-details {
+            margin-top: 10px;
+        }
+
+        .error-details-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s ease;
+        }
+
+        .error-details-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .error-details-content {
+            display: none;
+            margin-top: 12px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .error-details-content.show {
+            display: block;
+        }
+
+        .error-details-content ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .error-details-content li {
+            margin: 4px 0;
+        }
+
+        .error-details-content code {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
         /* Responsive design */
         @media (max-width: 768px) {
             .container {
@@ -396,12 +466,29 @@
                 </div>
                 <div class="summary-item rate">
                     <p>Success Rate</p>
+                    {% if overall_stats.has_errors %}
+                    <h3 style="color: var(--danger);">--</h3>
+                    {% else %}
                     <h3>{{ "%.1f"|format(overall_stats.success_rate) }}%</h3>
                     <div class="progress-container">
                         <div class="progress-bar" style="--progress-width: {{ overall_stats.success_rate }}%"></div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
+            {% if overall_stats.has_errors %}
+            <div class="error-banner" role="alert" style="margin-top: 20px;">
+                <span class="error-icon">⚠</span>
+                <div>
+                    <strong>Execution Errors Detected</strong>
+                    <ul style="margin: 5px 0 0 0; padding-left: 20px;">
+                    {% for error in overall_stats.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Individual Test Type Sections -->
@@ -412,11 +499,29 @@
                     <span class="test-type-badge {{ test_type.lower() }}-badge">{{ test_type }}</span>
                     <h2>{{ framework_data.title }} Test Results</h2>
                 </div>
+                {% if not framework_data.is_error %}
                 <a href="{{ framework_data.report_path }}" class="view-report-btn">
                     View Detailed Report →
                 </a>
+                {% endif %}
             </div>
             
+            {% if framework_data.is_error %}
+            <div class="error-banner" role="alert">
+                <span class="error-icon">⚠</span>
+                <div style="flex: 1;">
+                    <strong>Execution Error:</strong> {{ framework_data.error_reason or 'An error occurred during test execution' }}
+                    {% if framework_data.error_details_html %}
+                    <div class="error-details">
+                        <button class="error-details-toggle" onclick="toggleDetails(this)">Show Details ▼</button>
+                        <div class="error-details-content">
+                            {{ framework_data.error_details_html | safe }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
             <div class="mini-stats">
                 <div class="mini-stat">
                     <div class="mini-stat-value total-value">{{ framework_data.stats.total }}</div>
@@ -439,6 +544,7 @@
                     <div class="mini-stat-label">Success Rate</div>
                 </div>
             </div>
+            {% endif %}
         </div>
         {% endfor %}
 
@@ -447,5 +553,12 @@
             <p>This combined report aggregates results from {{ test_type_stats|length }} test type(s)</p>
         </footer>
     </div>
+    <script>
+        function toggleDetails(button) {
+            const content = button.nextElementSibling;
+            const isShown = content.classList.toggle('show');
+            button.textContent = isShown ? 'Hide Details ▲' : 'Show Details ▼';
+        }
+    </script>
 </body>
 </html> 
