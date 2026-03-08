@@ -5,17 +5,13 @@
 import logging
 import sys
 from enum import Enum
-from typing import TYPE_CHECKING, TextIO, cast
+from typing import Literal, TextIO, cast
 
-# Generic type syntax (StreamHandler[TextIO]) requires Python 3.11+
-# Use TYPE_CHECKING guard for 3.10 compatibility while preserving type info
-if TYPE_CHECKING:
-    _StreamHandlerBase = logging.StreamHandler[TextIO]
-else:
-    _StreamHandlerBase = logging.StreamHandler
+_VALID_STREAMS = ("stdout", "stderr")
+StreamName = Literal["stdout", "stderr"]
 
 
-class CurrentStreamHandler(_StreamHandlerBase):
+class CurrentStreamHandler(logging.StreamHandler):  # type: ignore[type-arg]
     """StreamHandler that always uses the current sys.stdout/stderr.
 
     This prevents 'I/O operation on closed file' errors when sys.stdout
@@ -23,8 +19,13 @@ class CurrentStreamHandler(_StreamHandlerBase):
     is created.
     """
 
-    def __init__(self, stream_name: str = "stdout") -> None:
-        self.stream_name = stream_name  # MUST come BEFORE super().__init__()
+    def __init__(self, stream_name: StreamName = "stdout") -> None:
+        if stream_name not in _VALID_STREAMS:
+            raise ValueError(
+                f"stream_name must be 'stdout' or 'stderr', got {stream_name!r}"
+            )
+        # Set before property access; setter is no-op so order is for clarity
+        self.stream_name = stream_name
         super().__init__()
 
     @property  # type: ignore[override]
