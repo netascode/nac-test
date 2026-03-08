@@ -26,6 +26,7 @@ from pyats import aetest
 
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
 from nac_test.core.constants import PYATS_RESULTS_DIRNAME
+from nac_test.exceptions import ControllerDetectionError
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
 from nac_test.pyats_core.common.types import (
@@ -156,7 +157,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # Detect controller type based on environment variables
         try:
             self.controller_type = detect_controller_type()
-        except ValueError as e:
+        except ControllerDetectionError as e:
             # Log error and re-raise to fail the test setup
             self.logger.error(f"Controller detection failed: {e}")
             raise

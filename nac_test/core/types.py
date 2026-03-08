@@ -270,7 +270,7 @@ class CombinedResults:
     def errors(self) -> list[str]:
         """All unique execution errors/reasons across all frameworks."""
         reasons = [r.reason for r in self._results if r.reason is not None]
-        return list(set(reasons))
+        return list(dict.fromkeys(reasons))
 
     @property
     def was_not_run(self) -> bool:

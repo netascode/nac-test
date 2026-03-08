@@ -93,21 +93,3 @@ class EnvironmentValidator:
             Formatted error message suitable for terminal display
         """
         return terminal.format_env_var_error(missing_vars, controller_type)
-
-    @staticmethod
-    def validate_controller_env(controller_type: str) -> list[str]:
-        """Validate controller-specific environment variables.
-
-        Checks that all required credential environment variables are set
-        for the specified controller type.
-
-        Args:
-            controller_type: Type of controller (ACI, SDWAN, CC, etc.)
-
-        Returns:
-            List of missing environment variable names (empty if all present)
-
-        Raises:
-            ValueError: If controller_type is unknown
-        """
-        return EnvironmentValidator.get_missing_controller_vars(controller_type)

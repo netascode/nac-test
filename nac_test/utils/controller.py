@@ -14,6 +14,8 @@ ambiguous test execution contexts.
 import logging
 import os
 
+from nac_test.exceptions import ControllerDetectionError
+
 logger = logging.getLogger(__name__)
 
 # Define supported controller types and their required environment variables
@@ -43,8 +45,10 @@ def detect_controller_type() -> str:
         The detected controller type (e.g., "ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE").
 
     Raises:
-        ValueError: If no controller credentials are found, multiple controllers are
-            configured, or credentials are incomplete.
+        ControllerDetectionError: If no controller credentials are found, multiple
+            controllers are configured, or credentials are incomplete. The exception
+            carries a short ``reason`` (``str(e)``) and a ``verbose_message`` with
+            markdown-formatted details suitable for HTML error reports.
 
     Example:
         >>> os.environ.update({"ACI_URL": "https://apic.local",
@@ -66,12 +70,40 @@ def detect_controller_type() -> str:
     if len(complete_sets) > 1:
         error_message = _format_multiple_credentials_error(complete_sets)
         logger.error(f"Multiple controller credentials detected: {complete_sets}")
-        raise ValueError(error_message)
+        controllers = ", ".join(complete_sets)
+        verbose = "\n".join(
+            [
+                "**Multiple controller credentials detected**",
+                "",
+                f"Detected controllers: `{controllers}`",
+                "",
+                "**Remediation:**",
+                "- Unset credentials for controllers you don't want to use",
+                "- Use a separate shell session for each controller type",
+                "- Use environment variable management tools (direnv, dotenv) to switch contexts",
+            ]
+        )
+        raise ControllerDetectionError(error_message, verbose)
 
     # Check for no credentials at all
     if not complete_sets and not partial_sets:
         error_message = _format_no_credentials_error(partial_sets)
-        raise ValueError(error_message)
+        supported = ", ".join(CREDENTIAL_PATTERNS.keys())
+        verbose = "\n".join(
+            [
+                "**No controller credentials found**",
+                "",
+                "Controller credentials are required for test execution.",
+                "",
+                "**Required environment variables:**",
+                "- `<TYPE>_URL`",
+                "- `<TYPE>_USERNAME`",
+                "- `<TYPE>_PASSWORD`",
+                "",
+                f"**Supported controller types:** `{supported}`",
+            ]
+        )
+        raise ControllerDetectionError(error_message, verbose)
 
     # Check for incomplete credentials
     if not complete_sets and partial_sets:
@@ -79,81 +111,34 @@ def detect_controller_type() -> str:
             f"{controller}: missing {', '.join(info['missing'])}"
             for controller, info in partial_sets.items()
         ]
+        incomplete_lines = "\n".join(f"  - {info}" for info in incomplete_info)
         error_message = (
             f"Incomplete controller credentials detected:\n"
-            f"{chr(10).join(f'  - {info}' for info in incomplete_info)}\n\n"
+            f"{incomplete_lines}\n\n"
             f"Please provide ALL required environment variables for your controller type."
         )
         logger.error(f"Incomplete credentials: {', '.join(incomplete_info)}")
-        raise ValueError(error_message)
+        controller = next(iter(partial_sets))
+        info = partial_sets[controller]
+        missing = ", ".join(f"`{v}`" for v in info["missing"])
+        present = ", ".join(f"`{v}`" for v in info["present"])
+        verbose = "\n".join(
+            [
+                f"**Incomplete credentials for {controller}**",
+                "",
+                f"**Missing:** {missing}",
+                "",
+                f"**Present:** {present}",
+                "",
+                "Please provide ALL required environment variables for your controller type.",
+            ]
+        )
+        raise ControllerDetectionError(error_message, verbose)
 
     # Exactly one complete set found - success
     controller_type = complete_sets[0]
     logger.info(f"Detected controller type: {controller_type}")
     return controller_type
-
-
-def get_detection_error_message() -> str:
-    """Get a markdown-formatted error message for controller detection failures.
-
-    Call this after detect_controller_type() raises ValueError to get
-    a detailed message suitable for error reporting in HTML reports.
-
-    Returns:
-        Markdown-formatted error message with:
-        - Error type description
-        - Specific details (missing/present variables)
-        - Remediation hints
-    """
-    complete_sets, partial_sets = _find_credential_sets()
-
-    if len(complete_sets) > 1:
-        controllers = ", ".join(complete_sets)
-        lines = [
-            "**Multiple controller credentials detected**",
-            "",
-            f"Detected controllers: `{controllers}`",
-            "",
-            "**Remediation:**",
-            "- Unset credentials for controllers you don't want to use",
-            "- Use a separate shell session for each controller type",
-            "- Use environment variable management tools (direnv, dotenv) to switch contexts",
-        ]
-        return "\n".join(lines)
-
-    if not complete_sets and not partial_sets:
-        supported = ", ".join(CREDENTIAL_PATTERNS.keys())
-        lines = [
-            "**No controller credentials found**",
-            "",
-            "Controller credentials are required for test execution.",
-            "",
-            "**Required environment variables:**",
-            "- `<TYPE>_URL`",
-            "- `<TYPE>_USERNAME`",
-            "- `<TYPE>_PASSWORD`",
-            "",
-            f"**Supported controller types:** `{supported}`",
-        ]
-        return "\n".join(lines)
-
-    if not complete_sets and partial_sets:
-        controller = list(partial_sets.keys())[0]
-        info = partial_sets[controller]
-        missing = ", ".join(f"`{v}`" for v in info["missing"])
-        present = ", ".join(f"`{v}`" for v in info["present"])
-        lines = [
-            f"**Incomplete credentials for {controller}**",
-            "",
-            f"**Missing:** {missing}",
-            "",
-            f"**Present:** {present}",
-            "",
-            "Please provide ALL required environment variables for your controller type.",
-        ]
-        return "\n".join(lines)
-
-    return "**Unknown error state**"
 
 
 def _find_credential_sets() -> tuple[list[str], dict[str, dict[str, list[str]]]]:

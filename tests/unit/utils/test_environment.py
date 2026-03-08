@@ -41,20 +41,3 @@ class TestGetMissingControllerVars:
         monkeypatch.setenv("SDWAN_URL", "https://sdwan.test.com")
         missing = EnvironmentValidator.get_missing_controller_vars("SDWAN")
         assert missing == ["SDWAN_USERNAME", "SDWAN_PASSWORD"]
-
-
-class TestValidateControllerEnv:
-    """Tests for EnvironmentValidator.validate_controller_env()."""
-
-    def test_delegates_to_get_missing_controller_vars(
-        self, clean_controller_env: None, monkeypatch: MonkeyPatch
-    ) -> None:
-        """Verify validate_controller_env delegates to get_missing_controller_vars."""
-        monkeypatch.setenv("CC_URL", "https://cc.test.com")
-        result = EnvironmentValidator.validate_controller_env("CC")
-        assert result == ["CC_USERNAME", "CC_PASSWORD"]
-
-    def test_unknown_controller_type_raises_error(self) -> None:
-        """Verify ValueError propagates for unknown controller types."""
-        with pytest.raises(ValueError, match="Unknown controller type"):
-            EnvironmentValidator.validate_controller_env("INVALID")

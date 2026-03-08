@@ -9,13 +9,13 @@ from unittest.mock import patch
 
 import pytest
 
+from nac_test.exceptions import ControllerDetectionError
 from nac_test.utils.controller import (
     CREDENTIAL_PATTERNS,
     _find_credential_sets,
     _format_multiple_credentials_error,
     _format_no_credentials_error,
     detect_controller_type,
-    get_detection_error_message,
 )
 
 
@@ -77,13 +77,17 @@ class TestControllerDetection:
         os.environ["SDWAN_USERNAME"] = "sdwan_user"
         os.environ["SDWAN_PASSWORD"] = "sdwan_pass"
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ControllerDetectionError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
         assert "Multiple controller credentials detected: ACI, SDWAN" in error_msg
         assert "unset SDWAN_URL SDWAN_USERNAME SDWAN_PASSWORD" in error_msg
         assert "unset ACI_URL ACI_USERNAME ACI_PASSWORD" in error_msg
+        assert (
+            "**Multiple controller credentials detected**"
+            in exc_info.value.verbose_message
+        )
 
     def test_no_credentials_error(self) -> None:
         """Test error when no controller credentials are found."""
@@ -92,7 +96,7 @@ class TestControllerDetection:
             for var in controller_vars:
                 os.environ.pop(var, None)
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ControllerDetectionError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
@@ -100,6 +104,7 @@ class TestControllerDetection:
         assert "Controller credentials are required for ALL test types" in error_msg
         assert "export ACI_URL=" in error_msg
         assert "export SDWAN_URL=" in error_msg
+        assert "**No controller credentials found**" in exc_info.value.verbose_message
 
     def test_partial_credentials_error(self) -> None:
         """Test error when controller has incomplete credentials."""
@@ -108,12 +113,13 @@ class TestControllerDetection:
         os.environ["ACI_USERNAME"] = "admin"
         # Deliberately not setting ACI_PASSWORD
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ControllerDetectionError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
         assert "Incomplete controller credentials detected" in error_msg
         assert "ACI: missing ACI_PASSWORD" in error_msg
+        assert "**Incomplete credentials for ACI**" in exc_info.value.verbose_message
 
     def test_empty_string_handling(self) -> None:
         """Test that empty string values are treated as missing."""
@@ -122,7 +128,7 @@ class TestControllerDetection:
         os.environ["ACI_USERNAME"] = "admin"
         os.environ["ACI_PASSWORD"] = ""  # Empty string
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ControllerDetectionError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
@@ -136,7 +142,7 @@ class TestControllerDetection:
         os.environ["SDWAN_USERNAME"] = "admin"
         os.environ["SDWAN_PASSWORD"] = "   "  # Only whitespace
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ControllerDetectionError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
@@ -276,7 +282,7 @@ class TestEdgeCases:
         os.environ["aci_username"] = "admin"
         os.environ["aci_password"] = "password"
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ControllerDetectionError) as exc_info:
             detect_controller_type()
 
         assert "No controller credentials found" in str(exc_info.value)
@@ -333,7 +339,7 @@ class TestEdgeCases:
     @patch.dict(os.environ, {}, clear=True)
     def test_truly_empty_environment(self) -> None:
         """Test with a completely empty environment."""
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ControllerDetectionError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
@@ -354,7 +360,7 @@ class TestEdgeCases:
         os.environ["ISE_USERNAME"] = "ise_user"
         os.environ["ISE_PASSWORD"] = "ise_pass"
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ControllerDetectionError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
@@ -381,73 +387,3 @@ class TestEdgeCases:
 
         result = detect_controller_type()
         assert result == "SDWAN"
-
-
-class TestGetDetectionErrorMessage:
-    """Tests for get_detection_error_message() function."""
-
-    @pytest.fixture(autouse=True)
-    def clean_environment(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> Generator[None, None, None]:
-        """Clean environment variables before and after each test."""
-        for controller_vars in CREDENTIAL_PATTERNS.values():
-            for var in controller_vars:
-                monkeypatch.delenv(var, raising=False)
-        yield
-
-    def test_no_credentials_returns_markdown_message(self) -> None:
-        """Test message for no controller credentials."""
-        message = get_detection_error_message()
-
-        assert "**No controller credentials found**" in message
-        assert "`<TYPE>_URL`" in message
-        assert "`<TYPE>_USERNAME`" in message
-        assert "`<TYPE>_PASSWORD`" in message
-        assert "**Supported controller types:**" in message
-
-    def test_multiple_credentials_returns_markdown_message(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test message for multiple controller credentials."""
-        monkeypatch.setenv("ACI_URL", "https://apic.example.com")
-        monkeypatch.setenv("ACI_USERNAME", "admin")
-        monkeypatch.setenv("ACI_PASSWORD", "password")
-        monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
-        monkeypatch.setenv("SDWAN_USERNAME", "admin")
-        monkeypatch.setenv("SDWAN_PASSWORD", "password")
-
-        message = get_detection_error_message()
-
-        assert "**Multiple controller credentials detected**" in message
-        assert "`ACI, SDWAN`" in message or "`SDWAN, ACI`" in message
-        assert "**Remediation:**" in message
-        assert "Unset credentials" in message
-
-    def test_incomplete_credentials_returns_markdown_message(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test message for incomplete controller credentials."""
-        monkeypatch.setenv("ACI_URL", "https://apic.example.com")
-        monkeypatch.setenv("ACI_USERNAME", "admin")
-
-        message = get_detection_error_message()
-
-        assert "**Incomplete credentials for ACI**" in message
-        assert "**Missing:**" in message
-        assert "`ACI_PASSWORD`" in message
-        assert "**Present:**" in message
-        assert "`ACI_URL`" in message
-        assert "`ACI_USERNAME`" in message
-
-    def test_incomplete_credentials_multiple_missing(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test message when multiple credentials are missing."""
-        monkeypatch.setenv("CC_URL", "https://cc.example.com")
-
-        message = get_detection_error_message()
-
-        assert "**Incomplete credentials for CC**" in message
-        assert "`CC_USERNAME`" in message
-        assert "`CC_PASSWORD`" in message

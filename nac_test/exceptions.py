@@ -44,3 +44,15 @@ class TestError(NacTestError):
     """Raised when there's an error with Jinja tests."""
 
     pass
+
+
+class ControllerDetectionError(NacTestError):
+    """Raised when controller type cannot be determined from environment.
+
+    Carries both a short human-readable reason (in ``str(e)``) and a
+    verbose markdown-formatted message suitable for HTML error reports.
+    """
+
+    def __init__(self, reason: str, verbose_message: str) -> None:
+        super().__init__(reason)
+        self.verbose_message = verbose_message

@@ -14,6 +14,7 @@ import pytest
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.types import ErrorType, ExecutionState, PyATSResults, TestResults
+from nac_test.exceptions import ControllerDetectionError
 
 from .conftest import (
     PYATS_TEST_FILE_CONTENT,
@@ -155,7 +156,10 @@ class TestCombinedOrchestratorController:
             patch("typer.secho"),
             patch.object(CombinedOrchestrator, "_check_python_version"),
         ):
-            mock_detect.side_effect = ValueError("No controller credentials found")
+            mock_detect.side_effect = ControllerDetectionError(
+                "No controller credentials found",
+                "**No controller credentials found**",
+            )
             mock_robot.return_value.run_tests.return_value = TestResults(passed=1)
             mock_generator.return_value.generate_combined_summary.return_value = None
 
