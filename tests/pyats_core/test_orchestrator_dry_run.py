@@ -17,14 +17,6 @@ from .conftest import PyATSTestDirs
 class TestOrchestratorDryRun:
     """Tests for PyATSOrchestrator dry_run parameter and behavior."""
 
-    @pytest.fixture(autouse=True)
-    def _clean_env(self, clean_controller_env: None) -> None:
-        """Apply shared clean_controller_env fixture to all tests in this class.
-
-        Dry-run mode does not require controller credentials, so we ensure
-        tests run with a clean environment to verify this behavior.
-        """
-
     def test_dry_run_prints_summary_and_skips_execution(
         self,
         pyats_test_dirs: PyATSTestDirs,
