@@ -109,7 +109,7 @@ class PyATSOrchestrator:
         # Track test status (initialized to None, populated during test execution)
         self.test_status: dict[str, Any] | None = None
 
-        # Controller type: provided explicitly or detected lazily in run_tests()
+        # None in dry-run mode; detected and injected by CombinedOrchestrator otherwise.
         self.controller_type: str | None = controller_type
 
         # Calculate max workers based on system resources
@@ -605,6 +605,8 @@ class PyATSOrchestrator:
             d2d_result = TestResults.not_run(DRY_RUN_REASON) if d2d_tests else None
             return PyATSResults(api=api_result, d2d=d2d_result)
 
+        # Defensive guard: CombinedOrchestrator always provides controller_type or aborts
+        # before reaching here; this path should not be hit in normal usage.
         if self.controller_type is None:
             reason = "controller_type is required for test execution"
             return PyATSResults(
@@ -612,6 +614,11 @@ class PyATSOrchestrator:
                 d2d=TestResults.from_error(reason) if d2d_tests else None,
             )
 
+        # Currently redundant: detect_controller_type() in CombinedOrchestrator checks
+        # the same CREDENTIAL_PATTERNS and raises ControllerDetectionError if any are
+        # missing, so this can only trigger when PyATSOrchestrator is used standalone.
+        # If CREDENTIAL_PATTERNS is extended (e.g. IOSXE_* vars for SDWAN/CC), this
+        # check would become meaningful for the normal flow too.
         missing_vars = EnvironmentValidator.get_missing_controller_vars(
             self.controller_type
         )

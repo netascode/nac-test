@@ -154,7 +154,7 @@ class CombinedReportGenerator:
 
                     metadata = FRAMEWORK_METADATA.get(framework_key, {})
                     error_details_html = None
-                    if test_results.verbose_message:
+                    if test_results.is_error and test_results.verbose_message:
                         error_details_html = markdown_to_html(
                             test_results.verbose_message
                         )
