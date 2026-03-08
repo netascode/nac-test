@@ -270,6 +270,7 @@ class CombinedResults:
     def errors(self) -> list[str]:
         """All unique execution errors/reasons across all frameworks."""
         reasons = [r.reason for r in self._results if r.reason is not None]
+        # Remove duplicates while preserving order
         return list(dict.fromkeys(reasons))
 
     @property
