@@ -7,7 +7,6 @@ import io
 import logging
 import sys
 from collections.abc import Generator
-from typing import Any
 
 import pytest
 
@@ -35,6 +34,11 @@ class TestCurrentStreamHandler:
         handler = CurrentStreamHandler("stdout")
         handler.stream = io.StringIO()
         assert handler.stream is sys.stdout
+
+    def test_invalid_stream_name_raises_value_error(self) -> None:
+        """Verify invalid stream_name raises ValueError at construction."""
+        with pytest.raises(ValueError, match="must be 'stdout' or 'stderr'"):
+            CurrentStreamHandler("invalid")  # type: ignore[arg-type]
 
     def test_no_io_error_on_closed_stdout(self) -> None:
         """Verify no I/O error when previous stdout is closed (regression test for #487)."""
@@ -65,7 +69,7 @@ class TestConfigureLogging:
     """Tests for configure_logging() function."""
 
     @pytest.fixture(autouse=True)
-    def cleanup_root_logger(self) -> Generator[None, Any, None]:
+    def cleanup_root_logger(self) -> Generator[None, None, None]:
         """Clean up root logger after each test."""
         root_logger = logging.getLogger()
         original_handlers = root_logger.handlers[:]
@@ -82,7 +86,7 @@ class TestConfigureLogging:
         current_stream_handlers = [
             h for h in root_logger.handlers if isinstance(h, CurrentStreamHandler)
         ]
-        assert len(current_stream_handlers) >= 1
+        assert len(current_stream_handlers) == 1
 
     def test_surgical_handler_removal_preserves_file_handlers(self) -> None:
         """Verify only stdout/stderr handlers are removed, not file handlers."""
@@ -98,3 +102,15 @@ class TestConfigureLogging:
 
         assert file_handler in root_logger.handlers
         assert stdout_handler not in root_logger.handlers
+
+    def test_no_handler_accumulation_on_repeated_calls(self) -> None:
+        """Verify calling configure_logging multiple times does not accumulate handlers."""
+        configure_logging("INFO")
+        configure_logging("DEBUG")
+        configure_logging("WARNING")
+
+        root_logger = logging.getLogger()
+        current_stream_handlers = [
+            h for h in root_logger.handlers if isinstance(h, CurrentStreamHandler)
+        ]
+        assert len(current_stream_handlers) == 1
