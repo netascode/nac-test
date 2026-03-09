@@ -1091,6 +1091,87 @@ class TestE2EPyatsCc(E2ECombinedTestBase):
 
 
 # =============================================================================
+# VERBOSE FLAG SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EVerbose(E2ECombinedTestBase):
+    """E2E tests for the verbose flag scenario.
+
+    Scenario: Robot (1 pass) + PyATS API (1 pass), verifies --verbose flag enables DEBUG log level
+    Expected: CLI exits with code 0, verbose output visible for nac-test, Robot, and PyATS
+
+    This scenario verifies (in addition to all other base class tests) that when --verbose flag is passed:
+    1. Robot Framework is invoked with --loglevel DEBUG (the robot test checks this, we check the passed count)
+    2. PyATS verbose output (%EASYPY-INFO and %EASYPY-DEBUG) IS enabled (--verbose implies DEBUG loglevel)
+    """
+
+    @pytest.fixture
+    def results(self, e2e_verbose_results: E2EResults) -> E2EResults:
+        return e2e_verbose_results
+
+    def test_verbose_log_messages_in_stdout(self, results: E2EResults) -> None:
+        """Verify DEBUG log messages appear (nac-test loglevel=DEBUG)."""
+        assert "DEBUG - Found Robot template files" in results.stdout, (
+            "Missing nac-test DEBUG log message in stdout."
+        )
+
+    def test_pabot_verbose_shows_test_result(self, results: E2EResults) -> None:
+        """Verify pabot --verbose output shows test case result with PASS."""
+        pattern = r"Verify Log Level\s+\| PASS \|"
+        assert re.search(pattern, results.stdout), (
+            "Missing pabot verbose output showing test result"
+        )
+
+    def test_easypy_info_in_stdout(self, results: E2EResults) -> None:
+        """Verify %EASYPY-INFO appears (PyATS verbose output enabled)."""
+        assert "%EASYPY-INFO" in results.stdout, "Missing %EASYPY-INFO in stdout"
+
+    def test_easypy_debug_in_stdout(self, results: E2EResults) -> None:
+        """Verify %EASYPY-DEBUG appears (PyATS verbose output enabled)."""
+        assert "%EASYPY-DEBUG" in results.stdout, "Missing %EASYPY-DEBUG in stdout"
+
+
+# =============================================================================
+# VERBOSE WITH INFO LOGLEVEL SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EVerboseWithInfo(E2ECombinedTestBase):
+    """E2E tests for --verbose --loglevel INFO combination.
+
+    Scenario: Robot (1 pass) + PyATS API (1 pass), verifies --loglevel INFO filters PyATS DEBUG
+    Expected: CLI exits with code 0, %EASYPY-INFO visible but %EASYPY-DEBUG filtered out, pabot verbose output is shown
+    """
+
+    @pytest.fixture
+    def results(self, e2e_verbose_with_info_results: E2EResults) -> E2EResults:
+        return e2e_verbose_with_info_results
+
+    # The following two tests are duplicated from TestE2EVerbose. An intermediate
+    # E2EVerboseTestBase class was considered but rejected: the overhead of an extra
+    # base class outweighs the benefit for just two methods shared by two classes.
+    def test_pabot_verbose_shows_test_result(self, results: E2EResults) -> None:
+        """Verify pabot --verbose output shows test case result with PASS."""
+        pattern = r"Verify Log Level\s+\| PASS \|"
+        assert re.search(pattern, results.stdout), (
+            "Missing pabot verbose output showing test result"
+        )
+
+    def test_easypy_debug_not_in_stdout(self, results: E2EResults) -> None:
+        """Verify %EASYPY-DEBUG is filtered out when --loglevel INFO."""
+        assert "%EASYPY-DEBUG" not in results.stdout, (
+            "%EASYPY-DEBUG should be filtered with --loglevel INFO"
+        )
+
+    def test_easypy_info_in_stdout(self, results: E2EResults) -> None:
+        """Verify %EASYPY-INFO still appears with --loglevel INFO."""
+        assert "%EASYPY-INFO" in results.stdout, (
+            "%EASYPY-INFO should be visible with --loglevel INFO"
+        )
+
+
+# =============================================================================
 # DRY-RUN SCENARIO TESTS
 #
 # Three classes cover dry-run mode, each testing a distinct scenario:

@@ -347,6 +347,38 @@ PYATS_CC_SCENARIO = E2EScenario(
     expected_d2d_hostnames=["sd-dc-c8kv-01", "sd-dc-c8kv-02"],
 )
 
+VERBOSE_SCENARIO = E2EScenario(
+    name="verbose",
+    description="Verbose flag test - Robot + PyATS API, verifies --verbose enables DEBUG log level in nac-test and PyATS/Robot",
+    data_path=f"{_FIXTURE_BASE}/verbose/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/verbose/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=0,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+)
+
+VERBOSE_WITH_INFO_SCENARIO = E2EScenario(
+    name="verbose_with_info",
+    description="Verbose with INFO loglevel - verifies --verbose --loglevel INFO filters PyATS DEBUG output",
+    data_path=f"{_FIXTURE_BASE}/verbose/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/verbose/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=0,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+)
+
 DRY_RUN_SCENARIO = E2EScenario(
     name="dry_run_robot_pyats",
     description="Dry-run mode - Robot (2 validated) + PyATS (discovered, not executed)",

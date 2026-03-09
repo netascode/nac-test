@@ -218,7 +218,7 @@ def test_connection_broker_pooling_and_caching(
                 templates_path,
                 "-o",
                 output_dir,
-                "--verbosity",
+                "--loglevel",
                 "DEBUG",
             ],
         )

@@ -13,6 +13,7 @@ from _pytest.monkeypatch import MonkeyPatch
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import EXIT_ERROR
 from nac_test.core.types import PyATSResults
+from nac_test.utils.logging import DEFAULT_LOGLEVEL
 
 PYATS_TEST_FILE_CONTENT = """
 # PyATS test file
@@ -164,6 +165,8 @@ class TestCombinedOrchestratorController:
                     custom_testbed_path=None,
                     controller_type="SDWAN",
                     dry_run=False,
+                    verbose=False,
+                    loglevel=DEFAULT_LOGLEVEL,
                 )
 
                 # Verify run_tests was called on the instance
@@ -306,6 +309,7 @@ class TestCombinedOrchestratorController:
                     orchestrator.run_tests()
 
                 # Verify PyATSOrchestrator was called with controller_type
+
                 mock_pyats.assert_called_once_with(
                     data_paths=[data_dir],
                     test_dir=templates_dir,
@@ -315,6 +319,8 @@ class TestCombinedOrchestratorController:
                     custom_testbed_path=None,
                     controller_type="CC",
                     dry_run=False,
+                    verbose=False,
+                    loglevel=DEFAULT_LOGLEVEL,
                 )
 
                 # Verify run_tests was called on the instance
