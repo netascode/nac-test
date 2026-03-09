@@ -3,8 +3,11 @@
 """Unit tests for pre-flight controller authentication CLI behavior.
 
 These tests verify that the pre-flight auth check behaves correctly
-at the CLI level, including proper exit codes, banner display, and
+when run through the CLI, including proper exit codes, banner display, and
 HTML report generation. Uses mocked auth responses to test CLI flow.
+
+The auth check is performed inside CombinedOrchestrator.run_tests() (not
+in main.py), so mocks target nac_test.combined_orchestrator.
 """
 
 from pathlib import Path
@@ -41,9 +44,15 @@ class TestPreflightAuthCli:
             controller_url="https://apic.test.local",
             detail="HTTP 401: Unauthorized",
         )
-        with patch(
-            "nac_test.cli.main.preflight_auth_check",
-            return_value=failed_result,
+        with (
+            patch(
+                "nac_test.combined_orchestrator.preflight_auth_check",
+                return_value=failed_result,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedOrchestrator._discover_test_types",
+                return_value=(True, False),
+            ),
         ):
             runner = CliRunner()
             result = runner.invoke(
@@ -79,9 +88,15 @@ class TestPreflightAuthCli:
             controller_url="https://sdwan.test.local",
             detail="Connection timed out",
         )
-        with patch(
-            "nac_test.cli.main.preflight_auth_check",
-            return_value=failed_result,
+        with (
+            patch(
+                "nac_test.combined_orchestrator.preflight_auth_check",
+                return_value=failed_result,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedOrchestrator._discover_test_types",
+                return_value=(True, False),
+            ),
         ):
             runner = CliRunner()
             result = runner.invoke(
@@ -103,7 +118,7 @@ class TestPreflightAuthCli:
     def test_cli_proceeds_when_auth_succeeds(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """CLI proceeds normally when authentication succeeds."""
+        """CLI proceeds past auth when authentication succeeds (no failure banner)."""
         # Set up ACI credentials
         monkeypatch.setenv("ACI_URL", "https://apic.test.local")
         monkeypatch.setenv("ACI_USERNAME", "admin")
@@ -117,9 +132,15 @@ class TestPreflightAuthCli:
             controller_url="https://apic.test.local",
             detail="Authentication successful",
         )
-        with patch(
-            "nac_test.cli.main.preflight_auth_check",
-            return_value=success_result,
+        with (
+            patch(
+                "nac_test.combined_orchestrator.preflight_auth_check",
+                return_value=success_result,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedOrchestrator._discover_test_types",
+                return_value=(True, False),
+            ),
         ):
             runner = CliRunner()
             result = runner.invoke(
@@ -134,8 +155,10 @@ class TestPreflightAuthCli:
                 ],
             )
 
-        # Should proceed to data merging (which succeeds)
-        assert result.exit_code == 0
+        # Should proceed past auth — no failure banners displayed
+        assert "AUTHENTICATION FAILED" not in result.output
+        assert "UNREACHABLE" not in result.output
+        # Should proceed to data merging and PyATS execution
         assert "Merging data model files" in result.output
 
     def test_cli_skips_auth_check_in_render_only_mode(
@@ -154,7 +177,7 @@ class TestPreflightAuthCli:
             )
         )
         with patch(
-            "nac_test.cli.main.preflight_auth_check",
+            "nac_test.combined_orchestrator.preflight_auth_check",
             fail_if_called,
         ):
             runner = CliRunner()
@@ -193,9 +216,15 @@ class TestPreflightAuthCli:
             controller_url="https://catc.test.local",
             detail="HTTP 403: Forbidden",
         )
-        with patch(
-            "nac_test.cli.main.preflight_auth_check",
-            return_value=failed_result,
+        with (
+            patch(
+                "nac_test.combined_orchestrator.preflight_auth_check",
+                return_value=failed_result,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedOrchestrator._discover_test_types",
+                return_value=(True, False),
+            ),
         ):
             runner = CliRunner()
             result = runner.invoke(

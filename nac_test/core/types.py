@@ -328,18 +328,21 @@ class CombinedResults:
 
         Exit codes:
             0: All tests passed, no errors OR all frameworks intentionally skipped
+            1: Pre-flight failure (auth or controller detection failed)
             1-250: Number of test failures (capped at 250)
             252: No tests found/executed across any framework OR Robot Framework invalid arguments
             253: Execution was interrupted (Ctrl+C, etc.)
             255: Execution errors occurred (has_errors is True)
 
-        Priority (highest to lowest): 253 (interrupted) > 252 (data error) > 255 (generic)
+        Priority (highest to lowest): pre-flight > 253 (interrupted) > 252 (data error) > 255 (generic)
 
-        Why this priority? Interrupted (253) is highest because it's the most actionable
-        signal for CI/CD - the user explicitly stopped execution. Data errors (252) come
-        next as they indicate a configuration problem. Generic errors (255) are lowest
-        as they may be transient infrastructure issues.
+        Why this priority? Pre-flight failures (1) indicate that testing could not even begin
+        due to auth/connection issues — this is the most actionable signal. Interrupted (253)
+        is next because the user explicitly stopped execution. Data errors (252) indicate a
+        configuration problem. Generic errors (255) are lowest as they may be transient.
         """
+        if self.pre_flight_failure is not None:
+            return 1
         if self.has_errors:
             error_types = [
                 r.error_type for r in self._results if r.error_type is not None

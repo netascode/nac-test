@@ -9,16 +9,8 @@ import typer
 
 import nac_test
 from nac_test.cli.diagnostic import diagnostic_callback
-from nac_test.cli.ui import (
-    display_aci_defaults_banner,
-    display_auth_failure_banner,
-    display_unreachable_banner,
-)
-from nac_test.cli.validators import (
-    AuthOutcome,
-    preflight_auth_check,
-    validate_aci_defaults,
-)
+from nac_test.cli.ui import display_aci_defaults_banner
+from nac_test.cli.validators import validate_aci_defaults
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import (
     CONSOLE_TIME_FORMAT,
@@ -27,10 +19,7 @@ from nac_test.core.constants import (
     EXIT_INTERRUPTED,
     EXIT_INVALID_ARGS,
 )
-from nac_test.core.reporting.combined_generator import CombinedReportGenerator
-from nac_test.core.types import CombinedResults, PreFlightFailure
 from nac_test.data_merger import DataMerger
-from nac_test.utils.controller import detect_controller_type, get_env_var_prefix
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import VerbosityLevel, configure_logging
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
@@ -328,60 +317,6 @@ def main(
         typer.echo("")
         raise typer.Exit(1)
 
-    # Detect controller type and pre-flight auth check
-    # Skip for render-only and dry-run modes since they don't need controller access
-    controller_type: str | None = None
-    if not render_only and not dry_run:
-        try:
-            controller_type = detect_controller_type()
-        except ValueError as e:
-            # No credentials or multiple credentials configured
-            typer.echo(
-                typer.style(f"Error: {e}", fg=typer.colors.RED),
-                err=True,
-            )
-            raise typer.Exit(1) from None
-
-        auth_result = preflight_auth_check(controller_type)
-        if not auth_result.success:
-            typer.echo("")
-            # Display appropriate banner based on failure type
-            if auth_result.reason == AuthOutcome.UNREACHABLE:
-                display_unreachable_banner(
-                    controller_type=auth_result.controller_type,
-                    controller_url=auth_result.controller_url,
-                    detail=auth_result.detail,
-                )
-            else:
-                env_var_prefix = get_env_var_prefix(auth_result.controller_type)
-                display_auth_failure_banner(
-                    controller_type=auth_result.controller_type,
-                    controller_url=auth_result.controller_url,
-                    detail=auth_result.detail,
-                    env_var_prefix=env_var_prefix,
-                )
-            typer.echo("")
-
-            # Generate HTML report via unified pipeline
-            failure = PreFlightFailure(
-                failure_type=(
-                    "unreachable"
-                    if auth_result.reason == AuthOutcome.UNREACHABLE
-                    else "auth"
-                ),
-                controller_type=auth_result.controller_type,
-                controller_url=auth_result.controller_url,
-                detail=auth_result.detail,
-                status_code=auth_result.status_code,
-            )
-            results = CombinedResults(pre_flight_failure=failure)
-            generator = CombinedReportGenerator(output)
-            report_path = generator.generate_combined_summary(results)
-            if report_path is not None:
-                typer.echo(f"Report: {report_path}")
-
-            raise typer.Exit(1)
-
     # Merge data files with timing
     start_time = datetime.now()
     start_timestamp = start_time.strftime(CONSOLE_TIME_FORMAT)
@@ -458,6 +393,9 @@ def main(
             raise typer.Exit(stats.exit_code)
         typer.echo("\n✅ Templates rendered successfully (render-only mode)")
         raise typer.Exit(0)
+
+    if stats.pre_flight_failure is not None:
+        raise typer.Exit(stats.exit_code)
 
     if stats.has_errors:
         error_list = "; ".join(stats.errors)

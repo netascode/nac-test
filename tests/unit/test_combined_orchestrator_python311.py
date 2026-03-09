@@ -11,6 +11,7 @@ import typer
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
+from tests.unit.conftest import AUTH_SUCCESS
 
 
 class TestOrchestratorUnsupportedPythonExit:
@@ -73,6 +74,14 @@ class TestOrchestratorUnsupportedPythonExit:
             patch("nac_test.utils.platform.typer.echo"),
             patch.object(
                 orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.detect_controller_type",
+                return_value="ACI",
+            ),
+            patch(
+                "nac_test.combined_orchestrator.preflight_auth_check",
+                return_value=AUTH_SUCCESS,
             ),
         ):
             with pytest.raises(typer.Exit) as exc_info:

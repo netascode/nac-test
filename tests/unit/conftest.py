@@ -9,12 +9,21 @@ from typing import Any
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
+from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
 from nac_test.pyats_core.constants import (
     PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS,
     PYATS_POST_DISCONNECT_WAIT_SECONDS,
 )
 
 CONTROLLER_ENV_PREFIXES = ("ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_")
+
+AUTH_SUCCESS = AuthCheckResult(
+    success=True,
+    reason=AuthOutcome.SUCCESS,
+    controller_type="ACI",
+    controller_url="https://apic.test.com",
+    detail="OK",
+)
 
 
 def assert_connection_has_optimizations(connection: dict[str, Any]) -> None:

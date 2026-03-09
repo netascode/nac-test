@@ -16,42 +16,10 @@ from typer.testing import CliRunner
 import nac_test.cli.main
 from nac_test.core.constants import EXIT_DATA_ERROR
 
-pytestmark = pytest.mark.integration
-
-
-@pytest.fixture(scope="function", autouse=True)
-def setup_bogus_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set up environment variables for a bogus ACI controller.
-
-    Uses monkeypatch for safe, automatic cleanup that preserves
-    original environment state even if tests fail.
-
-    Also mocks the preflight auth check and controller detection so that
-    these Robot extra-args integration tests are not blocked by
-    unreachable controller credentials.
-
-    Args:
-        monkeypatch: Pytest monkeypatch fixture for safe environment manipulation.
-    """
-    from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
-
-    monkeypatch.setenv("ACI_URL", "foo")
-    monkeypatch.setenv("ACI_USERNAME", "foo")
-    monkeypatch.setenv("ACI_PASSWORD", "foo")
-
-    # Bypass preflight auth check — these tests validate Robot extra-args handling,
-    # not controller authentication.
-    monkeypatch.setattr("nac_test.cli.main.detect_controller_type", lambda: "ACI")
-    monkeypatch.setattr(
-        "nac_test.cli.main.preflight_auth_check",
-        lambda _: AuthCheckResult(
-            success=True,
-            reason=AuthOutcome.SUCCESS,
-            controller_type="ACI",
-            controller_url="foo",
-            detail="OK",
-        ),
-    )
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.usefixtures("setup_bogus_controller_env"),
+]
 
 
 def test_extra_args_with_valid_variable_and_separator_succeeds(tmp_path: Path) -> None:
