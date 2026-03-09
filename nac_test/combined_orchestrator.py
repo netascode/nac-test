@@ -176,7 +176,8 @@ class CombinedOrchestrator:
 
         # Pre-flight: detect controller and validate credentials for PyATS path only.
         # Robot path stays generic — it may not need controller access at all.
-        if has_pyats and not self.render_only:
+        # Dry-run mode skips auth — it validates test structure, not execution.
+        if has_pyats and not self.render_only and not self.dry_run:
             try:
                 self.controller_type = detect_controller_type()
                 logger.info(f"Controller type detected: {self.controller_type}")
