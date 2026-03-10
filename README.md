@@ -101,7 +101,6 @@ uv tool install nac-test
 
 The following Robot libraries are included with `nac-test`:
 
-- [RESTinstance](https://github.com/asyrjasalo/RESTinstance)
 - [robotframework-requests](https://github.com/MarketSquare/robotframework-requests)
 - [robotframework-jmespath](https://github.com/netascode/robotframework-jmespath)
 - [robotframework-jsonlibrary](https://github.com/robotframework-thailand/robotframework-jsonlibrary)
