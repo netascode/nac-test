@@ -1,6 +1,6 @@
 [project]
 name = "nac-test"
-version = "1.1.0b3"
+version = "2.0.0a1"
 description = "A CLI tool to render to execute Robot Framework (RF) and PyATS tests for Network as Code (NAC)."
 license = { text = "MPL-2.0" }
 readme = "README.md"
@@ -8,8 +8,10 @@ requires-python = ">=3.10"
 authors = [
     { name = "Daniel Schmidt", email = "danischm@cisco.com" },
     { name = "Andrea Testino", email = "atestini@cisco.com" },
+    { name = "Oliver Boehmer", email = "oboehmer@cisco.com" },
 ]
 maintainers = [
+    { name = "Daniel Schmidt", email = "danischm@cisco.com" },
     { name = "Oliver Boehmer", email = "oboehmer@cisco.com" },
 ]
 keywords = ["robot", "pyats", "testing", "automation", "jinja", "templating", "network"]
@@ -28,8 +30,8 @@ classifiers = [
 ]
 dependencies = [
     "Jinja2>=3.1.6",
-    "RESTinstance>=1.5.2",
     "jmespath>=1.0.1",
+    "nac-test-pyats-common>=0.3.0",
     "nac-yaml>=1.1.1",
     "robotframework>=7.3.2",
     "robotframework-jmespath",
@@ -39,12 +41,11 @@ dependencies = [
     "robotframework-requests>=0.9.7",
     "ruamel.yaml>=0.18.15",
     "typer>=0.17.4",
-    "setuptools<81", # required for RESTinstance which needs pkg_resources (sic)
     "scrapli-netconf>=2026.1.12",
     "asyncssh>=2.22.0",
-    # PyATS & Genie Ecosystem
-    "pyats>=25.5",
-    "genie>=25.5",
+    # PyATS & Genie Ecosystem — not supported on Windows
+    "pyats>=25.5 ; sys_platform != 'win32'",
+    "genie>=25.5 ; sys_platform != 'win32'",
     "psutil>=7.0.0",
     "httpx>=0.28",
     "aiofiles>=24.1",
@@ -65,17 +66,6 @@ iac-test = "nac_test.cli.main:app"
 nac-test = "nac_test.cli.main:app"
 
 [project.optional-dependencies]
-# Architecture adapters
-# This is optional to avoid circular dependency:
-#   nac-test-pyats-common requires nac-test (for base classes)
-#   nac-test optionally includes nac-test-pyats-common (for convenience) such that users can do `pip install nac-test[all]` to get both.
-adapters = [
-    "nac-test-pyats-common>=0.2.0",
-]
-# Convenience extra that includes all optional dependencies
-all = [
-    "nac-test-pyats-common>=0.2.0",
-]
 dev = [
     "ansible-core>=2.17.6",
     "bandit[toml]>=1.8.6",
