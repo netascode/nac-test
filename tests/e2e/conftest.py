@@ -483,7 +483,7 @@ def e2e_windows_pyats_skip_results(
     """Execute the Windows PyATS skip scenario once and cache results."""
     return _run_e2e_scenario(
         WINDOWS_PYATS_SKIP_SCENARIO,
-        mock_api_server,
+        None,
         None,
         tmp_path_factory,
         class_mocker,
