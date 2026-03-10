@@ -6,9 +6,15 @@
 import logging
 import multiprocessing as mp
 import os
-import resource
+import sys
 
 import psutil
+
+# resource module is Unix-only
+if sys.platform != "win32":
+    import resource
+else:
+    resource = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +58,13 @@ class SystemResourceCalculator:
             - hard: Hard limit
             - safe: Safe limit (70% of soft)
         """
+        if resource is None:
+            # Windows doesn't have Unix-style file descriptor limits
+            return {
+                "soft": 8192,
+                "hard": 8192,
+                "safe": 5734,  # 70% of 8192
+            }
         try:
             soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
             safe_limit = int(soft_limit * 0.7)
