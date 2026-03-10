@@ -112,6 +112,13 @@ jobs:
     name: Tests (Windows)
     runs-on: windows-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        python:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -121,8 +128,8 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Set up Python 3.12
-        run: uv python install 3.12
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
 
       - name: Test
         run: |
