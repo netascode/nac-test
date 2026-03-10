@@ -9,6 +9,11 @@ from pathlib import Path
 
 import typer
 
+from nac_test.cli.ui import (
+    display_auth_failure_banner,
+    display_unreachable_banner,
+)
+from nac_test.cli.validators import AuthOutcome, preflight_auth_check
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     EXIT_ERROR,
@@ -18,11 +23,16 @@ from nac_test.core.constants import (
     SUMMARY_REPORT_FILENAME,
 )
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
-from nac_test.core.types import CombinedResults, TestResults
+from nac_test.core.types import (
+    CombinedResults,
+    ControllerTypeKey,
+    PreFlightFailure,
+    TestResults,
+)
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
-from nac_test.utils.controller import detect_controller_type
+from nac_test.utils.controller import detect_controller_type, get_env_var_prefix
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 from nac_test.utils.terminal import terminal
@@ -121,20 +131,8 @@ class CombinedOrchestrator:
         self.dev_robot_only = dev_robot_only
         self.verbose = verbose
 
-        # Detect controller type early (unless we are in render-only mode, which doesn't require controller access)
-        self.controller_type: str | None = None
-        if not self.render_only:
-            try:
-                self.controller_type = detect_controller_type()
-                logger.info(f"Controller type detected: {self.controller_type}")
-            except ValueError as e:
-                # Exit gracefully if controller detection fails
-                typer.secho(
-                    f"\n❌ Controller detection failed:\n{e}",
-                    fg=typer.colors.RED,
-                    err=True,
-                )
-                raise typer.Exit(EXIT_ERROR) from None
+        # Controller type — detected lazily in run_tests() when PyATS tests are present
+        self.controller_type: ControllerTypeKey | None = None
 
     def run_tests(self) -> CombinedResults:
         """Main entry point for combined test execution.
@@ -179,6 +177,59 @@ class CombinedOrchestrator:
         # Build combined results from individual orchestrators
         combined_results = CombinedResults()
         mode_suffix = " (dry-run)" if self.dry_run else ""
+
+        # Pre-flight: detect controller and validate credentials for PyATS path only.
+        # Robot path stays generic — it may not need controller access at all.
+        # Dry-run mode skips auth — it validates test structure, not execution.
+        if has_pyats and not self.render_only and not self.dry_run:
+            try:
+                self.controller_type = detect_controller_type()
+                logger.info(f"Controller type detected: {self.controller_type}")
+            except ValueError as e:
+                typer.secho(
+                    f"\n❌ Controller detection failed:\n{e}",
+                    fg=typer.colors.RED,
+                    err=True,
+                )
+                raise typer.Exit(EXIT_ERROR) from None
+
+            auth_result = preflight_auth_check(self.controller_type)
+            if not auth_result.success:
+                typer.echo("")
+                if auth_result.reason == AuthOutcome.UNREACHABLE:
+                    display_unreachable_banner(
+                        controller_type=auth_result.controller_type,
+                        controller_url=auth_result.controller_url,
+                        detail=auth_result.detail,
+                    )
+                else:
+                    env_var_prefix = get_env_var_prefix(auth_result.controller_type)
+                    display_auth_failure_banner(
+                        controller_type=auth_result.controller_type,
+                        controller_url=auth_result.controller_url,
+                        detail=auth_result.detail,
+                        env_var_prefix=env_var_prefix,
+                    )
+                typer.echo("")
+
+                combined_results.pre_flight_failure = PreFlightFailure(
+                    failure_type=(
+                        "unreachable"
+                        if auth_result.reason == AuthOutcome.UNREACHABLE
+                        else "auth"
+                    ),
+                    controller_type=auth_result.controller_type,
+                    controller_url=auth_result.controller_url,
+                    detail=auth_result.detail,
+                    status_code=auth_result.status_code,
+                )
+
+                # Generate report and bail — no PyATS execution possible
+                generator = CombinedReportGenerator(self.output_dir)
+                report_path = generator.generate_combined_summary(combined_results)
+                if report_path is not None:
+                    typer.echo(f"Report: {report_path}")
+                return combined_results
 
         if has_pyats and not self.render_only:
             typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")

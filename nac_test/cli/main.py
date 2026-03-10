@@ -16,12 +16,14 @@ from nac_test.cli.ui import display_aci_defaults_banner
 from nac_test.cli.validators import validate_aci_defaults
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import (
+    CONSOLE_TIME_FORMAT,
     DEBUG_MODE,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
     EXIT_INVALID_ARGS,
 )
 from nac_test.data_merger import DataMerger
+from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import (
     DEFAULT_LOGLEVEL,
     LogLevel,
@@ -368,19 +370,18 @@ def main(
 
     # Merge data files with timing
     start_time = datetime.now()
-    typer.echo("\n\n📄 Merging data model files...")
+    start_timestamp = start_time.strftime(CONSOLE_TIME_FORMAT)
+    typer.echo(f"\n\n[{start_timestamp}] 📄 Merging data model files...")
 
     merged_data = DataMerger.merge_data_files(data)
     DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
 
     end_time = datetime.now()
+    end_timestamp = end_time.strftime(CONSOLE_TIME_FORMAT)
     duration = (end_time - start_time).total_seconds()
-    duration_str = (
-        f"{duration:.1f}s"
-        if duration < 60
-        else f"{int(duration // 60)}m {duration % 60:.0f}s"
+    typer.echo(
+        f"[{end_timestamp}] ✅ Data model merging completed ({format_duration(duration)})"
     )
-    typer.echo(f"✅ Data model merging completed ({duration_str})")
 
     # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
     orchestrator = CombinedOrchestrator(
@@ -432,15 +433,7 @@ def main(
     runtime_end = datetime.now()
     total_runtime = (runtime_end - runtime_start).total_seconds()
 
-    # Format like other timing outputs
-    if total_runtime < 60:
-        runtime_str = f"{total_runtime:.2f} seconds"
-    else:
-        minutes = int(total_runtime / 60)
-        secs = total_runtime % 60
-        runtime_str = f"{minutes} minutes {secs:.2f} seconds"
-
-    typer.echo(f"\nTotal runtime: {runtime_str}")
+    typer.echo(f"\nTotal runtime: {format_duration(total_runtime)}")
 
     if render_only:
         if stats.has_errors:
@@ -452,6 +445,9 @@ def main(
             raise typer.Exit(stats.exit_code)
         typer.echo("\n✅ Templates rendered successfully (render-only mode)")
         raise typer.Exit(0)
+
+    if stats.pre_flight_failure is not None:
+        raise typer.Exit(stats.exit_code)
 
     if stats.has_errors:
         error_list = "; ".join(stats.errors)
