@@ -298,7 +298,7 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
             dev_pyats_only=True,
         )
 
-        # Discovery returns both test types
+        # Discovery returns both test types present
         with patch.object(
             orchestrator, "_discover_test_types", return_value=(True, True)
         ):
@@ -358,7 +358,7 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
             dev_robot_only=True,
         )
 
-        # Discovery returns both test types
+        # Discovery returns both test types present
         with patch.object(
             orchestrator, "_discover_test_types", return_value=(True, True)
         ):
@@ -778,14 +778,24 @@ class TestExecutionSummary(TestCombinedOrchestratorFlow):
 
 
 class TestWindowsPlatformBehavior(TestCombinedOrchestratorFlow):
-    """Tests for Windows platform behavior."""
+    """Tests for Windows platform behavior (PYATS_SUPPORTED=False)."""
 
-    def test_windows_skips_pyats_runs_robot_with_warning(
+    @pytest.fixture
+    def orchestrator_with_robot(
+        self, orchestrator: CombinedOrchestrator
+    ) -> CombinedOrchestrator:
+        """Add a Robot template to the orchestrator's templates directory."""
+        (orchestrator.templates_dir / "test.robot").write_text(
+            "*** Test Cases ***\nDummy\n    Log    ok"
+        )
+        return orchestrator
+
+    def test_pyats_not_supported_skips_discovery_and_runs_robot_with_warning(
         self,
-        orchestrator: CombinedOrchestrator,
+        orchestrator_with_robot: CombinedOrchestrator,
         robot_results: TestResults,
     ) -> None:
-        """On Windows, PyATS tests should be skipped with warning, Robot should run."""
+        """When PYATS_SUPPORTED is False, skip PyATS discovery entirely, Robot should run."""
         mock_robot_instance = MagicMock()
         mock_robot_instance.run_tests.return_value = robot_results
 
@@ -795,10 +805,7 @@ class TestWindowsPlatformBehavior(TestCombinedOrchestratorFlow):
         )
 
         with (
-            patch("nac_test.combined_orchestrator.IS_WINDOWS", True),
-            patch.object(
-                orchestrator, "_discover_test_types", return_value=(True, True)
-            ),
+            patch("nac_test.combined_orchestrator.PYATS_SUPPORTED", False),
             patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats,
             patch("nac_test.combined_orchestrator.RobotOrchestrator") as mock_robot,
             patch(
@@ -810,18 +817,18 @@ class TestWindowsPlatformBehavior(TestCombinedOrchestratorFlow):
             mock_robot.return_value = mock_robot_instance
             mock_generator.return_value = mock_gen_instance
 
-            result = orchestrator.run_tests()
+            result = orchestrator_with_robot.run_tests()
 
-        # PyATS should NOT be called (skipped on Windows)
+        # PyATS should NOT be called (not supported)
         mock_pyats.assert_not_called()
 
         # Robot SHOULD be called
         mock_robot.assert_called_once()
         mock_robot_instance.run_tests.assert_called_once()
 
-        # Warning should be emitted
+        # Warning should be emitted about PyATS not being supported
         mock_secho.assert_any_call(
-            "\n⚠️  PyATS tests found but skipped — PyATS is not supported on Windows.",
+            "\n⚠️  PyATS is not supported on Windows — skipping PyATS tests.",
             fg=typer.colors.YELLOW,
         )
 
@@ -829,3 +836,74 @@ class TestWindowsPlatformBehavior(TestCombinedOrchestratorFlow):
         assert result.robot is not None
         assert result.api is None
         assert result.d2d is None
+
+
+class TestDiscoverTestTypesFlags(TestCombinedOrchestratorFlow):
+    """Tests for _discover_test_types() discover_pyats and discover_robot flags."""
+
+    @pytest.fixture
+    def orchestrator_with_robot(
+        self, orchestrator: CombinedOrchestrator
+    ) -> CombinedOrchestrator:
+        """Add a Robot template to the orchestrator's templates directory."""
+        (orchestrator.templates_dir / "test.robot").write_text(
+            "*** Test Cases ***\nDummy\n    Log    ok"
+        )
+        return orchestrator
+
+    def test_discover_both_by_default(
+        self, orchestrator_with_robot: CombinedOrchestrator
+    ) -> None:
+        """By default, both test types should be discovered (Robot present, PyATS absent)."""
+        has_pyats, has_robot = orchestrator_with_robot._discover_test_types()
+
+        # Robot should be discovered (we created a .robot file)
+        assert has_robot is True
+        # PyATS should be False (no valid PyATS test files)
+        assert has_pyats is False
+
+    def test_discover_pyats_false_skips_pyats_discovery(
+        self, orchestrator_with_robot: CombinedOrchestrator
+    ) -> None:
+        """When discover_pyats=False, PyATS discovery should be skipped."""
+        has_pyats, has_robot = orchestrator_with_robot._discover_test_types(
+            discover_pyats=False
+        )
+
+        # PyATS should NOT be discovered (skipped)
+        assert has_pyats is False
+        # Robot should still be discovered
+        assert has_robot is True
+
+    def test_discover_robot_false_skips_robot_discovery(
+        self, orchestrator_with_robot: CombinedOrchestrator
+    ) -> None:
+        """When discover_robot=False, Robot discovery should be skipped."""
+        has_pyats, has_robot = orchestrator_with_robot._discover_test_types(
+            discover_robot=False
+        )
+
+        # Robot should NOT be discovered (skipped)
+        assert has_robot is False
+
+    def test_discover_both_false_returns_false_false(
+        self, orchestrator_with_robot: CombinedOrchestrator
+    ) -> None:
+        """When both flags are False, both discoveries should be skipped."""
+        has_pyats, has_robot = orchestrator_with_robot._discover_test_types(
+            discover_pyats=False, discover_robot=False
+        )
+
+        # Both should be False
+        assert has_pyats is False
+        assert has_robot is False
+
+    def test_discover_robot_true_with_no_robot_files(
+        self, orchestrator: CombinedOrchestrator
+    ) -> None:
+        """When discover_robot=True but no Robot files exist, has_robot should be False."""
+        # Use base orchestrator (no robot files)
+        has_pyats, has_robot = orchestrator._discover_test_types(discover_robot=True)
+
+        # No robot files exist
+        assert has_robot is False

@@ -107,3 +107,6 @@ IS_WINDOWS: bool = platform.system() == "Windows"
 
 # macOS requires Python 3.12+.
 IS_UNSUPPORTED_MACOS_PYTHON: bool = IS_MACOS and sys.version_info < (3, 12)
+
+# PyATS platform support (PyATS wheels are not available for Windows)
+PYATS_SUPPORTED: bool = not IS_WINDOWS
