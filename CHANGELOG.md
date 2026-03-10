@@ -35,7 +35,7 @@ _Note: This changelog covers all 2.0.0 alpha and beta releases._
 
 - Upgraded pabot to 5.2.2
 - Streamlined CLI output with cleaner progress reporting
-- `--minimal-reports` reduces HTML report size by 80-95% (only failed tests include full details)
+- `--minimal-reports` reduces pyATS HTML report size by 80-95% (only failed tests include full details)
 
 # 1.2.2
 
