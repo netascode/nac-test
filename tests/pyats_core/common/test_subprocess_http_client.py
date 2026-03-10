@@ -9,19 +9,15 @@ Tests the fork-safe HTTP client:
 3. ConnectionPool platform-specific client selection
 """
 
-from typing import TYPE_CHECKING
-
 import httpx
 import pytest
+from pytest_mock import MockerFixture
 
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.http import (
     SubprocessHttpClient,
     SubprocessResponse,
 )
-
-if TYPE_CHECKING:
-    from pytest_mock.plugin import MockerFixture
 
 
 class TestSubprocessResponseRaiseForStatus:
@@ -83,7 +79,7 @@ class TestSubprocessHttpClientUrlResolution:
 class TestConnectionPoolPlatformSelection:
     """Tests for ConnectionPool client selection based on platform."""
 
-    def test_returns_subprocess_client_on_darwin(self, mocker: "MockerFixture") -> None:
+    def test_returns_subprocess_client_on_darwin(self, mocker: MockerFixture) -> None:
         """Verify SubprocessHttpClient is returned on macOS (fork-safety)."""
         mocker.patch(
             "nac_test.pyats_core.common.connection_pool.platform.system",
@@ -98,7 +94,7 @@ class TestConnectionPoolPlatformSelection:
 
         assert isinstance(client, SubprocessHttpClient)
 
-    def test_returns_httpx_client_on_linux(self, mocker: "MockerFixture") -> None:
+    def test_returns_httpx_client_on_linux(self, mocker: MockerFixture) -> None:
         """Verify httpx.AsyncClient is returned on Linux."""
         mocker.patch(
             "nac_test.pyats_core.common.connection_pool.platform.system",
@@ -113,7 +109,7 @@ class TestConnectionPoolPlatformSelection:
 
         assert isinstance(client, httpx.AsyncClient)
 
-    def test_returns_httpx_client_on_windows(self, mocker: "MockerFixture") -> None:
+    def test_returns_httpx_client_on_windows(self, mocker: MockerFixture) -> None:
         """Verify httpx.AsyncClient is returned on Windows."""
         mocker.patch(
             "nac_test.pyats_core.common.connection_pool.platform.system",

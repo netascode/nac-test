@@ -15,19 +15,17 @@ authentication caching for parallel processes. The tests cover:
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from pytest_mock import MockerFixture
 
 from nac_test.pyats_core.common.auth_cache import AuthCache
 
-if TYPE_CHECKING:
-    from pytest_mock.plugin import MockerFixture
-
 
 @pytest.fixture
-def mock_time(mocker: "MockerFixture") -> Any:
+def mock_time(mocker: MockerFixture) -> Any:
     """Fixture to mock time.time() for testing TTL behavior.
 
     Args:
@@ -42,7 +40,7 @@ def mock_time(mocker: "MockerFixture") -> Any:
 
 
 @pytest.fixture
-def mock_auth_cache_dir(mocker: "MockerFixture", tmp_path: Path) -> Path:
+def mock_auth_cache_dir(mocker: MockerFixture, tmp_path: Path) -> Path:
     """Fixture to provide a temporary auth cache directory.
 
     Args:
@@ -59,7 +57,7 @@ def mock_auth_cache_dir(mocker: "MockerFixture", tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def mock_fcntl(mocker: "MockerFixture") -> Any:
+def mock_fcntl(mocker: MockerFixture) -> Any:
     """Fixture to mock file locking operations.
 
     Note: This fixture now mocks filelock.FileLock instead of fcntl.flock,
@@ -595,7 +593,7 @@ class TestAuthCachePublicMethods:
     """Test cases for the public methods of AuthCache."""
 
     def test_get_or_create_calls_internal_correctly(
-        self, mocker: "MockerFixture"
+        self, mocker: MockerFixture
     ) -> None:
         """Test that get_or_create calls _cache_auth_data with correct parameters.
 
@@ -631,7 +629,7 @@ class TestAuthCachePublicMethods:
         )
 
     def test_get_or_create_token_calls_internal_correctly(
-        self, mocker: "MockerFixture"
+        self, mocker: MockerFixture
     ) -> None:
         """Test that get_or_create_token calls _cache_auth_data with correct parameters.
 
@@ -874,7 +872,7 @@ class TestAuthCacheIntegration:
         self,
         mock_auth_cache_dir: Path,
         mock_fcntl: Mock,
-        mocker: "MockerFixture",
+        mocker: MockerFixture,
         initial_time: float,
         check_time: float,
         should_refresh: bool,
@@ -960,7 +958,7 @@ class TestAuthCacheErrorHandling:
             )
 
     def test_cache_dir_creation(
-        self, mocker: "MockerFixture", tmp_path: Path, mock_fcntl: Mock, mock_time: Mock
+        self, mocker: MockerFixture, tmp_path: Path, mock_fcntl: Mock, mock_time: Mock
     ) -> None:
         """Test that cache directory is created if it doesn't exist.
 
