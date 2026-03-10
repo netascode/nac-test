@@ -7,12 +7,11 @@ import logging
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from nac_test.pyats_core.constants import (
     PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS,
     PYATS_POST_DISCONNECT_WAIT_SECONDS,
 )
+from nac_test.utils.yaml import YAMLError, dump, safe_load
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +57,7 @@ class TestbedGenerator:
                     f"Device '{hostname}' connection overridden by user-provided testbed"
                 )
                 # User-provided device takes precedence - return as-is
-                return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
+                return dump(testbed)
         else:
             # Create minimal testbed structure
             testbed = {
@@ -78,7 +77,7 @@ class TestbedGenerator:
         testbed["devices"][hostname] = TestbedGenerator._build_device_config(device)
 
         # Convert to YAML
-        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
+        return dump(testbed)
 
     @staticmethod
     def generate_consolidated_testbed_yaml(
@@ -167,7 +166,7 @@ class TestbedGenerator:
 
         # Convert to YAML
         # Note: User-only devices (not in auto-discovery) remain in testbed
-        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
+        return dump(testbed)
 
     @staticmethod
     def _load_user_testbed(base_testbed_path: Path) -> dict[str, Any]:
@@ -191,13 +190,13 @@ class TestbedGenerator:
         # Typer CLI validates: exists=True, file_okay=True, dir_okay=False (readable)
         try:
             with open(base_testbed_path, encoding="utf-8") as f:
-                testbed = yaml.safe_load(f)
+                testbed = safe_load(f)
         except UnicodeDecodeError as e:
             raise ValueError(
                 f"Testbed file '{base_testbed_path}' contains invalid UTF-8 encoding. "
                 f"Please ensure the file is saved as UTF-8."
             ) from e
-        except yaml.YAMLError as e:
+        except YAMLError as e:
             raise ValueError(
                 f"Invalid YAML syntax in testbed file '{base_testbed_path}': {e}"
             ) from e
