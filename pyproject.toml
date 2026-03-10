@@ -66,6 +66,7 @@ documentation = "https://github.com/netascode/nac-test"
 iac-test = "nac_test.cli.main:app"
 nac-test = "nac_test.cli.main:app"
 
+[project.optional-dependencies]
 dev = [
     "ansible-core>=2.17.6",
     "bandit[toml]>=1.8.6",
