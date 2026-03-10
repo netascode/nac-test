@@ -8,6 +8,8 @@ _Note: This changelog covers all 2.0.0 alpha and beta releases._
   - Initial support for ACI, SD-WAN, and Catalyst Center architectures
   - IOS-XE Direct-to-Device (D2D) SSH tests for SD-WAN and Catalyst Center
   - Experimental `--pyats` and `--robot` flags to limit test execution to one framework
+  - **Windows not supported**: pyATS libraries are not available on Windows. Use WSL2 as an alternative.
+  - **macOS requires Python 3.12+**: Earlier Python versions have known fork/SSL incompatibilities causing crashes during pyATS execution.
 - **Combined Dashboard**: New `combined_summary.html` report linking Robot and pyATS summaries
 - **Merged xUnit Output**: Robot and pyATS results merged into single `xunit.xml` for CI/CD integration
 - **Diagnostic Collection**: `--diagnostic` flag wraps execution to collect troubleshooting info (env, packages, logs)
@@ -15,8 +17,6 @@ _Note: This changelog covers all 2.0.0 alpha and beta releases._
 
 ## Breaking Changes
 
-- **Windows no longer supported**: pyATS libraries are not available on Windows. Use WSL2 as an alternative.
-- **macOS requires Python 3.12+**: Earlier Python versions have known fork/SSL incompatibilities causing crashes during pyATS execution
 - **Robot artifacts moved**: Output files (`log.html`, `report.html`, etc.) now created in `robot_results/` subdirectory; symlinks in root directory for backward compatibility
 - **RESTinstance removed from core dependencies**: The `RESTinstance` Robot library has been removed. Users who still need RESTinstance can install it separately alongside nac-test.
 
