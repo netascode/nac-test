@@ -46,6 +46,7 @@ from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspect
 from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.environment import EnvironmentValidator
+from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
@@ -799,14 +800,7 @@ class PyATSOrchestrator:
 
         if result["status"] in ["success", "partial"]:
             # Log report generation timing (procedural info)
-            duration = result["duration"]
-            if duration < 60:
-                duration_str = f"{duration:.2f} seconds"
-            else:
-                minutes = int(duration / 60)
-                secs = duration % 60
-                duration_str = f"{minutes} minutes {secs:.2f} seconds"
-
+            duration_str = format_duration(result["duration"])
             logger.info(f"Total report generation time: {duration_str}")
 
             # Log generated report paths (visible with -v INFO)

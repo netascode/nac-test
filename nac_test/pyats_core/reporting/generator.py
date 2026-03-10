@@ -30,6 +30,7 @@ import aiofiles  # type: ignore[import-untyped]
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     HTML_REPORTS_DIRNAME,
+    REPORT_TIMESTAMP_FORMAT,
     SUMMARY_REPORT_FILENAME,
 )
 from nac_test.core.types import TestResults
@@ -293,7 +294,7 @@ class ReportGenerator:
             results=test_data.get("results", []),
             command_executions=test_data.get("command_executions", []),
             status=test_data.get("overall_status", "unknown"),
-            generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            generation_time=datetime.now().strftime(REPORT_TIMESTAMP_FORMAT),
             jobfile_path=metadata.get("jobfile_path", ""),
             hostname=metadata.get("hostname"),  # Device name for D2D tests
         )
@@ -431,7 +432,7 @@ class ReportGenerator:
             # Render summary
             template = self.env.get_template("summary/report.html.j2")
             html_content = template.render(
-                generation_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                generation_time=datetime.now().strftime(REPORT_TIMESTAMP_FORMAT),
                 stats=stats,
                 results=all_results,
                 breadcrumb_link=f"../../../{COMBINED_SUMMARY_FILENAME}",  # 3 levels up from pyats_results/{type}/html_reports/

@@ -6,9 +6,9 @@
 import logging
 import threading
 import time
-from datetime import datetime
 from typing import Any
 
+from nac_test.utils.formatting import format_timestamp_ms
 from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class ProgressReporter:
         self, test_name: str, pid: int, worker_id: str, test_id: int
     ) -> None:
         """Report that a test has started executing"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        timestamp = format_timestamp_ms()
 
         # Use terminal utilities for consistent coloring
         status_text = terminal.warning("EXECUTING")
@@ -58,7 +58,7 @@ class ProgressReporter:
         duration: float,
     ) -> None:
         """Format: 2025-06-27 18:26:16.834346 [PID:893270] [4] [ID:4] PASSED ... in 3.2 seconds"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        timestamp = format_timestamp_ms()
 
         # Update test status with duration
         if test_name in self.test_status:
