@@ -147,7 +147,7 @@ class RobotWriter:
         # create output directory if it does not exist yet
         pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 
-        template = env.get_template(str(template_path))
+        template = env.get_template(template_path.as_posix())
         # Use custom_data if provided (for chunked templates), otherwise use pre-converted template_data
         if custom_data is not None:
             # Convert custom_data for template rendering (same as initialization conversion)
