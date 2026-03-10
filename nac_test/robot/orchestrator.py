@@ -18,6 +18,7 @@ from nac_test.core.constants import (
     EXIT_DATA_ERROR,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
+    IS_WINDOWS,
     LOG_HTML,
     OUTPUT_XML,
     REPORT_HTML,
@@ -206,14 +207,17 @@ class RobotOrchestrator:
             return TestResults.not_run("render-only mode")
 
     def _create_backward_compat_symlinks(self) -> None:
-        """Create backward compatibility symlinks at root pointing to robot_results/.
+        """Create backward compatibility links at root pointing to robot_results/.
 
-        Creates symlinks for:
+        Creates links for:
         - output.xml -> robot_results/output.xml
         - log.html -> robot_results/log.html
         - report.html -> robot_results/report.html
 
-        Note: xunit.xml is NOT symlinked here. The combined xunit.xml at root
+        On Unix/macOS: Creates symlinks (relative paths)
+        On Windows: Creates hard links (symlinks require admin privileges)
+
+        Note: xunit.xml is NOT linked here. The combined xunit.xml at root
         is created by the xunit merger (merging Robot + PyATS results).
 
         This ensures existing tools/scripts that expect these files at root continue to work.
@@ -227,18 +231,24 @@ class RobotOrchestrator:
 
             # Skip if source doesn't exist (shouldn't happen, but be defensive)
             if not source.exists():
-                logger.warning(f"Source file not found for symlink: {source}")
+                logger.warning(f"Source file not found for link: {source}")
                 continue
 
             # Remove existing symlink or file if it exists
             if target.is_symlink():
                 target.unlink()
             elif target.is_dir():
-                logger.warning(f"Skipping symlink creation: {target} is a directory")
+                logger.warning(f"Skipping link creation: {target} is a directory")
                 continue
             elif target.exists():
                 target.unlink()
 
-            # Create relative symlink
-            target.symlink_to(source.relative_to(self.base_output_dir))
-            logger.debug(f"Created symlink: {target} -> {source}")
+            try:
+                if IS_WINDOWS:
+                    target.hardlink_to(source)
+                    logger.debug(f"Created hard link: {target} -> {source}")
+                else:
+                    target.symlink_to(source.relative_to(self.base_output_dir))
+                    logger.debug(f"Created symlink: {target} -> {source}")
+            except OSError as e:
+                logger.warning(f"Failed to create link for {filename}: {e}")

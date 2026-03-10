@@ -20,12 +20,14 @@ This approach:
 import logging
 import re
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import pytest
 
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     HTML_REPORTS_DIRNAME,
+    IS_WINDOWS,
     LOG_HTML,
     OUTPUT_XML,
     PYATS_RESULTS_DIRNAME,
@@ -222,29 +224,42 @@ class E2ECombinedTestBase:
         )
 
     # -------------------------------------------------------------------------
-    # Robot Backward Compatibility Tests (symlinks)
+    # Robot Backward Compatibility Tests (symlinks on Unix, hard links on Windows)
     # -------------------------------------------------------------------------
 
-    def test_robot_output_xml_symlink_exists(self, results: E2EResults) -> None:
-        """Verify output.xml symlink exists at root."""
-        if not results.has_robot_results:
-            pytest.skip("No Robot results in this scenario")
-        symlink = results.output_dir / OUTPUT_XML
-        assert symlink.exists(), "Missing output.xml symlink at root"
-        assert symlink.is_symlink(), "output.xml is not a symlink"
+    @staticmethod
+    def _assert_is_link_to(link: Path, source: Path) -> None:
+        """Assert that link points to source (symlink on Unix, hard link on Windows)."""
+        if IS_WINDOWS:
+            assert link.stat().st_ino == source.stat().st_ino, (
+                f"Hard link mismatch:\n"
+                f"  Link inode: {link.stat().st_ino}\n"
+                f"  Source inode: {source.stat().st_ino}"
+            )
+        else:
+            assert link.is_symlink(), f"{link.name} is not a symlink"
+            assert link.resolve() == source, (
+                f"Symlink points to wrong location:\n"
+                f"  Expected: {source}\n"
+                f"  Got: {link.resolve()}"
+            )
 
-    def test_robot_symlinks_point_correctly(self, results: E2EResults) -> None:
-        """Verify symlinks correctly point to robot_results/ subdirectory."""
+    def test_robot_output_xml_link_exists(self, results: E2EResults) -> None:
+        """Verify output.xml link exists at root."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        symlink = results.output_dir / OUTPUT_XML
-        target = symlink.resolve()
-        expected = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
-        assert target == expected, (
-            f"Symlink points to wrong location:\n"
-            f"  Expected: {expected}\n"
-            f"  Got: {target}"
-        )
+        link = results.output_dir / OUTPUT_XML
+        source = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
+        assert link.exists(), "Missing output.xml link at root"
+        self._assert_is_link_to(link, source)
+
+    def test_robot_links_point_correctly(self, results: E2EResults) -> None:
+        """Verify links correctly point to robot_results/ subdirectory."""
+        if not results.has_robot_results:
+            pytest.skip("No Robot results in this scenario")
+        link = results.output_dir / OUTPUT_XML
+        source = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
+        self._assert_is_link_to(link, source)
 
     # -------------------------------------------------------------------------
     # Robot Summary Report Tests
