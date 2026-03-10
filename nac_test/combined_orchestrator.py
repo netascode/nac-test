@@ -161,30 +161,26 @@ class CombinedOrchestrator:
                 fg=typer.colors.YELLOW,
             )
 
-        # Warn if PyATS is not supported on this platform (unless user only wants Robot)
-        if not PYATS_SUPPORTED and not self.dev_robot_only:
+        # Discover test types (simple existence checks)
+        has_pyats, has_robot = self._discover_test_types()
+
+        # Apply dev mode filters - these flags restrict which test types run
+        if self.dev_pyats_only:
+            has_robot = False
+        if self.dev_robot_only:
+            has_pyats = False
+
+        # Skip PyATS on Windows (PyATS wheels are not available for this platform)
+        if has_pyats and not PYATS_SUPPORTED:
             typer.secho(
-                "\n⚠️  PyATS is not supported on Windows — skipping PyATS tests.",
+                "\n⚠️  PyATS tests found but skipped — PyATS is not supported on Windows.",
                 fg=typer.colors.YELLOW,
             )
-
-        # Discover what test types exist (only skip PyATS discovery if platform can't support it)
-        has_pyats, has_robot = self._discover_test_types(
-            discover_pyats=PYATS_SUPPORTED,
-            discover_robot=True,
-        )
-
-        # Apply dev mode filters and platform constraints to determine what to run
-        run_pyats = has_pyats and PYATS_SUPPORTED and not self.dev_robot_only
-        run_robot = has_robot and not self.dev_pyats_only
+            has_pyats = False
 
         # Handle empty scenarios
-        if not run_pyats and not run_robot:
-            if not has_pyats and not has_robot:
-                typer.echo(
-                    "No test files found (no *.py PyATS tests or *.robot templates)"
-                )
-            # else: tests exist but filtered out by dev flags or platform — no message needed
+        if not has_pyats and not has_robot:
+            typer.echo("No test files found (no *.py PyATS tests or *.robot templates)")
             return CombinedResults()
 
         # Build combined results from individual orchestrators
@@ -194,7 +190,7 @@ class CombinedOrchestrator:
         # Pre-flight: detect controller and validate credentials for PyATS path only.
         # Robot path stays generic — it may not need controller access at all.
         # Dry-run mode skips auth — it validates test structure, not execution.
-        if run_pyats and not self.render_only and not self.dry_run:
+        if has_pyats and not self.render_only and not self.dry_run:
             try:
                 self.controller_type = detect_controller_type()
                 logger.info(f"Controller type detected: {self.controller_type}")
@@ -244,7 +240,7 @@ class CombinedOrchestrator:
                     typer.echo(f"Report: {report_path}")
                 return combined_results
 
-        if run_pyats and not self.render_only:
+        if has_pyats and not self.render_only:
             typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
             self._check_python_version()
 
@@ -268,7 +264,7 @@ class CombinedOrchestrator:
             combined_results.api = pyats_results.api
             combined_results.d2d = pyats_results.d2d
 
-        if run_robot:
+        if has_robot:
             typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")
 
             robot_orchestrator = RobotOrchestrator(
@@ -327,53 +323,44 @@ class CombinedOrchestrator:
         """Defense-in-depth for programmatic usage that bypasses the CLI."""
         check_and_exit_if_unsupported_macos_python()
 
-    def _discover_test_types(
-        self, discover_pyats: bool = True, discover_robot: bool = True
-    ) -> tuple[bool, bool]:
+    def _discover_test_types(self) -> tuple[bool, bool]:
         """Discover which test types are present in the templates directory.
-
-        Args:
-            discover_pyats: Whether to look for PyATS tests
-            discover_robot: Whether to look for Robot templates
 
         Returns:
             Tuple of (has_pyats, has_robot)
         """
+        # Build list of directories to exclude from PyATS discovery
+        exclude_paths: list[Path] = []
+        if self.filters_path:
+            exclude_paths.append(self.filters_path)
+        if self.tests_path:
+            exclude_paths.append(self.tests_path)
+
+        # PyATS discovery - use has_pyats_tests() for efficient early exit
         has_pyats = False
-        has_robot = False
+        try:
+            test_discovery = TestDiscovery(
+                self.templates_dir, exclude_paths=exclude_paths
+            )
+            has_pyats = test_discovery.has_pyats_tests()
+            if has_pyats:
+                logger.debug("Found PyATS test files")
+        except Exception as e:
+            logger.debug(f"\nPyATS discovery failed (no PyATS tests found): {e}\n")
 
-        if discover_pyats:
-            # Build list of directories to exclude from PyATS discovery
-            exclude_paths: list[Path] = []
-            if self.filters_path:
-                exclude_paths.append(self.filters_path)
-            if self.tests_path:
-                exclude_paths.append(self.tests_path)
+        # Robot discovery - simple existence check (RobotWriter handles the rest)
+        # Local helper with early exit for efficiency - stops directory traversal on first match
+        def has_robot_files() -> bool:
+            robot_extensions = {".robot", ".resource", ".j2"}
+            for _, _, filenames in os.walk(self.templates_dir):
+                for f in filenames:
+                    if os.path.splitext(f)[1] in robot_extensions:
+                        return True
+            return False
 
-            try:
-                test_discovery = TestDiscovery(
-                    self.templates_dir, exclude_paths=exclude_paths
-                )
-                has_pyats = test_discovery.has_pyats_tests()
-                if has_pyats:
-                    logger.debug("Found PyATS test files")
-            except Exception as e:
-                logger.debug(f"\nPyATS discovery failed (no PyATS tests found): {e}\n")
-
-        if discover_robot:
-            # Robot discovery - simple existence check (RobotWriter handles the rest)
-            # Local helper with early exit for efficiency
-            def has_robot_files() -> bool:
-                robot_extensions = {".robot", ".resource", ".j2"}
-                for _, _, filenames in os.walk(self.templates_dir):
-                    for f in filenames:
-                        if os.path.splitext(f)[1] in robot_extensions:
-                            return True
-                return False
-
-            has_robot = has_robot_files()
-            if has_robot:
-                logger.debug("Found Robot template files")
+        has_robot = has_robot_files()
+        if has_robot:
+            logger.debug("Found Robot template files")
 
         return has_pyats, has_robot
 
