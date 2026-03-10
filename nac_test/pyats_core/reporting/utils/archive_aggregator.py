@@ -11,10 +11,10 @@ import logging
 import os
 import shutil
 import zipfile
-from datetime import datetime
 from pathlib import Path
 
 from nac_test.pyats_core.reporting.utils.archive_security import validate_archive_paths
+from nac_test.utils.formatting import format_file_timestamp_ms
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class ArchiveAggregator:
         logger.info(f"Aggregating {len(device_archives)} device archives")
 
         # Create timestamp for the aggregated archive
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+        timestamp = format_file_timestamp_ms()
         aggregated_archive_name = f"nac_test_job_d2d_{timestamp}.zip"
         aggregated_archive_path = output_dir / aggregated_archive_name
 

@@ -6,6 +6,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from functools import cached_property
+from typing import Literal
 
 from nac_test.core.constants import (
     EXIT_DATA_ERROR,
@@ -13,6 +14,10 @@ from nac_test.core.constants import (
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
 )
+
+# Type alias for supported controller type keys.
+# Matches the keys of CONTROLLER_REGISTRY in nac_test.utils.controller.
+ControllerTypeKey = Literal["ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"]
 
 
 class ExecutionState(str, Enum):
@@ -193,6 +198,30 @@ class PyATSResults:
         return f"PyATSResults({', '.join(parts) if parts else 'empty'})"
 
 
+@dataclass(frozen=True)
+class PreFlightFailure:
+    """Pre-execution failure that prevented all test execution.
+
+    Represents conditions detected before any tests run (auth failure,
+    controller unreachable, etc.). When present on CombinedResults,
+    all test counts will be zero.
+
+    Attributes:
+        failure_type: Category of failure - constrained to "auth" or "unreachable".
+        controller_type: Controller identifier ("ACI", "SDWAN", "CC").
+        controller_url: URL that was tested.
+        detail: Human-readable error description.
+        status_code: HTTP status code from the failed request, or None for
+            non-HTTP failures (e.g., connection timeout, DNS failure).
+    """
+
+    failure_type: Literal["auth", "unreachable"]
+    controller_type: ControllerTypeKey
+    controller_url: str
+    detail: str
+    status_code: int | None = None
+
+
 @dataclass
 class CombinedResults:
     """Combined test results from all frameworks.
@@ -204,14 +233,19 @@ class CombinedResults:
         api: Results from PyATS API tests (controller API validation)
         d2d: Results from PyATS D2D tests (device-to-device validation)
         robot: Results from Robot Framework tests
+        pre_flight_failure: Pre-execution failure that prevented testing
     """
 
     api: TestResults | None = None
     d2d: TestResults | None = None
     robot: TestResults | None = None
+    pre_flight_failure: PreFlightFailure | None = None
 
     def __str__(self) -> str:
         """Concise string: CombinedResults(API: t/p/f/s, D2D: t/p/f/s, Robot: t/p/f/s)."""
+        if self.pre_flight_failure is not None:
+            pf = self.pre_flight_failure
+            return f"CombinedResults(pre_flight_failure={pf.failure_type}: {pf.detail})"
         parts = []
         if self.api is not None:
             parts.append(f"API: {self.api}")
@@ -294,18 +328,21 @@ class CombinedResults:
 
         Exit codes:
             0: All tests passed, no errors OR all frameworks intentionally skipped
+            1: Pre-flight failure (auth or controller detection failed)
             1-250: Number of test failures (capped at 250)
             252: No tests found/executed across any framework OR Robot Framework invalid arguments
             253: Execution was interrupted (Ctrl+C, etc.)
             255: Execution errors occurred (has_errors is True)
 
-        Priority (highest to lowest): 253 (interrupted) > 252 (data error) > 255 (generic)
+        Priority (highest to lowest): pre-flight > 253 (interrupted) > 252 (data error) > 255 (generic)
 
-        Why this priority? Interrupted (253) is highest because it's the most actionable
-        signal for CI/CD - the user explicitly stopped execution. Data errors (252) come
-        next as they indicate a configuration problem. Generic errors (255) are lowest
-        as they may be transient infrastructure issues.
+        Why this priority? Pre-flight failures (1) indicate that testing could not even begin
+        due to auth/connection issues — this is the most actionable signal. Interrupted (253)
+        is next because the user explicitly stopped execution. Data errors (252) indicate a
+        configuration problem. Generic errors (255) are lowest as they may be transient.
         """
+        if self.pre_flight_failure is not None:
+            return 1
         if self.has_errors:
             error_types = [
                 r.error_type for r in self._results if r.error_type is not None
