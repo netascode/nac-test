@@ -10,7 +10,7 @@
 
 **Key Changes**:
 1. Robot files output to `robot_results/` directory (via pabot options)
-2. Backward-compatibility links at root
+2. Backward-compatibility symlinks at root
 3. New `nac_test/robot/reporting/` module (parser + generator)
 4. New `nac_test/core/reporting/` module (combined generator)
 5. Orchestrators return test statistics to CLI
@@ -42,7 +42,7 @@ nac_test/
     │   ├── __init__.py
     │   ├── robot_parser.py             # Parse output.xml using ResultVisitor
     │   └── robot_generator.py          # Generate Robot summary report
-    ├── orchestrator.py                 # MODIFIED: Create links, return stats
+    ├── orchestrator.py                 # MODIFIED: Create symlinks, return stats
     └── pabot.py                        # MODIFIED: Use --output, --log, --report options
 ```
 
@@ -455,8 +455,8 @@ def run_tests(self) -> TestResults:
         extra_args=self.extra_args,
     )
     
-    # Create backward-compatibility links at root
-    self._create_backward_compat_links()
+    # Create backward-compatibility symlinks at root
+    self._create_backward_compat_symlinks()
     
     # Parse results and return stats
     return self._get_test_statistics()
@@ -465,11 +465,8 @@ def run_tests(self) -> TestResults:
 2. Add helper methods:
 
 ```python
-def _create_backward_compat_links(self) -> None:
-    """Create links at root pointing to robot_results/ for backward compatibility.
-    
-    Creates hard links first (cross-platform), falling back to symlinks on Unix.
-    On Windows, if hard links fail, logs warning and skips (symlinks need admin).
+def _create_backward_compat_symlinks(self) -> None:
+    """Create symlinks at root pointing to robot_results/ for backward compatibility.
     
     Creates:
         output.xml -> robot_results/output.xml
@@ -485,17 +482,12 @@ def _create_backward_compat_links(self) -> None:
         target = self.output_dir / filename
         
         if source.exists():
-            # Remove existing file/link if it exists
+            # Remove existing file/symlink if it exists
             if target.exists() or target.is_symlink():
                 target.unlink()
-            # Try hard link first, fall back to symlink on Unix
-            try:
-                target.hardlink_to(source)
-                logger.debug(f"Created hard link: {target} -> {source}")
-            except OSError:
-                if not IS_WINDOWS:
-                    target.symlink_to(f"robot_results/{filename}")
-                    logger.debug(f"Created symlink: {target} -> robot_results/{filename}")
+            # Create relative symlink
+            target.symlink_to(f"robot_results/{filename}")
+            logger.debug(f"Created symlink: {target} -> robot_results/{filename}")
 
 def _get_test_statistics(self) -> TestResults:
     """Get test statistics from Robot output.xml.
@@ -527,8 +519,8 @@ def _get_test_statistics(self) -> TestResults:
 ```
 
 **Tests to Add** (create `tests/unit/robot/test_orchestrator.py`):
-- Test link creation (hard link or symlink)
-- Test link overwriting existing files
+- Test symlink creation
+- Test symlink overwriting existing files
 - Test statistics parsing
 - Test missing output.xml handling
 
@@ -1256,11 +1248,11 @@ async def generate_reports_from_archives(
             pyats_stats = await self._collect_pyats_stats(results)
         finally:
             # Clean up JSONL files after collecting stats
-            os.environ.pop("NAC_TEST_PYATS_KEEP_REPORT_DATA", None)
+            os.environ.pop("KEEP_HTML_REPORT_DATA", None)
             await self._cleanup_all_jsonl_files()
     elif len(archive_paths) > 1:
         # Multiple archives were requested but not all succeeded, still clean up
-        os.environ.pop("NAC_TEST_PYATS_KEEP_REPORT_DATA", None)
+        os.environ.pop("KEEP_HTML_REPORT_DATA", None)
         await self._cleanup_all_jsonl_files()
 
     # Determine overall status
@@ -1624,7 +1616,7 @@ header h1 {
 Create comprehensive unit tests for all new modules:
 
 #### `tests/unit/robot/test_orchestrator.py`
-- Test `_create_backward_compat_links()`
+- Test `_create_backward_compat_symlinks()`
 - Test `_get_test_statistics()`
 - Test return value format
 - Test missing output.xml
@@ -1665,7 +1657,7 @@ Create comprehensive unit tests for all new modules:
 **Implementation Status**: ✅ COMPLETE
 
 Integration tests already exist and pass:
-- `test_phase1_robot_output_directory_and_links`: Comprehensive test covering Phases 1-9
+- `test_phase1_robot_output_directory_and_symlinks`: Comprehensive test covering Phases 1-9
 - `test_combined_reporting_happy_path`: Full E2E test for all scenarios
 
 **Test Coverage:**
@@ -1673,7 +1665,7 @@ Integration tests already exist and pass:
 - ✅ combined_summary.html exists at root
 - ✅ Robot, API, D2D blocks present in dashboard
 - ✅ robot_results/summary_report.html exists
-- ✅ Links created at root (hard links or symlinks)
+- ✅ Symlinks created at root
 - ✅ Statistics accuracy across all frameworks
 - ✅ Exit codes based on test results
 - ✅ Directory structure verified
@@ -1687,7 +1679,7 @@ Integration tests already exist and pass:
 **Actual Implementation:**
 
 See `tests/integration/test_combined_reporting.py` for complete test implementation covering:
-- `test_phase1_robot_output_directory_and_links()` - Phases 1-9 validation
+- `test_phase1_robot_output_directory_and_symlinks()` - Phases 1-9 validation
 - `test_combined_reporting_happy_path()` - Full E2E validation
 
 ---
@@ -1707,7 +1699,7 @@ Added comprehensive "Combined Reporting Dashboard" section to `dev-docs/PRD_AND_
 1. **Architecture Overview**
    - Module structure and organization
    - Report file structure
-   - Backward compatibility links
+   - Backward compatibility symlinks
 
 2. **Component Documentation**
    - `CombinedReportGenerator`: Orchestrates unified dashboard
