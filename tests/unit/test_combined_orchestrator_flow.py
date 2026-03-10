@@ -16,6 +16,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import typer
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
@@ -774,3 +775,57 @@ class TestExecutionSummary(TestCombinedOrchestratorFlow):
 
         # Summary should NOT be printed in render_only mode
         mock_print.assert_not_called()
+
+
+class TestWindowsPlatformBehavior(TestCombinedOrchestratorFlow):
+    """Tests for Windows platform behavior."""
+
+    def test_windows_skips_pyats_runs_robot_with_warning(
+        self,
+        orchestrator: CombinedOrchestrator,
+        robot_results: TestResults,
+    ) -> None:
+        """On Windows, PyATS tests should be skipped with warning, Robot should run."""
+        mock_robot_instance = MagicMock()
+        mock_robot_instance.run_tests.return_value = robot_results
+
+        mock_gen_instance = MagicMock()
+        mock_gen_instance.generate_combined_summary.return_value = Path(
+            "/tmp/combined_summary.html"
+        )
+
+        with (
+            patch("nac_test.combined_orchestrator.sys.platform", "win32"),
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, True)
+            ),
+            patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats,
+            patch("nac_test.combined_orchestrator.RobotOrchestrator") as mock_robot,
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator"
+            ) as mock_generator,
+            patch("typer.echo"),
+            patch("typer.secho") as mock_secho,
+        ):
+            mock_robot.return_value = mock_robot_instance
+            mock_generator.return_value = mock_gen_instance
+
+            result = orchestrator.run_tests()
+
+        # PyATS should NOT be called (skipped on Windows)
+        mock_pyats.assert_not_called()
+
+        # Robot SHOULD be called
+        mock_robot.assert_called_once()
+        mock_robot_instance.run_tests.assert_called_once()
+
+        # Warning should be emitted
+        mock_secho.assert_any_call(
+            "\n⚠️  PyATS tests found but skipped — PyATS is not supported on Windows.",
+            fg=typer.colors.YELLOW,
+        )
+
+        # Results should only include Robot
+        assert result.robot is not None
+        assert result.api is None
+        assert result.d2d is None
