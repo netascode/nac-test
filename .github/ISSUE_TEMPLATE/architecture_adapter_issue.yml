@@ -1,0 +1,355 @@
+name: Architecture Adapter Issue
+description: Report issues specific to NaC architecture adapters (nac-test-pyats-common)
+title: "[adapter] "
+labels: ["bug", "adapter"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Is This the Right Template?
+
+        **Use this template if**:
+        - Authentication to a controller fails (APIC, SDWAN Manager, Catalyst Center, etc.)
+        - Device discovery/resolution doesn't work correctly
+        - Architecture-specific base classes have issues
+        - Token caching or session management is broken
+        - D2D/SSH tests can't connect to devices (and a network issue has been ruled out)
+
+        **Use a DIFFERENT template if**:
+        - Core nac-test CLI has issues → Use **"Bug Report"**
+        - HTML reports have issues → Use **"HTML Reporting Issue"**
+        - You want a new feature → Use **"Feature Request"**
+
+        ---
+
+        **Note:** This template is for issues with the Network as Code (NaC) architecture adapters
+        provided by the `nac-test-pyats-common` package.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Issue Description
+      description: A clear description of the adapter issue.
+      placeholder: Describe the issue...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: NaC Architecture
+      description: Which architecture adapter is affected? See https://netascode.cisco.com for supported architectures.
+      options:
+        - ACI (APIC - APICAuth, APICTestBase)
+        - NDO (Nexus Dashboard Orchestrator)
+        - NDFC / VXLAN-EVPN (Nexus Dashboard Fabric Controller)
+        - Catalyst SD-WAN (SDWANManagerAuth, SDWANManagerTestBase, SDWANTestBase)
+        - Catalyst Center (CatalystCenterAuth, CatalystCenterTestBase, CatalystCenterSSHTestBase)
+        - ISE (Identity Services Engine)
+        - FMC (Firepower Management Center)
+        - Meraki (Cloud-managed)
+        - NX-OS (Nexus Direct-to-Device)
+        - IOS-XE (Direct-to-Device)
+        - IOS-XR (Direct-to-Device)
+        - Hyperfabric
+    validations:
+      required: true
+
+  - type: dropdown
+    id: test-type
+    attributes:
+      label: Test Type
+      description: What type of tests are affected?
+      options:
+        - API Tests (controller REST API - uses *TestBase classes)
+        - D2D/SSH Tests (direct device access - uses SSH*TestBase classes)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: issue-category
+    attributes:
+      label: Issue Category
+      description: What aspect of the adapter is failing?
+      options:
+        - label: Authentication (login, token acquisition, session creation)
+        - label: Token/Session Caching (token renewal, cache invalidation)
+        - label: Device Discovery (parsing data model, resolving device inventory)
+        - label: HTTP Client (connection errors, SSL issues)
+        - label: SSH Connection (connection failures, credential issues)
+
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: "macOS has specific requirements for fork-safe authentication."
+      options:
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS Version
+      description: "Specify your OS version"
+      placeholder: "e.g., macOS Sonoma 14.2 or Ubuntu 22.04 LTS"
+    validations:
+      required: true
+
+  - type: input
+    id: controller-version
+    attributes:
+      label: Controller Version
+      description: "Version of your controller software"
+      placeholder: "e.g., APIC 6.0(2h), SDWAN Manager 20.12, Catalyst Center 2.3.7, ISE 3.2"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## System Information
+
+        Please run the appropriate command for your OS and paste the output below.
+
+        ---
+
+        ### macOS Users:
+
+        ```bash
+        echo "=== System Info ===" && \
+        sw_vers && \
+        echo "" && \
+        echo "=== Python Info ===" && \
+        python3 --version && \
+        which python3 && \
+        echo "" && \
+        echo "=== NaC Packages ===" && \
+        (pip freeze 2>/dev/null || uv pip freeze 2>/dev/null) | grep -E "^nac-"
+        ```
+
+        ---
+
+        ### Linux Users:
+
+        ```bash
+        echo "=== System Info ===" && \
+        cat /etc/os-release | grep -E "^(NAME|VERSION)=" && \
+        uname -r && \
+        echo "" && \
+        echo "=== Python Info ===" && \
+        python3 --version && \
+        which python3 && \
+        echo "" && \
+        echo "=== NaC Packages ===" && \
+        (pip freeze 2>/dev/null || uv pip freeze 2>/dev/null) | grep -E "^nac-"
+        ```
+
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Information Output
+      description: Paste the output from the command above.
+      render: text
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Environment Variables
+
+        Run the command below to safely check your NaC environment variables. This command **automatically masks sensitive values** while showing which variables are set:
+
+        ```bash
+        # NaC Environment Variables Check (auto-masks sensitive values)
+        for var in \
+          APIC_URL APIC_USERNAME APIC_PASSWORD APIC_INSECURE \
+          ACI_URL ACI_USERNAME ACI_PASSWORD \
+          SDWAN_URL SDWAN_USERNAME SDWAN_PASSWORD \
+          CC_URL CC_USERNAME CC_PASSWORD CC_INSECURE \
+          ISE_URL ISE_USERNAME ISE_PASSWORD \
+          FMC_URL FMC_USERNAME FMC_PASSWORD \
+          MERAKI_API_KEY MERAKI_ORG_ID \
+          NDO_URL NDO_USERNAME NDO_PASSWORD \
+          NDFC_URL NDFC_USERNAME NDFC_PASSWORD \
+          IOSXE_USERNAME IOSXE_PASSWORD \
+          NXOS_USERNAME NXOS_PASSWORD \
+          IOSXR_USERNAME IOSXR_PASSWORD \
+          NAC_TEST_DEBUG NAC_API_CONCURRENCY NAC_SSH_CONCURRENCY; do
+          if [ -n "${!var+x}" ]; then
+            case "$var" in
+              *PASSWORD*|*USERNAME*|*KEY*|*URL*|*SECRET*|*TOKEN*)
+                echo "$var=*** SET (${#!var} chars) ***"
+                ;;
+              *)
+                echo "$var=${!var}"
+                ;;
+            esac
+          else
+            echo "$var=(not set)"
+          fi
+        done
+        ```
+
+        Example output:
+        ```
+        APIC_URL=*** SET (28 chars) ***
+        APIC_USERNAME=*** SET (5 chars) ***
+        APIC_PASSWORD=*** SET (12 chars) ***
+        APIC_INSECURE=(not set)
+        SDWAN_URL=(not set)
+        ...
+        NAC_TEST_DEBUG=true
+        NAC_API_CONCURRENCY=5
+        ```
+
+  - type: textarea
+    id: environment-variables
+    attributes:
+      label: Environment Variables Output
+      description: |
+        Paste the output from the command above. Sensitive values are automatically masked.
+      render: bash
+      placeholder: |
+        APIC_URL=*** SET (28 chars) ***
+        APIC_USERNAME=*** SET (5 chars) ***
+        APIC_PASSWORD=*** SET (12 chars) ***
+        APIC_INSECURE=(not set)
+        ACI_URL=(not set)
+        ...
+        SDWAN_URL=*** SET (24 chars) ***
+        SDWAN_USERNAME=*** SET (5 chars) ***
+        SDWAN_PASSWORD=*** SET (10 chars) ***
+        ...
+        NAC_TEST_DEBUG=true
+        NAC_API_CONCURRENCY=5
+        NAC_SSH_CONCURRENCY=(not set)
+    validations:
+      required: true
+
+  - type: textarea
+    id: data-model
+    attributes:
+      label: Data Model Snippet (for D2D/Device Discovery Issues)
+      description: If the issue relates to device discovery, provide a sanitized snippet.
+      render: yaml
+      placeholder: |
+        # For SD-WAN:
+        sdwan:
+          sites:
+            - site_id: 100
+              routers:
+                - hostname: edge-router-1
+
+        # For Catalyst Center:
+        catalyst_center:
+          inventory:
+            devices:
+              - name: switch-1
+                device_ip: 10.1.1.1
+                state: MANAGED
+    validations:
+      required: false
+
+  - type: textarea
+    id: command-used
+    attributes:
+      label: Command Used
+      description: The exact nac-test command you ran.
+      render: bash
+      placeholder: "nac-test --pyats --data ./data --templates ./tests --output ./results"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior / Terminal Output
+      description: What actually happened? Include full terminal output and tracebacks.
+      render: text
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: troubleshooting
+    attributes:
+      label: Troubleshooting Attempted
+      description: What have you already tried?
+      options:
+        - label: Verified controller is reachable (can access web UI)
+        - label: Verified credentials work (tested manual login)
+        - label: Tried with `NAC_TEST_DEBUG=true`
+        - label: Checked SSL certificate settings (*_INSECURE variable)
+        - label: "For D2D: verified device is reachable via SSH manually"
+
+  - type: textarea
+    id: troubleshooting-other
+    attributes:
+      label: Other Troubleshooting Attempted
+      description: Describe any other troubleshooting steps you've tried that aren't listed above.
+      placeholder: |
+        - I also tried...
+        - I checked...
+        - I tested with curl/Postman...
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Project Directory Structure
+
+        If possible, show your project directory structure. This helps us understand your setup.
+
+        **If you have `tree` installed:**
+
+        ```bash
+        tree -I '__pycache__|.venv|venv|site-packages|*.pyc|.git' --dirsfirst -L 3
+        ```
+
+        **If you don't have `tree`:**
+
+        ```bash
+        find . -type d \( -name __pycache__ -o -name .venv -o -name venv -o -name .git \) -prune -o -type f -print | head -50
+        ```
+
+  - type: textarea
+    id: directory-structure
+    attributes:
+      label: Project Directory Structure
+      description: Paste the output from the tree command above (or describe your directory layout).
+      render: text
+      placeholder: |
+        .
+        ├── data/
+        │   ├── defaults.yaml
+        │   └── site1.yaml
+        ├── tests/
+        │   ├── verify_bgp.py
+        │   └── d2d/
+        │       └── verify_interfaces.py
+        └── nac-test-results/
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        - Controller software version and recent upgrades
+        - Network connectivity details (VPN, proxy, etc.)
+        - Any relevant controller configuration
+    validations:
+      required: false

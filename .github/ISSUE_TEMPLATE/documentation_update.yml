@@ -1,0 +1,99 @@
+name: Documentation Update
+description: Report incorrect, outdated, or missing documentation
+title: "[docs] "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Documentation Update Request
+
+        Use this template to report issues with nac-test or Network as Code (NaC) documentation.
+
+  - type: input
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Where is the documentation that needs updating?
+      placeholder: "e.g., README.md, CLI --help, netascode.cisco.com/..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What kind of documentation issue is this?
+      options:
+        - Incorrect - Documentation says something wrong
+        - Outdated - Documentation is no longer accurate
+        - Missing - Documentation for a feature doesn't exist
+        - Unclear - Documentation is confusing or ambiguous
+        - Incomplete - Documentation is missing important details
+    validations:
+      required: true
+
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: NaC Architecture (if applicable)
+      description: Is this documentation related to a specific architecture?
+      options:
+        - ACI (APIC)
+        - NDO (Nexus Dashboard Orchestrator)
+        - NDFC / VXLAN-EVPN (Nexus Dashboard Fabric Controller)
+        - Catalyst SD-WAN (SDWAN Manager / vManage)
+        - Catalyst Center (DNA Center)
+        - ISE (Identity Services Engine)
+        - FMC (Firepower Management Center)
+        - Meraki (Cloud-managed)
+        - NX-OS (Nexus Direct-to-Device)
+        - IOS-XE (Direct-to-Device)
+        - IOS-XR (Direct-to-Device)
+        - Hyperfabric
+        - General / Not architecture-specific
+    validations:
+      required: false
+
+  - type: textarea
+    id: current-docs
+    attributes:
+      label: Current Documentation Says
+      description: Quote the current documentation text.
+    validations:
+      required: false
+
+  - type: textarea
+    id: should-say
+    attributes:
+      label: What It Should Say
+      description: Describe what the correct information should be.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why is this change needed? What scenario led you to discover this issue?
+    validations:
+      required: false
+
+  - type: textarea
+    id: suggested-improvement
+    attributes:
+      label: Suggested Improvement (Optional)
+      description: If you have specific wording suggestions, provide them here.
+      render: markdown
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        - Does this affect new users or advanced users?
+        - Is this blocking you from using a feature?
+    validations:
+      required: false
