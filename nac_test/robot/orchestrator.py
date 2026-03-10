@@ -187,7 +187,7 @@ class RobotOrchestrator:
 
             # Phase 4: Create backward compatibility symlinks
             # (output files written directly to robot_results/ via --output/--log/--report flags)
-            self._create_backward_compat_symlinks()
+            self._create_backward_compat_links()
 
             # Phase 5: Generate Robot summary report and get stats
             logger.info("Generating Robot summary report...")
@@ -206,7 +206,7 @@ class RobotOrchestrator:
             typer.echo("✅ Robot Framework templates rendered (render-only mode)")
             return TestResults.not_run("render-only mode")
 
-    def _create_backward_compat_symlinks(self) -> None:
+    def _create_backward_compat_links(self) -> None:
         """Create backward compatibility links at root pointing to robot_results/.
 
         Creates links for:
@@ -214,8 +214,10 @@ class RobotOrchestrator:
         - log.html -> robot_results/log.html
         - report.html -> robot_results/report.html
 
-        On Unix/macOS: Creates symlinks (relative paths)
-        On Windows: Creates hard links (symlinks require admin privileges)
+        Link creation strategy:
+        1. Try hard link first (works on all platforms, no special privileges)
+        2. If hard link fails on Windows: log warning and skip (symlinks need admin)
+        3. If hard link fails on Unix/macOS: fall back to symlink (relative path)
 
         Note: xunit.xml is NOT linked here. The combined xunit.xml at root
         is created by the xunit merger (merging Robot + PyATS results).
@@ -243,12 +245,25 @@ class RobotOrchestrator:
             elif target.exists():
                 target.unlink()
 
+            # Try hard link first (works on all platforms without special privileges)
             try:
-                if IS_WINDOWS:
-                    target.hardlink_to(source)
-                    logger.debug(f"Created hard link: {target} -> {source}")
-                else:
-                    target.symlink_to(source.relative_to(self.base_output_dir))
-                    logger.debug(f"Created symlink: {target} -> {source}")
+                target.hardlink_to(source)
+                logger.debug(f"Created hard link: {target} -> {source}")
+                continue
+            except OSError as e:
+                logger.debug(f"Hard link failed for {filename}: {e}")
+
+            # Hard link failed — on Windows, warn and skip (symlinks need admin)
+            if IS_WINDOWS:
+                logger.warning(
+                    f"Could not create link for {filename}: hard links not supported "
+                    f"on this filesystem. Files remain in {ROBOT_RESULTS_DIRNAME}/."
+                )
+                continue
+
+            # On Unix/macOS, fall back to symlink
+            try:
+                target.symlink_to(source.relative_to(self.base_output_dir))
+                logger.debug(f"Created symlink: {target} -> {source}")
             except OSError as e:
                 logger.warning(f"Failed to create link for {filename}: {e}")

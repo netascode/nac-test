@@ -224,24 +224,29 @@ class E2ECombinedTestBase:
         )
 
     # -------------------------------------------------------------------------
-    # Robot Backward Compatibility Tests (symlinks on Unix, hard links on Windows)
+    # Robot Backward Compatibility Tests (hard links preferred, symlinks as fallback)
     # -------------------------------------------------------------------------
 
     @staticmethod
     def _assert_is_link_to(link: Path, source: Path) -> None:
-        """Assert that link points to source (symlink on Unix, hard link on Windows)."""
-        if IS_WINDOWS:
-            assert link.stat().st_ino == source.stat().st_ino, (
-                f"Hard link mismatch:\n"
-                f"  Link inode: {link.stat().st_ino}\n"
-                f"  Source inode: {source.stat().st_ino}"
-            )
-        else:
-            assert link.is_symlink(), f"{link.name} is not a symlink"
+        """Assert that link points to source (hard link or symlink).
+
+        The implementation tries hard links first (cross-platform), falling back
+        to symlinks on Unix if hard links fail. This helper accepts either type.
+        """
+        if link.is_symlink():
+            # Symlink: verify it resolves to source
             assert link.resolve() == source, (
                 f"Symlink points to wrong location:\n"
                 f"  Expected: {source}\n"
                 f"  Got: {link.resolve()}"
+            )
+        else:
+            # Hard link: verify same inode
+            assert link.stat().st_ino == source.stat().st_ino, (
+                f"Hard link mismatch:\n"
+                f"  Link inode: {link.stat().st_ino}\n"
+                f"  Source inode: {source.stat().st_ino}"
             )
 
     def test_robot_output_xml_link_exists(self, results: E2EResults) -> None:

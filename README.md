@@ -284,7 +284,7 @@ tests
 └── test1.robot
 ```
 
-Note: Root-level `log.html`, `output.xml`, `report.html`, and `xunit.xml` are symlinks to the corresponding files in `robot_results/` for backward compatibility.
+Note: Root-level `log.html`, `output.xml`, `report.html`, and `xunit.xml` are links to the corresponding files in `robot_results/` for backward compatibility.
 
 ## PyATS Testing
 
