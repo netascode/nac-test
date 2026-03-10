@@ -438,3 +438,21 @@ DRY_RUN_ROBOT_FAIL_SCENARIO = E2EScenario(
     expected_pyats_d2d_failed=0,
     expected_pyats_d2d_skipped=0,
 )
+
+WINDOWS_PYATS_SKIP_SCENARIO = E2EScenario(
+    name="windows_pyats_skip",
+    description="Windows PyATS skip - Robot (1 pass), PyATS discovered but skipped on Windows",
+    data_path=f"{_FIXTURE_BASE}/windows_pyats_skip/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/windows_pyats_skip/templates",
+    requires_testbed=False,  # No D2D tests actually run
+    architecture="SDWAN",
+    expected_exit_code=0,
+    # Robot tests run normally
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    # All PyATS expectations are 0 (skipped on Windows)
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+)

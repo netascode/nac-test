@@ -19,6 +19,7 @@ This approach:
 
 import logging
 import re
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -1336,3 +1337,39 @@ class TestE2EDryRunRobotFail(E2ECombinedTestBase):
     @pytest.fixture
     def results(self, e2e_dry_run_robot_fail_results: E2EResults) -> E2EResults:
         return e2e_dry_run_robot_fail_results
+
+
+# =============================================================================
+# WINDOWS PYATS SKIP SCENARIO TESTS
+# =============================================================================
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test scenario")
+@pytest.mark.windows
+class TestE2EWindowsPyatsSkip(E2ECombinedTestBase):
+    """E2E tests for the Windows PyATS skip scenario.
+
+    Scenario: Windows platform with PyATS tests in templates but PyATS not supported.
+    Robot (1 pass), PyATS tests discovered but skipped.
+    Expected: CLI exits with code 0, warning message in stdout.
+
+    This test class validates that on Windows:
+    - Robot Framework tests execute normally
+    - PyATS tests are discovered but skipped (not executed)
+    - A warning is displayed about PyATS being unsupported on Windows
+    """
+
+    @pytest.fixture
+    def results(self, e2e_windows_pyats_skip_results: E2EResults) -> E2EResults:
+        return e2e_windows_pyats_skip_results
+
+    def test_pyats_skip_warning_in_stdout(self, results: E2EResults) -> None:
+        """Verify the PyATS skip warning message appears in stdout."""
+        expected_warning = (
+            "PyATS tests found but skipped — PyATS is not supported on Windows"
+        )
+        assert expected_warning in results.stdout, (
+            f"Missing Windows PyATS skip warning in stdout.\n"
+            f"Expected: '{expected_warning}'\n"
+            f"Stdout: {results.stdout[:500]}"
+        )
