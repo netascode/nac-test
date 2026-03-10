@@ -104,9 +104,9 @@ jobs:
 
       - name: Test
         run: |
-          uv sync --extra dev --extra adapters    # --extra adapters will pull in nac-test-pyats-common
+          uv sync --extra dev
           # Run tests in parallel (--dist loadscope keeps test classes together, this is critical for e2e tests)
-          uv run pytest tests/ -n auto --dist loadscope
+          uv run pytest -n auto --dist loadscope tests/
 
   notification:
     name: Notification
