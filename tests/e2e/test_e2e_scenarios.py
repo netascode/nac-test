@@ -27,7 +27,6 @@ import pytest
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     HTML_REPORTS_DIRNAME,
-    IS_WINDOWS,
     LOG_HTML,
     OUTPUT_XML,
     PYATS_RESULTS_DIRNAME,
