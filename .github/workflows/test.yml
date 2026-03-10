@@ -108,16 +108,37 @@ jobs:
           # Run tests in parallel (--dist loadscope keeps test classes together, this is critical for e2e tests)
           uv run pytest -n auto --dist loadscope tests/
 
+  test-windows:
+    name: Tests (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Test
+        run: |
+          uv sync --extra dev
+          uv run pytest -m windows -v
+
   notification:
     name: Notification
     if: always() && github.event_name != 'pull_request'
-    needs: [security, lint, test]
+    needs: [security, lint, test, test-windows]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check Job Success
         run: |
-          if [ ${{ needs.security.result }} == 'success' ] && [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test.result }} == 'success' ]; then
+          if [ ${{ needs.security.result }} == 'success' ] && [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test.result }} == 'success' ] && [ ${{ needs.test-windows.result }} == 'success' ]; then
             echo "All jobs succeeded"
             echo "jobSuccess=success" >> $GITHUB_ENV
           else

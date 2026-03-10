@@ -1023,6 +1023,7 @@ class TestE2EMixed(E2ECombinedTestBase):
 # =============================================================================
 
 
+@pytest.mark.windows
 class TestE2ERobotOnly(E2ECombinedTestBase):
     """E2E tests for the robot-only scenario.
 
