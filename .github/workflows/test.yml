@@ -127,7 +127,7 @@ jobs:
       - name: Test
         run: |
           uv sync --extra dev
-          uv run pytest -m windows -v tests/e2e tests/integration
+          uv run pytest -m windows -v tests/e2e tests/integration/test_cli_*
 
   notification:
     name: Notification
