@@ -103,6 +103,7 @@ HTTP_SERVICE_UNAVAILABLE_CODES: tuple[int, ...] = (408, 429, 503, 504)
 
 # Platform detection
 IS_MACOS: bool = platform.system() == "Darwin"
+IS_WINDOWS: bool = platform.system() == "Windows"
 
 # macOS requires Python 3.12+.
 IS_UNSUPPORTED_MACOS_PYTHON: bool = IS_MACOS and sys.version_info < (3, 12)

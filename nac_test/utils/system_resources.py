@@ -6,15 +6,10 @@
 import logging
 import multiprocessing as mp
 import os
-import sys
 
 import psutil
 
-# resource module is Unix-only
-if sys.platform != "win32":
-    import resource
-else:
-    resource = None  # type: ignore[assignment]
+from nac_test.core.constants import IS_WINDOWS
 
 logger = logging.getLogger(__name__)
 
@@ -58,25 +53,28 @@ class SystemResourceCalculator:
             - hard: Hard limit
             - safe: Safe limit (70% of soft)
         """
-        if resource is None:
+        if IS_WINDOWS:
             # Windows doesn't have Unix-style file descriptor limits
             return {
                 "soft": 8192,
                 "hard": 8192,
                 "safe": 5734,  # 70% of 8192
             }
-        try:
-            soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
-            safe_limit = int(soft_limit * 0.7)
-            return {"soft": soft_limit, "hard": hard_limit, "safe": safe_limit}
-        except (OSError, ValueError) as e:
-            logger.warning(f"Could not get file descriptor limits: {e}")
-            # Return conservative fallback
-            return {
-                "soft": 1024,
-                "hard": 4096,
-                "safe": 716,  # 70% of 1024
-            }
+        else:
+            # Unix: use resource module (not available on Windows)
+            import resource
+
+            try:
+                soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+                safe_limit = int(soft_limit * 0.7)
+                return {"soft": soft_limit, "hard": hard_limit, "safe": safe_limit}
+            except (OSError, ValueError) as e:
+                logger.warning(f"Could not get file descriptor limits: {e}")
+                return {
+                    "soft": 1024,
+                    "hard": 4096,
+                    "safe": 716,  # 70% of 1024
+                }
 
     @staticmethod
     def calculate_worker_capacity(

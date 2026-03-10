@@ -5,7 +5,6 @@
 
 import logging
 import os
-import sys
 from pathlib import Path
 
 import typer
@@ -19,6 +18,7 @@ from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     EXIT_ERROR,
     HTML_REPORTS_DIRNAME,
+    IS_WINDOWS,
     PYATS_RESULTS_DIRNAME,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
@@ -171,7 +171,7 @@ class CombinedOrchestrator:
             has_pyats = False
 
         # Skip PyATS on Windows (PyATS wheels are not available for this platform)
-        if has_pyats and sys.platform == "win32":
+        if has_pyats and IS_WINDOWS:
             typer.secho(
                 "\n⚠️  PyATS tests found but skipped — PyATS is not supported on Windows.",
                 fg=typer.colors.YELLOW,
