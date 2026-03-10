@@ -33,7 +33,7 @@ from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.controller import detect_controller_type, get_env_var_prefix
-from nac_test.utils.logging import VerbosityLevel
+from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 from nac_test.utils.terminal import terminal
 from nac_test.utils.xunit_merger import merge_xunit_results
@@ -75,11 +75,12 @@ class CombinedOrchestrator:
         max_parallel_devices: int | None = None,
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
-        verbosity: VerbosityLevel = VerbosityLevel.WARNING,
+        loglevel: LogLevel = DEFAULT_LOGLEVEL,
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
         processes: int | None = None,
         extra_args: list[str] | None = None,
+        verbose: bool = False,
     ):
         """Initialize the combined orchestrator.
 
@@ -93,15 +94,16 @@ class CombinedOrchestrator:
             include_tags: Tags to include (Robot only)
             exclude_tags: Tags to exclude (Robot only)
             render_only: Only render tests without executing (Robot only)
-            dry_run: Dry run mode (Robot only)
+            dry_run: Dry run mode (skips actual test execution)
             processes: Number of parallel processes for Robot test execution (Robot only)
             extra_args: Additional Robot Framework arguments to pass to pabot (Robot only)
             max_parallel_devices: Max parallel devices for PyATS D2D tests
             minimal_reports: Only include command outputs for failed/errored tests (PyATS only)
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides (PyATS only)
-            verbosity: Logging verbosity level
+            loglevel: Logging level
             dev_pyats_only: Development mode - run only PyATS tests (skip Robot)
             dev_robot_only: Development mode - run only Robot Framework tests (skip PyATS)
+            verbose: Enable verbose mode - keeps archive files, enables verbose output
         """
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
@@ -122,11 +124,12 @@ class CombinedOrchestrator:
         self.max_parallel_devices = max_parallel_devices
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
-        self.verbosity = verbosity
+        self.loglevel = loglevel
 
         # Development modes
         self.dev_pyats_only = dev_pyats_only
         self.dev_robot_only = dev_robot_only
+        self.verbose = verbose
 
         # Controller type — detected lazily in run_tests() when PyATS tests are present
         self.controller_type: ControllerTypeKey | None = None
@@ -173,6 +176,7 @@ class CombinedOrchestrator:
 
         # Build combined results from individual orchestrators
         combined_results = CombinedResults()
+        mode_suffix = " (dry-run)" if self.dry_run else ""
 
         # Pre-flight: detect controller and validate credentials for PyATS path only.
         # Robot path stays generic — it may not need controller access at all.
@@ -228,7 +232,7 @@ class CombinedOrchestrator:
                 return combined_results
 
         if has_pyats and not self.render_only:
-            typer.echo("\n🧪 Running PyATS tests...\n")
+            typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
             self._check_python_version()
 
             pyats_orchestrator = PyATSOrchestrator(
@@ -239,6 +243,9 @@ class CombinedOrchestrator:
                 minimal_reports=self.minimal_reports,
                 custom_testbed_path=self.custom_testbed_path,
                 controller_type=self.controller_type,
+                dry_run=self.dry_run,
+                verbose=self.verbose,
+                loglevel=self.loglevel,
             )
             if self.max_parallel_devices is not None:
                 pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
@@ -249,7 +256,7 @@ class CombinedOrchestrator:
             combined_results.d2d = pyats_results.d2d
 
         if has_robot:
-            typer.echo("\n🤖 Running Robot Framework tests...\n")
+            typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")
 
             robot_orchestrator = RobotOrchestrator(
                 data_paths=self.data_paths,
@@ -264,7 +271,8 @@ class CombinedOrchestrator:
                 dry_run=self.dry_run,
                 processes=self.processes,
                 extra_args=self.extra_args,
-                verbosity=self.verbosity,
+                loglevel=self.loglevel,
+                verbose=self.verbose,
             )
             try:
                 robot_results = robot_orchestrator.run_tests()

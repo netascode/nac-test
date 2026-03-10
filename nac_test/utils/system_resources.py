@@ -70,7 +70,7 @@ class SystemResourceCalculator:
         memory_per_worker_gb: float = 2.0,
         cpu_multiplier: float = 2.0,
         max_workers: int = 50,
-        env_var: str = "PYATS_MAX_WORKERS",
+        env_var: str = "NAC_TEST_PYATS_PROCESSES",
     ) -> int:
         """Calculate optimal worker count based on system resources.
 
@@ -120,7 +120,7 @@ class SystemResourceCalculator:
         memory_per_connection_mb: float = 10.0,
         fds_per_connection: int = 5,
         max_connections: int = 1000,
-        env_var: str = "MAX_CONNECTIONS",
+        env_var: str = "NAC_TEST_PYATS_MAX_CONNECTIONS",
     ) -> int:
         """Calculate optimal connection count based on system resources.
 

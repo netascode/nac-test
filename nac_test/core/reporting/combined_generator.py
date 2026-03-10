@@ -7,8 +7,6 @@ Generates a unified dashboard at the root level, rendering statistics
 passed in from the orchestrators.
 """
 
-from __future__ import annotations
-
 import logging
 from datetime import datetime
 from pathlib import Path

@@ -34,7 +34,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from nac_test.core.constants import DEBUG_MODE, FILE_TIMESTAMP_FORMAT
+from nac_test.core.constants import DEBUG_MODE
+from nac_test.pyats_core.constants import (
+    BATCH_SIZE,
+    BATCH_TIMEOUT_SECONDS,
+    OVERFLOW_DIR_OVERRIDE,
+    OVERFLOW_MEMORY_LIMIT_MB,
+    OVERFLOW_QUEUE_SIZE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -166,10 +173,6 @@ class OverflowQueue:
     - Thread-safe operations
     """
 
-    # Default configuration
-    DEFAULT_MAX_SIZE = 5000  # Maximum queue size
-    DEFAULT_MEMORY_LIMIT_MB = 500  # Maximum memory usage in MB
-
     def __init__(
         self,
         max_size: int | None = None,
@@ -179,19 +182,13 @@ class OverflowQueue:
         """Initialize the overflow queue.
 
         Args:
-            max_size: Maximum queue size (env var: NAC_TEST_QUEUE_SIZE)
-            memory_limit_mb: Memory limit in MB (env var: NAC_TEST_MEMORY_LIMIT_MB)
+            max_size: Maximum queue size (env var: NAC_TEST_PYATS_QUEUE_SIZE)
+            memory_limit_mb: Memory limit in MB (env var: NAC_TEST_PYATS_MEMORY_LIMIT_MB)
             overflow_dir: Directory for overflow files (default: /tmp/nac_test_overflow)
         """
         # Configuration
-        self.max_size = max_size or int(
-            os.environ.get("NAC_TEST_QUEUE_SIZE", str(self.DEFAULT_MAX_SIZE))
-        )
-        self.memory_limit_mb = memory_limit_mb or int(
-            os.environ.get(
-                "NAC_TEST_MEMORY_LIMIT_MB", str(self.DEFAULT_MEMORY_LIMIT_MB)
-            )
-        )
+        self.max_size = max_size or OVERFLOW_QUEUE_SIZE
+        self.memory_limit_mb = memory_limit_mb or OVERFLOW_MEMORY_LIMIT_MB
         self.memory_limit_bytes = self.memory_limit_mb * 1024 * 1024
 
         # Queue and memory tracking
@@ -205,7 +202,7 @@ class OverflowQueue:
         # Overflow to disk
         default_overflow = os.path.join(tempfile.gettempdir(), "nac_test_overflow")
         self.overflow_dir = overflow_dir or Path(
-            os.environ.get("NAC_TEST_OVERFLOW_DIR", default_overflow)
+            OVERFLOW_DIR_OVERRIDE or default_overflow
         )
         self.overflow_dir.mkdir(parents=True, exist_ok=True)
         self.overflow_file_count = 0
@@ -343,7 +340,7 @@ class OverflowQueue:
         self.total_overflowed_to_disk += 1
 
         # Create unique filename with timestamp and sequence
-        timestamp = time.strftime(FILE_TIMESTAMP_FORMAT)
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
         filename = (
             self.overflow_dir
             / f"overflow_{timestamp}_{self.overflow_file_count:06d}.json"
@@ -929,8 +926,8 @@ class BatchingReporter:
         Args:
             send_callback: Function to call when batch is ready to send
             error_callback: Function to call on errors
-            batch_size: Override default batch size (env var: NAC_TEST_BATCH_SIZE)
-            flush_timeout: Override flush timeout (env var: NAC_TEST_BATCH_TIMEOUT)
+            batch_size: Override default batch size (env var: NAC_TEST_PYATS_BATCH_SIZE)
+            flush_timeout: Override flush timeout (env var: NAC_TEST_PYATS_BATCH_TIMEOUT)
             debug_mode: Override debug mode (env var: NAC_TEST_DEBUG)
         """
         # Store callbacks
@@ -938,12 +935,8 @@ class BatchingReporter:
         self.error_callback = error_callback
 
         # Load configuration from environment with overrides
-        self.batch_size = batch_size or int(
-            os.environ.get("NAC_TEST_BATCH_SIZE", "200")
-        )
-        self.flush_timeout = flush_timeout or float(
-            os.environ.get("NAC_TEST_BATCH_TIMEOUT", "0.5")
-        )
+        self.batch_size = batch_size or BATCH_SIZE
+        self.flush_timeout = flush_timeout or BATCH_TIMEOUT_SECONDS
         self.debug_mode = debug_mode if debug_mode is not None else DEBUG_MODE
 
         # Initialize batch accumulator

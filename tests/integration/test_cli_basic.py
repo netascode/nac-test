@@ -5,7 +5,7 @@
 
 This module contains integration tests that verify basic CLI functionality
 including command execution, environment variable handling, custom filters,
-test file loading, and verbosity settings.
+test file loading, and loglevel settings.
 """
 
 import os
@@ -169,10 +169,10 @@ def test_nac_test_external_test_file_loading_succeeds(tmp_path: Path) -> None:
     )
 
 
-def test_nac_test_debug_verbosity_flag_accepted(tmp_path: Path) -> None:
-    """Test that the DEBUG verbosity flag is accepted and applied.
+def test_nac_test_debug_loglevel_flag_accepted(tmp_path: Path) -> None:
+    """Test that the DEBUG loglevel flag is accepted and applied.
 
-    Verifies that the CLI accepts the -v DEBUG option and processes
+    Verifies that the CLI accepts the -l DEBUG option and processes
     templates without errors when debug logging is enabled.
 
     Args:
@@ -190,13 +190,13 @@ def test_nac_test_debug_verbosity_flag_accepted(tmp_path: Path) -> None:
             templates_path,
             "-o",
             str(tmp_path),
-            "-v",
+            "-l",
             "DEBUG",
         ],
     )
 
     assert result.exit_code == 0, (
-        f"DEBUG verbosity flag should be accepted, got exit code "
+        f"DEBUG loglevel flag should be accepted, got exit code "
         f"{result.exit_code}: {result.output}"
     )
 
