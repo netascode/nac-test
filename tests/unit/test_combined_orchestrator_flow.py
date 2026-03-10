@@ -795,7 +795,7 @@ class TestWindowsPlatformBehavior(TestCombinedOrchestratorFlow):
         )
 
         with (
-            patch("nac_test.combined_orchestrator.sys.platform", "win32"),
+            patch("nac_test.combined_orchestrator.IS_WINDOWS", True),
             patch.object(
                 orchestrator, "_discover_test_types", return_value=(True, True)
             ),
