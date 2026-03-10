@@ -499,26 +499,26 @@
                     <span class="test-type-badge {{ test_type.lower() }}-badge">{{ test_type }}</span>
                     <h2>{{ framework_data.title }} Test Results</h2>
                 </div>
-                {% if not framework_data.is_error %}
+                {% if not framework_data.is_error and not framework_data.is_pre_flight_failure %}
                 <a href="{{ framework_data.report_path }}" class="view-report-btn">
                     View Detailed Report →
                 </a>
                 {% endif %}
             </div>
             
-            {% if framework_data.is_error %}
+            {% if framework_data.is_pre_flight_failure %}
+            <div class="error-banner" role="alert" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                <span class="error-icon">⚠</span>
+                <div style="flex: 1;">
+                    <strong>Pre-flight failure — tests not executed</strong>
+                    <a href="{{ framework_data.report_path }}" style="color: white; margin-left: 10px;">View details →</a>
+                </div>
+            </div>
+            {% elif framework_data.is_error %}
             <div class="error-banner" role="alert">
                 <span class="error-icon">⚠</span>
                 <div style="flex: 1;">
                     <strong>Execution Error:</strong> {{ framework_data.error_reason or 'An error occurred during test execution' }}
-                    {% if framework_data.error_details_html %}
-                    <div class="error-details">
-                        <button class="error-details-toggle" onclick="toggleDetails(this)">Show Details ▼</button>
-                        <div class="error-details-content">
-                            {{ framework_data.error_details_html | safe }}
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
             {% else %}

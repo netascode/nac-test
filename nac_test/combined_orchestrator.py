@@ -16,7 +16,6 @@ from nac_test.cli.ui import (
 from nac_test.cli.validators import AuthOutcome, preflight_auth_check
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
-    EXIT_ERROR,
     HTML_REPORTS_DIRNAME,
     PYATS_RESULTS_DIRNAME,
     ROBOT_RESULTS_DIRNAME,
@@ -29,7 +28,6 @@ from nac_test.core.types import (
     PreFlightFailure,
     TestResults,
 )
-from nac_test.exceptions import ControllerDetectionError
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
@@ -188,46 +186,52 @@ class CombinedOrchestrator:
             try:
                 self.controller_type = detect_controller_type()
                 logger.info(f"Controller type detected: {self.controller_type}")
-            except (ValueError, ControllerDetectionError) as e:
+            except ValueError as e:
                 typer.secho(
                     f"\n❌ Controller detection failed:\n{e}",
                     fg=typer.colors.RED,
                     err=True,
                 )
-                raise typer.Exit(EXIT_ERROR) from None
-
-            auth_result = preflight_auth_check(self.controller_type)
-            if not auth_result.success:
-                typer.echo("")
-                if auth_result.reason == AuthOutcome.UNREACHABLE:
-                    display_unreachable_banner(
-                        controller_type=auth_result.controller_type,
-                        controller_url=auth_result.controller_url,
-                        detail=auth_result.detail,
-                    )
-                else:
-                    env_var_prefix = get_env_var_prefix(auth_result.controller_type)
-                    display_auth_failure_banner(
-                        controller_type=auth_result.controller_type,
-                        controller_url=auth_result.controller_url,
-                        detail=auth_result.detail,
-                        env_var_prefix=env_var_prefix,
-                    )
-                typer.echo("")
-
                 combined_results.pre_flight_failure = PreFlightFailure(
-                    failure_type=(
-                        "unreachable"
-                        if auth_result.reason == AuthOutcome.UNREACHABLE
-                        else "auth"
-                    ),
-                    controller_type=auth_result.controller_type,
-                    controller_url=auth_result.controller_url,
-                    detail=auth_result.detail,
-                    status_code=auth_result.status_code,
+                    failure_type="detection",
+                    controller_type=None,
+                    controller_url=None,
+                    detail=str(e),
                 )
-                # Mark pre-flight as failed but continue to Robot block
                 preflight_failed = True
+
+            if not preflight_failed and self.controller_type is not None:
+                auth_result = preflight_auth_check(self.controller_type)
+                if not auth_result.success:
+                    typer.echo("")
+                    if auth_result.reason == AuthOutcome.UNREACHABLE:
+                        display_unreachable_banner(
+                            controller_type=auth_result.controller_type,
+                            controller_url=auth_result.controller_url,
+                            detail=auth_result.detail,
+                        )
+                    else:
+                        env_var_prefix = get_env_var_prefix(auth_result.controller_type)
+                        display_auth_failure_banner(
+                            controller_type=auth_result.controller_type,
+                            controller_url=auth_result.controller_url,
+                            detail=auth_result.detail,
+                            env_var_prefix=env_var_prefix,
+                        )
+                    typer.echo("")
+
+                    combined_results.pre_flight_failure = PreFlightFailure(
+                        failure_type=(
+                            "unreachable"
+                            if auth_result.reason == AuthOutcome.UNREACHABLE
+                            else "auth"
+                        ),
+                        controller_type=auth_result.controller_type,
+                        controller_url=auth_result.controller_url,
+                        detail=auth_result.detail,
+                        status_code=auth_result.status_code,
+                    )
+                    preflight_failed = True
 
         # Run PyATS tests only if pre-flight passed
         if has_pyats and not self.render_only and not preflight_failed:

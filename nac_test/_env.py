@@ -1,11 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Low-level environment variable parsing utilities.
-
-For higher-level environment validation (required vars, controller credentials),
-see nac_test.utils.environment.EnvironmentValidator.
-"""
+"""Low-level environment variable parsing utilities."""
 
 # Why _env.py lives here instead of utils/env.py:
 #

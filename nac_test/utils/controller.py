@@ -18,8 +18,6 @@ from typing import cast
 
 from nac_test.core.types import ControllerTypeKey
 
-from nac_test.exceptions import ControllerDetectionError
-
 logger = logging.getLogger(__name__)
 
 
@@ -117,10 +115,8 @@ def detect_controller_type() -> ControllerTypeKey:
         The detected controller type (e.g., "ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE").
 
     Raises:
-        ControllerDetectionError: If no controller credentials are found, multiple
-            controllers are configured, or credentials are incomplete. The exception
-            carries a short ``reason`` (``str(e)``) and a ``verbose_message`` with
-            markdown-formatted details suitable for HTML error reports.
+        ValueError: If no controller credentials are found, multiple controllers are
+            configured, or credentials are incomplete.
 
     Example:
         >>> os.environ.update({"ACI_URL": "https://apic.local",
@@ -142,40 +138,12 @@ def detect_controller_type() -> ControllerTypeKey:
     if len(complete_sets) > 1:
         error_message = _format_multiple_credentials_error(complete_sets)
         logger.error(f"Multiple controller credentials detected: {complete_sets}")
-        controllers = ", ".join(complete_sets)
-        verbose = "\n".join(
-            [
-                "**Multiple controller credentials detected**",
-                "",
-                f"Detected controllers: `{controllers}`",
-                "",
-                "**Remediation:**",
-                "- Unset credentials for controllers you don't want to use",
-                "- Use a separate shell session for each controller type",
-                "- Use environment variable management tools (direnv, dotenv) to switch contexts",
-            ]
-        )
-        raise ControllerDetectionError(error_message, verbose)
+        raise ValueError(error_message)
 
     # Check for no credentials at all
     if not complete_sets and not partial_sets:
         error_message = _format_no_credentials_error(partial_sets)
-        supported = ", ".join(CREDENTIAL_PATTERNS.keys())
-        verbose = "\n".join(
-            [
-                "**No controller credentials found**",
-                "",
-                "Controller credentials are required for test execution.",
-                "",
-                "**Required environment variables:**",
-                "- `<TYPE>_URL`",
-                "- `<TYPE>_USERNAME`",
-                "- `<TYPE>_PASSWORD`",
-                "",
-                f"**Supported controller types:** `{supported}`",
-            ]
-        )
-        raise ControllerDetectionError(error_message, verbose)
+        raise ValueError(error_message)
 
     # Check for incomplete credentials
     if not complete_sets and partial_sets:
@@ -190,22 +158,7 @@ def detect_controller_type() -> ControllerTypeKey:
             f"Please provide ALL required environment variables for your controller type."
         )
         logger.error(f"Incomplete credentials: {', '.join(incomplete_info)}")
-        controller = next(iter(partial_sets))
-        info = partial_sets[controller]
-        missing = ", ".join(f"`{v}`" for v in info["missing"])
-        present = ", ".join(f"`{v}`" for v in info["present"])
-        verbose = "\n".join(
-            [
-                f"**Incomplete credentials for {controller}**",
-                "",
-                f"**Missing:** {missing}",
-                "",
-                f"**Present:** {present}",
-                "",
-                "Please provide ALL required environment variables for your controller type.",
-            ]
-        )
-        raise ControllerDetectionError(error_message, verbose)
+        raise ValueError(error_message)
 
     # Exactly one complete set found - success
     # complete_sets come from CONTROLLER_REGISTRY keys, which are always valid

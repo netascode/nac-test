@@ -28,6 +28,7 @@ from nac_test.core.constants import (
     HTML_REPORTS_DIRNAME,
     LOG_HTML,
     OUTPUT_XML,
+    PRE_FLIGHT_FAILURE_FILENAME,
     PYATS_RESULTS_DIRNAME,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
@@ -305,7 +306,10 @@ class E2ECombinedTestBase:
     def test_pyats_results_directory_state(self, results: E2EResults) -> None:
         """Verify pyats_results/ exists when expected, doesn't exist otherwise."""
         pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
-        if results.has_pyats_results:
+        should_exist = (
+            results.has_pyats_results or results.scenario.expects_pre_flight_failure
+        )
+        if should_exist:
             assert pyats_dir.exists(), f"Expected {PYATS_RESULTS_DIRNAME}/ to exist"
             assert pyats_dir.is_dir()
         else:
@@ -1316,3 +1320,80 @@ class TestE2EDryRunRobotFail(E2ECombinedTestBase):
     @pytest.fixture
     def results(self, e2e_dry_run_robot_fail_results: E2EResults) -> E2EResults:
         return e2e_dry_run_robot_fail_results
+
+
+# =============================================================================
+# PRE-FLIGHT FAILURE SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EPyatsRobotNoController(E2ECombinedTestBase):
+    """PyATS+Robot with no controller credentials (pre-flight failure).
+
+    Scenario: Robot (1 pass) + PyATS (pre-flight failure due to missing credentials)
+    Expected: CLI exits with code 1, Robot results present, pre-flight failure report generated
+    """
+
+    @pytest.fixture
+    def results(self, e2e_pyats_robot_no_controller_results: E2EResults) -> E2EResults:
+        return e2e_pyats_robot_no_controller_results
+
+    # -------------------------------------------------------------------------
+    # Pre-flight failure specific tests
+    # -------------------------------------------------------------------------
+
+    def test_pre_flight_failure_report_written(self, results: E2EResults) -> None:
+        """Verify pre-flight failure report was generated."""
+        assert (
+            results.output_dir / PYATS_RESULTS_DIRNAME / PRE_FLIGHT_FAILURE_FILENAME
+        ).exists()
+
+    def test_combined_summary_links_preflight_report(self, results: E2EResults) -> None:
+        """Verify combined summary links to pre-flight failure report."""
+        html = (results.output_dir / COMBINED_SUMMARY_FILENAME).read_text()
+        assert PRE_FLIGHT_FAILURE_FILENAME in html
+
+    def test_pyats_rows_show_preflight_banner(self, results: E2EResults) -> None:
+        """Verify combined summary shows pre-flight failure banner."""
+        html = (results.output_dir / COMBINED_SUMMARY_FILENAME).read_text()
+        assert "Pre-flight" in html
+
+    def test_no_pyats_results_subdirs_created(self, results: E2EResults) -> None:
+        """Verify no PyATS results subdirectories were created."""
+        assert not (results.output_dir / PYATS_RESULTS_DIRNAME / "api").exists()
+        assert not (results.output_dir / PYATS_RESULTS_DIRNAME / "d2d").exists()
+
+
+class TestE2EPyatsRobotAuthFail(E2ECombinedTestBase):
+    """PyATS+Robot where pre-flight auth check fails (401).
+
+    Scenario: Robot (1 pass) + PyATS (pre-flight failure due to auth failure)
+    Expected: CLI exits with code 1, Robot results present, pre-flight failure report generated
+    """
+
+    @pytest.fixture
+    def results(self, e2e_pyats_robot_auth_fail_results: E2EResults) -> E2EResults:
+        return e2e_pyats_robot_auth_fail_results
+
+    # -------------------------------------------------------------------------
+    # Pre-flight failure specific tests
+    # -------------------------------------------------------------------------
+
+    def test_pre_flight_failure_report_written(self, results: E2EResults) -> None:
+        """Verify pre-flight failure report was generated."""
+        report = (
+            results.output_dir / PYATS_RESULTS_DIRNAME / PRE_FLIGHT_FAILURE_FILENAME
+        )
+        assert report.exists()
+
+    def test_pre_flight_report_shows_auth_failure(self, results: E2EResults) -> None:
+        """Verify pre-flight failure report shows auth failure details."""
+        html = (
+            results.output_dir / PYATS_RESULTS_DIRNAME / PRE_FLIGHT_FAILURE_FILENAME
+        ).read_text()
+        assert "401" in html or "Unauthorized" in html or "BAD_CREDENTIALS" in html
+
+    def test_combined_summary_links_preflight_report(self, results: E2EResults) -> None:
+        """Verify combined summary links to pre-flight failure report."""
+        html = (results.output_dir / COMBINED_SUMMARY_FILENAME).read_text()
+        assert PRE_FLIGHT_FAILURE_FILENAME in html

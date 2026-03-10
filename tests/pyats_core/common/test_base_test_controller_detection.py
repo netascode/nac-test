@@ -10,7 +10,6 @@ from unittest.mock import patch
 import pytest
 from pyats import aetest
 
-from nac_test.exceptions import ControllerDetectionError
 from nac_test.pyats_core.common.base_test import NACTestBase
 
 
@@ -80,7 +79,7 @@ class TestBaseTestControllerDetection:
         with patch.object(
             test_instance, "load_data_model", return_value={"test": "data"}
         ):
-            with pytest.raises(ControllerDetectionError) as exc_info:
+            with pytest.raises(ValueError) as exc_info:
                 test_instance.setup()
 
             assert "No controller credentials found" in str(exc_info.value)
@@ -130,7 +129,7 @@ class TestBaseTestControllerDetection:
         with patch.object(
             test_instance, "load_data_model", return_value={"test": "data"}
         ):
-            with pytest.raises(ControllerDetectionError) as exc_info:
+            with pytest.raises(ValueError) as exc_info:
                 test_instance.setup()
 
             assert "Multiple controller credentials detected" in str(exc_info.value)

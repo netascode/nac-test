@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 import pytest
 
-from nac_test.exceptions import ControllerDetectionError
 from nac_test.utils.controller import (
     CREDENTIAL_PATTERNS,
     _find_credential_sets,
@@ -77,17 +76,13 @@ class TestControllerDetection:
         os.environ["SDWAN_USERNAME"] = "sdwan_user"
         os.environ["SDWAN_PASSWORD"] = "sdwan_pass"
 
-        with pytest.raises(ControllerDetectionError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
         assert "Multiple controller credentials detected: ACI, SDWAN" in error_msg
         assert "unset SDWAN_URL SDWAN_USERNAME SDWAN_PASSWORD" in error_msg
         assert "unset ACI_URL ACI_USERNAME ACI_PASSWORD" in error_msg
-        assert (
-            "**Multiple controller credentials detected**"
-            in exc_info.value.verbose_message
-        )
 
     def test_no_credentials_error(self) -> None:
         """Test error when no controller credentials are found."""
@@ -96,7 +91,7 @@ class TestControllerDetection:
             for var in controller_vars:
                 os.environ.pop(var, None)
 
-        with pytest.raises(ControllerDetectionError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
@@ -104,7 +99,6 @@ class TestControllerDetection:
         assert "Controller credentials are required for ALL test types" in error_msg
         assert "export ACI_URL=" in error_msg
         assert "export SDWAN_URL=" in error_msg
-        assert "**No controller credentials found**" in exc_info.value.verbose_message
 
     def test_partial_credentials_error(self) -> None:
         """Test error when controller has incomplete credentials."""
@@ -113,13 +107,12 @@ class TestControllerDetection:
         os.environ["ACI_USERNAME"] = "admin"
         # Deliberately not setting ACI_PASSWORD
 
-        with pytest.raises(ControllerDetectionError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
         assert "Incomplete controller credentials detected" in error_msg
         assert "ACI: missing ACI_PASSWORD" in error_msg
-        assert "**Incomplete credentials for ACI**" in exc_info.value.verbose_message
 
     def test_empty_string_handling(self) -> None:
         """Test that empty string values are treated as missing."""
@@ -128,7 +121,7 @@ class TestControllerDetection:
         os.environ["ACI_USERNAME"] = "admin"
         os.environ["ACI_PASSWORD"] = ""  # Empty string
 
-        with pytest.raises(ControllerDetectionError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
@@ -142,7 +135,7 @@ class TestControllerDetection:
         os.environ["SDWAN_USERNAME"] = "admin"
         os.environ["SDWAN_PASSWORD"] = "   "  # Only whitespace
 
-        with pytest.raises(ControllerDetectionError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
@@ -282,7 +275,7 @@ class TestEdgeCases:
         os.environ["aci_username"] = "admin"
         os.environ["aci_password"] = "password"
 
-        with pytest.raises(ControllerDetectionError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             detect_controller_type()
 
         assert "No controller credentials found" in str(exc_info.value)
@@ -339,7 +332,7 @@ class TestEdgeCases:
     @patch.dict(os.environ, {}, clear=True)
     def test_truly_empty_environment(self) -> None:
         """Test with a completely empty environment."""
-        with pytest.raises(ControllerDetectionError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)
@@ -360,7 +353,7 @@ class TestEdgeCases:
         os.environ["ISE_USERNAME"] = "ise_user"
         os.environ["ISE_PASSWORD"] = "ise_pass"
 
-        with pytest.raises(ControllerDetectionError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             detect_controller_type()
 
         error_msg = str(exc_info.value)

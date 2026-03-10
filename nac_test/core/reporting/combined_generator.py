@@ -16,6 +16,7 @@ from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     HTML_REPORTS_DIRNAME,
     HTTP_FORBIDDEN_CODE,
+    PRE_FLIGHT_FAILURE_FILENAME,
     PYATS_RESULTS_DIRNAME,
     REPORT_TIMESTAMP_FORMAT,
     ROBOT_RESULTS_DIRNAME,
@@ -123,7 +124,11 @@ class CombinedReportGenerator:
         """Generate combined summary dashboard.
 
         Dispatches to the appropriate renderer based on the results state:
-        - If pre_flight_failure is set, renders the auth failure template
+        - If pre_flight_failure is set with no other results, renders only the
+          auth failure template as combined_summary.html
+        - If pre_flight_failure is set AND Robot has results, generates both:
+          - Child report at pyats_results/pre_flight_failure.html
+          - Combined dashboard at combined_summary.html with links to the child
         - Otherwise, renders the normal combined dashboard template
 
         Args:
@@ -133,15 +138,38 @@ class CombinedReportGenerator:
         Returns:
             Path to combined_summary.html, or None if generation fails.
         """
+        pre_flight_report_path: Path | None = None
         if results is not None and results.pre_flight_failure is not None:
-            return self._generate_pre_flight_failure_report(results.pre_flight_failure)
+            pre_flight_report_path = self._generate_pre_flight_failure_report(
+                results.pre_flight_failure
+            )
+            if results.robot is None:
+                if pre_flight_report_path is not None:
+                    combined_summary_path = self.output_dir / COMBINED_SUMMARY_FILENAME
+                    html_content = pre_flight_report_path.read_text(encoding="utf-8")
+                    combined_summary_path.write_text(html_content, encoding="utf-8")
+                    return combined_summary_path
+                return None
 
         try:
             test_type_stats: dict[str, dict[str, Any]] = {}
 
-            # Build per-framework stats for template rendering
             if results is not None:
-                # Map CombinedResults attributes to framework keys
+                if results.pre_flight_failure is not None and pre_flight_report_path:
+                    relative_report_path = str(
+                        pre_flight_report_path.relative_to(self.output_dir)
+                    )
+                    for framework_key in ("API", "D2D"):
+                        metadata = FRAMEWORK_METADATA.get(framework_key, {})
+                        test_type_stats[framework_key] = {
+                            "title": metadata.get("title", framework_key),
+                            "stats": None,
+                            "report_path": relative_report_path,
+                            "is_pre_flight_failure": True,
+                            "is_error": False,
+                            "error_reason": None,
+                        }
+
                 framework_mapping = [
                     ("API", results.api),
                     ("D2D", results.d2d),
@@ -149,23 +177,20 @@ class CombinedReportGenerator:
                 ]
 
                 for framework_key, test_results in framework_mapping:
+                    if framework_key in test_type_stats:
+                        continue
                     if test_results is None:
                         continue
 
                     metadata = FRAMEWORK_METADATA.get(framework_key, {})
-                    error_details_html = None
-                    if test_results.is_error and test_results.verbose_message:
-                        error_details_html = markdown_to_html(
-                            test_results.verbose_message
-                        )
 
                     test_type_stats[framework_key] = {
                         "title": metadata.get("title", framework_key),
                         "stats": test_results,
                         "report_path": metadata.get("report_path", "#"),
+                        "is_pre_flight_failure": False,
                         "is_error": test_results.is_error,
                         "error_reason": test_results.reason,
-                        "error_details_html": error_details_html,
                     }
 
             overall_stats = results if results is not None else CombinedResults()
@@ -200,24 +225,40 @@ class CombinedReportGenerator:
 
         Renders the auth_failure/report.html.j2 template with context
         derived from the PreFlightFailure dataclass. Writes to
-        combined_summary.html (not auth_failure_report.html).
+        pyats_results/pre_flight_failure.html.
 
         Args:
             failure: The pre-flight failure details.
 
         Returns:
-            Path to combined_summary.html, or None if generation fails.
+            Path to pre_flight_failure.html, or None if generation fails.
         """
         try:
-            self.output_dir.mkdir(parents=True, exist_ok=True)
+            failure_report_path = (
+                self.output_dir / PYATS_RESULTS_DIRNAME / PRE_FLIGHT_FAILURE_FILENAME
+            )
+            failure_report_path.parent.mkdir(parents=True, exist_ok=True)
 
             is_403 = failure.status_code == HTTP_FORBIDDEN_CODE
-            display_name = get_display_name(failure.controller_type)
-            env_var_prefix = get_env_var_prefix(failure.controller_type)
-            host = extract_host(failure.controller_url)
-            curl_example = _get_curl_example(
-                failure.controller_type, failure.controller_url
-            )
+
+            display_name: str | None = None
+            env_var_prefix: str | None = None
+            host: str | None = None
+            curl_example: str | None = None
+
+            if failure.controller_type is not None:
+                display_name = get_display_name(failure.controller_type)
+                env_var_prefix = get_env_var_prefix(failure.controller_type)
+            if failure.controller_url is not None:
+                host = extract_host(failure.controller_url)
+            if (
+                failure.controller_type is not None
+                and failure.controller_url is not None
+            ):
+                curl_example = _get_curl_example(
+                    failure.controller_type, failure.controller_url
+                )
+
             timestamp = datetime.now().strftime(REPORT_TIMESTAMP_FORMAT)
 
             template = self.env.get_template("auth_failure/report.html.j2")
@@ -234,13 +275,10 @@ class CombinedReportGenerator:
                 timestamp=timestamp,
             )
 
-            combined_summary_path = self.output_dir / COMBINED_SUMMARY_FILENAME
-            combined_summary_path.write_text(html_content, encoding="utf-8")
+            failure_report_path.write_text(html_content, encoding="utf-8")
 
-            logger.info(
-                "Generated pre-flight failure report: %s", combined_summary_path
-            )
-            return combined_summary_path
+            logger.info("Generated pre-flight failure report: %s", failure_report_path)
+            return failure_report_path
 
         except Exception as e:
             logger.error("Failed to generate pre-flight failure report: %s", e)

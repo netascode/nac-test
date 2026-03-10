@@ -14,7 +14,6 @@ from nac_test.utils.device_validation import (
     REQUIRED_DEVICE_FIELDS,
     validate_device_inventory,
 )
-from nac_test.utils.environment import EnvironmentValidator
 from nac_test.utils.file_discovery import find_data_file
 from nac_test.utils.logging import LogLevel, configure_logging
 from nac_test.utils.strings import sanitize_hostname
@@ -24,7 +23,6 @@ from nac_test.utils.terminal import terminal
 __all__ = [
     "terminal",
     "SystemResourceCalculator",
-    "EnvironmentValidator",
     "cleanup_pyats_runtime",
     "cleanup_old_test_outputs",
     "cleanup_stale_test_artifacts",

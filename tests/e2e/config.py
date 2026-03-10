@@ -47,6 +47,8 @@ class E2EScenario:
     requires_testbed: bool = True  # D2D tests require testbed, Robot/API-only don't
     architecture: str | None = None
     is_dry_run: bool = False  # Dry-run mode: validates structure without execution
+    expects_pre_flight_failure: bool = False
+    skip_controller_setup: bool = False
 
     # Expected CLI behavior
     expected_exit_code: int = 0
@@ -181,6 +183,13 @@ class E2EScenario:
                 raise ValueError(
                     f"Scenario '{self.name}' expects {expected_failures} failures "
                     f"but exit_code={self.expected_exit_code} (should be {expected_exit_code})"
+                )
+        elif self.expects_pre_flight_failure:
+            # Pre-flight failures cause exit_code=1 without test failures
+            if self.expected_exit_code != 1:
+                raise ValueError(
+                    f"Scenario '{self.name}' expects pre-flight failure "
+                    f"but exit_code={self.expected_exit_code} (should be 1)"
                 )
         elif self.expected_exit_code != 0:
             raise ValueError(
@@ -435,4 +444,39 @@ DRY_RUN_ROBOT_FAIL_SCENARIO = E2EScenario(
     expected_pyats_d2d_passed=0,
     expected_pyats_d2d_failed=0,
     expected_pyats_d2d_skipped=0,
+)
+
+PYATS_ROBOT_NO_CONTROLLER_SCENARIO = E2EScenario(
+    name="pyats_robot_no_controller",
+    description="PyATS+Robot with no controller credentials - Robot runs, PyATS skipped with pre-flight failure",
+    data_path=f"{_FIXTURE_BASE}/pyats_robot_no_controller/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/pyats_robot_no_controller/templates",
+    requires_testbed=False,
+    architecture="SDWAN",
+    expects_pre_flight_failure=True,
+    skip_controller_setup=True,
+    expected_exit_code=1,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+)
+
+PYATS_ROBOT_AUTH_FAIL_SCENARIO = E2EScenario(
+    name="pyats_robot_auth_fail",
+    description="PyATS+Robot where preflight auth fails - Robot runs, pre-flight report generated",
+    data_path=f"{_FIXTURE_BASE}/pyats_robot_auth_fail/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/pyats_robot_auth_fail/templates",
+    requires_testbed=False,
+    architecture="SDWAN",
+    expects_pre_flight_failure=True,
+    expected_exit_code=1,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
 )

@@ -4,22 +4,19 @@
 """Unit tests for CombinedOrchestrator controller detection and pre-flight auth.
 
 Tests verify that CombinedOrchestrator correctly handles:
-- Controller detection (exits on failure)
+- Controller detection (sets pre_flight_failure on failure, allows Robot to continue)
 - Pre-flight auth check (sets pre_flight_failure, allows Robot to continue)
 - Dry-run mode (skips all auth)
 - Render-only mode (skips PyATS entirely)
 """
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-import typer
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.cli.validators import AuthCheckResult, AuthOutcome
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.core.constants import EXIT_ERROR
 from nac_test.core.types import PyATSResults, TestResults
 from nac_test.utils.logging import DEFAULT_LOGLEVEL
 
@@ -89,27 +86,49 @@ class TestCombinedOrchestratorController:
 
         assert orchestrator.controller_type == "ACI"
 
-    def test_detection_failure_exits_during_run_tests(
+    def test_detection_failure_sets_pre_flight_failure_and_allows_robot(
         self, pyats_test_env: PyATSTestEnv
     ) -> None:
-        """Detection failure should raise typer.Exit during run_tests(), not __init__."""
+        """Detection failure should set pre_flight_failure and allow Robot to run."""
         (pyats_test_env.test_dir / "test_verify.py").write_text(PYATS_TEST_FILE_CONTENT)
+        (pyats_test_env.test_dir / "test.robot").write_text(ROBOT_TEST_FILE_CONTENT)
 
         orchestrator = CombinedOrchestrator(
             data_paths=[pyats_test_env.data_dir],
             templates_dir=pyats_test_env.test_dir,
             output_dir=pyats_test_env.output_dir,
             merged_data_filename=pyats_test_env.merged_file.name,
-            dev_pyats_only=True,
         )
 
         with (
+            patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats,
+            patch("nac_test.combined_orchestrator.RobotOrchestrator") as mock_robot,
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator"
+            ) as mock_generator,
+            patch("typer.echo"),
             patch("typer.secho"),
         ):
-            with pytest.raises(typer.Exit) as exc_info:
-                orchestrator.run_tests()
+            mock_robot.return_value.run_tests.return_value = TestResults(passed=1)
+            mock_generator.return_value.generate_combined_summary.return_value = None
 
-            assert exc_info.value.exit_code == EXIT_ERROR
+            result = orchestrator.run_tests()
+
+        # PyATS should NOT be called since detection failed
+        mock_pyats.assert_not_called()
+        # Robot should run even though PyATS detection failed
+        mock_robot.assert_called_once()
+        # Pre-flight failure should be set with detection type
+        assert result.pre_flight_failure is not None
+        assert result.pre_flight_failure.failure_type == "detection"
+        assert result.pre_flight_failure.controller_type is None
+        assert result.pre_flight_failure.controller_url is None
+        # PyATS results should be None (not executed)
+        assert result.api is None
+        assert result.d2d is None
+        # Robot results should be present
+        assert result.robot is not None
+        assert result.robot.passed == 1
 
     def test_preflight_auth_failure_sets_pre_flight_failure_and_allows_robot(
         self, pyats_test_env: PyATSTestEnv, aci_controller_env: None

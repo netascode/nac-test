@@ -3,12 +3,11 @@
 
 """Unit tests for CombinedReportGenerator."""
 
-import re
 from pathlib import Path
 
 import pytest
 
-from nac_test.core.constants import COMBINED_SUMMARY_FILENAME
+from nac_test.core.constants import COMBINED_SUMMARY_FILENAME, PYATS_RESULTS_DIRNAME
 from nac_test.core.reporting.combined_generator import (
     CombinedReportGenerator,
     _get_curl_example,
@@ -411,3 +410,37 @@ class TestPreFlightFailureReport:
         report_path = generator.generate_combined_summary(results)
 
         assert report_path is None
+
+    def test_pre_flight_failure_with_robot_generates_both_reports(
+        self, tmp_path: Path
+    ) -> None:
+        """Pre-flight failure + Robot results generates child report and combined dashboard."""
+        failure = PreFlightFailure(
+            failure_type="auth",
+            controller_type="ACI",
+            controller_url="https://apic.test.local",
+            detail="HTTP 401: Unauthorized",
+            status_code=401,
+        )
+        robot_results = TestResults(passed=5, failed=1, skipped=0)
+        results = CombinedResults(pre_flight_failure=failure, robot=robot_results)
+        generator = CombinedReportGenerator(tmp_path)
+
+        report_path = generator.generate_combined_summary(results)
+
+        assert report_path is not None
+        assert report_path.name == COMBINED_SUMMARY_FILENAME
+
+        child_report = tmp_path / PYATS_RESULTS_DIRNAME / "pre_flight_failure.html"
+        assert child_report.exists()
+        child_content = child_report.read_text()
+        assert "apic.test.local" in child_content
+        assert "401" in child_content
+
+        combined_content = report_path.read_text()
+        assert "Robot Framework" in combined_content
+        assert "5" in combined_content
+        assert "PyATS API" in combined_content
+        assert "PyATS Direct-to-Device (D2D)" in combined_content
+        assert "Pre-flight failure" in combined_content
+        assert "pre_flight_failure.html" in combined_content

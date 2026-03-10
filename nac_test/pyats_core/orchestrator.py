@@ -46,7 +46,6 @@ from nac_test.utils.cleanup import (
     cleanup_pyats_runtime,
     cleanup_stale_test_artifacts,
 )
-from nac_test.utils.environment import EnvironmentValidator
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
@@ -609,26 +608,6 @@ class PyATSOrchestrator:
         # before reaching here; this path should not be hit in normal usage.
         if self.controller_type is None:
             reason = "controller_type is required for test execution"
-            return PyATSResults(
-                api=TestResults.from_error(reason) if api_tests else None,
-                d2d=TestResults.from_error(reason) if d2d_tests else None,
-            )
-
-        # Currently redundant: detect_controller_type() in CombinedOrchestrator checks
-        # the same CREDENTIAL_PATTERNS and raises ControllerDetectionError if any are
-        # missing, so this can only trigger when PyATSOrchestrator is used standalone.
-        # If CREDENTIAL_PATTERNS is extended (e.g. IOSXE_* vars for SDWAN/CC), this
-        # check would become meaningful for the normal flow too.
-        missing_vars = EnvironmentValidator.get_missing_controller_vars(
-            self.controller_type
-        )
-        if missing_vars:
-            print(
-                EnvironmentValidator.format_missing_credentials_error(
-                    self.controller_type, missing_vars
-                )
-            )
-            reason = "Controller credentials missing"
             return PyATSResults(
                 api=TestResults.from_error(reason) if api_tests else None,
                 d2d=TestResults.from_error(reason) if d2d_tests else None,

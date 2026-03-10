@@ -6,9 +6,10 @@
 Tests for controller validation in PyATSOrchestrator:
 1. Controller type passed from caller is used (no detection)
 2. Dry-run mode accepts controller_type=None
-3. Missing controller_type for execution raises ValueError
-4. Missing credentials for provided controller_type returns error
-5. Error results only for discovered test categories
+3. Missing controller_type for execution returns error result
+
+Note: Credential validation (e.g., missing ACI_URL when controller_type="ACI")
+is handled by CombinedOrchestrator's pre-flight auth check, not PyATSOrchestrator.
 """
 
 import pytest
@@ -90,74 +91,3 @@ class TestOrchestratorControllerValidation:
         assert result.api.state == ExecutionState.ERROR
         assert "controller_type is required" in (result.api.reason or "")
         assert result.d2d is None  # only api test files were created
-
-    def test_provided_controller_type_missing_credentials_returns_error(
-        self, pyats_test_dirs: PyATSTestDirs
-    ) -> None:
-        """Test that provided controller_type with missing credentials returns error."""
-        (pyats_test_dirs.test_dir / "test_api.py").write_text(
-            PYATS_API_TEST_FILE_CONTENT
-        )
-        d2d_dir = pyats_test_dirs.test_dir / "d2d"
-        d2d_dir.mkdir()
-        (d2d_dir / "test_d2d.py").write_text(PYATS_D2D_TEST_FILE_CONTENT)
-
-        orchestrator = PyATSOrchestrator(
-            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
-            test_dir=pyats_test_dirs.test_dir,
-            output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename=pyats_test_dirs.merged_file.name,
-            controller_type="ACI",
-        )
-
-        result = orchestrator.run_tests()
-
-        assert result.api is not None
-        assert result.api.state == ExecutionState.ERROR
-        assert "credentials missing" in (result.api.reason or "").lower()
-        assert result.d2d is not None
-        assert result.d2d.state == ExecutionState.ERROR
-
-    def test_error_results_only_for_discovered_categories_api_only(
-        self, pyats_test_dirs: PyATSTestDirs
-    ) -> None:
-        """Test that error results are only returned for discovered test categories."""
-        (pyats_test_dirs.test_dir / "test_api.py").write_text(
-            PYATS_API_TEST_FILE_CONTENT
-        )
-
-        orchestrator = PyATSOrchestrator(
-            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
-            test_dir=pyats_test_dirs.test_dir,
-            output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename=pyats_test_dirs.merged_file.name,
-            controller_type="ACI",
-        )
-
-        result = orchestrator.run_tests()
-
-        assert result.api is not None
-        assert result.api.state == ExecutionState.ERROR
-        assert result.d2d is None
-
-    def test_error_results_only_for_discovered_categories_d2d_only(
-        self, pyats_test_dirs: PyATSTestDirs
-    ) -> None:
-        """Test that error results are only returned for discovered test categories."""
-        d2d_dir = pyats_test_dirs.test_dir / "d2d"
-        d2d_dir.mkdir()
-        (d2d_dir / "test_d2d.py").write_text(PYATS_D2D_TEST_FILE_CONTENT)
-
-        orchestrator = PyATSOrchestrator(
-            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
-            test_dir=pyats_test_dirs.test_dir,
-            output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename=pyats_test_dirs.merged_file.name,
-            controller_type="ACI",
-        )
-
-        result = orchestrator.run_tests()
-
-        assert result.api is None
-        assert result.d2d is not None
-        assert result.d2d.state == ExecutionState.ERROR

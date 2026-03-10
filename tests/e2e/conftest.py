@@ -31,6 +31,8 @@ from tests.e2e.config import (
     PYATS_API_ONLY_SCENARIO,
     PYATS_CC_SCENARIO,
     PYATS_D2D_ONLY_SCENARIO,
+    PYATS_ROBOT_AUTH_FAIL_SCENARIO,
+    PYATS_ROBOT_NO_CONTROLLER_SCENARIO,
     ROBOT_ONLY_SCENARIO,
     SUCCESS_SCENARIO,
     VERBOSE_SCENARIO,
@@ -208,7 +210,7 @@ def _run_e2e_scenario(
     output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
 
     arch = scenario.architecture
-    if arch:
+    if arch and not scenario.skip_controller_setup:
         if mock_api_server:
             class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
         else:
@@ -470,4 +472,49 @@ def e2e_dry_run_robot_fail_results(
         tmp_path_factory,
         class_mocker,
         extra_cli_args=["--dry-run"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_pyats_robot_no_controller_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute PyATS+Robot with no controller credentials (pre-flight failure)."""
+    return _run_e2e_scenario(
+        PYATS_ROBOT_NO_CONTROLLER_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_pyats_robot_auth_fail_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute PyATS+Robot where preflight auth check fails (pre-flight failure)."""
+    from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
+
+    class_mocker.setattr(
+        "nac_test.combined_orchestrator.preflight_auth_check",
+        lambda _: AuthCheckResult(
+            success=False,
+            reason=AuthOutcome.BAD_CREDENTIALS,
+            controller_type="SDWAN",
+            controller_url=mock_api_server.url,
+            detail="HTTP 401: Unauthorized",
+            status_code=401,
+        ),
+    )
+    return _run_e2e_scenario(
+        PYATS_ROBOT_AUTH_FAIL_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
     )

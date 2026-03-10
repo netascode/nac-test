@@ -44,7 +44,6 @@ class ErrorType(Enum):
     """
 
     GENERIC = "generic"
-    CONTROLLER_DETECTION = "controller_detection"
     INVALID_ROBOT_ARGS = "invalid_robot_args"
     INTERRUPTED = "interrupted"
 
@@ -88,7 +87,6 @@ class TestResults:
     reason: str | None = None
     state: ExecutionState = ExecutionState.SUCCESS
     error_type: ErrorType | None = None
-    verbose_message: str | None = None
 
     @property
     def total(self) -> int:
@@ -120,7 +118,6 @@ class TestResults:
         cls,
         reason: str,
         error_type: ErrorType = ErrorType.GENERIC,
-        verbose_message: str | None = None,
     ) -> "TestResults":
         """Create TestResults representing an execution error.
 
@@ -130,7 +127,6 @@ class TestResults:
         Args:
             reason: Error message describing what went wrong
             error_type: Category of error for exit code determination
-            verbose_message: Optional detailed message (markdown) for error reporting
 
         Returns:
             TestResults with zero counts, reason recorded, and ERROR state
@@ -139,7 +135,6 @@ class TestResults:
             reason=reason,
             state=ExecutionState.ERROR,
             error_type=error_type,
-            verbose_message=verbose_message,
         )
 
     @property
@@ -218,17 +213,17 @@ class PreFlightFailure:
     all test counts will be zero.
 
     Attributes:
-        failure_type: Category of failure - constrained to "auth" or "unreachable".
-        controller_type: Controller identifier ("ACI", "SDWAN", "CC").
-        controller_url: URL that was tested.
+        failure_type: Category of failure - "auth", "unreachable", or "detection".
+        controller_type: Controller identifier ("ACI", "SDWAN", "CC"), or None for detection failures.
+        controller_url: URL that was tested, or None for detection failures.
         detail: Human-readable error description.
         status_code: HTTP status code from the failed request, or None for
             non-HTTP failures (e.g., connection timeout, DNS failure).
     """
 
-    failure_type: Literal["auth", "unreachable"]
-    controller_type: ControllerTypeKey
-    controller_url: str
+    failure_type: Literal["auth", "unreachable", "detection"]
+    controller_type: ControllerTypeKey | None
+    controller_url: str | None
     detail: str
     status_code: int | None = None
 
