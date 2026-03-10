@@ -160,7 +160,7 @@ class TestRobotOrchestrator:
         orchestrator._create_backward_compat_symlinks()
 
         # Verify warning was logged
-        assert "Source file not found for symlink" in caplog.text
+        assert "Source file not found" in caplog.text
 
     @patch("nac_test.robot.orchestrator.run_pabot")
     def test_run_tests_render_only_mode(
