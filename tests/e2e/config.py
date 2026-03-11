@@ -274,7 +274,7 @@ MIXED_SCENARIO = E2EScenario(
 
 MIXED_RELATIVE_OUTPUT_SCENARIO = E2EScenario(
     name="mixed_relative_output",
-    description="Mixed results using a relative output path - Robot (1 pass, 1 fail) + PyATS API (0 pass, 1 fail) + PyATS D2D (1 pass, 0 fail)",
+    description="Mixed results - Robot (1 pass, 1 fail) + PyATS API (0 pass, 1 fail) + PyATS D2D (1 pass, 0 fail) [relative output path]",
     data_path=f"{_FIXTURE_BASE}/mixed/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/mixed/templates",
     architecture="SDWAN",

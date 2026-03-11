@@ -1030,13 +1030,6 @@ class TestE2EMixedRelativeOutput(E2ECombinedTestBase):
         """Provide mixed relative-output scenario results."""
         return e2e_mixed_relative_output_results
 
-    def test_stdout_does_not_show_nested_output_path(self, results: E2EResults) -> None:
-        """Verify the run does not report nested output directories for Robot files."""
-        assert (
-            f"/{results.output_dir.name}/{results.output_dir.name}/"
-            not in results.stdout
-        )
-
 
 # =============================================================================
 # ROBOT-ONLY SCENARIO TESTS

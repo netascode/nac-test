@@ -12,7 +12,6 @@ Common fixtures (mock_api_server, class_mocker, etc.) are inherited
 from the global tests/conftest.py.
 """
 
-import os
 import tempfile
 from collections.abc import Generator
 from dataclasses import dataclass
@@ -211,7 +210,7 @@ def _run_e2e_scenario(
     output_arg = str(output_dir)
 
     if scenario.relative_output_path:
-        output_arg = os.path.relpath(output_dir, Path.cwd())
+        output_arg = str(output_dir.relative_to(Path.cwd(), walk_up=True))
 
     arch = scenario.architecture
     if mock_api_server:

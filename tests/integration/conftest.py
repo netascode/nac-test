@@ -3,10 +3,10 @@
 
 """Shared fixtures for integration tests."""
 
-import os
 import shutil
 import tempfile
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 
@@ -21,13 +21,14 @@ def temp_cwd_dir() -> Generator[str, None, None]:
     from the repo root instead of an absolute system temp path.
 
     Yields:
-        Relative path string to the created directory.
+        str: Relative path string to the created directory.
     """
-    temp_dir = tempfile.mkdtemp(dir=os.getcwd(), prefix="__nac_tmp_")
+    cwd = Path.cwd()
+    temp_dir = Path(tempfile.mkdtemp(dir=cwd, prefix="__nac_tmp_"))
     try:
-        yield os.path.relpath(temp_dir, os.getcwd())
+        yield str(temp_dir.relative_to(cwd))
     finally:
-        if os.path.exists(temp_dir):
+        if temp_dir.exists():
             shutil.rmtree(temp_dir)
 
 

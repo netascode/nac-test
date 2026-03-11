@@ -97,7 +97,28 @@ def run_pabot(
     ordering_file: Path | None = None,
     extra_args: list[str] | None = None,
 ) -> int:
-    """Run pabot"""
+    """Run pabot against rendered Robot suites in the output directory.
+
+    Args:
+        path: Base output directory containing the rendered Robot suites.
+        include: Robot include tags to pass through to pabot.
+        exclude: Robot exclude tags to pass through to pabot.
+        processes: Number of pabot worker processes to use.
+        dry_run: Whether to execute Robot in dry-run mode.
+        verbose: Whether to enable pabot verbose output.
+        robot_loglevel: Robot Framework log level to pass through.
+        ordering_file: Optional pabot ordering file for test-level splitting.
+        extra_args: Additional validated Robot Framework arguments.
+
+    Returns:
+        int: Pabot exit code.
+
+    Notes:
+        The output path is resolved to an absolute path before building pabot
+        arguments. Relative paths can otherwise be resolved twice by
+        Robot/Pabot, which creates nested output directories and breaks later
+        artifact discovery.
+    """
     include = include or []
     exclude = exclude or []
     robot_args: list[str] = []
