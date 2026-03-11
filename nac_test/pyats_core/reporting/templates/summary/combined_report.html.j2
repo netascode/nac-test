@@ -436,10 +436,14 @@
                 </div>
                 <div class="summary-item rate">
                     <p>Success Rate</p>
+                    {% if overall_stats.pre_flight_failure %}
+                    <h3 style="color: var(--danger);"><strong>--</strong></h3>
+                    {% else %}
                     <h3>{{ "%.1f"|format(overall_stats.success_rate) }}%</h3>
                     <div class="progress-container">
                         <div class="progress-bar" style="--progress-width: {{ overall_stats.success_rate }}%"></div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -452,9 +456,11 @@
                     <span class="test-type-badge {{ test_type.lower() }}-badge">{{ test_type }}</span>
                     <h2>{{ framework_data.title }} Test Results</h2>
                 </div>
+                {% if not framework_data.is_pre_flight_failure %}
                 <a href="{{ framework_data.report_path }}" class="view-report-btn">
                     View Detailed Report →
                 </a>
+                {% endif %}
             </div>
             
             {% if framework_data.is_pre_flight_failure %}
