@@ -49,6 +49,7 @@ class E2EScenario:
         ""  # Controller type: "SDWAN", "ACI", "CC" - determines env var prefix
     )
     is_dry_run: bool = False  # Dry-run mode: validates structure without execution
+    relative_output_path: bool = False
 
     # Expected CLI behavior
     expected_exit_code: int = 0
@@ -266,6 +267,23 @@ MIXED_SCENARIO = E2EScenario(
     expected_pyats_api_passed=0,
     expected_pyats_api_failed=1,
     # PyATS D2D: verify_iosxe_control.py (IOSXETestBase) - 1 pass
+    expected_pyats_d2d_passed=1,
+    expected_pyats_d2d_failed=0,
+    expected_d2d_hostnames=["sd-dc-c8kv-01"],
+)
+
+MIXED_RELATIVE_OUTPUT_SCENARIO = E2EScenario(
+    name="mixed_relative_output",
+    description="Mixed results using a relative output path - Robot (1 pass, 1 fail) + PyATS API (0 pass, 1 fail) + PyATS D2D (1 pass, 0 fail)",
+    data_path=f"{_FIXTURE_BASE}/mixed/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/mixed/templates",
+    architecture="SDWAN",
+    relative_output_path=True,
+    expected_exit_code=2,
+    expected_robot_passed=1,
+    expected_robot_failed=1,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=1,
     expected_pyats_d2d_passed=1,
     expected_pyats_d2d_failed=0,
     expected_d2d_hostnames=["sd-dc-c8kv-01"],

@@ -12,6 +12,7 @@ Common fixtures (mock_api_server, class_mocker, etc.) are inherited
 from the global tests/conftest.py.
 """
 
+import os
 import tempfile
 from collections.abc import Generator
 from dataclasses import dataclass
@@ -27,6 +28,7 @@ from tests.e2e.config import (
     DRY_RUN_PYATS_ONLY_SCENARIO,
     DRY_RUN_ROBOT_FAIL_SCENARIO,
     DRY_RUN_SCENARIO,
+    MIXED_RELATIVE_OUTPUT_SCENARIO,
     MIXED_SCENARIO,
     PYATS_API_ONLY_SCENARIO,
     PYATS_CC_SCENARIO,
@@ -206,6 +208,10 @@ def _run_e2e_scenario(
 
     # Create scenario-specific temp directory
     output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
+    output_arg = str(output_dir)
+
+    if scenario.relative_output_path:
+        output_arg = os.path.relpath(output_dir, Path.cwd())
 
     arch = scenario.architecture
     if mock_api_server:
@@ -228,7 +234,7 @@ def _run_e2e_scenario(
         "-t",
         scenario.templates_path,
         "-o",
-        str(output_dir),
+        output_arg,
     ]
 
     if scenario.requires_testbed and sdwan_user_testbed:
@@ -309,6 +315,23 @@ def e2e_mixed_results(
     """Execute the mixed scenario once and cache results for the class."""
     return _run_e2e_scenario(
         MIXED_SCENARIO,
+        mock_api_server,
+        sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_mixed_relative_output_results(
+    mock_api_server: MockAPIServer,
+    sdwan_user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the mixed scenario once using a relative output path."""
+    return _run_e2e_scenario(
+        MIXED_RELATIVE_OUTPUT_SCENARIO,
         mock_api_server,
         sdwan_user_testbed,
         tmp_path_factory,
