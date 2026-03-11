@@ -47,7 +47,10 @@ from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.utils import sanitize_hostname
-from nac_test.utils.controller import detect_controller_type
+from nac_test.utils.controller import (
+    detect_controller_type,
+    get_defaults_prefix,
+)
 from nac_test.utils.formatting import format_file_timestamp_ms
 
 T = TypeVar("T")
@@ -834,23 +837,14 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                         "tenants.bgp_peers.admin_state",
                     )
         """
-        from nac_test.utils.controller import CONTROLLER_TO_DEFAULTS_PREFIX
-
         # Use controller type already detected in setup()
         # No need to re-detect (would perform 21 env var lookups)
-        defaults_prefix = CONTROLLER_TO_DEFAULTS_PREFIX[self.controller_type]
-
-        # Construct architecture-specific error message
-        missing_error = (
-            f"{self.controller_type} defaults file required. "
-            f"Pass -d ./defaults/ to include {defaults_prefix} configuration."
-        )
+        defaults_prefix = get_defaults_prefix(self.controller_type)
 
         return _resolve(
             self.data_model,
             *default_paths,
             defaults_prefix=defaults_prefix,
-            missing_error=missing_error,
             required=required,
         )
 
