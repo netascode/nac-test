@@ -19,11 +19,23 @@ the merged NAC data model.
 import logging
 import os
 from dataclasses import dataclass
-from typing import cast
+from typing import TypedDict, cast
 
 from nac_test.core.types import ControllerTypeKey
 
 logger = logging.getLogger(__name__)
+
+
+class CredentialSetStatus(TypedDict):
+    """Status of a controller credential set.
+
+    Attributes:
+        present: List of environment variable names that are set.
+        missing: List of environment variable names that are not set.
+    """
+
+    present: list[str]
+    missing: list[str]
 
 
 @dataclass(frozen=True)
@@ -159,7 +171,7 @@ def detect_controller_type() -> ControllerTypeKey:
 
     # Check for no credentials at all
     if not complete_sets and not partial_sets:
-        error_message = _format_no_credentials_error(partial_sets)
+        error_message = _format_no_credentials_error()
         logger.error("No controller credentials found in environment")
         raise ValueError(error_message)
 
@@ -171,7 +183,7 @@ def detect_controller_type() -> ControllerTypeKey:
         ]
         error_message = (
             f"Incomplete controller credentials detected:\n"
-            f"{chr(10).join(f'  - {info}' for info in incomplete_info)}\n\n"
+            f"{'\n'.join(f'  - {info}' for info in incomplete_info)}\n\n"
             f"Please provide ALL required environment variables for your controller type."
         )
         logger.error(f"Incomplete credentials: {partial_sets}")
@@ -185,7 +197,7 @@ def detect_controller_type() -> ControllerTypeKey:
     return controller_type
 
 
-def _find_credential_sets() -> tuple[list[str], dict[str, dict[str, list[str]]]]:
+def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
     """Find complete and partial credential sets in environment.
 
     Examines environment variables to identify which controller types have
@@ -194,7 +206,7 @@ def _find_credential_sets() -> tuple[list[str], dict[str, dict[str, list[str]]]]
     Returns:
         A tuple containing:
             - List of controller types with complete credentials
-            - Dictionary mapping controller types to dict with "present" and "missing" lists
+            - Dictionary mapping controller types to CredentialSetStatus
 
     Example:
         >>> os.environ.update({"ACI_URL": "https://apic.local", "ACI_USERNAME": "admin"})
@@ -205,7 +217,7 @@ def _find_credential_sets() -> tuple[list[str], dict[str, dict[str, list[str]]]]
         {"ACI": {"present": ["ACI_URL", "ACI_USERNAME"], "missing": ["ACI_PASSWORD"]}}
     """
     complete_sets: list[str] = []
-    partial_sets: dict[str, dict[str, list[str]]] = {}
+    partial_sets: dict[str, CredentialSetStatus] = {}
 
     for controller_type, config in CONTROLLER_REGISTRY.items():
         required_vars = config.required_env_vars
@@ -288,23 +300,17 @@ def _format_multiple_credentials_error(controllers: list[str]) -> str:
     return message
 
 
-def _format_no_credentials_error(
-    partial_credentials: dict[str, dict[str, list[str]]],
-) -> str:
+def _format_no_credentials_error() -> str:
     """Format error message when no controller credentials are found.
 
     Creates a detailed error message with setup instructions when no controller
     credentials are detected in the environment.
 
-    Args:
-        partial_credentials: Dictionary of partial credential sets (not used here,
-            but included for consistency with the calling pattern).
-
     Returns:
         Formatted error message with setup guidance.
 
     Example:
-        >>> error = _format_no_credentials_error({})
+        >>> error = _format_no_credentials_error()
         >>> print(error)
         No controller credentials found in environment.
         ...

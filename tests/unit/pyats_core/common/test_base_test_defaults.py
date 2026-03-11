@@ -87,9 +87,11 @@ class TestNACTestBaseDefaults:
         apic_data_model: dict[str, Any],
         aci_controller_env: None,
     ) -> None:
-        """get_default_value auto-detects ACI controller and uses defaults.apic prefix."""
+        """get_default_value uses self.controller_type set by setup() to find defaults prefix."""
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = apic_data_model
+        # Simulate what setup() does - set controller_type
+        instance.controller_type = "ACI"
 
         with patch(
             "nac_test.pyats_core.common.base_test._resolve",
@@ -97,7 +99,7 @@ class TestNACTestBaseDefaults:
         ) as mock_resolve:
             result = instance.get_default_value("fabric.name")
 
-        # Should auto-detect ACI and use defaults.apic prefix
+        # Should use self.controller_type (ACI) and map to defaults.apic prefix
         _, kwargs = mock_resolve.call_args
         assert kwargs["defaults_prefix"] == "defaults.apic"
         assert "ACI defaults file required" in kwargs["missing_error"]
@@ -109,9 +111,10 @@ class TestNACTestBaseDefaults:
         sdwan_data_model: dict[str, Any],
         sdwan_controller_env: None,
     ) -> None:
-        """get_default_value auto-detects SD-WAN controller and uses defaults.sdwan prefix."""
+        """get_default_value uses self.controller_type to find defaults.sdwan prefix."""
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = sdwan_data_model
+        instance.controller_type = "SDWAN"
 
         with patch(
             "nac_test.pyats_core.common.base_test._resolve",
@@ -129,9 +132,10 @@ class TestNACTestBaseDefaults:
         nac_test_base_class: Any,
         cc_controller_env: None,
     ) -> None:
-        """get_default_value auto-detects Catalyst Center and uses defaults.catc prefix."""
+        """get_default_value uses self.controller_type to find defaults.catc prefix."""
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = {"defaults": {"catc": {"timeout": 30}}}
+        instance.controller_type = "CC"
 
         with patch(
             "nac_test.pyats_core.common.base_test._resolve",
@@ -149,9 +153,10 @@ class TestNACTestBaseDefaults:
         nac_test_base_class: Any,
         iosxe_controller_env: None,
     ) -> None:
-        """get_default_value auto-detects IOS-XE and uses defaults.iosxe prefix."""
+        """get_default_value uses self.controller_type to find defaults.iosxe prefix."""
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = {"defaults": {"iosxe": {"timeout": 30}}}
+        instance.controller_type = "IOSXE"
 
         with patch(
             "nac_test.pyats_core.common.base_test._resolve",
@@ -169,16 +174,15 @@ class TestNACTestBaseDefaults:
         nac_test_base_class: Any,
         apic_data_model: dict[str, Any],
     ) -> None:
-        """get_default_value raises ValueError when no controller credentials found."""
+        """get_default_value requires controller_type to be set by setup()."""
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = apic_data_model
+        # Don't set controller_type - simulates calling before setup()
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(AttributeError) as exc_info:
             instance.get_default_value("fabric.name")
 
-        error_message = str(exc_info.value)
-        assert "Cannot resolve defaults - controller detection failed" in error_message
-        assert "No controller credentials found" in error_message
+        assert "controller_type" in str(exc_info.value)
 
     def test_delegates_to_resolver_with_cascade_paths(
         self,
@@ -189,6 +193,7 @@ class TestNACTestBaseDefaults:
         """get_default_value delegates cascade paths to _resolve correctly."""
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = apic_data_model
+        instance.controller_type = "ACI"
 
         with patch(
             "nac_test.pyats_core.common.base_test._resolve",
@@ -217,6 +222,7 @@ class TestNACTestBaseDefaults:
         """required parameter defaults to True when not explicitly passed."""
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = apic_data_model
+        instance.controller_type = "ACI"
 
         with patch(
             "nac_test.pyats_core.common.base_test._resolve",
@@ -235,6 +241,7 @@ class TestNACTestBaseDefaults:
         data_model = {"defaults": {"apic": {"key": "value"}}}
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = data_model
+        instance.controller_type = "ACI"
 
         with patch(
             "nac_test.pyats_core.common.base_test._resolve",

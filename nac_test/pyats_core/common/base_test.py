@@ -88,46 +88,6 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         "INFO": ResultStatus.INFO,
     }
 
-    # Defaults resolution configuration (architectures opt-in by setting DEFAULTS_PREFIX)
-    DEFAULTS_PREFIX: str | None = None  # Subclasses override, e.g., "defaults.apic"
-    DEFAULTS_MISSING_ERROR: str = (
-        "Defaults block not found in data model. "
-        "Ensure the defaults file is passed to nac-test."
-    )
-
-    # def __init_subclass__(cls, **kwargs):
-    #     """Enforce required class variables in subclasses.
-
-    #     This method validates that concrete test classes define required
-    #     class variables for proper test metadata and reporting.
-
-    #     Args:
-    #         **kwargs: Additional keyword arguments passed to super().__init_subclass__
-
-    #     Raises:
-    #         TypeError: If required class variables are not defined
-    #     """
-    #     super().__init_subclass__(**kwargs)
-
-    #     # Skip validation for known abstract intermediate classes
-    #     # These classes extend NACTestBase but are still meant to be subclassed
-    #     abstract_classes = {
-    #         'APICTestBase',
-    #         'SSHTestBase',
-    #         'NACTestBase'  # Include self to handle edge cases
-    #     }
-
-    #     if cls.__name__ in abstract_classes:
-    #         return
-
-    #     # Enforce TEST_TYPE_NAME for concrete test classes
-    #     if not hasattr(cls, 'TEST_TYPE_NAME') or cls.TEST_TYPE_NAME is None:
-    #         raise TypeError(
-    #             f"{cls.__name__} must define TEST_TYPE_NAME class variable. "
-    #             f"Example: TEST_TYPE_NAME = 'BGP Peer' or 'Bridge Domain' or 'BFD Session'. "
-    #             f"This should be a human-readable name for the type of network element being tested."
-    #         )
-
     @classmethod
     @lru_cache(maxsize=1)
     def get_rendered_metadata(cls) -> dict[str, str]:
@@ -874,33 +834,15 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                         "tenants.bgp_peers.admin_state",
                     )
         """
-        from nac_test.utils.controller import (
-            CONTROLLER_TO_DEFAULTS_PREFIX,
-            detect_controller_type,
-        )
+        from nac_test.utils.controller import CONTROLLER_TO_DEFAULTS_PREFIX
 
-        # Auto-detect controller type from environment
-        try:
-            controller_type = detect_controller_type()
-        except ValueError as e:
-            # Re-raise with defaults-specific context
-            raise ValueError(
-                f"Cannot resolve defaults - controller detection failed: {e}"
-            ) from e
-
-        # Look up the defaults prefix for this controller type
-        defaults_prefix = CONTROLLER_TO_DEFAULTS_PREFIX.get(controller_type)
-
-        if defaults_prefix is None:
-            raise ValueError(
-                f"No defaults prefix mapping configured for controller type: {controller_type}. "
-                f"This is a framework configuration error - please report this issue."
-            )
+        # Use controller type already detected in setup()
+        # No need to re-detect (would perform 21 env var lookups)
+        defaults_prefix = CONTROLLER_TO_DEFAULTS_PREFIX[self.controller_type]
 
         # Construct architecture-specific error message
-        controller_name = controller_type.upper()
         missing_error = (
-            f"{controller_name} defaults file required. "
+            f"{self.controller_type} defaults file required. "
             f"Pass -d ./defaults/ to include {defaults_prefix} configuration."
         )
 
