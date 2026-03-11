@@ -447,6 +447,11 @@ def main(
         raise typer.Exit(0)
 
     if stats.pre_flight_failure is not None:
+        pf = stats.pre_flight_failure
+        typer.echo(
+            f"\n❌  Pre-flight failure ({pf.failure_type.value})",
+            err=True,
+        )
         raise typer.Exit(stats.exit_code)
 
     if stats.has_errors:
