@@ -503,7 +503,6 @@ def e2e_dry_run_robot_fail_results(
 
 @pytest.fixture(scope="class")
 def e2e_windows_pyats_skip_results(
-    mock_api_server: MockAPIServer,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
