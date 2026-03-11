@@ -10,9 +10,6 @@ handling and test-level splitting behavior.
 
 import os
 import re
-import shutil
-import tempfile
-from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -24,21 +21,6 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.usefixtures("setup_bogus_controller_env"),
 ]
-
-
-@pytest.fixture
-def temp_cwd_dir() -> Generator[str, None, None]:
-    """Create a unique temporary directory in the current working directory.
-
-    The directory is automatically cleaned up after the test completes.
-
-    Yields:
-        Path to the temporary directory.
-    """
-    temp_dir = tempfile.mkdtemp(dir=os.getcwd(), prefix="output_")
-    yield temp_dir
-    if os.path.exists(temp_dir):
-        shutil.rmtree(temp_dir)
 
 
 @pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_cwd_dir"])
