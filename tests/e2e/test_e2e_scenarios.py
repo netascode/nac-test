@@ -37,6 +37,7 @@ from nac_test.core.constants import (
     XUNIT_XML,
 )
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
+from tests.conftest import assert_is_link_to
 from tests.e2e.conftest import E2EResults
 from tests.e2e.html_helpers import (
     assert_combined_stats,
@@ -227,28 +228,6 @@ class E2ECombinedTestBase:
     # Robot Backward Compatibility Tests (hard links preferred, symlinks as fallback)
     # -------------------------------------------------------------------------
 
-    @staticmethod
-    def _assert_is_link_to(link: Path, source: Path) -> None:
-        """Assert that link points to source (hard link or symlink).
-
-        The implementation tries hard links first (cross-platform), falling back
-        to symlinks on Unix if hard links fail. This helper accepts either type.
-        """
-        if link.is_symlink():
-            # Symlink: verify it resolves to source
-            assert link.resolve() == source, (
-                f"Symlink points to wrong location:\n"
-                f"  Expected: {source}\n"
-                f"  Got: {link.resolve()}"
-            )
-        else:
-            # Hard link: verify same inode
-            assert link.stat().st_ino == source.stat().st_ino, (
-                f"Hard link mismatch:\n"
-                f"  Link inode: {link.stat().st_ino}\n"
-                f"  Source inode: {source.stat().st_ino}"
-            )
-
     def test_robot_output_xml_link_exists(self, results: E2EResults) -> None:
         """Verify output.xml link exists at root."""
         if not results.has_robot_results:
@@ -256,7 +235,7 @@ class E2ECombinedTestBase:
         link = results.output_dir / OUTPUT_XML
         source = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
         assert link.exists(), "Missing output.xml link at root"
-        self._assert_is_link_to(link, source)
+        assert_is_link_to(link, source)
 
     def test_robot_links_point_correctly(self, results: E2EResults) -> None:
         """Verify links correctly point to robot_results/ subdirectory."""
@@ -264,7 +243,7 @@ class E2ECombinedTestBase:
             pytest.skip("No Robot results in this scenario")
         link = results.output_dir / OUTPUT_XML
         source = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
-        self._assert_is_link_to(link, source)
+        assert_is_link_to(link, source)
 
     # -------------------------------------------------------------------------
     # Robot Summary Report Tests

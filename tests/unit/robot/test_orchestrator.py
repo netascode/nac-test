@@ -23,6 +23,7 @@ from nac_test.core.constants import (
 from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
+from tests.conftest import assert_is_link_to
 
 
 @pytest.fixture
@@ -124,11 +125,7 @@ class TestRobotOrchestrator:
             link = temp_output_dir / filename
             source = robot_results_dir / filename
             assert link.exists(), f"Link not created for {filename}"
-            # Check it's either a hard link (same inode) or symlink to source
-            if link.is_symlink():
-                assert link.resolve() == source
-            else:
-                assert link.stat().st_ino == source.stat().st_ino
+            assert_is_link_to(link, source)
             assert link.read_text() == f"Mock {filename}"
 
     def test_create_backward_compat_links_replaces_existing(
