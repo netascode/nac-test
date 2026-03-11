@@ -165,6 +165,29 @@ class TestRobotOrchestrator:
         # Verify warning was logged
         assert "Source file not found" in caplog.text
 
+    def test_create_backward_compat_links_falls_back_to_symlink(
+        self, orchestrator, temp_output_dir, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test link creation falls back to symlink when hard links fail on Unix."""
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+
+        source = robot_results_dir / OUTPUT_XML
+        source.write_text("<robot></robot>")
+
+        monkeypatch.setattr("nac_test.robot.orchestrator.IS_WINDOWS", False)
+
+        def fail_hardlink(self: Path, target: Path) -> None:
+            raise OSError("hard links not supported")
+
+        monkeypatch.setattr(Path, "hardlink_to", fail_hardlink)
+
+        orchestrator._create_backward_compat_links()
+
+        link = temp_output_dir / OUTPUT_XML
+        assert link.is_symlink()
+        assert link.resolve() == source
+
     @patch("nac_test.robot.orchestrator.run_pabot")
     def test_run_tests_render_only_mode(
         self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
