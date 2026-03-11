@@ -519,3 +519,74 @@ class TestCombinedResultsStringRepresentation:
         )
         expected = "CombinedResults(API: 5/5/0/0, D2D: 3/2/1/0, Robot: 10/8/1/1)"
         assert str(result) == expected
+
+
+class TestCombinedResultsHasAnyResults:
+    """Tests for CombinedResults.has_any_results property."""
+
+    def test_empty_results_has_no_results(self) -> None:
+        """has_any_results is False when no framework results are set."""
+        results = CombinedResults()
+        assert results.has_any_results is False
+
+    def test_with_api_results_has_results(self) -> None:
+        """has_any_results is True when API results are present."""
+        results = CombinedResults(api=TestResults(passed=1))
+        assert results.has_any_results is True
+
+    def test_with_d2d_results_has_results(self) -> None:
+        """has_any_results is True when D2D results are present."""
+        results = CombinedResults(d2d=TestResults(passed=1))
+        assert results.has_any_results is True
+
+    def test_with_robot_results_has_results(self) -> None:
+        """has_any_results is True when Robot results are present."""
+        results = CombinedResults(robot=TestResults(passed=1))
+        assert results.has_any_results is True
+
+    def test_with_all_results_has_results(self) -> None:
+        """has_any_results is True when all framework results are present."""
+        results = CombinedResults(
+            api=TestResults(passed=1),
+            d2d=TestResults(passed=2),
+            robot=TestResults(passed=3),
+        )
+        assert results.has_any_results is True
+
+    def test_with_empty_test_results_has_results(self) -> None:
+        """has_any_results is True even when TestResults are empty (0 tests).
+
+        The property checks if frameworks *ran*, not if they produced tests.
+        An empty TestResults object still indicates execution occurred.
+        """
+        results = CombinedResults(api=TestResults.empty())
+        assert results.has_any_results is True
+
+    def test_with_preflight_failure_only_has_no_results(self) -> None:
+        """has_any_results is False when only pre_flight_failure is set."""
+        from nac_test.core.types import PreFlightFailure, PreFlightFailureType
+
+        results = CombinedResults(
+            pre_flight_failure=PreFlightFailure(
+                failure_type=PreFlightFailureType.AUTH,
+                detail="Auth failed",
+                controller_type="ACI",
+                controller_url="https://example.com",
+            )
+        )
+        assert results.has_any_results is False
+
+    def test_with_preflight_failure_and_robot_has_results(self) -> None:
+        """has_any_results is True when pre_flight_failure + Robot results exist."""
+        from nac_test.core.types import PreFlightFailure, PreFlightFailureType
+
+        results = CombinedResults(
+            pre_flight_failure=PreFlightFailure(
+                failure_type=PreFlightFailureType.AUTH,
+                detail="Auth failed",
+                controller_type="ACI",
+                controller_url="https://example.com",
+            ),
+            robot=TestResults(passed=5, failed=1),
+        )
+        assert results.has_any_results is True

@@ -20,6 +20,20 @@ from nac_test.core.constants import (
 ControllerTypeKey = Literal["ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"]
 
 
+class PreFlightFailureType(str, Enum):
+    """Type of pre-flight failure that prevented PyATS execution.
+
+    Attributes:
+        AUTH: Authentication failed (invalid credentials, 401/403).
+        UNREACHABLE: Controller unreachable (network error, timeout, 5xx).
+        DETECTION: Controller type could not be detected (no credentials set).
+    """
+
+    AUTH = "auth"
+    UNREACHABLE = "unreachable"
+    DETECTION = "detection"
+
+
 class ExecutionState(str, Enum):
     """Execution state for test results.
 
@@ -207,17 +221,17 @@ class PreFlightFailure:
     all test counts will be zero.
 
     Attributes:
-        failure_type: Category of failure - constrained to "auth" or "unreachable".
-        controller_type: Controller identifier ("ACI", "SDWAN", "CC").
-        controller_url: URL that was tested.
+        failure_type: Category of failure.
+        controller_type: Controller identifier, or None for detection failures.
+        controller_url: URL that was tested, or None for detection failures.
         detail: Human-readable error description.
         status_code: HTTP status code from the failed request, or None for
             non-HTTP failures (e.g., connection timeout, DNS failure).
     """
 
-    failure_type: Literal["auth", "unreachable"]
-    controller_type: ControllerTypeKey
-    controller_url: str
+    failure_type: PreFlightFailureType
+    controller_type: ControllerTypeKey | None
+    controller_url: str | None
     detail: str
     status_code: int | None = None
 
@@ -298,6 +312,11 @@ class CombinedResults:
     def was_not_run(self) -> bool:
         """Check if all frameworks were intentionally not run (e.g., render-only mode)."""
         return bool(self._results) and all(r.was_not_run for r in self._results)
+
+    @property
+    def has_any_results(self) -> bool:
+        """Check if any test framework produced results (tests actually ran)."""
+        return bool(self._results)
 
     @property
     def success_rate(self) -> float:

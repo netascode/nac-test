@@ -340,6 +340,46 @@
             display: none !important;
         }
 
+        .preflight-failure {
+            background: linear-gradient(135deg, #b03a2e, #e74c3c);
+            border-radius: 8px;
+            color: white;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+        }
+
+        .preflight-failure .failure-icon {
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+
+        .preflight-failure .failure-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .preflight-failure .failure-text {
+            display: flex;
+            align-items: center;
+        }
+
+        .preflight-failure a {
+            color: white;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+
+        .preflight-failure a:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
         /* Responsive design */
         @media (max-width: 768px) {
             .container {
@@ -417,6 +457,17 @@
                 </a>
             </div>
             
+            {% if framework_data.is_pre_flight_failure %}
+            <div class="preflight-failure">
+                <div class="failure-content">
+                    <div class="failure-text">
+                        <span class="failure-icon">⚠️</span>
+                        <strong>Pre-flight failure — tests not executed</strong>
+                    </div>
+                    <a href="{{ framework_data.report_path }}">View details →</a>
+                </div>
+            </div>
+            {% else %}
             <div class="mini-stats">
                 <div class="mini-stat">
                     <div class="mini-stat-value total-value">{{ framework_data.stats.total }}</div>
@@ -439,6 +490,7 @@
                     <div class="mini-stat-label">Success Rate</div>
                 </div>
             </div>
+            {% endif %}
         </div>
         {% endfor %}
 

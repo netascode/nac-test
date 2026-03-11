@@ -16,7 +16,6 @@ from nac_test.cli.ui import (
 from nac_test.cli.validators import AuthOutcome, preflight_auth_check
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
-    EXIT_ERROR,
     HTML_REPORTS_DIRNAME,
     PYATS_RESULTS_DIRNAME,
     ROBOT_RESULTS_DIRNAME,
@@ -27,6 +26,7 @@ from nac_test.core.types import (
     CombinedResults,
     ControllerTypeKey,
     PreFlightFailure,
+    PreFlightFailureType,
     TestResults,
 )
 from nac_test.pyats_core.discovery import TestDiscovery
@@ -181,6 +181,7 @@ class CombinedOrchestrator:
         # Pre-flight: detect controller and validate credentials for PyATS path only.
         # Robot path stays generic — it may not need controller access at all.
         # Dry-run mode skips auth — it validates test structure, not execution.
+        preflight_failed = False
         if has_pyats and not self.render_only and not self.dry_run:
             try:
                 self.controller_type = detect_controller_type()
@@ -191,47 +192,48 @@ class CombinedOrchestrator:
                     fg=typer.colors.RED,
                     err=True,
                 )
-                raise typer.Exit(EXIT_ERROR) from None
-
-            auth_result = preflight_auth_check(self.controller_type)
-            if not auth_result.success:
-                typer.echo("")
-                if auth_result.reason == AuthOutcome.UNREACHABLE:
-                    display_unreachable_banner(
-                        controller_type=auth_result.controller_type,
-                        controller_url=auth_result.controller_url,
-                        detail=auth_result.detail,
-                    )
-                else:
-                    env_var_prefix = get_env_var_prefix(auth_result.controller_type)
-                    display_auth_failure_banner(
-                        controller_type=auth_result.controller_type,
-                        controller_url=auth_result.controller_url,
-                        detail=auth_result.detail,
-                        env_var_prefix=env_var_prefix,
-                    )
-                typer.echo("")
-
                 combined_results.pre_flight_failure = PreFlightFailure(
-                    failure_type=(
-                        "unreachable"
-                        if auth_result.reason == AuthOutcome.UNREACHABLE
-                        else "auth"
-                    ),
-                    controller_type=auth_result.controller_type,
-                    controller_url=auth_result.controller_url,
-                    detail=auth_result.detail,
-                    status_code=auth_result.status_code,
+                    failure_type=PreFlightFailureType.DETECTION,
+                    controller_type=None,
+                    controller_url=None,
+                    detail=str(e),
                 )
+                preflight_failed = True
 
-                # Generate report and bail — no PyATS execution possible
-                generator = CombinedReportGenerator(self.output_dir)
-                report_path = generator.generate_combined_summary(combined_results)
-                if report_path is not None:
-                    typer.echo(f"Report: {report_path}")
-                return combined_results
+            if not preflight_failed and self.controller_type is not None:
+                auth_result = preflight_auth_check(self.controller_type)
+                if not auth_result.success:
+                    typer.echo("")
+                    if auth_result.reason == AuthOutcome.UNREACHABLE:
+                        display_unreachable_banner(
+                            controller_type=auth_result.controller_type,
+                            controller_url=auth_result.controller_url,
+                            detail=auth_result.detail,
+                        )
+                    else:
+                        env_var_prefix = get_env_var_prefix(auth_result.controller_type)
+                        display_auth_failure_banner(
+                            controller_type=auth_result.controller_type,
+                            controller_url=auth_result.controller_url,
+                            detail=auth_result.detail,
+                            env_var_prefix=env_var_prefix,
+                        )
+                    typer.echo("")
 
-        if has_pyats and not self.render_only:
+                    combined_results.pre_flight_failure = PreFlightFailure(
+                        failure_type=(
+                            PreFlightFailureType.UNREACHABLE
+                            if auth_result.reason == AuthOutcome.UNREACHABLE
+                            else PreFlightFailureType.AUTH
+                        ),
+                        controller_type=auth_result.controller_type,
+                        controller_url=auth_result.controller_url,
+                        detail=auth_result.detail,
+                        status_code=auth_result.status_code,
+                    )
+                    preflight_failed = True
+
+        if has_pyats and not self.render_only and not preflight_failed:
             typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
             self._check_python_version()
 
@@ -295,15 +297,16 @@ class CombinedOrchestrator:
             if combined_path:
                 logger.info(f"Combined dashboard generated: {combined_path}")
 
-            merged_xunit = None
-            try:
-                merged_xunit = merge_xunit_results(self.output_dir)
-            except Exception as e:
-                logger.warning(f"Failed to merge xunit files: {e}")
-            if merged_xunit:
-                logger.info(f"Merged xunit.xml: {merged_xunit}")
-            else:
-                logger.warning("No xunit files found to merge")
+            if combined_results.has_any_results:
+                merged_xunit = None
+                try:
+                    merged_xunit = merge_xunit_results(self.output_dir)
+                except Exception as e:
+                    logger.warning(f"Failed to merge xunit files: {e}")
+                if merged_xunit:
+                    logger.info(f"Merged xunit.xml: {merged_xunit}")
+                else:
+                    logger.warning("No xunit files found to merge")
 
             self._print_execution_summary(combined_results)
 
