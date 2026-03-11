@@ -19,6 +19,13 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError as YAMLError  # noqa: PLC0414 - re-export
 
 
+def _create_yaml_dumper() -> YAML:
+    """Create a safe YAML dumper with nac-test defaults."""
+    yaml_dumper = YAML(typ="safe", pure=True)
+    yaml_dumper.default_flow_style = False
+    return yaml_dumper
+
+
 def safe_load(stream: str | IO[str]) -> Any:
     """Load YAML safely from a string or file-like object.
 
@@ -56,8 +63,7 @@ def dump(data: Any) -> str:
         >>> dump({"key": "value"})
         'key: value\\n'
     """
-    y = YAML()
-    y.default_flow_style = False
+    y = _create_yaml_dumper()
     s = StringIO()
     y.dump(data, s)
     return s.getvalue()
@@ -76,6 +82,5 @@ def dump_to_stream(data: Any, stream: IO[str]) -> None:
         >>> with open("output.yaml", "w") as f:
         ...     dump_to_stream({"key": "value"}, f)
     """
-    y = YAML()
-    y.default_flow_style = False
+    y = _create_yaml_dumper()
     y.dump(data, stream)

@@ -5,6 +5,9 @@
 
 from io import StringIO
 
+import pytest
+from ruamel.yaml.error import YAMLError
+
 from nac_test.utils.yaml import dump, dump_to_stream, safe_load
 
 
@@ -26,6 +29,11 @@ class TestSafeLoad:
         """Empty YAML document returns None."""
         assert safe_load("") is None
 
+    def test_load_invalid_yaml_raises_yaml_error(self) -> None:
+        """Malformed YAML raises the wrapped parser error."""
+        with pytest.raises(YAMLError):
+            safe_load("key: [unterminated")
+
 
 class TestDump:
     """Tests for dump function."""
@@ -33,7 +41,13 @@ class TestDump:
     def test_dump_returns_string(self) -> None:
         """Dump returns YAML string."""
         result = dump({"key": "value"})
-        assert "key: value" in result
+        assert isinstance(result, str)
+        assert result == "key: value\n"
+
+    def test_dump_uses_block_style_for_nested_data(self) -> None:
+        """Dump uses block style instead of inline flow style."""
+        result = dump({"items": ["a", "b"]})
+        assert result == "items:\n- a\n- b\n"
 
 
 class TestDumpToStream:
@@ -43,4 +57,4 @@ class TestDumpToStream:
         """Dump to stream writes YAML content."""
         stream = StringIO()
         dump_to_stream({"key": "value"}, stream)
-        assert "key: value" in stream.getvalue()
+        assert stream.getvalue() == "key: value\n"
