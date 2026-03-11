@@ -47,3 +47,15 @@ def clean_controller_env(monkeypatch: MonkeyPatch) -> None:
     for key in list(os.environ.keys()):
         if any(prefix in key for prefix in CONTROLLER_ENV_PREFIXES):
             monkeypatch.delenv(key, raising=False)
+
+
+@pytest.fixture()
+def iosxe_controller_env(monkeypatch: MonkeyPatch) -> None:
+    """Set up IOS-XE controller environment variables for testing.
+
+    Provides consistent controller credentials for IOS-XE/D2D tests.
+    Use this fixture instead of manually setting env vars in tests.
+    """
+    monkeypatch.setenv("IOSXE_URL", "https://test.example.com")
+    monkeypatch.setenv("IOSXE_USERNAME", "test_user")
+    monkeypatch.setenv("IOSXE_PASSWORD", "test_pass")

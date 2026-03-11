@@ -9,6 +9,11 @@ ALL test types (both API and D2D tests) as they determine the architecture conte
 
 The detection logic ensures exactly one controller type is configured at a time to prevent
 ambiguous test execution contexts.
+
+The module also provides a mapping from controller types to their defaults block prefixes,
+enabling automatic defaults resolution without per-architecture configuration. For example,
+when ACI_URL is detected, the framework automatically knows to look for defaults.apic in
+the merged NAC data model.
 """
 
 import logging
@@ -25,6 +30,18 @@ CREDENTIAL_PATTERNS: dict[str, list[str]] = {
     "FMC": ["FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"],
     "ISE": ["ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"],
     "IOSXE": ["IOSXE_URL"],  # Direct device access, no controller credentials needed
+}
+
+# Map controller types to their defaults block prefix in NAC data models
+# This enables automatic defaults resolution without per-architecture configuration
+CONTROLLER_TO_DEFAULTS_PREFIX: dict[str, str] = {
+    "ACI": "defaults.apic",  # APIC = Application Policy Infrastructure Controller
+    "SDWAN": "defaults.sdwan",
+    "CC": "defaults.catc",  # Catalyst Center (formerly DNA Center)
+    "MERAKI": "defaults.meraki",
+    "FMC": "defaults.fmc",
+    "ISE": "defaults.ise",
+    "IOSXE": "defaults.iosxe",
 }
 
 

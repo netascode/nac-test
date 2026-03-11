@@ -830,13 +830,20 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         the merged NAC data model. It supports cascade behavior - when multiple
         paths are provided, the first non-None value found is returned.
 
-        Note:
-            Architectures must set the DEFAULTS_PREFIX class attribute to enable
-            this feature. If DEFAULTS_PREFIX is None, calling this method raises
-            NotImplementedError.
+        Architecture Detection:
+            The defaults prefix is automatically determined from the controller type
+            detected via environment variables (ACI_URL, SDWAN_URL, etc.). No manual
+            configuration is needed - the framework automatically maps:
+            - ACI (ACI_URL) → defaults.apic
+            - SD-WAN (SDWAN_URL) → defaults.sdwan
+            - Catalyst Center (CC_URL) → defaults.catc
+            - IOS-XE (IOSXE_URL) → defaults.iosxe
+            - Meraki (MERAKI_URL) → defaults.meraki
+            - FMC (FMC_URL) → defaults.fmc
+            - ISE (ISE_URL) → defaults.ise
 
         Args:
-            *default_paths: One or more JMESPaths relative to DEFAULTS_PREFIX.
+            *default_paths: One or more JMESPaths relative to the auto-detected prefix.
                 Single path: self.get_default_value("tenants.l3outs.nodes.pod")
                 Cascade: self.get_default_value("path1", "path2", "path3")
             required: If True (default), raises ValueError when no value found.
@@ -847,38 +854,57 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             Returns None only if required=False and no value exists.
 
         Raises:
-            NotImplementedError: If DEFAULTS_PREFIX is None (architecture doesn't
-                support defaults resolution).
+            ValueError: If no controller environment is detected, or if required
+                value is not found at any of the specified paths.
             TypeError: If no paths are provided.
-            ValueError: If defaults block is missing or required value not found.
 
         Example:
-            class APICTestBase(NACTestBase):
-                DEFAULTS_PREFIX = "defaults.apic"
-                DEFAULTS_MISSING_ERROR = "ACI defaults file required..."
-
-            class VerifyBGPPeers(APICTestBase):
+            class MyACITest(APICTestBase):
                 def get_items_to_verify(self):
-                    # Single path lookup
+                    # Auto-detects ACI_URL → uses "defaults.apic" prefix
                     default_pod = self.get_default_value("tenants.l3outs.nodes.pod")
 
                     # Cascade - returns first found
-                    default_admin_state = self.get_default_value(
+                    default_admin = self.get_default_value(
                         "tenants.l3outs.bgp_peers.admin_state",
                         "tenants.bgp_peers.admin_state",
                     )
         """
-        if self.DEFAULTS_PREFIX is None:
-            raise NotImplementedError(
-                f"{self.__class__.__name__} does not support defaults resolution. "
-                f"Set DEFAULTS_PREFIX class attribute to enable this feature."
+        from nac_test.utils.controller import (
+            CONTROLLER_TO_DEFAULTS_PREFIX,
+            detect_controller_type,
+        )
+
+        # Auto-detect controller type from environment
+        try:
+            controller_type = detect_controller_type()
+        except ValueError as e:
+            # Re-raise with defaults-specific context
+            raise ValueError(
+                f"Cannot resolve defaults - controller detection failed: {e}"
+            ) from e
+
+        # Look up the defaults prefix for this controller type
+        defaults_prefix = CONTROLLER_TO_DEFAULTS_PREFIX.get(controller_type)
+
+        if defaults_prefix is None:
+            raise ValueError(
+                f"No defaults prefix mapping configured for controller type: {controller_type}. "
+                f"This is a framework configuration error - please report this issue."
             )
+
+        # Construct architecture-specific error message
+        controller_name = controller_type.upper()
+        missing_error = (
+            f"{controller_name} defaults file required. "
+            f"Pass -d ./defaults/ to include {defaults_prefix} configuration."
+        )
 
         return _resolve(
             self.data_model,
             *default_paths,
-            defaults_prefix=self.DEFAULTS_PREFIX,
-            missing_error=self.DEFAULTS_MISSING_ERROR,
+            defaults_prefix=defaults_prefix,
+            missing_error=missing_error,
             required=required,
         )
 

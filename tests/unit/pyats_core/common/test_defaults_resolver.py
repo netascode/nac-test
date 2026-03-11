@@ -474,8 +474,13 @@ class TestGetDefaultValueErrorHandling:
     def test_missing_defaults_block_raises(
         self, empty_data_model: dict[str, Any]
     ) -> None:
-        """Should raise ValueError if defaults block is missing."""
-        with pytest.raises(ValueError, match="Defaults block not found"):
+        """Should raise ValueError if defaults block is missing (value not found).
+
+        Note: CLI validators ensure defaults exist before tests run. This test
+        validates the error message when a value lookup fails (which will happen
+        if the entire defaults block is missing).
+        """
+        with pytest.raises(ValueError, match="Required default value not found"):
             get_default_value(
                 empty_data_model,
                 "some.path",
@@ -519,20 +524,27 @@ class TestGetDefaultValueErrorHandling:
         assert "Tried paths in order" in error_message
 
     def test_custom_missing_error_used(self, empty_data_model: dict[str, Any]) -> None:
-        """Custom error message should be used when defaults block is missing."""
-        custom_error = "Custom error: Please provide defaults.yaml file."
+        """Error message should show path not found (CLI validators ensure defaults exist).
 
-        with pytest.raises(ValueError, match="Custom error"):
+        Note: The missing_error parameter is no longer used for defaults block
+        validation (CLI validators handle that). This test verifies the behavior
+        when a value is not found in an empty data model.
+        """
+        with pytest.raises(ValueError, match="Required default value not found"):
             get_default_value(
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.apic",
-                missing_error=custom_error,
+                missing_error="Custom error: Please provide defaults.yaml file.",
             )
 
     def test_none_data_model_raises(self) -> None:
-        """Should raise ValueError for None data model (treated as missing defaults)."""
-        with pytest.raises(ValueError, match="Missing defaults"):
+        """Should raise ValueError for None data model (value not found).
+
+        Note: CLI validators ensure defaults exist. This test verifies behavior
+        when data_model is None (JMESPath will return None for any path search).
+        """
+        with pytest.raises(ValueError, match="Required default value not found"):
             get_default_value(
                 None,  # type: ignore[arg-type]
                 "some.path",
@@ -602,46 +614,55 @@ class TestArchitectureAgnostic:
         assert result == "custom-value"
 
     def test_custom_error_message_apic(self, empty_data_model: dict[str, Any]) -> None:
-        """Custom error messages should be used for APIC."""
-        custom_error = "APIC defaults not found. Please pass defaults.yaml to nac-test."
+        """Should raise value not found error for APIC (CLI validators ensure defaults exist).
 
+        Note: CLI validators handle defaults block validation. This test verifies
+        the error message when a value is not found.
+        """
         with pytest.raises(ValueError) as exc_info:
             get_default_value(
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.apic",
-                missing_error=custom_error,
+                missing_error="APIC defaults not found. Please pass defaults.yaml to nac-test.",
             )
 
-        assert custom_error in str(exc_info.value)
+        assert "Required default value not found" in str(exc_info.value)
+        assert "defaults.apic.some.path" in str(exc_info.value)
 
     def test_custom_error_message_sdwan(self, empty_data_model: dict[str, Any]) -> None:
-        """Custom error messages should be used for SD-WAN."""
-        custom_error = "SD-WAN defaults not configured. Check your data directory."
+        """Should raise value not found error for SD-WAN (CLI validators ensure defaults exist).
 
+        Note: CLI validators handle defaults block validation. This test verifies
+        the error message when a value is not found.
+        """
         with pytest.raises(ValueError) as exc_info:
             get_default_value(
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.sdwan",
-                missing_error=custom_error,
+                missing_error="SD-WAN defaults not configured. Check your data directory.",
             )
 
-        assert custom_error in str(exc_info.value)
+        assert "Required default value not found" in str(exc_info.value)
+        assert "defaults.sdwan.some.path" in str(exc_info.value)
 
     def test_custom_error_message_catc(self, empty_data_model: dict[str, Any]) -> None:
-        """Custom error messages should be used for Catalyst Center."""
-        custom_error = "Catalyst Center defaults file is required."
+        """Should raise value not found error for Catalyst Center (CLI validators ensure defaults exist).
 
+        Note: CLI validators handle defaults block validation. This test verifies
+        the error message when a value is not found.
+        """
         with pytest.raises(ValueError) as exc_info:
             get_default_value(
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.catc",
-                missing_error=custom_error,
+                missing_error="Catalyst Center defaults file is required.",
             )
 
-        assert custom_error in str(exc_info.value)
+        assert "Required default value not found" in str(exc_info.value)
+        assert "defaults.catc.some.path" in str(exc_info.value)
 
 
 # =============================================================================

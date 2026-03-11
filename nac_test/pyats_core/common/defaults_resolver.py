@@ -29,9 +29,16 @@ def ensure_defaults_block_exists(
     """Validate that a defaults block exists in the data model.
 
     This function performs a simple existence check for the defaults block
-    in the merged data model. It should be called before attempting to read
-    any default values to provide a clear error message when the defaults
-    file was not passed to nac-test.
+    in the merged data model.
+
+    Note:
+        In production, CLI validators (e.g., validate_aci_defaults from PR #525)
+        perform this check BEFORE test execution begins, so this function is NOT
+        called during normal test execution for performance reasons. It remains
+        useful for:
+        - Direct testing/debugging of defaults resolution logic
+        - Architecture-specific one-time validation during test setup
+        - Unit tests that bypass CLI validators
 
     Args:
         data_model: The merged NAC data model containing configuration and defaults.
@@ -78,6 +85,13 @@ def get_default_value(
     multiple paths. When multiple paths are provided, the first non-None value
     found is returned.
 
+    Performance Note:
+        CLI validators (e.g., validate_aci_defaults) perform pre-flight validation
+        that the defaults block exists before test execution begins. This function
+        does NOT re-validate the defaults block presence for performance - that
+        check would be redundant on every call. If a value is not found, clear
+        error messages guide the user.
+
     Note on Return Type:
         The return type is `Any | None` because JMESPath can return any type
         (str, int, bool, dict, list, etc.) and None is returned when
@@ -89,7 +103,8 @@ def get_default_value(
             Single: get_default_value(data, "path.to.value", ...)
             Cascade: get_default_value(data, "path1", "path2", "path3", ...)
         defaults_prefix: JMESPath prefix for the defaults block.
-        missing_error: Error message if defaults block is missing.
+        missing_error: Error message template if required value not found.
+            Used in error messages but NOT for block validation (handled by CLI validators).
         required: If True (default), raises ValueError when no value found.
             If False, returns None when no value found.
 
@@ -99,7 +114,7 @@ def get_default_value(
 
     Raises:
         TypeError: If no paths are provided.
-        ValueError: If defaults block is missing or required value not found.
+        ValueError: If required value not found at any of the specified paths.
 
     Example:
         >>> data = {
@@ -140,13 +155,6 @@ def get_default_value(
         raise TypeError(
             "get_default_value() requires at least one default_path argument"
         )
-
-    # First ensure the defaults block exists
-    ensure_defaults_block_exists(
-        data_model=data_model,
-        defaults_prefix=defaults_prefix,
-        missing_error=missing_error,
-    )
 
     # Try each path in order, return the first non-None value
     for path in default_paths:
