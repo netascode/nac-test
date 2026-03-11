@@ -15,11 +15,14 @@ from nac_test.core.constants import (
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
+    EXIT_PREFLIGHT_FAILURE,
 )
 from nac_test.core.types import (
     CombinedResults,
     ErrorType,
     ExecutionState,
+    PreFlightFailure,
+    PreFlightFailureType,
     PyATSResults,
     TestResults,
 )
@@ -366,6 +369,18 @@ class TestCombinedResultsExitCode:
         result = CombinedResults()
         assert result.exit_code == EXIT_DATA_ERROR
 
+    def test_exit_code_preflight_failure(self) -> None:
+        """Exit code 1 when pre-flight failure occurred."""
+        result = CombinedResults(
+            pre_flight_failure=PreFlightFailure(
+                failure_type=PreFlightFailureType.AUTH,
+                controller_type="ACI",
+                controller_url="https://apic.test.local",
+                detail="HTTP 401: Unauthorized",
+            )
+        )
+        assert result.exit_code == EXIT_PREFLIGHT_FAILURE
+
     def test_was_not_run_true_when_all_skipped(self) -> None:
         """was_not_run is True when all frameworks were intentionally skipped."""
         result = CombinedResults(
@@ -564,8 +579,6 @@ class TestCombinedResultsHasAnyResults:
 
     def test_with_preflight_failure_only_has_no_results(self) -> None:
         """has_any_results is False when only pre_flight_failure is set."""
-        from nac_test.core.types import PreFlightFailure, PreFlightFailureType
-
         results = CombinedResults(
             pre_flight_failure=PreFlightFailure(
                 failure_type=PreFlightFailureType.AUTH,
@@ -578,8 +591,6 @@ class TestCombinedResultsHasAnyResults:
 
     def test_with_preflight_failure_and_robot_has_results(self) -> None:
         """has_any_results is True when pre_flight_failure + Robot results exist."""
-        from nac_test.core.types import PreFlightFailure, PreFlightFailureType
-
         results = CombinedResults(
             pre_flight_failure=PreFlightFailure(
                 failure_type=PreFlightFailureType.AUTH,

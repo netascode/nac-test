@@ -59,6 +59,7 @@ ROBOT_TIMESTAMP_FORMAT_NO_MS: str = "%Y%m%d %H:%M:%S"
 # Exit codes
 # Note: EXIT_SUCCESS (0) is intentionally not defined here - zero is a universal
 # POSIX convention that never changes, so a named constant adds no clarity.
+EXIT_PREFLIGHT_FAILURE: int = 1  # Pre-flight failure (auth, unreachable, detection)
 EXIT_INVALID_ARGS: int = (
     2  # Invalid nac-test arguments (aligns with POSIX/Typer convention)
 )

@@ -13,6 +13,7 @@ from nac_test.core.constants import (
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
+    EXIT_PREFLIGHT_FAILURE,
 )
 
 # Type alias for supported controller type keys.
@@ -347,7 +348,7 @@ class CombinedResults:
 
         Exit codes:
             0: All tests passed, no errors OR all frameworks intentionally skipped
-            1: Pre-flight failure (auth or controller detection failed)
+            1: Pre-flight failure (auth, unreachable, or controller detection failed)
             1-250: Number of test failures (capped at 250)
             252: No tests found/executed across any framework OR Robot Framework invalid arguments
             253: Execution was interrupted (Ctrl+C, etc.)
@@ -361,7 +362,7 @@ class CombinedResults:
         configuration problem. Generic errors (255) are lowest as they may be transient.
         """
         if self.pre_flight_failure is not None:
-            return 1
+            return EXIT_PREFLIGHT_FAILURE
         if self.has_errors:
             error_types = [
                 r.error_type for r in self._results if r.error_type is not None
