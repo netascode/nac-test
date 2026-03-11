@@ -37,7 +37,7 @@ class RobotOrchestrator:
 
     This class follows a similar architectural pattern as PyATSOrchestrator:
     - Receives base output directory from caller
-    - Uses root output directory for backward compatibility (unlike PyATS which uses subdirectory)
+    - Uses a dedicated robot_results/ working directory under the base output directory
     - Manages complete Robot Framework lifecycle
     - Reuses existing RobotWriter and pabot components (DRY principle)
     """
@@ -64,7 +64,7 @@ class RobotOrchestrator:
         Args:
             data_paths: List of paths to data model YAML files
             templates_dir: Directory containing Robot template files
-            output_dir: Base output directory (orchestrator creates robot_results subdirectory)
+            output_dir: Base output directory (orchestrator uses its robot_results subdirectory)
             merged_data_filename: Name of the merged data model file
             filters_path: Optional path to filter files
             tests_path: Optional path to test files
@@ -79,12 +79,8 @@ class RobotOrchestrator:
         """
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
-        self.base_output_dir = Path(
-            output_dir
-        )  # Store base directory for merged data file access
-        self.output_dir = (
-            self.base_output_dir
-        )  # Keep at root for backward compatibility
+        self.base_output_dir = Path(output_dir)
+        self.output_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
         self.merged_data_filename = merged_data_filename
 
         # Robot-specific parameters
@@ -118,9 +114,9 @@ class RobotOrchestrator:
         """Execute the complete Robot Framework test lifecycle.
 
         This method:
-        1. Creates the output directory (uses root for backward compatibility)
+        1. Creates the Robot Framework working directory under robot_results/
         2. Renders Robot test templates using RobotWriter
-        3. Creates merged data model file in output directory
+        3. Creates merged data model file in the Robot working directory
         4. Executes tests using pabot (unless render_only mode)
         5. Creates backward compatibility symlinks
         6. Extracts and returns test statistics
@@ -185,7 +181,7 @@ class RobotOrchestrator:
                 return TestResults.from_error(error_msg)
 
             # Phase 4: Create backward compatibility symlinks
-            # (output files written directly to robot_results/ via --output/--log/--report flags)
+            # (output files are written directly to robot_results/ via pabot --outputdir)
             self._create_backward_compat_symlinks()
 
             # Phase 5: Generate Robot summary report and get stats
