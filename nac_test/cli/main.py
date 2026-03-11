@@ -16,7 +16,6 @@ from nac_test.cli.ui import display_aci_defaults_banner
 from nac_test.cli.validators import validate_aci_defaults
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import (
-    CONSOLE_TIME_FORMAT,
     DEBUG_MODE,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
@@ -370,18 +369,13 @@ def main(
 
     # Merge data files with timing
     start_time = datetime.now()
-    start_timestamp = start_time.strftime(CONSOLE_TIME_FORMAT)
-    typer.echo(f"\n\n[{start_timestamp}] 📄 Merging data model files...")
+    typer.echo("\n\n📄 Merging data model files...")
 
     merged_data = DataMerger.merge_data_files(data)
     DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
 
-    end_time = datetime.now()
-    end_timestamp = end_time.strftime(CONSOLE_TIME_FORMAT)
-    duration = (end_time - start_time).total_seconds()
-    typer.echo(
-        f"[{end_timestamp}] ✅ Data model merging completed ({format_duration(duration)})"
-    )
+    duration = (datetime.now() - start_time).total_seconds()
+    typer.echo(f"✅ Data model merging completed ({format_duration(duration)})")
 
     # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
     orchestrator = CombinedOrchestrator(
