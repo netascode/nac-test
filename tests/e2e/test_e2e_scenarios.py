@@ -19,15 +19,14 @@ This approach:
 
 import logging
 import re
-import sys
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
 import pytest
 
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     HTML_REPORTS_DIRNAME,
+    IS_WINDOWS,
     LOG_HTML,
     OUTPUT_XML,
     PYATS_RESULTS_DIRNAME,
@@ -1336,7 +1335,7 @@ class TestE2EDryRunRobotFail(E2ECombinedTestBase):
 # =============================================================================
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test scenario")
+@pytest.mark.skipif(not IS_WINDOWS, reason="Windows-only test scenario")
 @pytest.mark.windows
 class TestE2EWindowsPyatsSkip(E2ECombinedTestBase):
     """E2E tests for the Windows PyATS skip scenario.
