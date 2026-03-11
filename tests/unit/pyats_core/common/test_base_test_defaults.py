@@ -1,18 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Tests for NACTestBase.get_default_value() delegation to defaults_resolver.
+"""Tests for NACTestBase.get_default_value() auto-detection integration.
 
 This module verifies that the get_default_value() instance method on NACTestBase:
-- Guards against missing DEFAULTS_PREFIX with NotImplementedError
+- Auto-detects controller type from environment variables
+- Maps controller type to correct defaults prefix
 - Delegates to defaults_resolver.get_default_value with correct arguments
-- Threads through DEFAULTS_PREFIX and DEFAULTS_MISSING_ERROR class attributes
+- Handles missing controller credentials gracefully
 
 Note:
     Cascade behavior, falsy value handling, error messages, and edge cases
     are thoroughly tested in test_defaults_resolver.py. These tests focus
-    exclusively on the delegation contract between NACTestBase and the
-    defaults_resolver utility.
+    exclusively on the auto-detection and delegation contract between
+    NACTestBase and the defaults_resolver utility.
 """
 
 from typing import Any
@@ -72,60 +73,121 @@ def nac_test_base_class() -> Any:
 
 
 class TestNACTestBaseDefaults:
-    """Tests for NACTestBase.get_default_value() delegation contract.
+    """Tests for NACTestBase.get_default_value() auto-detection and delegation.
 
-    These tests verify that the instance method correctly guards on
-    DEFAULTS_PREFIX and delegates to defaults_resolver.get_default_value
-    with the proper arguments from class attributes.
+    These tests verify that the instance method:
+    - Auto-detects controller type from environment variables
+    - Maps controller type to correct defaults prefix
+    - Delegates to defaults_resolver.get_default_value with proper arguments
     """
 
-    def test_prefix_none_raises_not_implemented(
+    def test_aci_autodetection(
+        self,
+        nac_test_base_class: Any,
+        apic_data_model: dict[str, Any],
+        aci_controller_env: None,
+    ) -> None:
+        """get_default_value auto-detects ACI controller and uses defaults.apic prefix."""
+        instance = nac_test_base_class.__new__(nac_test_base_class)
+        instance.data_model = apic_data_model
+
+        with patch(
+            "nac_test.pyats_core.common.base_test._resolve",
+            return_value=sentinel.result,
+        ) as mock_resolve:
+            result = instance.get_default_value("fabric.name")
+
+        # Should auto-detect ACI and use defaults.apic prefix
+        _, kwargs = mock_resolve.call_args
+        assert kwargs["defaults_prefix"] == "defaults.apic"
+        assert "ACI defaults file required" in kwargs["missing_error"]
+        assert result is sentinel.result
+
+    def test_sdwan_autodetection(
+        self,
+        nac_test_base_class: Any,
+        sdwan_data_model: dict[str, Any],
+        sdwan_controller_env: None,
+    ) -> None:
+        """get_default_value auto-detects SD-WAN controller and uses defaults.sdwan prefix."""
+        instance = nac_test_base_class.__new__(nac_test_base_class)
+        instance.data_model = sdwan_data_model
+
+        with patch(
+            "nac_test.pyats_core.common.base_test._resolve",
+            return_value=sentinel.result,
+        ) as mock_resolve:
+            result = instance.get_default_value("global.timeout")
+
+        _, kwargs = mock_resolve.call_args
+        assert kwargs["defaults_prefix"] == "defaults.sdwan"
+        assert "SDWAN defaults file required" in kwargs["missing_error"]
+        assert result is sentinel.result
+
+    def test_cc_autodetection(
+        self,
+        nac_test_base_class: Any,
+        cc_controller_env: None,
+    ) -> None:
+        """get_default_value auto-detects Catalyst Center and uses defaults.catc prefix."""
+        instance = nac_test_base_class.__new__(nac_test_base_class)
+        instance.data_model = {"defaults": {"catc": {"timeout": 30}}}
+
+        with patch(
+            "nac_test.pyats_core.common.base_test._resolve",
+            return_value=sentinel.result,
+        ) as mock_resolve:
+            result = instance.get_default_value("timeout")
+
+        _, kwargs = mock_resolve.call_args
+        assert kwargs["defaults_prefix"] == "defaults.catc"
+        assert "CC defaults file required" in kwargs["missing_error"]
+        assert result is sentinel.result
+
+    def test_iosxe_autodetection(
+        self,
+        nac_test_base_class: Any,
+        iosxe_controller_env: None,
+    ) -> None:
+        """get_default_value auto-detects IOS-XE and uses defaults.iosxe prefix."""
+        instance = nac_test_base_class.__new__(nac_test_base_class)
+        instance.data_model = {"defaults": {"iosxe": {"timeout": 30}}}
+
+        with patch(
+            "nac_test.pyats_core.common.base_test._resolve",
+            return_value=sentinel.result,
+        ) as mock_resolve:
+            result = instance.get_default_value("timeout")
+
+        _, kwargs = mock_resolve.call_args
+        assert kwargs["defaults_prefix"] == "defaults.iosxe"
+        assert "IOSXE defaults file required" in kwargs["missing_error"]
+        assert result is sentinel.result
+
+    def test_no_controller_credentials_raises(
         self,
         nac_test_base_class: Any,
         apic_data_model: dict[str, Any],
     ) -> None:
-        """get_default_value raises NotImplementedError when DEFAULTS_PREFIX is None."""
+        """get_default_value raises ValueError when no controller credentials found."""
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = apic_data_model
-        # DEFAULTS_PREFIX is None by default on NACTestBase
 
-        with pytest.raises(NotImplementedError) as exc_info:
+        with pytest.raises(ValueError) as exc_info:
             instance.get_default_value("fabric.name")
 
         error_message = str(exc_info.value)
-        assert "does not support defaults resolution" in error_message
-        assert "Set DEFAULTS_PREFIX" in error_message
+        assert "Cannot resolve defaults - controller detection failed" in error_message
+        assert "No controller credentials found" in error_message
 
-    def test_class_name_in_not_implemented_error(
+    def test_delegates_to_resolver_with_cascade_paths(
         self,
         nac_test_base_class: Any,
         apic_data_model: dict[str, Any],
+        aci_controller_env: None,
     ) -> None:
-        """NotImplementedError includes the concrete subclass name."""
-
-        class MyConcreteTest(nac_test_base_class):  # type: ignore[misc]
-            pass  # DEFAULTS_PREFIX is still None
-
-        instance = MyConcreteTest.__new__(MyConcreteTest)
-        instance.data_model = apic_data_model
-
-        with pytest.raises(NotImplementedError) as exc_info:
-            instance.get_default_value("some.path")
-
-        assert "MyConcreteTest" in str(exc_info.value)
-
-    def test_delegates_to_resolver_with_correct_args(
-        self,
-        nac_test_base_class: Any,
-        apic_data_model: dict[str, Any],
-    ) -> None:
-        """get_default_value delegates to _resolve with all arguments threaded through."""
-
-        class APICTestBase(nac_test_base_class):  # type: ignore[misc]
-            DEFAULTS_PREFIX = "defaults.apic"
-            DEFAULTS_MISSING_ERROR = "APIC defaults required."
-
-        instance = APICTestBase.__new__(APICTestBase)
+        """get_default_value delegates cascade paths to _resolve correctly."""
+        instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = apic_data_model
 
         with patch(
@@ -141,47 +203,19 @@ class TestNACTestBaseDefaults:
             "fabric.name",
             "fallback.name",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults required.",
+            missing_error="ACI defaults file required. Pass -d ./defaults/ to include defaults.apic configuration.",
             required=False,
         )
         assert result is sentinel.result
-
-    def test_default_error_message_threaded_through(
-        self,
-        nac_test_base_class: Any,
-        apic_data_model: dict[str, Any],
-    ) -> None:
-        """Default DEFAULTS_MISSING_ERROR value is passed when not overridden."""
-
-        class TestBase(nac_test_base_class):  # type: ignore[misc]
-            DEFAULTS_PREFIX = "defaults.apic"
-            # Don't override DEFAULTS_MISSING_ERROR — use base class default
-
-        instance = TestBase.__new__(TestBase)
-        instance.data_model = apic_data_model
-
-        with patch(
-            "nac_test.pyats_core.common.base_test._resolve",
-        ) as mock_resolve:
-            instance.get_default_value("some.path")
-
-        _, kwargs = mock_resolve.call_args
-        assert "Defaults block not found in data model" in kwargs["missing_error"]
-        assert (
-            "Ensure the defaults file is passed to nac-test" in kwargs["missing_error"]
-        )
 
     def test_required_defaults_to_true(
         self,
         nac_test_base_class: Any,
         apic_data_model: dict[str, Any],
+        aci_controller_env: None,
     ) -> None:
         """required parameter defaults to True when not explicitly passed."""
-
-        class TestBase(nac_test_base_class):  # type: ignore[misc]
-            DEFAULTS_PREFIX = "defaults.apic"
-
-        instance = TestBase.__new__(TestBase)
+        instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = apic_data_model
 
         with patch(
@@ -192,40 +226,14 @@ class TestNACTestBaseDefaults:
         _, kwargs = mock_resolve.call_args
         assert kwargs["required"] is True
 
-    def test_subclass_prefix_overrides_base(
-        self,
-        nac_test_base_class: Any,
-        sdwan_data_model: dict[str, Any],
-    ) -> None:
-        """Subclass DEFAULTS_PREFIX and DEFAULTS_MISSING_ERROR override base values."""
-
-        class SDWANTestBase(nac_test_base_class):  # type: ignore[misc]
-            DEFAULTS_PREFIX = "defaults.sdwan"
-            DEFAULTS_MISSING_ERROR = "SD-WAN defaults required."
-
-        instance = SDWANTestBase.__new__(SDWANTestBase)
-        instance.data_model = sdwan_data_model
-
-        with patch(
-            "nac_test.pyats_core.common.base_test._resolve",
-        ) as mock_resolve:
-            instance.get_default_value("global.timeout")
-
-        _, kwargs = mock_resolve.call_args
-        assert kwargs["defaults_prefix"] == "defaults.sdwan"
-        assert kwargs["missing_error"] == "SD-WAN defaults required."
-
     def test_data_model_passed_to_resolver(
         self,
         nac_test_base_class: Any,
+        aci_controller_env: None,
     ) -> None:
         """The instance's data_model is passed as the first positional argument."""
         data_model = {"defaults": {"apic": {"key": "value"}}}
-
-        class TestBase(nac_test_base_class):  # type: ignore[misc]
-            DEFAULTS_PREFIX = "defaults.apic"
-
-        instance = TestBase.__new__(TestBase)
+        instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.data_model = data_model
 
         with patch(
