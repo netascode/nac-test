@@ -28,8 +28,7 @@ def temp_cwd_dir() -> Generator[str, None, None]:
     try:
         yield str(temp_dir.relative_to(cwd))
     finally:
-        if temp_dir.exists():
-            shutil.rmtree(temp_dir)
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @pytest.fixture(scope="function")

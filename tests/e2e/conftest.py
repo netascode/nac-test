@@ -28,7 +28,6 @@ from tests.e2e.config import (
     DRY_RUN_PYATS_ONLY_SCENARIO,
     DRY_RUN_ROBOT_FAIL_SCENARIO,
     DRY_RUN_SCENARIO,
-    MIXED_RELATIVE_OUTPUT_SCENARIO,
     MIXED_SCENARIO,
     PYATS_API_ONLY_SCENARIO,
     PYATS_CC_SCENARIO,
@@ -177,6 +176,7 @@ def _run_e2e_scenario(
     sdwan_user_testbed: str | None,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
+    output_path_relative: bool = False,
     extra_cli_args: list[str] | None = None,
     extra_env_vars: dict[str, str] | None = None,
 ) -> E2EResults:
@@ -190,6 +190,7 @@ def _run_e2e_scenario(
         sdwan_user_testbed: Path to the testbed YAML (None if not required).
         tmp_path_factory: Pytest temp path factory.
         class_mocker: Class-scoped monkeypatch.
+        output_path_relative: Whether to pass a cwd-relative output path to the CLI.
         extra_cli_args: Additional CLI arguments to pass (e.g., ["--dry-run", "--verbose"]).
         extra_env_vars: Additional environment variables to set (e.g., {"NAC_TEST_DEBUG": "true"}).
 
@@ -210,7 +211,7 @@ def _run_e2e_scenario(
     output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
     output_arg = str(output_dir)
 
-    if scenario.relative_output_path:
+    if output_path_relative:
         # pathlib-only alternatives are more convoluted here, while relpath
         # directly expresses the cross-directory relative path we need.
         output_arg = os.path.relpath(output_dir, Path.cwd())
@@ -333,11 +334,12 @@ def e2e_mixed_relative_output_results(
 ) -> E2EResults:
     """Execute the mixed scenario once using a relative output path."""
     return _run_e2e_scenario(
-        MIXED_RELATIVE_OUTPUT_SCENARIO,
+        MIXED_SCENARIO,
         mock_api_server,
         sdwan_user_testbed,
         tmp_path_factory,
         class_mocker,
+        output_path_relative=True,
     )
 
 
