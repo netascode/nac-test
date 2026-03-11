@@ -73,6 +73,7 @@ ENV/
 .vscode
 
 tmp/
+__nac_tmp_*
 
 .mypy_cache/
 .ruff_cache/

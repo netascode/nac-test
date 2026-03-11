@@ -1018,6 +1018,19 @@ class TestE2EMixed(E2ECombinedTestBase):
         assert "fail" in html_content.lower(), "Dashboard missing fail indicators"
 
 
+class TestE2EMixedRelativeOutput(E2ECombinedTestBase):
+    """E2E tests for the mixed scenario using a relative output path.
+
+    Scenario: Robot (1 pass, 1 fail) + PyATS API (0 pass, 1 fail) + PyATS D2D (1 pass)
+    with `-o <relative-dir>`.
+    """
+
+    @pytest.fixture
+    def results(self, e2e_mixed_relative_output_results: E2EResults) -> E2EResults:
+        """Provide mixed relative-output scenario results."""
+        return e2e_mixed_relative_output_results
+
+
 # =============================================================================
 # ROBOT-ONLY SCENARIO TESTS
 # =============================================================================
