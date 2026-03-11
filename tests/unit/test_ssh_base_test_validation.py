@@ -14,7 +14,9 @@ from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
 class TestSSHTestBaseValidation:
     """Test that SSHTestBase properly validates device info."""
 
-    def test_validation_called_for_valid_device(self) -> None:
+    def test_validation_called_for_valid_device(
+        self, iosxe_controller_env: None
+    ) -> None:
         """Test that validation is called and passes for valid device info."""
         # Create a valid device info dict
         valid_device = {
@@ -31,10 +33,7 @@ class TestSSHTestBaseValidation:
             temp_file = f.name
 
         try:
-            # Setup environment with controller credentials (required by NACTestBase.setup)
-            os.environ["IOSXE_URL"] = "https://test.example.com"
-            os.environ["IOSXE_USERNAME"] = "test_user"
-            os.environ["IOSXE_PASSWORD"] = "test_pass"
+            # Setup environment with device info and data model
             os.environ["DEVICE_INFO"] = json.dumps(valid_device)
             os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = temp_file
 
@@ -63,9 +62,6 @@ class TestSSHTestBaseValidation:
         finally:
             # Clean up environment variables
             for key in [
-                "IOSXE_URL",
-                "IOSXE_USERNAME",
-                "IOSXE_PASSWORD",
                 "DEVICE_INFO",
                 "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH",
             ]:
@@ -74,7 +70,9 @@ class TestSSHTestBaseValidation:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
 
-    def test_validation_fails_for_missing_fields(self) -> None:
+    def test_validation_fails_for_missing_fields(
+        self, iosxe_controller_env: None
+    ) -> None:
         """Test that validation fails and reports missing fields."""
         # Create an invalid device info dict (missing username and password)
         invalid_device = {
@@ -89,10 +87,7 @@ class TestSSHTestBaseValidation:
             temp_file = f.name
 
         try:
-            # Setup environment with controller credentials (required by NACTestBase.setup)
-            os.environ["IOSXE_URL"] = "https://test.example.com"
-            os.environ["IOSXE_USERNAME"] = "test_user"
-            os.environ["IOSXE_PASSWORD"] = "test_pass"
+            # Setup environment with device info and data model
             os.environ["DEVICE_INFO"] = json.dumps(invalid_device)
             os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = temp_file
 
@@ -125,9 +120,6 @@ class TestSSHTestBaseValidation:
         finally:
             # Clean up environment variables
             for key in [
-                "IOSXE_URL",
-                "IOSXE_USERNAME",
-                "IOSXE_PASSWORD",
                 "DEVICE_INFO",
                 "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH",
             ]:
@@ -136,7 +128,9 @@ class TestSSHTestBaseValidation:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
 
-    def test_validation_not_called_for_json_parse_error(self) -> None:
+    def test_validation_not_called_for_json_parse_error(
+        self, iosxe_controller_env: None
+    ) -> None:
         """Test that validation is not called if JSON parsing fails."""
         # Create a temporary test data file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -144,10 +138,6 @@ class TestSSHTestBaseValidation:
             temp_file = f.name
 
         try:
-            # Setup environment with controller credentials (required by NACTestBase.setup)
-            os.environ["IOSXE_URL"] = "https://test.example.com"
-            os.environ["IOSXE_USERNAME"] = "test_user"
-            os.environ["IOSXE_PASSWORD"] = "test_pass"
             # Setup environment with invalid JSON
             os.environ["DEVICE_INFO"] = "not valid json"
             os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = temp_file
@@ -181,9 +171,6 @@ class TestSSHTestBaseValidation:
         finally:
             # Clean up environment variables
             for key in [
-                "IOSXE_URL",
-                "IOSXE_USERNAME",
-                "IOSXE_PASSWORD",
                 "DEVICE_INFO",
                 "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH",
             ]:

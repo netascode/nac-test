@@ -15,48 +15,8 @@ IOSXE while still requiring them for other controller types.
 import os
 import tempfile
 from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
-
-# Mock PyATS before importing NACTestBase
-_mock_aetest = MagicMock()
-_mock_aetest.Testcase = object
-_mock_aetest.setup = lambda f: f
-_mock_aetest_steps = MagicMock()
-_mock_aetest_steps_impl = MagicMock()
-_mock_pyats_pkg = MagicMock()
-_mock_pyats_pkg.aetest = _mock_aetest
-
-
-@pytest.fixture(autouse=True)
-def mock_pyats() -> Any:
-    """Mock PyATS module to avoid import errors."""
-    with patch.dict(
-        "sys.modules",
-        {
-            "pyats": _mock_pyats_pkg,
-            "pyats.aetest": _mock_aetest,
-            "pyats.aetest.steps": _mock_aetest_steps,
-            "pyats.aetest.steps.implementation": _mock_aetest_steps_impl,
-        },
-    ):
-        yield
-
-
-@pytest.fixture()
-def nac_test_base_class() -> Any:
-    """Import and return the real NACTestBase class."""
-    import sys
-
-    # Clear cached module to force reimport with mocked pyats
-    for mod_name in list(sys.modules):
-        if "base_test" in mod_name or "step_interceptor" in mod_name:
-            del sys.modules[mod_name]
-
-    from nac_test.pyats_core.common.base_test import NACTestBase
-
-    return NACTestBase
 
 
 @pytest.fixture()
@@ -64,9 +24,7 @@ def temp_data_model_file() -> Any:
     """Create temporary data model file for tests."""
     import json
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".json", delete=False
-    ) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         json.dump({"defaults": {"iosxe": {}, "apic": {}}}, f)
         temp_file = f.name
 

@@ -106,7 +106,7 @@ class TestEnsureDefaultsBlockExists:
         ensure_defaults_block_exists(
             data_model=apic_data_model,
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults block missing.",
+            missing_error="APIC defaults file required.",
         )
 
     def test_missing_defaults_raises_value_error(
@@ -140,7 +140,7 @@ class TestEnsureDefaultsBlockExists:
         ensure_defaults_block_exists(
             data_model=apic_data_model,
             defaults_prefix="defaults.apic",
-            missing_error="Missing APIC defaults.",
+            missing_error="APIC defaults file required.",
         )
 
     def test_custom_prefix_sdwan(self, sdwan_data_model: dict[str, Any]) -> None:
@@ -148,7 +148,7 @@ class TestEnsureDefaultsBlockExists:
         ensure_defaults_block_exists(
             data_model=sdwan_data_model,
             defaults_prefix="defaults.sdwan",
-            missing_error="Missing SD-WAN defaults.",
+            missing_error="SDWAN defaults file required.",
         )
 
     def test_custom_prefix_catc(self, catc_data_model: dict[str, Any]) -> None:
@@ -156,7 +156,7 @@ class TestEnsureDefaultsBlockExists:
         ensure_defaults_block_exists(
             data_model=catc_data_model,
             defaults_prefix="defaults.catc",
-            missing_error="Missing Catalyst Center defaults.",
+            missing_error="CATC defaults file required.",
         )
 
     def test_wrong_architecture_prefix_raises(
@@ -167,7 +167,7 @@ class TestEnsureDefaultsBlockExists:
             ensure_defaults_block_exists(
                 data_model=apic_data_model,
                 defaults_prefix="defaults.sdwan",
-                missing_error="SD-WAN defaults not found.",
+                missing_error="SD-WAN defaults not found",
             )
 
 
@@ -189,7 +189,6 @@ class TestGetDefaultValueSinglePath:
             sdwan_data_model,
             "global.timeout",
             defaults_prefix="defaults.sdwan",
-            missing_error="SD-WAN defaults missing.",
         )
 
         assert result == 30
@@ -200,7 +199,6 @@ class TestGetDefaultValueSinglePath:
             apic_data_model,
             "tenants.l3outs.nodes.pod",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == 1
@@ -213,7 +211,6 @@ class TestGetDefaultValueSinglePath:
             deeply_nested_data_model,
             "level1.level2.level3.level4.level5.value",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == "deep-value"
@@ -227,7 +224,6 @@ class TestGetDefaultValueSinglePath:
                 sdwan_data_model,
                 "nonexistent.path",
                 defaults_prefix="defaults.sdwan",
-                missing_error="SD-WAN defaults missing.",
                 required=True,
             )
 
@@ -239,7 +235,6 @@ class TestGetDefaultValueSinglePath:
             sdwan_data_model,
             "nonexistent.path",
             defaults_prefix="defaults.sdwan",
-            missing_error="SD-WAN defaults missing.",
             required=False,
         )
 
@@ -253,7 +248,6 @@ class TestGetDefaultValueSinglePath:
             data_model_with_falsy_values,
             "settings.enabled",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result is False
@@ -266,7 +260,6 @@ class TestGetDefaultValueSinglePath:
             data_model_with_falsy_values,
             "settings.count",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == 0
@@ -279,7 +272,6 @@ class TestGetDefaultValueSinglePath:
             data_model_with_falsy_values,
             "settings.name",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == ""
@@ -292,7 +284,6 @@ class TestGetDefaultValueSinglePath:
             data_model_with_falsy_values,
             "settings.items",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == []
@@ -305,7 +296,6 @@ class TestGetDefaultValueSinglePath:
             data_model_with_falsy_values,
             "settings.config",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == {}
@@ -316,7 +306,6 @@ class TestGetDefaultValueSinglePath:
             apic_data_model,
             "tenants.l3outs.nodes",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == {"pod": 1}
@@ -327,7 +316,6 @@ class TestGetDefaultValueSinglePath:
             apic_data_model,
             "tenants.l3outs.bgp_peers.admin_state",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == "enabled"
@@ -354,7 +342,6 @@ class TestGetDefaultValueCascade:
             "global.timeout",
             "device.connection_timeout",
             defaults_prefix="defaults.sdwan",
-            missing_error="SD-WAN defaults missing.",
         )
 
         # First path exists, should return 30 (not 60)
@@ -367,7 +354,6 @@ class TestGetDefaultValueCascade:
             "nonexistent.timeout",
             "global.timeout",
             defaults_prefix="defaults.sdwan",
-            missing_error="SD-WAN defaults missing.",
         )
 
         # First path doesn't exist, should fall back to second path
@@ -382,7 +368,6 @@ class TestGetDefaultValueCascade:
             "missing.value",
             "device.os",
             defaults_prefix="defaults.sdwan",
-            missing_error="SD-WAN defaults missing.",
         )
 
         assert result == "iosxe"
@@ -395,7 +380,6 @@ class TestGetDefaultValueCascade:
             "missing.second",
             "global.retry_count",
             defaults_prefix="defaults.sdwan",
-            missing_error="SD-WAN defaults missing.",
         )
 
         assert result == 3
@@ -411,7 +395,6 @@ class TestGetDefaultValueCascade:
                 "missing.path2",
                 "missing.path3",
                 defaults_prefix="defaults.sdwan",
-                missing_error="SD-WAN defaults missing.",
                 required=True,
             )
 
@@ -425,7 +408,6 @@ class TestGetDefaultValueCascade:
             "missing.path2",
             "missing.path3",
             defaults_prefix="defaults.sdwan",
-            missing_error="SD-WAN defaults missing.",
             required=False,
         )
 
@@ -442,7 +424,6 @@ class TestGetDefaultValueCascade:
             "missing.e",
             "features.bgp.enabled",
             defaults_prefix="defaults.sdwan",
-            missing_error="SD-WAN defaults missing.",
         )
 
         assert result is True
@@ -468,7 +449,6 @@ class TestGetDefaultValueErrorHandling:
             get_default_value(
                 sdwan_data_model,
                 defaults_prefix="defaults.sdwan",
-                missing_error="SD-WAN defaults missing.",
             )
 
     def test_missing_defaults_block_raises(
@@ -485,7 +465,6 @@ class TestGetDefaultValueErrorHandling:
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.apic",
-                missing_error="Defaults block not found.",
             )
 
     def test_error_message_includes_single_path(
@@ -497,7 +476,6 @@ class TestGetDefaultValueErrorHandling:
                 sdwan_data_model,
                 "nonexistent.setting",
                 defaults_prefix="defaults.sdwan",
-                missing_error="SD-WAN defaults missing.",
             )
 
         error_message = str(exc_info.value)
@@ -514,7 +492,6 @@ class TestGetDefaultValueErrorHandling:
                 "missing.path2",
                 "missing.path3",
                 defaults_prefix="defaults.sdwan",
-                missing_error="SD-WAN defaults missing.",
             )
 
         error_message = str(exc_info.value)
@@ -535,7 +512,6 @@ class TestGetDefaultValueErrorHandling:
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.apic",
-                missing_error="Custom error: Please provide defaults.yaml file.",
             )
 
     def test_none_data_model_raises(self) -> None:
@@ -549,7 +525,6 @@ class TestGetDefaultValueErrorHandling:
                 None,  # type: ignore[arg-type]
                 "some.path",
                 defaults_prefix="defaults.apic",
-                missing_error="Missing defaults.",
             )
 
 
@@ -571,7 +546,6 @@ class TestArchitectureAgnostic:
             apic_data_model,
             "fabric.name",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == "test-fabric"
@@ -582,7 +556,6 @@ class TestArchitectureAgnostic:
             sdwan_data_model,
             "device.os",
             defaults_prefix="defaults.sdwan",
-            missing_error="SD-WAN defaults missing.",
         )
 
         assert result == "iosxe"
@@ -593,7 +566,6 @@ class TestArchitectureAgnostic:
             catc_data_model,
             "sites.area",
             defaults_prefix="defaults.catc",
-            missing_error="Catalyst Center defaults missing.",
         )
 
         assert result == "Global"
@@ -608,7 +580,6 @@ class TestArchitectureAgnostic:
             custom_data_model,
             "setting.value",
             defaults_prefix="defaults.custom_arch",
-            missing_error="Custom architecture defaults missing.",
         )
 
         assert result == "custom-value"
@@ -624,7 +595,6 @@ class TestArchitectureAgnostic:
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.apic",
-                missing_error="APIC defaults not found. Please pass defaults.yaml to nac-test.",
             )
 
         assert "Required default value not found" in str(exc_info.value)
@@ -641,7 +611,6 @@ class TestArchitectureAgnostic:
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.sdwan",
-                missing_error="SD-WAN defaults not configured. Check your data directory.",
             )
 
         assert "Required default value not found" in str(exc_info.value)
@@ -658,7 +627,6 @@ class TestArchitectureAgnostic:
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.catc",
-                missing_error="Catalyst Center defaults file is required.",
             )
 
         assert "Required default value not found" in str(exc_info.value)
@@ -684,7 +652,6 @@ class TestEdgeCases:
             data_model,
             "timeout",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == 30
@@ -699,7 +666,6 @@ class TestEdgeCases:
             data_model,
             "config_v2.setting_1.value_2",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == "test"
@@ -712,7 +678,6 @@ class TestEdgeCases:
             data_model,
             "setting",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
             required=False,
         )
 
@@ -728,7 +693,6 @@ class TestEdgeCases:
                 data_model,
                 "setting",
                 defaults_prefix="defaults.apic",
-                missing_error="APIC defaults missing.",
                 required=True,
             )
 
@@ -740,7 +704,6 @@ class TestEdgeCases:
             data_model,
             "ports",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == [80, 443, 8080]
@@ -753,7 +716,6 @@ class TestEdgeCases:
             data_model,
             "enabled",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result is True
@@ -766,7 +728,6 @@ class TestEdgeCases:
             data_model,
             "threshold",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == 0.95
@@ -779,7 +740,6 @@ class TestEdgeCases:
             data_model,
             "offset",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == -10
@@ -803,7 +763,6 @@ class TestEdgeCases:
             data_model,
             "tenants.tenant_5.vrfs.vrf_7.id",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert result == 7
@@ -816,7 +775,6 @@ class TestEdgeCases:
                 sdwan_data_model,
                 "nonexistent.path",
                 defaults_prefix="defaults.sdwan",
-                missing_error="SD-WAN defaults missing.",
             )
 
     def test_ensure_defaults_preserves_original_data(
@@ -830,7 +788,7 @@ class TestEdgeCases:
         ensure_defaults_block_exists(
             data_model=apic_data_model,
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
+            missing_error="APIC defaults file required.",
         )
 
         assert apic_data_model == original
@@ -853,7 +811,6 @@ class TestEdgeCases:
                 data_model,
                 "[invalid",
                 defaults_prefix="defaults.apic",
-                missing_error="APIC defaults missing.",
             )
 
     def test_get_default_value_preserves_original_data(
@@ -868,7 +825,6 @@ class TestEdgeCases:
             apic_data_model,
             "fabric.name",
             defaults_prefix="defaults.apic",
-            missing_error="APIC defaults missing.",
         )
 
         assert apic_data_model == original
@@ -895,5 +851,4 @@ class TestEdgeCases:
                 data_model,
                 "",
                 defaults_prefix="defaults.apic",
-                missing_error="APIC defaults missing.",
             )
