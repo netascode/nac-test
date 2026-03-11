@@ -332,7 +332,7 @@ def e2e_mixed_relative_output_results(
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
 ) -> E2EResults:
-    """Execute the mixed scenario once using a relative output path."""
+    """Execute the mixed scenario (same as above) with a relative output path."""
     return _run_e2e_scenario(
         MIXED_SCENARIO,
         mock_api_server,
