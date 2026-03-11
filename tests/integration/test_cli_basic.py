@@ -18,7 +18,6 @@ import nac_test.cli.main
 
 pytestmark = [
     pytest.mark.integration,
-    pytest.mark.usefixtures("setup_bogus_controller_env"),
 ]
 
 
