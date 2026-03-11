@@ -44,28 +44,29 @@ def ensure_defaults_block_exists(
         data_model: The merged NAC data model containing configuration and defaults.
         defaults_prefix: JMESPath prefix for the defaults block
             (e.g., "defaults.apic", "defaults.sdwan").
-        missing_error: Error message to raise if defaults block is missing.
-            Should be architecture-specific with guidance on how to fix.
+        missing_error: User-friendly error message to show if defaults block is missing.
+            Should include controller display name and remediation steps.
 
     Raises:
         ValueError: If the defaults block is not found at the specified prefix.
+            Uses the provided missing_error message for user-friendly output.
 
     Example:
         >>> data = {"defaults": {"apic": {"fabric": {"name": "test"}}}}
         >>> ensure_defaults_block_exists(
         ...     data,
         ...     defaults_prefix="defaults.apic",
-        ...     missing_error="APIC defaults block missing. Pass defaults.yaml to nac-test."
+        ...     missing_error="APIC defaults file required. Pass -d ./defaults/",
         ... )  # No error raised
 
         >>> ensure_defaults_block_exists(
         ...     {},
         ...     defaults_prefix="defaults.apic",
-        ...     missing_error="APIC defaults block missing."
+        ...     missing_error="APIC defaults file required. Pass -d ./defaults/",
         ... )
         Traceback (most recent call last):
             ...
-        ValueError: APIC defaults block missing.
+        ValueError: APIC defaults file required. Pass -d ./defaults/
     """
     result = jmespath.search(defaults_prefix, data_model)
     if result is None:
@@ -76,7 +77,6 @@ def get_default_value(
     data_model: dict[str, Any],
     *default_paths: str,
     defaults_prefix: str,
-    missing_error: str,
     required: bool = True,
 ) -> Any | None:
     """Read default value(s) from the defaults block with cascade/fallback support.
@@ -103,8 +103,6 @@ def get_default_value(
             Single: get_default_value(data, "path.to.value", ...)
             Cascade: get_default_value(data, "path1", "path2", "path3", ...)
         defaults_prefix: JMESPath prefix for the defaults block.
-        missing_error: Error message template if required value not found.
-            Used in error messages but NOT for block validation (handled by CLI validators).
         required: If True (default), raises ValueError when no value found.
             If False, returns None when no value found.
 
@@ -129,16 +127,14 @@ def get_default_value(
         # Single path lookup
         >>> get_default_value(
         ...     data, "global.timeout",
-        ...     defaults_prefix="defaults.sdwan",
-        ...     missing_error="SDWAN defaults missing"
+        ...     defaults_prefix="defaults.sdwan"
         ... )
         30
 
         # Cascade lookup (first non-None wins)
         >>> get_default_value(
         ...     data, "device.custom_timeout", "global.timeout",
-        ...     defaults_prefix="defaults.sdwan",
-        ...     missing_error="SDWAN defaults missing"
+        ...     defaults_prefix="defaults.sdwan"
         ... )
         30
 
@@ -146,7 +142,6 @@ def get_default_value(
         >>> get_default_value(
         ...     data, "nonexistent.path",
         ...     defaults_prefix="defaults.sdwan",
-        ...     missing_error="SDWAN defaults missing",
         ...     required=False
         ... )
         None
