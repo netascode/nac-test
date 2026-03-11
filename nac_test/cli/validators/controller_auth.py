@@ -24,7 +24,7 @@ from typing import Any
 
 from nac_test.core.error_classification import (
     AuthOutcome,
-    _classify_auth_error,
+    classify_auth_error,
     extract_http_status_code,
 )
 from nac_test.core.types import ControllerTypeKey
@@ -149,7 +149,7 @@ def preflight_auth_check(controller_type: ControllerTypeKey) -> AuthCheckResult:
         )
         return AuthCheckResult(
             success=True,
-            reason=AuthOutcome.SUCCESS,
+            reason=AuthOutcome.SKIPPED,
             controller_type=controller_type,
             controller_url=controller_url,
             detail="Pre-flight check skipped (no auth adapter available)",
@@ -190,14 +190,14 @@ def preflight_auth_check(controller_type: ControllerTypeKey) -> AuthCheckResult:
         logger.debug("Pre-flight auth check skipped due to missing env vars: %s", e)
         return AuthCheckResult(
             success=True,
-            reason=AuthOutcome.SUCCESS,
+            reason=AuthOutcome.SKIPPED,
             controller_type=controller_type,
             controller_url=controller_url,
             detail=f"Pre-flight check skipped: {e}",
         )
     except Exception as e:
         # Authentication failed - classify the error
-        reason, detail = _classify_auth_error(e)
+        reason, detail = classify_auth_error(e)
         status_code = extract_http_status_code(e)
         logger.debug(
             "Pre-flight auth check failed for %s: %s (%s)",

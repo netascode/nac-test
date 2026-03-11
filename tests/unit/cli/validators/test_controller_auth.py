@@ -14,9 +14,9 @@ from _pytest.monkeypatch import MonkeyPatch
 from nac_test.cli.validators.controller_auth import (
     CONTROLLER_REGISTRY,
     AuthOutcome,
-    _classify_auth_error,
     _get_auth_callable,
     _get_controller_url,
+    classify_auth_error,
     preflight_auth_check,
 )
 from nac_test.core.error_classification import extract_http_status_code
@@ -74,13 +74,13 @@ class TestGetControllerUrl:
 
 
 class TestClassifyAuthError:
-    """Tests for _classify_auth_error helper function."""
+    """Tests for classify_auth_error helper function."""
 
     def test_classifies_401_as_bad_credentials(self) -> None:
         """HTTP 401 errors are classified as bad credentials."""
         error = Exception("HTTP 401: Unauthorized")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.BAD_CREDENTIALS
         assert detail == "HTTP 401: Unauthorized"
@@ -89,7 +89,7 @@ class TestClassifyAuthError:
         """HTTP 403 errors are classified as bad credentials."""
         error = Exception("HTTP 403: Forbidden - insufficient privileges")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.BAD_CREDENTIALS
         assert detail == "HTTP 403: Forbidden"
@@ -98,7 +98,7 @@ class TestClassifyAuthError:
         """Timeout errors are classified as unreachable."""
         error = Exception("Connection timed out after 30 seconds")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.UNREACHABLE
         assert "timed out" in detail.lower()
@@ -107,7 +107,7 @@ class TestClassifyAuthError:
         """Connection refused errors are classified as unreachable."""
         error = Exception("Connection refused on port 443")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.UNREACHABLE
 
@@ -115,7 +115,7 @@ class TestClassifyAuthError:
         """DNS resolution failures are classified as unreachable."""
         error = Exception("Name or service not known: apic.example.com")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.UNREACHABLE
 
@@ -123,7 +123,7 @@ class TestClassifyAuthError:
         """Unknown errors are classified as unexpected."""
         error = Exception("Something completely unexpected happened")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.UNEXPECTED_ERROR
         assert "unexpected" in detail.lower()
@@ -132,7 +132,7 @@ class TestClassifyAuthError:
         """HTTP 503 Service Unavailable is classified as unreachable."""
         error = Exception("HTTP 503: Service Unavailable")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.UNREACHABLE
         assert "503" in detail
@@ -141,7 +141,7 @@ class TestClassifyAuthError:
         """HTTP 429 Too Many Requests is classified as unreachable."""
         error = Exception("HTTP 429: Too Many Requests")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.UNREACHABLE
         assert "429" in detail
@@ -150,7 +150,7 @@ class TestClassifyAuthError:
         """HTTP 500 Server Error is classified as unexpected error."""
         error = Exception("HTTP 500: Internal Server Error")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.UNEXPECTED_ERROR
         assert "500" in detail
@@ -159,7 +159,7 @@ class TestClassifyAuthError:
         """HTTP 404 Not Found is classified as unexpected error (not auth failure)."""
         error = Exception("HTTP 404: Not Found - endpoint does not exist")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.UNEXPECTED_ERROR
         assert "404" in detail
@@ -169,7 +169,7 @@ class TestClassifyAuthError:
         # Port 443 should not be matched as HTTP 443 status code
         error = Exception("Connection refused on port 443")
 
-        reason, detail = _classify_auth_error(error)
+        reason, detail = classify_auth_error(error)
 
         assert reason == AuthOutcome.UNREACHABLE
         assert "Connection refused" in detail
@@ -209,7 +209,7 @@ class TestPreflightAuthCheck:
         result = preflight_auth_check("IOSXE")
 
         assert result.success is True
-        assert result.reason == AuthOutcome.SUCCESS
+        assert result.reason == AuthOutcome.SKIPPED
         assert "skipped" in result.detail.lower()
 
     def test_returns_success_when_adapters_not_installed(
