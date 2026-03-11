@@ -15,19 +15,17 @@ authentication caching for parallel processes. The tests cover:
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from pytest_mock import MockerFixture
 
 from nac_test.pyats_core.common.auth_cache import AuthCache
 
-if TYPE_CHECKING:
-    from pytest_mock.plugin import MockerFixture
-
 
 @pytest.fixture
-def mock_time(mocker: "MockerFixture") -> Any:
+def mock_time(mocker: MockerFixture) -> Any:
     """Fixture to mock time.time() for testing TTL behavior.
 
     Args:
@@ -42,7 +40,7 @@ def mock_time(mocker: "MockerFixture") -> Any:
 
 
 @pytest.fixture
-def mock_auth_cache_dir(mocker: "MockerFixture", tmp_path: Path) -> Path:
+def mock_auth_cache_dir(mocker: MockerFixture, tmp_path: Path) -> Path:
     """Fixture to provide a temporary auth cache directory.
 
     Args:
@@ -59,7 +57,7 @@ def mock_auth_cache_dir(mocker: "MockerFixture", tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def mock_fcntl(mocker: "MockerFixture") -> Any:
+def mock_fcntl(mocker: MockerFixture) -> Any:
     """Fixture to mock file locking operations.
 
     Note: This fixture now mocks filelock.FileLock instead of fcntl.flock,
@@ -595,7 +593,7 @@ class TestAuthCachePublicMethods:
     """Test cases for the public methods of AuthCache."""
 
     def test_get_or_create_calls_internal_correctly(
-        self, mocker: "MockerFixture"
+        self, mocker: MockerFixture
     ) -> None:
         """Test that get_or_create calls _cache_auth_data with correct parameters.
 
@@ -631,7 +629,7 @@ class TestAuthCachePublicMethods:
         )
 
     def test_get_or_create_token_calls_internal_correctly(
-        self, mocker: "MockerFixture"
+        self, mocker: MockerFixture
     ) -> None:
         """Test that get_or_create_token calls _cache_auth_data with correct parameters.
 
@@ -874,7 +872,7 @@ class TestAuthCacheIntegration:
         self,
         mock_auth_cache_dir: Path,
         mock_fcntl: Mock,
-        mocker: "MockerFixture",
+        mocker: MockerFixture,
         initial_time: float,
         check_time: float,
         should_refresh: bool,
@@ -960,7 +958,7 @@ class TestAuthCacheErrorHandling:
             )
 
     def test_cache_dir_creation(
-        self, mocker: "MockerFixture", tmp_path: Path, mock_fcntl: Mock, mock_time: Mock
+        self, mocker: MockerFixture, tmp_path: Path, mock_fcntl: Mock, mock_time: Mock
     ) -> None:
         """Test that cache directory is created if it doesn't exist.
 
@@ -992,3 +990,143 @@ class TestAuthCacheErrorHandling:
         # Assert
         assert non_existent_dir.exists()
         assert non_existent_dir.is_dir()
+
+
+class TestAuthCacheInvalidate:
+    """Test cases for the AuthCache.invalidate() classmethod."""
+
+    def test_invalidate_removes_existing_cache_file(
+        self,
+        mock_auth_cache_dir: Path,
+        mock_fcntl: Mock,
+        mock_time: Mock,
+        sample_auth_func: Mock,
+    ) -> None:
+        """Invalidate deletes a previously cached auth file and forces re-auth.
+
+        Creates a cache entry via _cache_auth_data, then calls invalidate()
+        and verifies the cache file is removed. A subsequent _cache_auth_data
+        call must invoke the auth function again (cache miss).
+
+        Args:
+            mock_auth_cache_dir: Mocked auth cache directory path.
+            mock_fcntl: Mocked file locking.
+            mock_time: Mocked time.time() for consistent testing.
+            sample_auth_func: Mock authentication function.
+        """
+        controller_type = "ACI"
+        url = "https://apic.example.com"
+
+        # Populate the cache
+        AuthCache._cache_auth_data(
+            controller_type=controller_type,
+            url=url,
+            auth_func=sample_auth_func,
+            extract_token=True,
+        )
+        assert len(list(mock_auth_cache_dir.glob("*.json"))) == 1
+
+        # Invalidate
+        AuthCache.invalidate(controller_type, url)
+
+        # Cache file should be gone
+        assert len(list(mock_auth_cache_dir.glob("*.json"))) == 0
+
+        # Next access should call the auth function again
+        sample_auth_func.reset_mock()
+        AuthCache._cache_auth_data(
+            controller_type=controller_type,
+            url=url,
+            auth_func=sample_auth_func,
+            extract_token=True,
+        )
+        sample_auth_func.assert_called_once()
+
+    def test_invalidate_noop_when_no_cache_exists(
+        self,
+        mock_auth_cache_dir: Path,
+        mock_fcntl: Mock,
+    ) -> None:
+        """Invalidate is a silent no-op when there is no cache file to remove.
+
+        Args:
+            mock_auth_cache_dir: Mocked auth cache directory path.
+            mock_fcntl: Mocked file locking.
+        """
+        # No cache file exists — this must not raise
+        AuthCache.invalidate("ACI", "https://apic.example.com")
+
+        # Directory should still be empty
+        assert len(list(mock_auth_cache_dir.glob("*.json"))) == 0
+
+    def test_invalidate_cleans_up_lock_file(
+        self,
+        mock_auth_cache_dir: Path,
+        mock_time: Mock,
+        sample_auth_func: Mock,
+    ) -> None:
+        """Invalidate leaves no cache or lock artifacts behind.
+
+        This test does NOT mock FileLock so that real file locking occurs.
+        Note: filelock >= 3.13 (UnixFileLock) auto-deletes lock files on
+        release, so the .lock file may not persist between calls. This test
+        verifies the end state — no artifacts remain after invalidation.
+
+        Args:
+            mock_auth_cache_dir: Mocked auth cache directory path.
+            mock_time: Mocked time.time() for consistent testing.
+            sample_auth_func: Mock authentication function.
+        """
+        controller_type = "ACI"
+        url = "https://apic.example.com"
+
+        # Populate cache (using real FileLock)
+        AuthCache._cache_auth_data(
+            controller_type=controller_type,
+            url=url,
+            auth_func=sample_auth_func,
+            extract_token=True,
+        )
+
+        # Cache file must exist after population
+        json_files = list(mock_auth_cache_dir.glob("*.json"))
+        assert len(json_files) == 1
+
+        # Invalidate
+        AuthCache.invalidate(controller_type, url)
+
+        # No cache or lock artifacts should remain
+        assert len(list(mock_auth_cache_dir.glob("*.json"))) == 0
+        assert len(list(mock_auth_cache_dir.glob("*.lock"))) == 0
+
+    def test_invalidate_does_not_raise_on_permission_error(
+        self,
+        mock_auth_cache_dir: Path,
+        mocker: "MockerFixture",
+    ) -> None:
+        """Invalidate swallows exceptions and never blocks test execution.
+
+        Args:
+            mock_auth_cache_dir: Mocked auth cache directory path.
+            mocker: Pytest mocker fixture for creating mocks.
+        """
+        import hashlib
+
+        controller_type = "ACI"
+        url = "https://apic.example.com"
+
+        url_hash = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
+        cache_file = mock_auth_cache_dir / f"{controller_type}_{url_hash}.json"
+        cache_file.write_text("{}")
+
+        # Make FileLock raise an OSError to simulate a permission issue
+        mocker.patch(
+            "nac_test.pyats_core.common.auth_cache.FileLock",
+            side_effect=OSError("Permission denied"),
+        )
+
+        # Must not raise
+        AuthCache.invalidate(controller_type, url)
+
+        # The cache file still exists because we couldn't acquire the lock
+        assert cache_file.exists()

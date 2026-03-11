@@ -32,7 +32,7 @@ jobs:
         run: bandit -c pyproject.toml -r nac_test/ -ll -f json -o bandit-security-report.json
         
       - name: Upload security report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: bandit-security-report
@@ -104,9 +104,9 @@ jobs:
 
       - name: Test
         run: |
-          uv sync --extra dev --extra adapters    # --extra adapters will pull in nac-test-pyats-common
+          uv sync --extra dev
           # Run tests in parallel (--dist loadscope keeps test classes together, this is critical for e2e tests)
-          uv run pytest tests/ -n auto --dist loadscope
+          uv run pytest -n auto --dist loadscope tests/
 
   notification:
     name: Notification

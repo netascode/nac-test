@@ -4,7 +4,11 @@
 """Utility modules for nac-test framework."""
 
 from nac_test.utils.asyncio_utils import get_or_create_event_loop
-from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
+from nac_test.utils.cleanup import (
+    cleanup_old_test_outputs,
+    cleanup_pyats_runtime,
+    cleanup_stale_test_artifacts,
+)
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.device_validation import (
     REQUIRED_DEVICE_FIELDS,
@@ -12,7 +16,7 @@ from nac_test.utils.device_validation import (
 )
 from nac_test.utils.environment import EnvironmentValidator
 from nac_test.utils.file_discovery import find_data_file
-from nac_test.utils.logging import VerbosityLevel, configure_logging
+from nac_test.utils.logging import LogLevel, configure_logging
 from nac_test.utils.strings import sanitize_hostname
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
@@ -23,8 +27,9 @@ __all__ = [
     "EnvironmentValidator",
     "cleanup_pyats_runtime",
     "cleanup_old_test_outputs",
+    "cleanup_stale_test_artifacts",
     "configure_logging",
-    "VerbosityLevel",
+    "LogLevel",
     # Asyncio utilities (cross-version compatibility)
     "get_or_create_event_loop",
     # Device validation utilities (SSH/D2D architecture)

@@ -22,6 +22,8 @@ from jinja2 import (
 )
 
 from nac_test.pyats_core.reporting.types import ResultStatus
+from nac_test.utils.formatting import format_duration as _format_duration
+from nac_test.utils.formatting import format_timestamp_ms
 
 # Get the absolute path to the templates directory
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -44,59 +46,16 @@ def format_datetime(dt_str: str | datetime) -> str:
         dt = datetime.fromisoformat(dt_str)
     else:
         dt = dt_str
-    # Include milliseconds (first 3 digits of microseconds)
-    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    return format_timestamp_ms(dt)
 
 
 def format_duration(duration_seconds: float | int | None) -> str:
     """Format a duration in seconds to a human-readable format.
 
-    Uses smart formatting to display durations in the most readable way:
-    - Less than 1 second: "< 1s"
-    - 1-59 seconds: "X.Xs" (e.g., "2.5s", "45.2s")
-    - 1-59 minutes: "Xm XXs" (e.g., "1m 23s", "15m 8s")
-    - 1+ hours: "Xh Xm" (e.g., "1h 5m", "2h 45m")
-
-    Args:
-        duration_seconds: Duration in seconds as a float or int, or None.
-
-    Returns:
-        Formatted duration string, or "N/A" if duration is None.
-
-    Examples:
-        >>> format_duration(0.5)
-        "< 1s"
-        >>> format_duration(2.456)
-        "2.5s"
-        >>> format_duration(83.2)
-        "1m 23s"
-        >>> format_duration(3725.8)
-        "1h 2m"
+    Delegates to :func:`nac_test.utils.formatting.format_duration`.
+    Kept here so the Jinja2 filter registration continues to work.
     """
-    if duration_seconds is None:
-        return "N/A"
-
-    # Convert to float for calculations
-    duration = float(duration_seconds)
-
-    # Less than 1 second
-    if duration < 1.0:
-        return "< 1s"
-
-    # 1-59 seconds: show one decimal place
-    if duration < 60:
-        return f"{duration:.1f}s"
-
-    # 1-59 minutes: show minutes and seconds
-    if duration < 3600:
-        minutes = int(duration // 60)
-        seconds = int(duration % 60)
-        return f"{minutes}m {seconds}s"
-
-    # 1+ hours: show hours and minutes (drop seconds for brevity)
-    hours = int(duration // 3600)
-    minutes = int((duration % 3600) // 60)
-    return f"{hours}h {minutes}m"
+    return _format_duration(duration_seconds)
 
 
 def get_status_style(status: ResultStatus | str) -> dict[str, str]:

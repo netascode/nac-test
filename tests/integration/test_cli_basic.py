@@ -5,12 +5,9 @@
 
 This module contains integration tests that verify basic CLI functionality
 including command execution, environment variable handling, custom filters,
-test file loading, and verbosity settings.
+test file loading, and loglevel settings.
 """
 
-import os
-import tempfile
-from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -19,62 +16,41 @@ from typer.testing import CliRunner
 
 import nac_test.cli.main
 
-pytestmark = pytest.mark.integration
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.usefixtures("setup_bogus_controller_env"),
+]
 
 
-@pytest.fixture
-def temp_cwd_dir() -> Generator[str, None, None]:
-    """Create a unique temporary directory in the current working directory.
-
-    The directory is automatically cleaned up after the test completes.
-
-    Yields:
-        Path to the temporary directory.
-    """
-    import shutil
-
-    temp_dir = tempfile.mkdtemp(dir=os.getcwd(), prefix="output_")
-    yield temp_dir
-    if os.path.exists(temp_dir):
-        shutil.rmtree(temp_dir)
-
-
-@pytest.fixture(scope="function", autouse=True)
-def setup_bogus_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set up environment variables for a bogus ACI controller.
-
-    Uses monkeypatch for safe, automatic cleanup that preserves
-    original environment state even if tests fail.
-
-    Args:
-        monkeypatch: Pytest monkeypatch fixture for safe environment manipulation.
-    """
-    monkeypatch.setenv("ACI_URL", "foo")
-    monkeypatch.setenv("ACI_USERNAME", "foo")
-    monkeypatch.setenv("ACI_PASSWORD", "foo")
-
-
-def test_nac_test_basic_execution_succeeds(tmp_path: Path) -> None:
+@pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_cwd_dir"])
+def test_nac_test_basic_execution_succeeds(
+    request: pytest.FixtureRequest, fixture_name: str
+) -> None:
     """Test that basic nac-test CLI execution completes successfully.
 
     Verifies that the CLI can process data files and templates without
-    errors when provided with valid paths and a temporary output directory.
+    errors when provided with valid paths and either an absolute temp output
+    directory or a cwd-relative temp output directory.
 
     Args:
-        tmp_path: Pytest fixture providing a temporary directory.
+        request: Pytest fixture request for dynamic fixture access.
+        fixture_name: Name of the output directory fixture to use.
     """
     runner = CliRunner()
-    data_path = "tests/integration/fixtures/data/"
+    output_dir = request.getfixturevalue(fixture_name)
+    data_path = "tests/integration/fixtures/data/data.yaml"
     templates_path = "tests/integration/fixtures/templates/"
     result = runner.invoke(
         nac_test.cli.main.app,
         [
             "-d",
             data_path,
+            "-d",
+            "tests/integration/fixtures/data/defaults.yaml",
             "-t",
             templates_path,
             "-o",
-            str(tmp_path),
+            str(output_dir),
         ],
     )
     assert result.exit_code == 0, (
@@ -181,10 +157,10 @@ def test_nac_test_external_test_file_loading_succeeds(tmp_path: Path) -> None:
     )
 
 
-def test_nac_test_debug_verbosity_flag_accepted(tmp_path: Path) -> None:
-    """Test that the DEBUG verbosity flag is accepted and applied.
+def test_nac_test_debug_loglevel_flag_accepted(tmp_path: Path) -> None:
+    """Test that the DEBUG loglevel flag is accepted and applied.
 
-    Verifies that the CLI accepts the -v DEBUG option and processes
+    Verifies that the CLI accepts the -l DEBUG option and processes
     templates without errors when debug logging is enabled.
 
     Args:
@@ -202,13 +178,13 @@ def test_nac_test_debug_verbosity_flag_accepted(tmp_path: Path) -> None:
             templates_path,
             "-o",
             str(tmp_path),
-            "-v",
+            "-l",
             "DEBUG",
         ],
     )
 
     assert result.exit_code == 0, (
-        f"DEBUG verbosity flag should be accepted, got exit code "
+        f"DEBUG loglevel flag should be accepted, got exit code "
         f"{result.exit_code}: {result.output}"
     )
 

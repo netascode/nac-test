@@ -11,7 +11,12 @@ from dataclasses import dataclass
 
 import typer
 
+from nac_test.utils.controller import get_display_name
 from nac_test.utils.terminal import TerminalColors
+from nac_test.utils.url import extract_host
+
+# Type alias for typer color values
+ColorValue = str | int | tuple[int, int, int]
 
 # Banner display settings
 BANNER_CONTENT_WIDTH: int = (
@@ -75,6 +80,26 @@ UNICODE_BOX_STYLE = BoxStyle(
 )
 
 
+def _wrap_url_lines(prefix: str, url: str, indent: str = "") -> list[str]:
+    """Wrap a prefix + URL into one or two lines to fit banner width.
+
+    If the combined line fits within BANNER_CONTENT_WIDTH, returns a single line.
+    Otherwise, the prefix goes on one line and the URL on the next (indented).
+
+    Args:
+        prefix: The text before the URL (e.g., "Could not connect to APIC at").
+        url: The URL string.
+        indent: Leading whitespace for both lines (e.g., "  " for indented commands).
+
+    Returns:
+        A list of one or two strings that fit within the banner width.
+    """
+    single_line = f"{indent}{prefix} {url}"
+    if len(single_line) <= BANNER_CONTENT_WIDTH:
+        return [single_line]
+    return [f"{indent}{prefix}", f"{indent}  {url}"]
+
+
 def _get_box_style(no_color: bool) -> BoxStyle:
     """Return ASCII or Unicode box style based on color mode."""
     return ASCII_BOX_STYLE if no_color else UNICODE_BOX_STYLE
@@ -114,6 +139,58 @@ def _build_title_line(title: str, width: int, style: BoxStyle) -> str:
     )
 
 
+def _render_banner(
+    title: str,
+    content_lines: list[str],
+    border_color: ColorValue = typer.colors.RED,
+    text_color: ColorValue = typer.colors.WHITE,
+) -> None:
+    """Render a styled terminal banner with box borders.
+
+    Handles both Unicode (colored) and ASCII (NO_COLOR) rendering modes.
+    All public banner functions should delegate to this to avoid duplication.
+
+    Args:
+        title: The banner title text. For Unicode mode, can include emoji.
+        content_lines: List of content strings (one per line inside the box).
+        border_color: Typer color for borders in color mode.
+        text_color: Typer color for content text in color mode.
+    """
+    width = BANNER_CONTENT_WIDTH
+    no_color = TerminalColors.NO_COLOR
+    style = _get_box_style(no_color)
+
+    # Build borders
+    h_border = style.horizontal * width
+    top_border = style.top_left + h_border + style.top_right
+    separator = style.mid_left + h_border + style.mid_right
+    bottom_border = style.bottom_left + h_border + style.bottom_right
+    title_line = _build_title_line(title, width, style)
+
+    bordered_content = [
+        _build_bordered_line(line, width, style) for line in content_lines
+    ]
+
+    if no_color:
+        typer.echo(top_border)
+        typer.echo(title_line)
+        typer.echo(separator)
+        for line in bordered_content:
+            typer.echo(line)
+        typer.echo(bottom_border)
+    else:
+        typer.echo(typer.style(top_border, fg=border_color))
+        typer.echo(typer.style(title_line, fg=border_color))
+        typer.echo(typer.style(separator, fg=border_color))
+        for line in bordered_content:
+            typer.echo(
+                typer.style(style.vertical, fg=border_color)
+                + typer.style(line[1:-1], fg=text_color)
+                + typer.style(style.vertical, fg=border_color)
+            )
+        typer.echo(typer.style(bottom_border, fg=border_color))
+
+
 def display_aci_defaults_banner() -> None:
     """Display a prominent banner when ACI defaults file is missing.
 
@@ -126,25 +203,12 @@ def display_aci_defaults_banner() -> None:
         Requires UTF-8 terminal support for Unicode box-drawing characters.
         Set NO_COLOR=1 environment variable to use ASCII fallback.
     """
-    width = BANNER_CONTENT_WIDTH
     no_color = TerminalColors.NO_COLOR
-    style = _get_box_style(no_color)
-
-    # Title content differs by mode
     title = (
         "!!! DEFAULTS FILE REQUIRED FOR ACI !!!"
         if no_color
         else "🛑 DEFAULTS FILE REQUIRED FOR ACI 🛑"
     )
-
-    # Build borders
-    h_border = style.horizontal * width
-    top_border = style.top_left + h_border + style.top_right
-    separator = style.mid_left + h_border + style.mid_right
-    bottom_border = style.bottom_left + h_border + style.bottom_right
-    title_line = _build_title_line(title, width, style)
-
-    # Content lines
     content_lines = [
         "",
         "Cisco's ACI as Code (AaC) requires the defaults file for proper test",
@@ -155,32 +219,83 @@ def display_aci_defaults_banner() -> None:
         "  nac-test -d ./data -d ./defaults/ -t ./tests/ -o ./output",
         "",
     ]
-    bordered_content = [
-        _build_bordered_line(line, width, style) for line in content_lines
+    _render_banner(title, content_lines)
+
+
+def display_auth_failure_banner(
+    controller_type: str,
+    controller_url: str,
+    detail: str,
+    env_var_prefix: str,
+) -> None:
+    """Display a prominent banner when controller authentication fails.
+
+    This banner is shown when the pre-flight auth check fails due to invalid
+    credentials (HTTP 401/403). It provides remediation steps including the
+    environment variable names to check.
+
+    Args:
+        controller_type: The controller type string (e.g., "ACI", "SDWAN", "CC").
+        controller_url: The URL that was attempted.
+        detail: Human-readable error detail (e.g., "HTTP 401: Unauthorized").
+        env_var_prefix: The environment variable prefix (e.g., "ACI", "SDWAN", "CC").
+
+    Note:
+        Uses the same box style and color handling as display_aci_defaults_banner.
+    """
+    display_name = get_display_name(controller_type)
+    no_color = TerminalColors.NO_COLOR
+    title = (
+        "!!! CONTROLLER AUTHENTICATION FAILED !!!"
+        if no_color
+        else "⛔ CONTROLLER AUTHENTICATION FAILED"
+    )
+    content_lines = [
+        "",
+        *_wrap_url_lines(
+            f"Could not authenticate to {display_name} at", controller_url
+        ),
+        "",
+        "Verify your credentials:",
+        f"  export {env_var_prefix}_USERNAME=<username>",
+        f"  export {env_var_prefix}_PASSWORD=<password>",
+        "",
     ]
+    _render_banner(title, content_lines)
 
-    # Output based on color mode
-    if no_color:
-        typer.echo(top_border)
-        typer.echo(title_line)
-        typer.echo(separator)
-        for line in bordered_content:
-            typer.echo(line)
-        typer.echo(bottom_border)
-    else:
-        border_color = typer.colors.RED
-        text_color = typer.colors.WHITE
 
-        typer.echo(typer.style(top_border, fg=border_color))
-        typer.echo(typer.style(title_line, fg=border_color))
-        typer.echo(typer.style(separator, fg=border_color))
+def display_unreachable_banner(
+    controller_type: str,
+    controller_url: str,
+    detail: str,
+) -> None:
+    """Display a prominent banner when controller is unreachable.
 
-        for line in bordered_content:
-            # Color borders red, content white
-            typer.echo(
-                typer.style(style.vertical, fg=border_color)
-                + typer.style(line[1:-1], fg=text_color)
-                + typer.style(style.vertical, fg=border_color)
-            )
+    This banner is shown when the pre-flight auth check fails due to the
+    controller being unreachable (connection timeout, connection refused, etc.).
+    It provides connectivity debugging steps.
 
-        typer.echo(typer.style(bottom_border, fg=border_color))
+    Args:
+        controller_type: The controller type string (e.g., "ACI", "SDWAN", "CC").
+        controller_url: The URL that was attempted.
+        detail: Human-readable error detail (e.g., "Connection timed out").
+
+    Note:
+        Uses the same box style and color handling as display_aci_defaults_banner.
+    """
+    display_name = get_display_name(controller_type)
+    host = extract_host(controller_url)
+    no_color = TerminalColors.NO_COLOR
+    title = (
+        "!!! CONTROLLER UNREACHABLE !!!" if no_color else "⛔ CONTROLLER UNREACHABLE"
+    )
+    content_lines = [
+        "",
+        *_wrap_url_lines(f"Could not connect to {display_name} at", controller_url),
+        "",
+        "Verify the controller is reachable and the URL is correct:",
+        *_wrap_url_lines("curl -k", controller_url, indent="  "),
+        f"  ping {host}",
+        "",
+    ]
+    _render_banner(title, content_lines)

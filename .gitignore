@@ -73,6 +73,7 @@ ENV/
 .vscode
 
 tmp/
+__nac_tmp_*
 
 .mypy_cache/
 .ruff_cache/
@@ -94,6 +95,7 @@ pabot_results/
 CLAUDE.md
 # Opencode/oh-my-opencode
 .sisyphus/
+AGENTS.md
 
 # bandit security report, if generated
 bandit-security-report.json

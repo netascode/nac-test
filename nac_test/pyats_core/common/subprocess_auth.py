@@ -320,12 +320,12 @@ with open({output_path_escaped}, "w") as f:
         if "error" in result:
             error_msg = result["error"]
             traceback_str = result.get("traceback", "")
-            logger.error(
+            logger.debug(
                 "[SubprocessAuth] Authentication failed: %s\n%s",
                 error_msg,
                 traceback_str,
             )
-            raise SubprocessAuthError(f"Authentication failed: {error_msg}")
+            raise SubprocessAuthError(error_msg)
 
         logger.debug("[SubprocessAuth] Authentication completed successfully")
         return result

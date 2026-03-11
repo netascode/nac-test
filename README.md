@@ -55,9 +55,12 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_MINIMAL_REPORTS]  │
 │    --diagnostic                         Wrap execution with diagnostic       │
 │                                         collection script for troubleshooting│
+│    --verbose                            Enables verbose output for nac-test, │
+│                                         Robot and PyATS execution.           |
+│                                         [env var: NAC_TEST_VERBOSE]          │
 │    --merged-data-file… -m   TEXT        Filename for merged data model.      │
 │                                         [default: merged_data_model_test...] │
-│    --verbosity         -v   [DEBUG|...] Verbosity level. [default: WARNING]  │
+│    --loglevel          -l   [DEBUG|...] Log level. [default: WARNING]        │
 │    --version                            Display version number.              │
 │    --help                               Show this message and exit.          │
 ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -75,28 +78,29 @@ For Robot Framework tests, [Pabot](https://pabot.org/) executes test suites in p
 
 ## Installation
 
-**Python Requirements:**
-- **Linux / Windows**: Python 3.10 or higher
+**Platform Requirements:**
+
+- **Linux**: Python 3.10 or higher
 - **macOS**: Python 3.12 or higher (earlier versions have known incompatibilities)
+- **Windows**: Not supported in nac-test 2.x
 
 Don't have the right Python version? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/), or install using:
 - `brew install python@3.12`
 - `uv python install 3.12`
 - `pyenv install 3.12`
 
-`nac-validate` can be installed in a virtual environment using `pip` or `uv`:
+`nac-test` can be installed in a virtual environment using `pip` or `uv`:
 
 ```bash
 # Using pip
 pip install nac-test
 
-# Using uv (recommended)
-uv tools install nac-test
+# Using uv (recommended, also for install performance reasons)
+uv tool install nac-test
 ```
 
 The following Robot libraries are included with `nac-test`:
 
-- [RESTinstance](https://github.com/asyrjasalo/RESTinstance)
 - [robotframework-requests](https://github.com/MarketSquare/robotframework-requests)
 - [robotframework-jmespath](https://github.com/netascode/robotframework-jmespath)
 - [robotframework-jsonlibrary](https://github.com/robotframework-thailand/robotframework-jsonlibrary)
@@ -325,14 +329,17 @@ export IOSXE_USERNAME=admin
 export IOSXE_PASSWORD=devicepassword
 
 # Run all tests (Robot + PyATS combined)
-nac-test -d ./data -t ./tests -o ./results
+nac-test -d ./data -t ./tests -o ./output
 
 # Run only PyATS tests (development mode)
-nac-test -d ./data -t ./tests -o ./results --pyats
+nac-test -d ./data -t ./tests -o ./output --pyats
 
 # Run only Robot Framework tests (development mode)
-nac-test -d ./data -t ./tests -o ./results --robot
+nac-test -d ./data -t ./tests -o ./output --robot
 ```
+
+**Note**: the --pyats and --robot are experimental development arguments which
+might be removed in later versions. 
 
 ### PyATS Output
 
@@ -373,7 +380,7 @@ Before test execution, `nac-test` merges all YAML data files into a single data 
 By default, the merged file is named `merged_data_model_test_variables.yaml`. You can customize this:
 
 ```bash
-nac-test -d ./data -t ./tests -o ./results -m my_custom_data.yaml
+nac-test -d ./data -t ./tests -o ./output -m my_custom_data.yaml
 ```
 
 ### Accessing the Merged Data
@@ -391,7 +398,7 @@ For faster development cycles, you can run only one test framework at a time:
 Run only PyATS tests, skipping Robot Framework:
 
 ```bash
-nac-test -d ./data -t ./tests -o ./results --pyats
+nac-test -d ./data -t ./tests -o ./output --pyats
 ```
 
 This is useful when:
@@ -404,7 +411,7 @@ This is useful when:
 Run only Robot Framework tests, skipping PyATS:
 
 ```bash
-nac-test -d ./data -t ./tests -o ./results --robot
+nac-test -d ./data -t ./tests -o ./output --robot
 ```
 
 This is useful when:
@@ -419,7 +426,7 @@ This is useful when:
 For CI/CD pipelines with artifact size constraints, use the `--minimal-reports` flag:
 
 ```bash
-nac-test -d ./data -t ./tests -o ./results --minimal-reports
+nac-test -d ./data -t ./tests -o ./output --minimal-reports
 ```
 
 This reduces HTML report size by **80-95%** by only including detailed command outputs for failed or errored tests. Passed tests show summary information without full API response bodies.
@@ -430,10 +437,10 @@ For Direct-to-Device (D2D) tests that connect to network devices via SSH, you ca
 
 ```bash
 # Automatically calculate based on system resources (default)
-nac-test -d ./data -t ./tests -o ./results --pyats
+nac-test -d ./data -t ./tests -o ./output --pyats
 
 # Limit to specific number of parallel device connections
-nac-test -d ./data -t ./tests -o ./results --pyats --max-parallel-devices 10
+nac-test -d ./data -t ./tests -o ./output --pyats --max-parallel-devices 10
 ```
 
 The `--max-parallel-devices` option sets an upper limit on concurrent SSH connections to prevent overwhelming network devices or exhausting system resources.
@@ -624,12 +631,12 @@ Metadata        Test Concurrency     True
 
 **Implementation:** `nac-test` checks the rendered robot files for the `Metadata` setting and instructs pabot to run each test within the respective suite in parallel (using pabot's `--testlevelsplit --ordering ordering.txt` arguments). You can inspect the `ordering.txt` file in the output directory.
 
-**Disabling test-level parallelization:** Set the environment variable `NAC_TEST_NO_TESTLEVELSPLIT=1` to disable this feature.
+**Disabling test-level parallelization:** Set the environment variable `NAC_TEST_DISABLE_TESTLEVELSPLIT=true` to disable this feature.
 
 
 ## Advanced Robot Framework Options
 
-You can pass additional Robot Framework options directly to `nac-test`, which are forwarded to the pabot/Robot Framework execution. This enables advanced use cases like custom variables, listeners, and logging configuration:
+You can pass additional Robot Framework options directly to `nac-test`, which are forwarded to the pabot/Robot Framework execution. This enables advanced use cases like custom variables and listeners:
 
 ```bash
 # Pass custom variables
@@ -638,19 +645,36 @@ nac-test -d data/ -t templates/ -o output/ --variable MY_VAR:value
 # Multiple variables
 nac-test -d data/ -t templates/ -o output/ --variable VAR1:value1 --variable VAR2:value2
 
-# Custom log level
-nac-test -d data/ -t templates/ -o output/ --loglevel DEBUG
-
 # Add a listener
 nac-test -d data/ -t templates/ -o output/ --listener MyListener.py
 
 # Combine multiple options
-nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --loglevel INFO --listener MyListener
+nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --listener MyListener
 ```
 
 **Note:** Only Robot Framework options are supported. Pabot-specific options (like `--testlevelsplit`, `--pabotlib`, etc.) and test file paths are not allowed and will result in an error with exit code 252 (invalid Robot Framework arguments).
 
 See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#command-line-options) for all available options.
+
+### Robot Framework Log Level
+
+**Breaking change in nac-test 2.0:** The `--loglevel` argument is now a nac-test option that controls the overall logging verbosity, not a pass-through Robot Framework argument. Robot Framework's log level is automatically set to `DEBUG` when nac-test's `--loglevel` is set to `DEBUG`; otherwise, Robot uses its default log level.
+
+If you need fine-grained control over Robot Framework's log level (e.g., `TRACE`), implement this within your test suites using one of these approaches:
+
+```bash
+# Pass log level as a Robot variable
+nac-test -d data/ -t templates/ -o output/ --variable MY_LOG_LEVEL:TRACE
+```
+
+Then in your Robot test suite, use the `Set Log Level` keyword:
+
+```robot
+*** Settings ***
+Suite Setup    Set Log Level    ${MY_LOG_LEVEL}
+```
+
+Alternatively, use environment variables to control logging behavior within your test implementation.
 
 ## Exit Codes
 
@@ -666,6 +690,52 @@ nac-test _mostly_ follows Robot Framework exit code conventions to provide meani
 | **255** | Execution error | Framework crash or infrastructure error |
 
 (we only follow _mostly_ as we deviate in using `2` for invalid nac-test arguments, and don't use `251`).
+
+## Verbose Mode
+
+The `--verbose` flag enables verbose mode for troubleshooting test execution:
+
+```bash
+nac-test -d ./data -t ./tests -o ./output --verbose
+```
+
+When enabled, verbose mode:
+- Sets nac-test log level to DEBUG (can be overridden by setting `--loglevel`)
+- Enables verbose output for `pabot` execution (shows the Robot console output) 
+- Sets Robot Framework loglevel to DEBUG for additional debug information in the
+  execution (can be overridden by `--loglevel` or Robot argument `--loglevel`)
+- Shows additional progress information and console output during PyATS test execution. 
+  The pyATS loglevel will follow the `--loglevel` setting, so you can reduce the output
+  for example via `--verbose --loglevel ERROR` which limits pyATS debugging output
+  to ERROR information
+
+## Advanced Environment Variables
+
+In addition to CLI options, `nac-test` supports several environment variables for advanced tuning:
+
+### PyATS Execution Tuning
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NAC_TEST_PYATS_PROCESSES` | Auto (CPU-based) | Number of parallel PyATS worker processes |
+| `NAC_TEST_PYATS_MAX_CONNECTIONS` | Auto (resource-based) | Maximum concurrent API connections |
+| `NAC_TEST_PYATS_API_CONCURRENCY` | 10 | Concurrent API requests per worker |
+| `NAC_TEST_PYATS_SSH_CONCURRENCY` | 5 | Concurrent SSH connections per worker |
+| `NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT` | 10485760 | Output buffer size in bytes (10MB) |
+| `NAC_TEST_PYATS_KEEP_REPORT_DATA` | unset | Keep intermediate JSONL/archive files |
+| `NAC_TEST_PYATS_OVERFLOW_DIR` | /tmp/nac_test_overflow | Directory for overflow files when memory limits exceeded |
+
+### Robot Framework Execution
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NAC_TEST_DISABLE_TESTLEVELSPLIT` | unset | Disable test-level parallelization for Robot |
+
+### Verbose and Development
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NAC_TEST_VERBOSE` | unset | Enable verbose mode: verbose output and retain intermediate files (see `NAC_TEST_PYATS_KEEP_REPORT_DATA`) |
 
 ## Troubleshooting
 
@@ -694,7 +764,7 @@ export SDWAN_USERNAME=admin
 export SDWAN_PASSWORD=your-password
 
 # 3. Run nac-test with the --diagnostic flag
-nac-test -d ./data -t ./tests -o ./results --pyats --diagnostic
+nac-test -d ./data -t ./tests -o ./output --pyats --diagnostic
 ```
 
 The diagnostic flag will wrap your nac-test execution and generate a `nac-test-diagnostics-XXXXXX.tar.gz` file containing all diagnostic information with sensitive data automatically masked.

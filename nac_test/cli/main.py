@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
+
+"""CLI entry point for nac-test."""
+
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -13,13 +16,19 @@ from nac_test.cli.ui import display_aci_defaults_banner
 from nac_test.cli.validators import validate_aci_defaults
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import (
+    CONSOLE_TIME_FORMAT,
     DEBUG_MODE,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
     EXIT_INVALID_ARGS,
 )
 from nac_test.data_merger import DataMerger
-from nac_test.utils.logging import VerbosityLevel, configure_logging
+from nac_test.utils.formatting import format_duration
+from nac_test.utils.logging import (
+    DEFAULT_LOGLEVEL,
+    LogLevel,
+    configure_logging,
+)
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 
 # Pretty exceptions are verbose but helpful for debugging.
@@ -30,18 +39,30 @@ logger = logging.getLogger(__name__)
 
 
 def version_callback(value: bool) -> None:
+    """Print version and exit when --version is passed."""
     if value:
         typer.echo(f"nac-test, version {nac_test.__version__}")
         raise typer.Exit()
 
 
-Verbosity = Annotated[
-    VerbosityLevel,
+# Named "LoglevelOption" (not "Loglevel") to avoid confusion with the LogLevel enum type
+LoglevelOption = Annotated[
+    LogLevel | None,
     typer.Option(
-        "-v",
+        "--loglevel",
+        "-l",
+        help=f"Log level. Default: {DEFAULT_LOGLEVEL.value} (or DEBUG if --verbose is set).",
+        envvar="NAC_TEST_LOGLEVEL",
+        is_eager=True,
+    ),
+]
+
+DeprecatedVerbosity = Annotated[
+    LogLevel | None,
+    typer.Option(
         "--verbosity",
-        help="Verbosity level.",
-        envvar="NAC_VALIDATE_VERBOSITY",
+        "-v",
+        hidden=True,
         is_eager=True,
     ),
 ]
@@ -162,7 +183,7 @@ DryRun = Annotated[
     bool,
     typer.Option(
         "--dry-run",
-        help="Dry run flag. See robot dry run mode.",
+        help="Dry run mode: validates test structure without execution.",
         envvar="NAC_TEST_DRY_RUN",
     ),
 ]
@@ -242,6 +263,16 @@ Diagnostic = Annotated[
 ]
 
 
+Verbose = Annotated[
+    bool,
+    typer.Option(
+        "--verbose",
+        help="Enable verbose mode: enables verbose output for nac-test, Robot and PyATS execution.",
+        envvar="NAC_TEST_VERBOSE",
+    ),
+]
+
+
 Testbed = Annotated[
     Path | None,
     typer.Option(
@@ -275,9 +306,11 @@ def main(
     max_parallel_devices: MaxParallelDevices | None = None,
     minimal_reports: MinimalReports = False,
     testbed: Testbed = None,
-    verbosity: Verbosity = VerbosityLevel.WARNING,
+    loglevel: LoglevelOption = None,
+    verbosity: DeprecatedVerbosity = None,
     version: Version = False,  # noqa: ARG001
     diagnostic: Diagnostic = False,  # noqa: ARG001
+    verbose: Verbose = False,
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
@@ -287,7 +320,27 @@ def main(
     These are appended to the pabot invocation. Pabot-specific options and test
     files/directories are not supported and will result in an error.
     """
-    configure_logging(verbosity)
+
+    # Handle deprecated --verbosity option
+    if verbosity is not None:
+        typer.echo(
+            typer.style(
+                "Warning: --verbosity is deprecated, use --loglevel instead.",
+                fg=typer.colors.YELLOW,
+            ),
+            err=True,
+        )
+        if loglevel is None:
+            loglevel = verbosity
+
+    # Resolve loglevel: explicit > verbose-implied > default
+    if loglevel is not None:
+        effective_loglevel = loglevel
+    elif verbose:
+        effective_loglevel = LogLevel.DEBUG
+    else:
+        effective_loglevel = DEFAULT_LOGLEVEL
+    configure_logging(effective_loglevel)
 
     check_and_exit_if_unsupported_macos_python()
 
@@ -317,19 +370,18 @@ def main(
 
     # Merge data files with timing
     start_time = datetime.now()
-    typer.echo("\n\n📄 Merging data model files...")
+    start_timestamp = start_time.strftime(CONSOLE_TIME_FORMAT)
+    typer.echo(f"\n\n[{start_timestamp}] 📄 Merging data model files...")
 
     merged_data = DataMerger.merge_data_files(data)
     DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
 
     end_time = datetime.now()
+    end_timestamp = end_time.strftime(CONSOLE_TIME_FORMAT)
     duration = (end_time - start_time).total_seconds()
-    duration_str = (
-        f"{duration:.1f}s"
-        if duration < 60
-        else f"{int(duration // 60)}m {duration % 60:.0f}s"
+    typer.echo(
+        f"[{end_timestamp}] ✅ Data model merging completed ({format_duration(duration)})"
     )
-    typer.echo(f"✅ Data model merging completed ({duration_str})")
 
     # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
     orchestrator = CombinedOrchestrator(
@@ -348,9 +400,10 @@ def main(
         extra_args=ctx.args,
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
-        verbosity=verbosity,
+        loglevel=effective_loglevel,
         dev_pyats_only=pyats,
         dev_robot_only=robot,
+        verbose=verbose,
     )
 
     # Track total runtime for benchmarking
@@ -380,15 +433,7 @@ def main(
     runtime_end = datetime.now()
     total_runtime = (runtime_end - runtime_start).total_seconds()
 
-    # Format like other timing outputs
-    if total_runtime < 60:
-        runtime_str = f"{total_runtime:.2f} seconds"
-    else:
-        minutes = int(total_runtime / 60)
-        secs = total_runtime % 60
-        runtime_str = f"{minutes} minutes {secs:.2f} seconds"
-
-    typer.echo(f"\nTotal runtime: {runtime_str}")
+    typer.echo(f"\nTotal runtime: {format_duration(total_runtime)}")
 
     if render_only:
         if stats.has_errors:
@@ -400,6 +445,9 @@ def main(
             raise typer.Exit(stats.exit_code)
         typer.echo("\n✅ Templates rendered successfully (render-only mode)")
         raise typer.Exit(0)
+
+    if stats.pre_flight_failure is not None:
+        raise typer.Exit(stats.exit_code)
 
     if stats.has_errors:
         error_list = "; ".join(stats.errors)

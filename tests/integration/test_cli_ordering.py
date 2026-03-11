@@ -10,9 +10,6 @@ handling and test-level splitting behavior.
 
 import os
 import re
-import shutil
-import tempfile
-from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -20,37 +17,10 @@ from typer.testing import CliRunner
 
 import nac_test.cli.main
 
-pytestmark = pytest.mark.integration
-
-
-@pytest.fixture
-def temp_cwd_dir() -> Generator[str, None, None]:
-    """Create a unique temporary directory in the current working directory.
-
-    The directory is automatically cleaned up after the test completes.
-
-    Yields:
-        Path to the temporary directory.
-    """
-    temp_dir = tempfile.mkdtemp(dir=os.getcwd(), prefix="output_")
-    yield temp_dir
-    if os.path.exists(temp_dir):
-        shutil.rmtree(temp_dir)
-
-
-@pytest.fixture(scope="function", autouse=True)
-def setup_bogus_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set up environment variables for a bogus ACI controller.
-
-    Uses monkeypatch for safe, automatic cleanup that preserves
-    original environment state even if tests fail.
-
-    Args:
-        monkeypatch: Pytest monkeypatch fixture for safe environment manipulation.
-    """
-    monkeypatch.setenv("ACI_URL", "foo")
-    monkeypatch.setenv("ACI_USERNAME", "foo")
-    monkeypatch.setenv("ACI_PASSWORD", "foo")
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.usefixtures("setup_bogus_controller_env"),
+]
 
 
 @pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_cwd_dir"])
@@ -194,9 +164,9 @@ def test_ordering_file_not_created_when_no_concurrent_suites_exist(
 def test_ordering_file_not_created_when_testlevelsplit_disabled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Test that ordering.txt is not created when NAC_TEST_NO_TESTLEVELSPLIT is set.
+    """Test that ordering.txt is not created when NAC_TEST_DISABLE_TESTLEVELSPLIT is set.
 
-    Verifies that setting the NAC_TEST_NO_TESTLEVELSPLIT environment variable
+    Verifies that setting the NAC_TEST_DISABLE_TESTLEVELSPLIT environment variable
     disables test-level splitting and prevents ordering.txt from being created,
     even when concurrent test suites are present.
 
@@ -207,7 +177,7 @@ def test_ordering_file_not_created_when_testlevelsplit_disabled(
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list/"
     templates_path = "tests/integration/fixtures/templates_ordering_1/"
-    monkeypatch.setenv("NAC_TEST_NO_TESTLEVELSPLIT", "1")
+    monkeypatch.setattr("nac_test.robot.orchestrator.DISABLE_TESTLEVELSPLIT", True)
 
     result = runner.invoke(
         nac_test.cli.main.app,
@@ -222,10 +192,10 @@ def test_ordering_file_not_created_when_testlevelsplit_disabled(
         ],
     )
     assert result.exit_code == 0, (
-        f"Render-only with NO_TESTLEVELSPLIT should succeed, got exit code "
+        f"Render-only with DISABLE_TESTLEVELSPLIT should succeed, got exit code "
         f"{result.exit_code}: {result.output}"
     )
 
     assert not (tmp_path / "ordering.txt").exists(), (
-        "ordering.txt file should not exist when NAC_TEST_NO_TESTLEVELSPLIT is set"
+        "ordering.txt file should not exist when NAC_TEST_DISABLE_TESTLEVELSPLIT is set"
     )

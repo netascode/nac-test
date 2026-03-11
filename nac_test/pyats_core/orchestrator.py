@@ -16,6 +16,8 @@ from typing import Any
 import yaml
 
 from nac_test.core.constants import (
+    DEBUG_MODE,
+    DRY_RUN_REASON,
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
@@ -41,9 +43,15 @@ from nac_test.pyats_core.reporting.multi_archive_generator import (
 )
 from nac_test.pyats_core.reporting.utils.archive_aggregator import ArchiveAggregator
 from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
-from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
+from nac_test.utils.cleanup import (
+    cleanup_old_test_outputs,
+    cleanup_pyats_runtime,
+    cleanup_stale_test_artifacts,
+)
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.environment import EnvironmentValidator
+from nac_test.utils.formatting import format_duration
+from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
 
@@ -62,6 +70,9 @@ class PyATSOrchestrator:
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
+        dry_run: bool = False,
+        verbose: bool = False,
+        loglevel: LogLevel = DEFAULT_LOGLEVEL,
     ):
         """Initialize the PyATS orchestrator.
 
@@ -74,6 +85,9 @@ class PyATSOrchestrator:
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
                 If not provided, will be detected automatically.
+            dry_run: If True, validate test structure without executing tests
+            verbose: Enable verbose mode - verbose output
+            loglevel: Log level for PyATS output filtering
         """
         self.data_paths = data_paths
         self.test_dir = Path(test_dir).resolve()
@@ -86,6 +100,9 @@ class PyATSOrchestrator:
         self.merged_data_filename = merged_data_filename
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
+        self.dry_run = dry_run
+        self.verbose = verbose
+        self.loglevel = loglevel
 
         # Track test status by type for combined summary
         self.api_test_status: dict[str, dict[str, Any]] = {}
@@ -126,7 +143,9 @@ class PyATSOrchestrator:
         )
 
         # Initialize execution components
-        self.job_generator = JobGenerator(self.max_workers, self.output_dir)
+        self.job_generator = JobGenerator(
+            self.max_workers, self.output_dir, self.loglevel
+        )
         self.output_processor: OutputProcessor | None = (
             None  # Will be initialized when progress reporter is ready
         )
@@ -143,7 +162,7 @@ class PyATSOrchestrator:
             memory_per_worker_gb=MEMORY_PER_WORKER_GB,
             cpu_multiplier=DEFAULT_CPU_MULTIPLIER,
             max_workers=MAX_WORKERS_HARD_LIMIT,
-            env_var="PYATS_MAX_WORKERS",
+            env_var="NAC_TEST_PYATS_PROCESSES",
         )
 
         return cpu_workers
@@ -315,7 +334,6 @@ class PyATSOrchestrator:
             return archive_path
 
         finally:
-            # Clean up the temporary job file
             if job_file_path and os.path.exists(job_file_path):
                 os.unlink(job_file_path)
 
@@ -524,6 +542,35 @@ class PyATSOrchestrator:
 
         return PyATSResults(api=api_results, d2d=d2d_results)
 
+    def _print_dry_run_summary(
+        self, api_tests: list[Path], d2d_tests: list[Path]
+    ) -> None:
+        """Print dry-run summary showing tests that would be executed.
+
+        Args:
+            api_tests: List of discovered API test files
+            d2d_tests: List of discovered D2D test files
+        """
+        print("\n" + "=" * 70)
+        print("🔍 DRY-RUN MODE: Showing tests that would be executed")
+        print("=" * 70)
+
+        if api_tests:
+            print(f"\n📋 API Tests ({len(api_tests)}):")
+            for test_file in sorted(api_tests):
+                rel_path = test_file.relative_to(self.test_dir)
+                print(f"   • {rel_path}")
+
+        if d2d_tests:
+            print(f"\n📋 D2D/SSH Tests ({len(d2d_tests)}):")
+            for test_file in sorted(d2d_tests):
+                rel_path = test_file.relative_to(self.test_dir)
+                print(f"   • {rel_path}")
+
+        print("\n" + "=" * 70)
+        print("✅ PyATS dry-run complete (no tests executed)")
+        print("=" * 70 + "\n")
+
     def run_tests(self) -> PyATSResults:
         """Main entry point - triggers the async execution flow.
 
@@ -553,13 +600,16 @@ class PyATSOrchestrator:
         # Clean up before test execution
         cleanup_pyats_runtime()
 
+        # Clean up stale test artifacts (api/, d2d/ directories under output root)
+        # to prevent JSONL files from interrupted runs being picked up (fixes issue #526)
+        cleanup_stale_test_artifacts(self.base_output_dir)
+
         # Clean up old test outputs (CI/CD only)
         if os.environ.get("CI"):
             cleanup_old_test_outputs(self.output_dir, days=3)
 
         # Pre-flight check and setup
         self.validate_environment()
-        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Note: Merged data file created by main.py (single source of truth)
 
@@ -579,6 +629,13 @@ class PyATSOrchestrator:
             print(terminal.error(str(e)))
             raise
 
+        # Dry-run mode: print discovered tests and return results without further execution
+        if self.dry_run:
+            self._print_dry_run_summary(api_tests, d2d_tests)
+            api_result = TestResults.not_run(DRY_RUN_REASON) if api_tests else None
+            d2d_result = TestResults.not_run(DRY_RUN_REASON) if d2d_tests else None
+            return PyATSResults(api=api_result, d2d=d2d_result)
+
         breakdown_parts = []
         if api_tests:
             breakdown_parts.append(f"{len(api_tests)} api")
@@ -587,6 +644,9 @@ class PyATSOrchestrator:
         breakdown = f" ({', '.join(breakdown_parts)})" if breakdown_parts else ""
         print(f"Discovered {len(test_files)} PyATS test files{breakdown}")
         print(f"Running with {self.max_workers} parallel workers")
+
+        # Create output directory only when actually executing tests (not in dry-run mode)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize progress reporter for output formatting
         self.progress_reporter = ProgressReporter(
@@ -600,11 +660,16 @@ class PyATSOrchestrator:
 
         # Initialize execution components now that progress reporter is ready
         self.output_processor = OutputProcessor(
-            self.progress_reporter, self.test_status
+            self.progress_reporter,
+            self.test_status,
+            verbose=self.verbose,
+            loglevel=self.loglevel,
         )
         # Archives should be stored at base level, not in pyats_results subdirectory
         self.subprocess_runner = SubprocessRunner(
-            self.base_output_dir, output_handler=self.output_processor.process_line
+            self.base_output_dir,
+            output_handler=self.output_processor.process_line,
+            loglevel=self.loglevel,
         )
         # Generate the plugin config and pass it to the runner
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -743,14 +808,7 @@ class PyATSOrchestrator:
 
         if result["status"] in ["success", "partial"]:
             # Log report generation timing (procedural info)
-            duration = result["duration"]
-            if duration < 60:
-                duration_str = f"{duration:.2f} seconds"
-            else:
-                minutes = int(duration / 60)
-                secs = duration % 60
-                duration_str = f"{minutes} minutes {secs:.2f} seconds"
-
+            duration_str = format_duration(result["duration"])
             logger.info(f"Total report generation time: {duration_str}")
 
             # Log generated report paths (visible with -v INFO)
@@ -776,9 +834,7 @@ class PyATSOrchestrator:
 
             # Clean up archives after successful extraction and report generation
             # (unless in debug mode or user wants to keep data)
-            if not (
-                os.environ.get("PYATS_DEBUG") or os.environ.get("KEEP_HTML_REPORT_DATA")
-            ):
+            if not (DEBUG_MODE or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")):
                 for archive_path in archive_paths:
                     try:
                         archive_path.unlink()
@@ -789,7 +845,7 @@ class PyATSOrchestrator:
                         )
             else:
                 logger.info(
-                    "Keeping archive files (debug mode or KEEP_HTML_REPORT_DATA is set)"
+                    "Keeping archive files (NAC_TEST_DEBUG or NAC_TEST_PYATS_KEEP_REPORT_DATA is set)"
                 )
 
             # Clean up empty api/ and d2d/ temp parent directories
