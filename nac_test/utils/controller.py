@@ -47,6 +47,8 @@ class ControllerConfig:
         url_env_var: Environment variable name for the controller URL.
         env_var_prefix: Prefix for credential env vars (e.g., "ACI" → ACI_USERNAME).
         required_env_vars: List of environment variables required for this controller.
+        defaults_prefix: JMESPath prefix for the defaults block in NAC data models
+            (e.g., "defaults.apic", "defaults.sdwan").
         cache_key: The controller_type string passed to AuthCache by the auth adapter.
             None for controllers that don't have an auth adapter in nac-test-pyats-common.
     """
@@ -55,6 +57,7 @@ class ControllerConfig:
     url_env_var: str
     env_var_prefix: str
     required_env_vars: list[str]
+    defaults_prefix: str
     cache_key: str | None = None
 
 
@@ -66,6 +69,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="ACI_URL",
         env_var_prefix="ACI",
         required_env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
+        defaults_prefix="defaults.apic",
         cache_key="ACI",
     ),
     "SDWAN": ControllerConfig(
@@ -73,6 +77,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="SDWAN_URL",
         env_var_prefix="SDWAN",
         required_env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
+        defaults_prefix="defaults.sdwan",
         cache_key="SDWAN_MANAGER",
     ),
     "CC": ControllerConfig(
@@ -80,6 +85,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="CC_URL",
         env_var_prefix="CC",
         required_env_vars=["CC_URL", "CC_USERNAME", "CC_PASSWORD"],
+        defaults_prefix="defaults.catc",
         cache_key="CC",
     ),
     "MERAKI": ControllerConfig(
@@ -87,18 +93,21 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="MERAKI_URL",
         env_var_prefix="MERAKI",
         required_env_vars=["MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"],
+        defaults_prefix="defaults.meraki",
     ),
     "FMC": ControllerConfig(
         display_name="Firepower Management Center",
         url_env_var="FMC_URL",
         env_var_prefix="FMC",
         required_env_vars=["FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"],
+        defaults_prefix="defaults.fmc",
     ),
     "ISE": ControllerConfig(
         display_name="ISE",
         url_env_var="ISE_URL",
         env_var_prefix="ISE",
         required_env_vars=["ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"],
+        defaults_prefix="defaults.ise",
     ),
     "IOSXE": ControllerConfig(
         display_name="IOS XE",
@@ -107,6 +116,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         required_env_vars=[
             "IOSXE_URL"
         ],  # Direct device access, no controller credentials
+        defaults_prefix="defaults.iosxe",
     ),
 }
 
@@ -114,18 +124,6 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
 CREDENTIAL_PATTERNS: dict[str, list[str]] = {
     controller_type: config.required_env_vars
     for controller_type, config in CONTROLLER_REGISTRY.items()
-}
-
-# Map controller types to their defaults block prefix in NAC data models
-# This enables automatic defaults resolution without per-architecture configuration
-CONTROLLER_TO_DEFAULTS_PREFIX: dict[str, str] = {
-    "ACI": "defaults.apic",  # APIC = Application Policy Infrastructure Controller
-    "SDWAN": "defaults.sdwan",
-    "CC": "defaults.catc",  # Catalyst Center (formerly DNA Center)
-    "MERAKI": "defaults.meraki",
-    "FMC": "defaults.fmc",
-    "ISE": "defaults.ise",
-    "IOSXE": "defaults.iosxe",
 }
 
 
@@ -181,9 +179,10 @@ def detect_controller_type() -> ControllerTypeKey:
             f"{controller}: missing {', '.join(info['missing'])}"
             for controller, info in partial_sets.items()
         ]
+        lines = "\n".join(f"  - {info}" for info in incomplete_info)
         error_message = (
             f"Incomplete controller credentials detected:\n"
-            f"{'\n'.join(f'  - {info}' for info in incomplete_info)}\n\n"
+            f"{lines}\n\n"
             f"Please provide ALL required environment variables for your controller type."
         )
         logger.error(f"Incomplete credentials: {partial_sets}")
@@ -373,3 +372,29 @@ def get_env_var_prefix(controller_type: str) -> str:
     """
     config = CONTROLLER_REGISTRY.get(controller_type)
     return config.env_var_prefix if config else controller_type
+
+
+def get_defaults_prefix(controller_type: str) -> str:
+    """Get the JMESPath defaults prefix for a controller type.
+
+    Looks up the defaults_prefix from CONTROLLER_REGISTRY. If the controller type
+    is not registered, constructs a default prefix of "defaults.<controller_type_lower>"
+    for graceful degradation.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
+
+    Returns:
+        The JMESPath defaults prefix (e.g., "defaults.apic", "defaults.sdwan"),
+        or "defaults.<controller_type_lower>" if not found in registry.
+
+    Example:
+        >>> get_defaults_prefix("ACI")
+        'defaults.apic'
+        >>> get_defaults_prefix("SDWAN")
+        'defaults.sdwan'
+        >>> get_defaults_prefix("UNKNOWN")
+        'defaults.unknown'
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    return config.defaults_prefix if config else f"defaults.{controller_type.lower()}"

@@ -239,7 +239,7 @@ class TestHelperFunctions:
 
     def test_format_no_credentials_error(self) -> None:
         """Test formatting error message for no credentials."""
-        error_msg = _format_no_credentials_error({})
+        error_msg = _format_no_credentials_error()
 
         assert "No controller credentials found in environment" in error_msg
         assert "Controller credentials are required for ALL test types" in error_msg
