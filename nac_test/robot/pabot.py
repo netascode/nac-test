@@ -97,7 +97,28 @@ def run_pabot(
     ordering_file: Path | None = None,
     extra_args: list[str] | None = None,
 ) -> int:
-    """Run pabot"""
+    """Run pabot against rendered Robot suites in the output directory.
+
+    Args:
+        path: Base output directory containing the rendered Robot suites.
+        include: Robot include tags to pass through to pabot.
+        exclude: Robot exclude tags to pass through to pabot.
+        processes: Number of pabot worker processes to use.
+        dry_run: Whether to execute Robot in dry-run mode.
+        verbose: Whether to enable pabot verbose output.
+        robot_loglevel: Robot Framework log level to pass through.
+        ordering_file: Optional pabot ordering file for test-level splitting.
+        extra_args: Additional validated Robot Framework arguments.
+
+    Returns:
+        int: Pabot exit code.
+
+    Notes:
+        The output path is resolved to an absolute path before building pabot
+        arguments. Relative paths can otherwise be resolved twice by
+        Robot/Pabot, which creates nested output directories and breaks later
+        artifact discovery.
+    """
     include = include or []
     exclude = exclude or []
     robot_args: list[str] = []
@@ -117,11 +138,15 @@ def run_pabot(
         robot_args.extend(["--include", i])
     for e in exclude:
         robot_args.extend(["--exclude", e])
-    robot_results_dir = path / ROBOT_RESULTS_DIRNAME
+    # Use absolute paths for pabot output arguments. Relative paths can be resolved
+    # twice by Robot/Pabot, which writes results under nested output dirs and breaks
+    # later result discovery.
+    output_path = path.resolve()
+    robot_results_dir = output_path / ROBOT_RESULTS_DIRNAME
     robot_args.extend(
         [
             "--outputdir",
-            str(path),
+            str(output_path),
             "--skiponfailure",
             "non-critical",
             "--output",
@@ -147,7 +172,7 @@ def run_pabot(
     if robot_loglevel:
         robot_args.extend(["--loglevel", robot_loglevel])
 
-    args = pabot_args + robot_args + [str(path)]
+    args = pabot_args + robot_args + [str(output_path)]
     logger.info("Running pabot with args: %s", " ".join(args))
     exit_code: int = pabot.pabot.main_program(args)
     logger.info(f"Pabot execution completed with exit code {exit_code}")
