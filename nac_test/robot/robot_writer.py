@@ -168,7 +168,7 @@ class RobotWriter:
                     next_line = lines[index + 1]
                     if len(next_line) and not next_line[0].isspace():
                         cleaned_lines.append(line)
-        result = os.linesep.join(cleaned_lines)
+        result = "\n".join(cleaned_lines)
 
         with open(output_path, "w") as file:
             file.write(result)

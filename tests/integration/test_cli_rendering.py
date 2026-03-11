@@ -40,10 +40,7 @@ def verify_file_content(expected_yaml_path: Path, output_dir: Path) -> None:
         assert file_path.exists(), f"Expected file does not exist: {file_path}"
 
         actual_content = file_path.read_text()
-        # Normalize line endings for cross-platform comparison (CRLF -> LF)
-        actual_normalized = actual_content.replace("\r\n", "\n").strip()
-        expected_normalized = expected_content.replace("\r\n", "\n").strip()
-        assert actual_normalized == expected_normalized, (
+        assert actual_content.strip() == expected_content.strip(), (
             f"Content mismatch in {filename}:\n"
             f"Expected:\n{expected_content}\n"
             f"Actual:\n{actual_content}"
