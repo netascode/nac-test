@@ -117,11 +117,15 @@ def run_pabot(
         robot_args.extend(["--include", i])
     for e in exclude:
         robot_args.extend(["--exclude", e])
-    robot_results_dir = path / ROBOT_RESULTS_DIRNAME
+    # Use absolute paths for pabot output arguments. Relative paths can be resolved
+    # twice by Robot/Pabot, which writes results under nested output dirs and breaks
+    # later result discovery.
+    output_path = path.resolve()
+    robot_results_dir = output_path / ROBOT_RESULTS_DIRNAME
     robot_args.extend(
         [
             "--outputdir",
-            str(path),
+            str(output_path),
             "--skiponfailure",
             "non-critical",
             "--output",
@@ -147,7 +151,7 @@ def run_pabot(
     if robot_loglevel:
         robot_args.extend(["--loglevel", robot_loglevel])
 
-    args = pabot_args + robot_args + [str(path)]
+    args = pabot_args + robot_args + [str(output_path)]
     logger.info("Running pabot with args: %s", " ".join(args))
     exit_code: int = pabot.pabot.main_program(args)
     logger.info(f"Pabot execution completed with exit code {exit_code}")

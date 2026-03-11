@@ -3,9 +3,32 @@
 
 """Shared fixtures for integration tests."""
 
+import os
+import shutil
+import tempfile
+from collections.abc import Generator
+
 import pytest
 
 from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
+
+
+@pytest.fixture
+def temp_cwd_dir() -> Generator[str, None, None]:
+    """Create a temporary directory under the current working directory.
+
+    Integration tests use this fixture to exercise relative output handling
+    from the repo root instead of an absolute system temp path.
+
+    Yields:
+        Relative path string to the created directory.
+    """
+    temp_dir = tempfile.mkdtemp(dir=os.getcwd(), prefix="__nac_tmp_")
+    try:
+        yield os.path.relpath(temp_dir, os.getcwd())
+    finally:
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
 
 
 @pytest.fixture(scope="function")
