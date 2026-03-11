@@ -214,8 +214,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             raise
 
         self.controller_url = os.environ[f"{self.controller_type}_URL"]
-        self.username = os.environ[f"{self.controller_type}_USERNAME"]
-        self.password = os.environ[f"{self.controller_type}_PASSWORD"]
+        # USERNAME and PASSWORD are optional for some controller types (e.g., IOSXE)
+        # D2D tests use device-specific credentials from inventory, not controller credentials
+        self.username = os.environ.get(f"{self.controller_type}_USERNAME")
+        self.password = os.environ.get(f"{self.controller_type}_PASSWORD")
 
         # Connection pool is shared within process (for API tests)
         self.pool = ConnectionPool()
