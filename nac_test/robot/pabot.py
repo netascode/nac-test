@@ -117,11 +117,18 @@ def run_pabot(
         robot_args.extend(["--include", i])
     for e in exclude:
         robot_args.extend(["--exclude", e])
-    robot_results_dir = path / ROBOT_RESULTS_DIRNAME
+
+    # Resolve paths to absolute before passing to pabot. On Windows, relative paths
+    # like "../results" cause Robot Framework to double-resolve paths, resulting in
+    # malformed paths like "C:\foo\..\results\..\results\robot_results\xunit.xml".
+    # Using absolute paths ensures consistent behavior across platforms.
+    output_path = path.resolve()
+    robot_results_dir = output_path / ROBOT_RESULTS_DIRNAME
+
     robot_args.extend(
         [
             "--outputdir",
-            str(path),
+            str(output_path),
             "--skiponfailure",
             "non-critical",
             "--output",
