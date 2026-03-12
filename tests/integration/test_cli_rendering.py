@@ -9,7 +9,6 @@ chunked rendering, and merged data model output.
 """
 
 import filecmp
-import os
 from pathlib import Path
 
 import pytest
@@ -17,7 +16,7 @@ import yaml  # type: ignore
 from typer.testing import CliRunner
 
 import nac_test.cli.main
-from nac_test.core.constants import EXIT_ERROR
+from nac_test.core.constants import EXIT_ERROR, ROBOT_RESULTS_DIRNAME
 
 pytestmark = pytest.mark.integration
 
@@ -166,13 +165,14 @@ def test_list_rendering_creates_device_folders(tmp_path: Path) -> None:
             "--render-only",
         ],
     )
-    assert (tmp_path / "ABC" / "test1.robot").exists(), (
+    robot_results_dir = tmp_path / ROBOT_RESULTS_DIRNAME
+    assert (robot_results_dir / "ABC" / "test1.robot").exists(), (
         "Expected device folder ABC/test1.robot to be created"
     )
-    assert (tmp_path / "DEF" / "test1.robot").exists(), (
+    assert (robot_results_dir / "DEF" / "test1.robot").exists(), (
         "Expected device folder DEF/test1.robot to be created"
     )
-    assert (tmp_path / "_abC" / "test1.robot").exists(), (
+    assert (robot_results_dir / "_abC" / "test1.robot").exists(), (
         "Expected device folder _abC/test1.robot to be created"
     )
     assert result.exit_code == 0, (
@@ -205,13 +205,14 @@ def test_list_rendering_creates_device_files_in_shared_folder(tmp_path: Path) ->
             "--render-only",
         ],
     )
-    assert (tmp_path / "test1" / "ABC.robot").exists(), (
+    robot_results_dir = tmp_path / ROBOT_RESULTS_DIRNAME
+    assert (robot_results_dir / "test1" / "ABC.robot").exists(), (
         "Expected device file test1/ABC.robot to be created"
     )
-    assert (tmp_path / "test1" / "DEF.robot").exists(), (
+    assert (robot_results_dir / "test1" / "DEF.robot").exists(), (
         "Expected device file test1/DEF.robot to be created"
     )
-    assert (tmp_path / "test1" / "_abC.robot").exists(), (
+    assert (robot_results_dir / "test1" / "_abC.robot").exists(), (
         "Expected device file test1/_abC.robot to be created"
     )
     assert result.exit_code == 0, (
@@ -249,14 +250,17 @@ def test_chunked_list_rendering_produces_expected_content(tmp_path: Path) -> Non
         f"Chunked list rendering should succeed, got exit code {result.exit_code}: "
         f"{result.output}"
     )
-    assert not (tmp_path / "ABC" / "test1.robot").exists(), (
+    robot_results_dir = tmp_path / ROBOT_RESULTS_DIRNAME
+    assert not (robot_results_dir / "ABC" / "test1.robot").exists(), (
         "Chunked rendering should not create individual device folders"
     )
-    assert not (tmp_path / "DEF" / "test1.robot").exists(), (
+    assert not (robot_results_dir / "DEF" / "test1.robot").exists(), (
         "Chunked rendering should not create individual device folders"
     )
     # Verify files and their content match expected content
-    verify_file_content(Path(templates_path) / "expected_content.yaml", tmp_path)
+    verify_file_content(
+        Path(templates_path) / "expected_content.yaml", robot_results_dir
+    )
 
 
 def test_merged_data_model_creates_default_filename(tmp_path: Path) -> None:
@@ -273,13 +277,14 @@ def test_merged_data_model_creates_default_filename(tmp_path: Path) -> None:
     templates_path = "tests/integration/fixtures/templates/"
     expected_filename = "merged_data_model_test_variables.yaml"
     output_model_path = tmp_path / expected_filename
-    expected_model_path = "tests/integration/fixtures/data_merge/result.yaml"
+    data_dir = Path(data_path)
+    expected_model_path = data_dir / "result.yaml"
 
     base_args = [
         "-d",
-        os.path.join(data_path, "file1.yaml"),
+        str(data_dir / "file1.yaml"),
         "-d",
-        os.path.join(data_path, "file2.yaml"),
+        str(data_dir / "file2.yaml"),
         "-t",
         templates_path,
         "-o",
@@ -315,13 +320,14 @@ def test_merged_data_model_creates_custom_filename(tmp_path: Path) -> None:
     templates_path = "tests/integration/fixtures/templates/"
     expected_filename = "custom.yaml"
     output_model_path = tmp_path / expected_filename
-    expected_model_path = "tests/integration/fixtures/data_merge/result.yaml"
+    data_dir = Path(data_path)
+    expected_model_path = data_dir / "result.yaml"
 
     base_args = [
         "-d",
-        os.path.join(data_path, "file1.yaml"),
+        str(data_dir / "file1.yaml"),
         "-d",
-        os.path.join(data_path, "file2.yaml"),
+        str(data_dir / "file2.yaml"),
         "-t",
         templates_path,
         "-o",
@@ -374,6 +380,6 @@ def test_render_only_without_controller_credentials(tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 0
-    output = (tmp_path / "output" / "test.robot").read_text()
+    output = (tmp_path / "output" / ROBOT_RESULTS_DIRNAME / "test.robot").read_text()
     assert "Verify Router1" in output
     assert "{{" not in output

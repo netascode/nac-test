@@ -71,7 +71,8 @@ class TestRobotOrchestrator:
     ) -> None:
         """Test orchestrator initialization."""
         assert orchestrator.base_output_dir == temp_output_dir
-        assert orchestrator.output_dir == temp_output_dir  # At root for backward compat
+        assert orchestrator.output_dir == temp_output_dir / ROBOT_RESULTS_DIRNAME
+        assert orchestrator.ordering_file == orchestrator.output_dir / "ordering.txt"
         assert orchestrator.data_paths == mock_data_paths
         assert orchestrator.templates_dir == mock_templates_dir
         assert orchestrator.merged_data_filename == "merged_data.yaml"

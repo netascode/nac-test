@@ -279,20 +279,20 @@ class RobotWriter:
     @staticmethod
     def _calculate_full_suite_name(output_path: Path, robot_file: Path) -> str:
         """
-        We need to collect the final robot suite name (ex. Output.Config.Tenants.L3Out)
+        We need to collect the final robot suite name (ex. Robot Results.Config.Tenants.L3Out)
         and note this in the ordering file. The suite name is derived from
-        1. the output path (the last part of it if the path is an absolute path)
+        1. the output path (its last path component, i.e. the directory name)
         2. the path of the robot file relative the the output path
         Each part of 1 and 2 is passed through a robot API to (ex: config -> Config) and
         joined with a dot (.) to form the suite name.
         Example 1:
-            Input:  output_path = /tmp/foo/output
-                    filename = /tmp/foo/output/config/tenants/ABC/L3Out.robot
-            Result: suite_dirname = Output.Config.Tenants.ABC.L3Out
+            Input:  output_path = /tmp/foo/robot_results
+                    filename = /tmp/foo/robot_results/config/tenants/ABC/L3Out.robot
+            Result: suite_dirname = Robot Results.Config.Tenants.ABC.L3Out
         Example 2:
-            Input:  output_path = foobar
-                    filename = foobar/integration_tests/whatever.robot
-            Result: suite_dirname = Foobar.Integration Tests.Whatever
+            Input:  output_path = robot_results
+                    filename = robot_results/integration_tests/whatever.robot
+            Result: suite_dirname = Robot Results.Integration Tests.Whatever
         """
         relative_path = robot_file.parent.relative_to(output_path)
         path_parts = [output_path.name] + list(relative_path.parts) + [robot_file.stem]

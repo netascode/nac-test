@@ -10,10 +10,6 @@ from robot.errors import DataError
 
 from nac_test.core.constants import (
     EXIT_DATA_ERROR,
-    LOG_HTML,
-    OUTPUT_XML,
-    REPORT_HTML,
-    ROBOT_RESULTS_DIRNAME,
     XUNIT_XML,
 )
 
@@ -100,7 +96,7 @@ def run_pabot(
     """Run pabot against rendered Robot suites in the output directory.
 
     Args:
-        path: Base output directory containing the rendered Robot suites.
+        path: Robot output directory, also containing the rendered Robot suites.
         include: Robot include tags to pass through to pabot.
         exclude: Robot exclude tags to pass through to pabot.
         processes: Number of pabot worker processes to use.
@@ -141,22 +137,15 @@ def run_pabot(
     # Use absolute paths for pabot output arguments. Relative paths can be resolved
     # twice by Robot/Pabot, which writes results under nested output dirs and breaks
     # later result discovery.
-    output_path = path.resolve()
-    robot_results_dir = output_path / ROBOT_RESULTS_DIRNAME
+    abs_path = path.resolve()
     robot_args.extend(
         [
             "--outputdir",
-            str(output_path),
+            str(abs_path),
             "--skiponfailure",
             "non-critical",
-            "--output",
-            str(robot_results_dir / OUTPUT_XML),
-            "--log",
-            str(robot_results_dir / LOG_HTML),
-            "--report",
-            str(robot_results_dir / REPORT_HTML),
             "--xunit",
-            str(robot_results_dir / XUNIT_XML),
+            str(abs_path / XUNIT_XML),
         ]
     )
 
@@ -172,7 +161,7 @@ def run_pabot(
     if robot_loglevel:
         robot_args.extend(["--loglevel", robot_loglevel])
 
-    args = pabot_args + robot_args + [str(output_path)]
+    args = pabot_args + robot_args + [str(abs_path)]
     logger.info("Running pabot with args: %s", " ".join(args))
     exit_code: int = pabot.pabot.main_program(args)
     logger.info(f"Pabot execution completed with exit code {exit_code}")

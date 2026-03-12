@@ -703,7 +703,7 @@ When enabled, verbose mode:
 - Sets nac-test log level to DEBUG (can be overridden by setting `--loglevel`)
 - Enables verbose output for `pabot` execution (shows the Robot console output) 
 - Sets Robot Framework loglevel to DEBUG for additional debug information in the
-  execution (can be overridden by `--loglevel` or Robot argument `--loglevel`)
+  execution (unless overridden by `--loglevel`)
 - Shows additional progress information and console output during PyATS test execution. 
   The pyATS loglevel will follow the `--loglevel` setting, so you can reduce the output
   for example via `--verbose --loglevel ERROR` which limits pyATS debugging output

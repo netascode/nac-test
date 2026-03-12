@@ -14,11 +14,12 @@ from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
 
 
 @pytest.fixture
-def temp_cwd_dir() -> Generator[str, None, None]:
+def temp_relative_output_dir() -> Generator[str, None, None]:
     """Create a temporary directory under the current working directory.
 
-    Integration tests use this fixture to exercise relative output handling
-    from the repo root instead of an absolute system temp path.
+    Yields a *relative* path string (relative to cwd). Integration tests use
+    this alongside ``tmp_path`` (which yields an absolute path) to exercise
+    that the CLI handles both absolute and relative ``-o`` arguments correctly.
 
     Yields:
         str: Relative path string to the created directory.
