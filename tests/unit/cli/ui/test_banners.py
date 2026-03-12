@@ -11,6 +11,9 @@ from unittest.mock import patch
 
 from nac_test.cli.ui.banners import (
     BANNER_CONTENT_WIDTH,
+    UNICODE_BOX_STYLE,
+    _build_title_line,
+    _get_visual_width,
     _wrap_url_lines,
     display_aci_defaults_banner,
     display_auth_failure_banner,
@@ -318,3 +321,33 @@ class TestLongUrlBannerRendering:
             assert len(line) <= expected_line_width, (
                 f"Line overflows box ({len(line)} > {expected_line_width}): {line!r}"
             )
+
+
+class TestTitleAlignment:
+    """Tests for banner title alignment with emojis (#638)."""
+
+    def test_get_visual_width_counts_emoji_as_two(self) -> None:
+        """Emojis are counted as 2 display columns."""
+        assert _get_visual_width("⛔") == 2
+        assert _get_visual_width("🛑") == 2
+        assert _get_visual_width("A") == 1
+
+    def test_get_visual_width_mixed_text(self) -> None:
+        """Mixed text with emojis calculates correctly."""
+        # "⛔ CONTROLLER" = 2 + 11 = 13
+        assert _get_visual_width("⛔ CONTROLLER") == 13
+        # "🛑 ACI 🛑" = 2 + 5 + 2 = 9
+        assert _get_visual_width("🛑 ACI 🛑") == 9
+
+    def test_single_emoji_title_is_centered(self) -> None:
+        """Single-emoji title is properly centered (#638)."""
+        title = "⛔ CONTROLLER AUTHENTICATION FAILED"
+        line = _build_title_line(title, BANNER_CONTENT_WIDTH, UNICODE_BOX_STYLE)
+        # Line should be exactly BANNER_CONTENT_WIDTH + 2 (for border chars)
+        assert _get_visual_width(line) == BANNER_CONTENT_WIDTH + 2
+
+    def test_double_emoji_title_is_centered(self) -> None:
+        """Double-emoji title is properly centered."""
+        title = "🛑 DEFAULTS FILE REQUIRED FOR ACI 🛑"
+        line = _build_title_line(title, BANNER_CONTENT_WIDTH, UNICODE_BOX_STYLE)
+        assert _get_visual_width(line) == BANNER_CONTENT_WIDTH + 2
