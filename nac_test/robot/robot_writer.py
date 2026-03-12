@@ -281,7 +281,7 @@ class RobotWriter:
         """
         We need to collect the final robot suite name (ex. Robot Results.Config.Tenants.L3Out)
         and note this in the ordering file. The suite name is derived from
-        1. the output path (the last part of it if the path is an absolute path)
+        1. the output path (its last path component, i.e. the directory name)
         2. the path of the robot file relative the the output path
         Each part of 1 and 2 is passed through a robot API to (ex: config -> Config) and
         joined with a dot (.) to form the suite name.

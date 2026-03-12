@@ -137,15 +137,15 @@ def run_pabot(
     # Use absolute paths for pabot output arguments. Relative paths can be resolved
     # twice by Robot/Pabot, which writes results under nested output dirs and breaks
     # later result discovery.
-    output_path = path.resolve()
+    abs_path = path.resolve()
     robot_args.extend(
         [
             "--outputdir",
-            str(output_path),
+            str(abs_path),
             "--skiponfailure",
             "non-critical",
             "--xunit",
-            str(output_path / XUNIT_XML),
+            str(abs_path / XUNIT_XML),
         ]
     )
 
@@ -161,7 +161,7 @@ def run_pabot(
     if robot_loglevel:
         robot_args.extend(["--loglevel", robot_loglevel])
 
-    args = pabot_args + robot_args + [str(output_path)]
+    args = pabot_args + robot_args + [str(abs_path)]
     logger.info("Running pabot with args: %s", " ".join(args))
     exit_code: int = pabot.pabot.main_program(args)
     logger.info(f"Pabot execution completed with exit code {exit_code}")

@@ -23,7 +23,7 @@ pytestmark = [
 ]
 
 
-@pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_cwd_dir"])
+@pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_relative_output_dir"])
 def test_ordering_file_contains_concurrent_tests_and_non_concurrent_suites(
     request: pytest.FixtureRequest, fixture_name: str
 ) -> None:
@@ -33,7 +33,7 @@ def test_ordering_file_contains_concurrent_tests_and_non_concurrent_suites(
     - Test cases with Test Concurrency metadata are listed with --test flag
     - Suites without Test Concurrency are listed with --suite flag
     - All expected robot files are rendered correctly
-    - Supports both tmp_path (system temp) and temp_cwd_dir (cwd) locations
+    - Supports both tmp_path (absolute system temp) and temp_relative_output_dir (relative cwd path)
 
     Args:
         request: Pytest fixture request for dynamic fixture access.

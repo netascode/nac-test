@@ -237,4 +237,4 @@ class RobotOrchestrator:
 
             # Create relative symlink
             target.symlink_to(source.relative_to(self.base_output_dir))
-            logger.debug(f"Created symlink: {target} -> {source}")
+            logger.debug(f"Created symlink: {target} -> {target.readlink()}")
