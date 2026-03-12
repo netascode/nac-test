@@ -443,7 +443,7 @@ def main(
     if stats.pre_flight_failure is not None:
         pf = stats.pre_flight_failure
         typer.echo(
-            f"\n❌  Pre-flight failure ({pf.failure_type.value})",
+            f"\n❌  Pre-flight failure ({pf.failure_type.display_name})",
             err=True,
         )
         raise typer.Exit(stats.exit_code)

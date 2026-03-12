@@ -26,7 +26,6 @@ from nac_test.core.types import (
     CombinedResults,
     ControllerTypeKey,
     PreFlightFailure,
-    PreFlightFailureType,
 )
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
 from nac_test.utils.controller import get_display_name, get_env_var_prefix
@@ -131,8 +130,8 @@ class CombinedReportGenerator:
         Dispatches to the appropriate renderer based on the results state:
         - If pre_flight_failure is set with no other results, generates child report
           and hard-links it to combined_summary.html
-        - If pre_flight_failure is set with Robot results, includes pre-flight in
-          the combined dashboard with link to child report
+        - If pre_flight_failure is set and Robot results exist, includes pre-flight in
+          the combined dashboard with link to child report (TO BE DISCUSSED in design review)
         - Otherwise, renders the normal combined dashboard template
 
         Args:
@@ -153,14 +152,25 @@ class CombinedReportGenerator:
             if not results.has_any_results:
                 if pre_flight_report_path:
                     combined_path = self.output_dir / COMBINED_SUMMARY_FILENAME
-                    if combined_path.exists():
-                        combined_path.unlink()
-                    combined_path.hardlink_to(pre_flight_report_path)
-                    logger.info(
-                        "Hard-linked pre-flight report to combined dashboard: %s",
-                        combined_path,
-                    )
-                    return combined_path
+                    try:
+                        # we shouldn't need to cleanup, see #639
+                        combined_path.unlink(missing_ok=True)
+
+                        combined_path.hardlink_to(pre_flight_report_path)
+                        logger.info(
+                            "Hard-linked pre-flight report to combined dashboard: %s",
+                            combined_path,
+                        )
+                        return combined_path
+                    except OSError as e:
+                        logger.warning(
+                            "Failed to hard-link pre-flight report: %s",
+                            e,
+                        )
+                        # In a rare case of failure, let combined orchestrator
+                        # print the link to the pyats_results/pre-flight page
+                        # instead of the root-level dashboard
+                        return pre_flight_report_path
                 return None
 
         try:
@@ -250,7 +260,6 @@ class CombinedReportGenerator:
             failure_report_path.parent.mkdir(parents=True, exist_ok=True)
 
             is_403 = failure.status_code == HTTP_FORBIDDEN_CODE
-            is_detection = failure.failure_type == PreFlightFailureType.DETECTION
 
             display_name = (
                 get_display_name(failure.controller_type)
@@ -274,9 +283,8 @@ class CombinedReportGenerator:
 
             template = self.env.get_template("auth_failure/report.html.j2")
             html_content = template.render(
-                failure_type=failure.failure_type.value,
+                failure_type=failure.failure_type,
                 is_403=is_403,
-                is_detection=is_detection,
                 controller_type=failure.controller_type,
                 controller_url=failure.controller_url,
                 display_name=display_name,

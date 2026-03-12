@@ -34,6 +34,30 @@ class PreFlightFailureType(str, Enum):
     UNREACHABLE = "unreachable"
     DETECTION = "detection"
 
+    @property
+    def display_name(self) -> str:
+        """User-friendly display name for CLI output and reports."""
+        return _PREFLIGHT_DISPLAY_NAMES[self]
+
+    @property
+    def is_auth(self) -> bool:
+        return self == PreFlightFailureType.AUTH
+
+    @property
+    def is_unreachable(self) -> bool:
+        return self == PreFlightFailureType.UNREACHABLE
+
+    @property
+    def is_detection(self) -> bool:
+        return self == PreFlightFailureType.DETECTION
+
+
+_PREFLIGHT_DISPLAY_NAMES: dict[PreFlightFailureType, str] = {
+    PreFlightFailureType.AUTH: "Controller Authentication Failed",
+    PreFlightFailureType.UNREACHABLE: "Controller Unreachable",
+    PreFlightFailureType.DETECTION: "Controller Detection Failed",
+}
+
 
 class ExecutionState(str, Enum):
     """Execution state for test results.
