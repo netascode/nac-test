@@ -5,7 +5,6 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from functools import cached_property
 from typing import Literal
 
 from nac_test.core.constants import (
@@ -294,13 +293,9 @@ class CombinedResults:
             parts.append(f"Robot: {self.robot}")
         return f"CombinedResults({', '.join(parts) if parts else 'empty'})"
 
-    @cached_property
+    @property
     def _results(self) -> list["TestResults"]:
-        """Cached list of non-None results for aggregation.
-
-        Note: Safe to cache because CombinedResults fields are set at construction
-        and not mutated. Do not mutate api/d2d/robot after creation.
-        """
+        """List of non-None results for aggregation."""
         return [r for r in (self.api, self.d2d, self.robot) if r is not None]
 
     @property
