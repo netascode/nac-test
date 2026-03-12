@@ -149,8 +149,8 @@ class CombinedReportGenerator:
                 results.pre_flight_failure
             )
 
-            # If only pre-flight failed (no Robot results), hard-link to combined_summary
-            if results.robot is None:
+            # If only pre-flight failed (no test results), hard-link to combined_summary
+            if not results.has_any_results:
                 if pre_flight_report_path:
                     combined_path = self.output_dir / COMBINED_SUMMARY_FILENAME
                     if combined_path.exists():
