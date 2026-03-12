@@ -200,7 +200,9 @@ class CombinedOrchestrator:
                 )
                 preflight_failed = True
 
-            if not preflight_failed and self.controller_type is not None:
+            if not preflight_failed:
+                # Type narrowing: controller_type is set by detect_controller_type() above
+                assert self.controller_type is not None
                 auth_result = preflight_auth_check(self.controller_type)
                 if not auth_result.success:
                     typer.echo("")
@@ -365,8 +367,9 @@ class CombinedOrchestrator:
         typer.echo("=" * 70)
         typer.echo("Combined Test Execution Summary")
         typer.echo("-" * 70)
-        typer.echo(terminal.format_test_summary(results))
-        typer.echo("-" * 70)
+        if results.has_any_results:
+            typer.echo(terminal.format_test_summary(results))
+            typer.echo("-" * 70)
 
         # print absolute filenames in our summary to align with robot/rebot output
         combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME

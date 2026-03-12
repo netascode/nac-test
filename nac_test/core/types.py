@@ -373,6 +373,9 @@ class CombinedResults:
             253: Execution was interrupted (Ctrl+C, etc.)
             255: Execution errors occurred (has_errors is True)
 
+        Note: Exit code 1 from pre-flight failure takes precedence over test failures.
+        If pre-flight fails, exit code is 1 regardless of any subsequent test results.
+
         Priority (highest to lowest): pre-flight > 253 (interrupted) > 252 (data error) > 255 (generic)
 
         Why this priority? Pre-flight failures (1) indicate that testing could not even begin
