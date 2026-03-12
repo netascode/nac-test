@@ -17,7 +17,7 @@ _Note: This changelog covers all 2.0.0 alpha and beta releases._
 
 ## Breaking Changes
 
-- **Robot artifacts moved**: Output files (`log.html`, `report.html`, etc.) now created in `robot_results/` subdirectory; symlinks in root directory for backward compatibility
+- **Robot artifacts moved**: Output files (`log.html`, `report.html`, etc.) now created in `robot_results/` subdirectory; links in root directory for backward compatibility
 - **RESTinstance removed from core dependencies**: The `RESTinstance` Robot library has been removed. Users who still need RESTinstance can install it separately alongside nac-test.
 
 ## CLI Changes

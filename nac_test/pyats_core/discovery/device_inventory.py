@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import yaml  # type: ignore[import-untyped]
+from nac_test.utils.yaml import safe_load
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class DeviceInventoryDiscovery:
             return []
 
         with open(self.merged_data_filepath) as f:
-            data_model = yaml.safe_load(f)
+            data_model = safe_load(f)
 
         # Import the first D2D test file - all D2D tests in an architecture share the same SSH base class
         # For SD-WAN: all tests under /d2d/ inherit from SDWANTestBase
