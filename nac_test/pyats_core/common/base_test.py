@@ -3,8 +3,6 @@
 
 """Generic base test class for all architectures."""
 
-from __future__ import annotations
-
 import asyncio
 import json
 import logging
