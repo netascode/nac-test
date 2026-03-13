@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Import pabot's parse_args if available. Aliased with a leading underscore to
 # prevent it leaking as a re-exportable name from this module's namespace.
-# If pabot is unavailable or its API changes, validation is skipped gracefully.
+# If pabot's parse_args API changes, validation is skipped gracefully.
 _pabot_parse_args: Callable[..., tuple[Any, ...]] | None = None
 try:
     from pabot.arguments import parse_args
@@ -51,6 +51,9 @@ _CONTROLLED_OPTIONS_LOOKUP: dict[str, str] = {
     for k in ([long, short] if short else [long])
 }
 
+# pabot's parse_args requires at least one datasource argument
+_DUMMY_DATASOURCE = "__dummy__.robot"
+
 
 @functools.cache
 def _get_pabot_option_names() -> frozenset[str]:
@@ -62,7 +65,7 @@ def _get_pabot_option_names() -> frozenset[str]:
     """
     if _pabot_parse_args is None:
         return frozenset()
-    return frozenset(_pabot_parse_args(["__dummy__.robot"])[2].keys())
+    return frozenset(_pabot_parse_args([_DUMMY_DATASOURCE])[2].keys())
 
 
 def _raise_if_controlled_robot_options(extra_args: list[str]) -> None:
@@ -123,7 +126,7 @@ def _raise_if_datasources(datasources: list[str]) -> None:
     Raises:
         ValueError: If any actual datasources are found (excludes dummy).
     """
-    actual_datasources = [ds for ds in datasources if ds != "__dummy__.robot"]
+    actual_datasources = [ds for ds in datasources if ds != _DUMMY_DATASOURCE]
     if actual_datasources:
         error_msg = (
             f"Datasources/files are not allowed in extra arguments: "
@@ -151,11 +154,10 @@ def validate_extra_args(extra_args: list[str]) -> None:
         return
 
     # Use pabot's parse_args as the authoritative Robot argument validator.
-    # A dummy datasource is appended because parse_args requires at least one path
-    # argument; it is filtered out again in _raise_if_datasources.
     try:
-        _, datasources, _, _ = _pabot_parse_args(extra_args + ["__dummy__.robot"])
+        _, datasources, _, _ = _pabot_parse_args(extra_args + [_DUMMY_DATASOURCE])
     except DataError:
+        # Unknown robotframework arguments
         raise
     except (IndexError, TypeError) as e:
         logger.warning(f"pabot API may have changed, skipping validation: {e}")
