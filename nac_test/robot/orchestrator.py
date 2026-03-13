@@ -169,10 +169,10 @@ class RobotOrchestrator:
             )
             # Handle special exit codes - just log and return appropriate TestResults
             # User-facing error messages are handled centrally in main.py
-            # Note: EXIT_DATA_ERROR is unlikely in normal CLI flow (extra args are validated
-            # in main.py), but retained as a defensive guard.
             if exit_code == EXIT_DATA_ERROR:
-                error_msg = "Invalid Robot Framework arguments passed to nac-test"
+                # TODO(#643): introduce ErrorType.NO_TESTS_FOUND to replace INVALID_ROBOT_ARGS
+                # here — extra args are validated in main.py, so 252 means no test suites found
+                error_msg = "Invalid Robot Framework arguments or no tests found"
                 logger.error(error_msg)
                 return TestResults.from_error(error_msg, ErrorType.INVALID_ROBOT_ARGS)
             elif exit_code == EXIT_INTERRUPTED:
