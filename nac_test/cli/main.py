@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from rich.console import Console
+from rich.panel import Panel
 from robot.errors import DataError
 
 import nac_test
@@ -38,6 +40,17 @@ from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 app = typer.Typer(add_completion=False, pretty_exceptions_enable=DEBUG_MODE)
 
 logger = logging.getLogger(__name__)
+
+
+def _print_cli_error(message: str) -> None:
+    """Print a CLI argument error panel matching typer's own error style.
+
+    Args:
+        message: The error message to display inside the panel.
+    """
+    Console(stderr=True).print(
+        Panel(message, title="Error", border_style="red", title_align="left")
+    )
 
 
 def version_callback(value: bool) -> None:
@@ -347,13 +360,8 @@ def main(
 
     # Validate development flag combinations
     if pyats and robot:
-        typer.echo(
-            typer.style(
-                "Error: Cannot use both --pyats and --robot flags simultaneously.",
-                fg=typer.colors.RED,
-            )
-        )
-        typer.echo(
+        _print_cli_error(
+            "Cannot use both --pyats and --robot flags simultaneously.\n"
             "Use one development flag at a time, or neither for combined execution."
         )
         raise typer.Exit(EXIT_INVALID_ARGS)
@@ -364,16 +372,11 @@ def main(
             validate_extra_args(ctx.args)
         except ValueError as e:
             # CLI misuse: controlled option, pabot option, or datasource in extra args
-            typer.echo(typer.style(f"Error: {e}", fg=typer.colors.RED), err=True)
+            _print_cli_error(str(e))
             raise typer.Exit(EXIT_INVALID_ARGS) from None
         except DataError as e:
             # Invalid Robot Framework argument rejected by pabot's parser
-            typer.echo(
-                typer.style(
-                    f"Error: Invalid Robot Framework argument: {e}", fg=typer.colors.RED
-                ),
-                err=True,
-            )
+            _print_cli_error(f"Invalid Robot Framework argument: {e}")
             raise typer.Exit(EXIT_DATA_ERROR) from None
 
     # Create output directory and shared merged data file (SOT)
