@@ -9,15 +9,19 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from rich.console import Console
+from rich.panel import Panel
+from robot.errors import DataError
 
 import nac_test
 from nac_test.cli.diagnostic import diagnostic_callback
 from nac_test.cli.ui import display_aci_defaults_banner
-from nac_test.cli.validators import validate_aci_defaults
+from nac_test.cli.validators import validate_aci_defaults, validate_extra_args
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import (
     CONSOLE_TIME_FORMAT,
     DEBUG_MODE,
+    EXIT_DATA_ERROR,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
     EXIT_INVALID_ARGS,
@@ -36,6 +40,17 @@ from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 app = typer.Typer(add_completion=False, pretty_exceptions_enable=DEBUG_MODE)
 
 logger = logging.getLogger(__name__)
+
+
+def _print_cli_error(message: str) -> None:
+    """Print a CLI argument error panel matching typer's own error style.
+
+    Args:
+        message: The error message to display inside the panel.
+    """
+    Console(stderr=True).print(
+        Panel(message, title="Error", border_style="red", title_align="left")
+    )
 
 
 def version_callback(value: bool) -> None:
@@ -286,9 +301,7 @@ Testbed = Annotated[
 ]
 
 
-@app.command(
-    context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
-)
+@app.command(context_settings={"allow_extra_args": True})
 def main(
     ctx: typer.Context,
     data: Data,
@@ -315,10 +328,11 @@ def main(
 ) -> None:
     """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
 
-    Additional Robot Framework options can be passed at the end of the command to
-    further control test execution (e.g., --variable, --listener, --loglevel).
-    These are appended to the pabot invocation. Pabot-specific options and test
-    files/directories are not supported and will result in an error.
+    Additional Robot Framework options can be passed after the -- separator to
+    further control test execution (e.g., -- --variable X:Y, -- --listener MyListener).
+    These are appended to the pabot invocation. Pabot-specific options, test
+    files/directories, and options controlled by nac-test (like --include, --exclude)
+    are not supported and will result in an error.
     """
 
     # Handle deprecated --verbosity option
@@ -346,16 +360,24 @@ def main(
 
     # Validate development flag combinations
     if pyats and robot:
-        typer.echo(
-            typer.style(
-                "Error: Cannot use both --pyats and --robot flags simultaneously.",
-                fg=typer.colors.RED,
-            )
-        )
-        typer.echo(
+        _print_cli_error(
+            "Cannot use both --pyats and --robot flags simultaneously.\n"
             "Use one development flag at a time, or neither for combined execution."
         )
         raise typer.Exit(EXIT_INVALID_ARGS)
+
+    # Validate extra Robot Framework arguments early (fail fast before expensive operations)
+    if ctx.args:
+        try:
+            validate_extra_args(ctx.args)
+        except ValueError as e:
+            # CLI misuse: controlled option, pabot option, or datasource in extra args
+            _print_cli_error(str(e))
+            raise typer.Exit(EXIT_INVALID_ARGS) from None
+        except DataError as e:
+            # Invalid Robot Framework argument rejected by pabot's parser
+            _print_cli_error(f"Invalid Robot Framework argument: {e}")
+            raise typer.Exit(EXIT_DATA_ERROR) from None
 
     # Create output directory and shared merged data file (SOT)
     output.mkdir(parents=True, exist_ok=True)

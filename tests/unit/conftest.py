@@ -26,6 +26,26 @@ AUTH_SUCCESS = AuthCheckResult(
 )
 
 
+def is_sublist(sublist: list[str], full_list: list[str]) -> bool:
+    """Return True if sublist appears as a contiguous, ordered sequence within full_list.
+
+    Useful for asserting that a group of CLI arguments was passed through verbatim
+    and in the correct order, without assuming their absolute position in the list.
+
+    Examples::
+
+        is_sublist(["--loglevel", "DEBUG"], ["--outputdir", "/tmp", "--loglevel", "DEBUG", "/path"])
+        # True
+
+        is_sublist(["-L", "DEBUG"], ["--loglevel", "DEBUG"])
+        # False
+    """
+    return any(
+        full_list[i : i + len(sublist)] == sublist
+        for i in range(len(full_list) - len(sublist) + 1)
+    )
+
+
 def assert_connection_has_optimizations(connection: dict[str, Any]) -> None:
     """Verify connection includes expected optimization settings.
 
