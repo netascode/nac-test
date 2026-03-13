@@ -636,23 +636,34 @@ Metadata        Test Concurrency     True
 
 ## Advanced Robot Framework Options
 
-You can pass additional Robot Framework options directly to `nac-test`, which are forwarded to the pabot/Robot Framework execution. This enables advanced use cases like custom variables and listeners:
+You can pass additional Robot Framework options to `nac-test` using the `--` separator. These options are forwarded to the pabot/Robot Framework execution. This enables advanced use cases like custom variables and listeners:
 
 ```bash
-# Pass custom variables
-nac-test -d data/ -t templates/ -o output/ --variable MY_VAR:value
+# Pass custom variables (note the -- separator before Robot options)
+nac-test -d data/ -t templates/ -o output/ -- --variable MY_VAR:value
 
 # Multiple variables
-nac-test -d data/ -t templates/ -o output/ --variable VAR1:value1 --variable VAR2:value2
+nac-test -d data/ -t templates/ -o output/ -- --variable VAR1:value1 --variable VAR2:value2
 
 # Add a listener
-nac-test -d data/ -t templates/ -o output/ --listener MyListener.py
+nac-test -d data/ -t templates/ -o output/ -- --listener MyListener.py
 
 # Combine multiple options
-nac-test -d data/ -t templates/ -o output/ --variable ENV:prod --listener MyListener
+nac-test -d data/ -t templates/ -o output/ -- --variable ENV:prod --listener MyListener
+
+# Override the default --skiponfailure behavior
+nac-test -d data/ -t templates/ -o output/ -- --skiponfailure critical
 ```
 
-**Note:** Only Robot Framework options are supported. Pabot-specific options (like `--testlevelsplit`, `--pabotlib`, etc.) and test file paths are not allowed and will result in an error with exit code 252 (invalid Robot Framework arguments).
+**Important:**
+- The `--` separator is **required** before any Robot Framework options
+- Some Robot Framework options are controlled by nac-test and cannot be passed via `--`:
+  - `--include`/`-i` → use nac-test's `-i`/`--include`
+  - `--exclude`/`-e` → use nac-test's `-e`/`--exclude`
+  - `--outputdir`/`-d` → use nac-test's `-o`/`--output`
+  - `--output`/`-o`, `--log`/`-l`, `--report`/`-r`, `--xunit`/`-x` → controlled internally
+  - `--dryrun` → use nac-test's `--dry-run`
+- Pabot-specific options (like `--testlevelsplit`, `--pabotlib`, etc.) and test file paths are not allowed and will result in an error with exit code 252
 
 See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#command-line-options) for all available options.
 
@@ -660,21 +671,15 @@ See the [Robot Framework User Guide](https://robotframework.org/robotframework/l
 
 **Breaking change in nac-test 2.0:** The `--loglevel` argument is now a nac-test option that controls the overall logging verbosity, not a pass-through Robot Framework argument. Robot Framework's log level is automatically set to `DEBUG` when nac-test's `--loglevel` is set to `DEBUG`; otherwise, Robot uses its default log level.
 
-If you need fine-grained control over Robot Framework's log level (e.g., `TRACE`), implement this within your test suites using one of these approaches:
+If you need fine-grained control over Robot Framework's log level independently from nac-test's log level, use the `--` separator to pass Robot's `--loglevel` option directly:
 
 ```bash
-# Pass log level as a Robot variable
-nac-test -d data/ -t templates/ -o output/ --variable MY_LOG_LEVEL:TRACE
+# nac-test at INFO, Robot Framework at TRACE
+nac-test -d data/ -t templates/ -o output/ --loglevel INFO -- --loglevel TRACE
+
+# nac-test at WARNING (default), Robot Framework at DEBUG
+nac-test -d data/ -t templates/ -o output/ -- --loglevel DEBUG
 ```
-
-Then in your Robot test suite, use the `Set Log Level` keyword:
-
-```robot
-*** Settings ***
-Suite Setup    Set Log Level    ${MY_LOG_LEVEL}
-```
-
-Alternatively, use environment variables to control logging behavior within your test implementation.
 
 ## Exit Codes
 

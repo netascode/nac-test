@@ -1885,7 +1885,7 @@ requires-dist = [
     { name = "robotframework", specifier = ">=7.3.2" },
     { name = "robotframework-jmespath" },
     { name = "robotframework-jsonlibrary", specifier = ">=0.5" },
-    { name = "robotframework-pabot", specifier = ">=5.2.2" },
+    { name = "robotframework-pabot", specifier = ">=5.2.2,<6" },
     { name = "robotframework-requests", specifier = ">=0.9.7" },
     { name = "ruamel-yaml", specifier = ">=0.18.15" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.12" },

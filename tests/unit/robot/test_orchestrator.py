@@ -305,7 +305,7 @@ class TestRobotOrchestrator:
         assert orchestrator.verbose is False
 
     @pytest.mark.parametrize(
-        ("verbose", "loglevel", "expected_verbose", "expected_robot_loglevel"),
+        ("verbose", "loglevel", "expected_verbose", "expected_default_robot_loglevel"),
         [
             (True, LogLevel.WARNING, True, None),
             (True, LogLevel.DEBUG, True, "DEBUG"),
@@ -331,7 +331,7 @@ class TestRobotOrchestrator:
         verbose,
         loglevel,
         expected_verbose,
-        expected_robot_loglevel,
+        expected_default_robot_loglevel,
     ) -> None:
         """Test that verbose and loglevel are correctly passed to run_pabot."""
         orchestrator = RobotOrchestrator(
@@ -363,4 +363,4 @@ class TestRobotOrchestrator:
         mock_pabot.assert_called_once()
         call_kwargs = mock_pabot.call_args[1]
         assert call_kwargs["verbose"] is expected_verbose
-        assert call_kwargs["robot_loglevel"] == expected_robot_loglevel
+        assert call_kwargs["default_robot_loglevel"] == expected_default_robot_loglevel
