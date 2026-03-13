@@ -20,10 +20,6 @@ class TestRunPabotLoglevel:
             (None, None),
             ("DEBUG", "DEBUG"),
         ],
-        ids=[
-            "no_loglevel",
-            "debug_loglevel",
-        ],
     )
     @patch("nac_test.robot.pabot.pabot.pabot.main_program")
     def test_default_robot_loglevel_adds_arg(
@@ -52,32 +48,36 @@ class TestRunPabotLoglevel:
     @pytest.mark.parametrize(
         "extra_args",
         [
-            ["--loglevel", "TRACE"],  # space-separated form
-            ["--loglevel=TRACE"],  # equals form
-            ["-L", "TRACE"],  # short flag
+            ["--loglevel", "TRACE"],
+            ["--loglevel=TRACE"],
+            ["-L", "TRACE"],
         ],
-        ids=["loglevel_space", "loglevel_equals", "loglevel_short"],
+    )
+    @pytest.mark.parametrize(
+        "default_robot_loglevel",
+        ["DEBUG", None],
     )
     @patch("nac_test.robot.pabot.pabot.pabot.main_program")
     def test_extra_args_loglevel_overrides_default(
         self,
         mock_main_program: MagicMock,
         tmp_path: Path,
+        default_robot_loglevel: str | None,
         extra_args: list[str],
     ) -> None:
-        """Test that any loglevel form in extra_args overrides default_robot_loglevel."""
+        """Test that any loglevel form in extra_args is passed through as the sole loglevel."""
         mock_main_program.return_value = 0
 
         run_pabot(
             tmp_path,
-            default_robot_loglevel="DEBUG",
+            default_robot_loglevel=default_robot_loglevel,
             extra_args=extra_args,
         )
 
         mock_main_program.assert_called_once()
         call_args = mock_main_program.call_args[0][0]
 
-        # The default "DEBUG" loglevel must not have been appended — only the user's
+        # The default loglevel must not have been appended — only the user's
         # explicit loglevel (from extra_args) should be present.
         # _has_loglevel_arg is the authoritative detector; we use it here to confirm
         # the flag is present, then verify the value by extracting it directly.
