@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pabot.pabot
 
-from nac_test.cli.validators.args import _option_name
 from nac_test.core.constants import XUNIT_XML
+from nac_test.utils.strings import parse_cli_option_name
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def _has_loglevel_arg(args: list[str]) -> bool:
     """Return True if args contains an explicit loglevel flag (-L / --loglevel[=value])."""
     return any(
-        _option_name(arg).lower() in ["loglevel", "l"]
+        parse_cli_option_name(arg).lower() in ("loglevel", "l")
         for arg in args
         if arg.startswith("-")
     )
@@ -91,8 +91,7 @@ def run_pabot(
     extra_args = extra_args or []
     robot_args.extend(extra_args)
 
-    # Only add default_robot_loglevel if user didn't explicitly pass --loglevel via extra_args
-    # User's explicit "-- --loglevel TRACE" takes precedence over nac-test's implied level
+    # Respect explicit --loglevel in extra_args; default only applies if absent
     if default_robot_loglevel and not _has_loglevel_arg(extra_args):
         robot_args.extend(["--loglevel", default_robot_loglevel])
 

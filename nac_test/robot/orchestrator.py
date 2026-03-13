@@ -169,9 +169,8 @@ class RobotOrchestrator:
             )
             # Handle special exit codes - just log and return appropriate TestResults
             # User-facing error messages are handled centrally in main.py
-            # Note: EXIT_DATA_ERROR should not occur here in normal CLI flow — extra args
-            # are validated early in main.py before run_pabot is called. This branch is
-            # retained as a defensive guard for programmatic callers that bypass the CLI.
+            # Note: EXIT_DATA_ERROR is unlikely in normal CLI flow (extra args are validated
+            # in main.py), but retained as a defensive guard.
             if exit_code == EXIT_DATA_ERROR:
                 error_msg = "Invalid Robot Framework arguments passed to nac-test"
                 logger.error(error_msg)

@@ -8,7 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from nac_test.robot.pabot import _has_loglevel_arg, run_pabot
+from nac_test.robot.pabot import run_pabot
+from tests.unit.conftest import is_sublist
 
 
 class TestRunPabotLoglevel:
@@ -77,27 +78,11 @@ class TestRunPabotLoglevel:
         mock_main_program.assert_called_once()
         call_args = mock_main_program.call_args[0][0]
 
-        # The default loglevel must not have been appended — only the user's
-        # explicit loglevel (from extra_args) should be present.
-        # _has_loglevel_arg is the authoritative detector; we use it here to confirm
-        # the flag is present, then verify the value by extracting it directly.
-        assert _has_loglevel_arg(call_args), (
-            f"Expected a loglevel flag in call_args, but found none: {call_args}"
+        # extra_args passed through verbatim and in order
+        assert is_sublist(extra_args, call_args), (
+            f"extra_args {extra_args} not found as contiguous sequence in {call_args}"
         )
-        # Locate the flag and extract its value — handles both "=" and space forms.
-        loglevel_flags = [
-            i
-            for i, arg in enumerate(call_args)
-            if arg.startswith("-") and _has_loglevel_arg([arg])
-        ]
-        assert len(loglevel_flags) == 1, (
-            f"Expected exactly one loglevel flag, got {len(loglevel_flags)} in {call_args}"
-        )
-        flag = call_args[loglevel_flags[0]]
-        if "=" in flag:
-            actual_value = flag.split("=", 1)[1]
-        else:
-            actual_value = call_args[loglevel_flags[0] + 1]
-        assert actual_value == "TRACE", (
-            f"Expected loglevel TRACE, got {actual_value} in {call_args}"
-        )
+
+        # default loglevel must not be appended when extra_args already contains one
+        if default_robot_loglevel:
+            assert call_args[-2:] != ["--loglevel", default_robot_loglevel]

@@ -6,11 +6,14 @@ This module validates arguments passed after the -- separator to ensure they are
 valid Robot Framework options that don't conflict with nac-test's controlled options.
 """
 
+import functools
 import logging
 from collections.abc import Callable
 from typing import Any
 
 from robot.errors import DataError
+
+from nac_test.utils.strings import parse_cli_option_name
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +41,8 @@ _CONTROLLED_ROBOT_OPTIONS: list[tuple[str, str | None, str]] = [
     ("report", "r", "controlled internally by nac-test"),
     ("xunit", "x", "controlled internally by nac-test"),
     ("dryrun", None, "nac-test --dry-run"),
+    # --loglevel / -L is intentionally absent: users may override it via extra_args
+    # (e.g. "-- --loglevel TRACE"). nac-test sets a default but does not own the option.
 ]
 
 _CONTROLLED_OPTIONS_LOOKUP: dict[str, str] = {
@@ -47,26 +52,17 @@ _CONTROLLED_OPTIONS_LOOKUP: dict[str, str] = {
 }
 
 
-def _option_name(arg: str) -> str:
-    """Extract the option name from a CLI flag.
+@functools.cache
+def _get_pabot_option_names() -> frozenset[str]:
+    """Return pabot option names derived from pabot's own parser (computed once, cached).
 
-    Strips all leading dashes and any ``=value`` suffix.
-
-    Examples::
-
-        _option_name("--loglevel")       -> "loglevel"
-        _option_name("--loglevel=DEBUG") -> "loglevel"
+    Deferred to first call so the pabot parser is never invoked when extra args
+    are not used (the common case).  result[2] of parse_args is the pabot args
+    dict; its keys are the canonical option names.
     """
-    return arg.lstrip("-").split("=")[0]
-
-
-# Pabot option names derived from pabot's own parser at import time — stays in sync
-# automatically. result[2] of parse_args is the pabot args dict; its keys are canonical.
-_PABOT_OPTION_NAMES: frozenset[str] = (
-    frozenset(_pabot_parse_args(["__dummy__.robot"])[2].keys())
-    if _pabot_parse_args is not None
-    else frozenset()
-)
+    if _pabot_parse_args is None:
+        return frozenset()
+    return frozenset(_pabot_parse_args(["__dummy__.robot"])[2].keys())
 
 
 def _raise_if_controlled_robot_options(extra_args: list[str]) -> None:
@@ -79,7 +75,7 @@ def _raise_if_controlled_robot_options(extra_args: list[str]) -> None:
 
     for arg in extra_args:
         if arg.startswith("--"):
-            key = _option_name(arg).lower()
+            key = parse_cli_option_name(arg).lower()
         elif arg.startswith("-") and len(arg) == 2:
             key = arg[1]  # short options are case-sensitive (-i != -I)
         else:
@@ -108,7 +104,8 @@ def _raise_if_pabot_options(extra_args: list[str]) -> None:
     pabot_options_found = [
         arg
         for arg in extra_args
-        if arg.startswith("--") and _option_name(arg).lower() in _PABOT_OPTION_NAMES
+        if arg.startswith("--")
+        and parse_cli_option_name(arg).lower() in _get_pabot_option_names()
     ]
 
     if pabot_options_found:
