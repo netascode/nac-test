@@ -12,33 +12,29 @@ This test verifies that setup() handles optional credentials correctly for
 IOSXE while still requiring them for other controller types.
 """
 
+import json
 import os
-import tempfile
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 
 @pytest.fixture()
-def temp_data_model_file() -> Any:
-    """Create temporary data model file for tests."""
-    import json
+def temp_data_model_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
+    """Create temporary data model file for tests.
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump({"defaults": {"iosxe": {}, "apic": {}}}, f)
-        temp_file = f.name
-
-    original = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH")
-    os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = temp_file
-
-    yield temp_file
-
-    # Cleanup
-    os.unlink(temp_file)
-    if original:
-        os.environ["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = original
-    else:
-        os.environ.pop("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", None)
+    Uses tmp_path for automatic cleanup and monkeypatch for env var management.
+    """
+    data_model_path = tmp_path / "data_model.json"
+    data_model_path.write_text(json.dumps({"defaults": {"iosxe": {}, "apic": {}}}))
+    monkeypatch.setenv(
+        "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH", str(data_model_path)
+    )
+    return data_model_path
 
 
 class TestIOSXEOptionalCredentials:
@@ -47,7 +43,7 @@ class TestIOSXEOptionalCredentials:
     def test_iosxe_setup_works_without_username_password(
         self,
         nac_test_base_class: Any,
-        temp_data_model_file: str,
+        temp_data_model_file: Path,
         iosxe_controller_env: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -80,7 +76,7 @@ class TestIOSXEOptionalCredentials:
     def test_iosxe_setup_works_with_username_password(
         self,
         nac_test_base_class: Any,
-        temp_data_model_file: str,
+        temp_data_model_file: Path,
         iosxe_controller_env: None,
     ) -> None:
         """setup() should also work if IOSXE USERNAME/PASSWORD are provided.
@@ -103,7 +99,7 @@ class TestIOSXEOptionalCredentials:
     def test_aci_setup_requires_username_password(
         self,
         nac_test_base_class: Any,
-        temp_data_model_file: str,
+        temp_data_model_file: Path,
         aci_controller_env: None,
     ) -> None:
         """setup() should succeed for ACI with all required credentials.
@@ -127,7 +123,7 @@ class TestIOSXEOptionalCredentials:
     def test_aci_setup_fails_without_username(
         self,
         nac_test_base_class: Any,
-        temp_data_model_file: str,
+        temp_data_model_file: Path,
         aci_controller_env: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:

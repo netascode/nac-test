@@ -6,9 +6,6 @@
 This module verifies that all controller types in CONTROLLER_REGISTRY correctly
 map to their defaults prefixes, and that the complete integration works end-to-end
 from controller detection through defaults resolution.
-
-These tests address Oliver's feedback: "Tests for all 7 CONTROLLER_TO_DEFAULTS_PREFIX
-mappings" and "Integration tests for get_default_value()".
 """
 
 from typing import Any
@@ -20,10 +17,7 @@ from nac_test.utils.controller import CONTROLLER_REGISTRY, get_defaults_prefix
 
 
 class TestControllerDefaultsPrefixMapping:
-    """Tests that verify all controller types correctly map to defaults prefixes.
-
-    Oliver's feedback: "Tests for all 7 CONTROLLER_TO_DEFAULTS_PREFIX mappings (BLOCKING test gaps)"
-    """
+    """Tests that verify all controller types correctly map to defaults prefixes."""
 
     @pytest.mark.parametrize(
         "controller_type,expected_prefix",
@@ -73,9 +67,7 @@ class TestControllerDefaultsPrefixMapping:
 
 
 class TestGetDefaultValueIntegration:
-    """Integration tests for get_default_value() in real test class instances.
-
-    Oliver's feedback: "Integration tests for get_default_value() (BLOCKING test gaps)"
+    """Integration tests for resolve_default_value() in real test class instances.
 
     These tests verify the complete integration flow:
     1. Controller type detection from environment
@@ -96,7 +88,9 @@ class TestGetDefaultValueIntegration:
         instance.controller_type = "ACI"
 
         # Mock only the _resolve function to verify correct delegation
-        with patch("nac_test.pyats_core.common.base_test._resolve") as mock_resolve:
+        with patch(
+            "nac_test.pyats_core.common.base_test.resolve_default_value"
+        ) as mock_resolve:
             mock_resolve.return_value = "test-fabric"
 
             result = instance.get_default_value("fabric.name")
@@ -120,7 +114,9 @@ class TestGetDefaultValueIntegration:
         instance.data_model = sdwan_data_model
         instance.controller_type = "SDWAN"
 
-        with patch("nac_test.pyats_core.common.base_test._resolve") as mock_resolve:
+        with patch(
+            "nac_test.pyats_core.common.base_test.resolve_default_value"
+        ) as mock_resolve:
             mock_resolve.return_value = 30
 
             result = instance.get_default_value("global.timeout")
@@ -139,7 +135,9 @@ class TestGetDefaultValueIntegration:
         instance.data_model = {"defaults": {"catc": {"timeout": 60}}}
         instance.controller_type = "CC"
 
-        with patch("nac_test.pyats_core.common.base_test._resolve") as mock_resolve:
+        with patch(
+            "nac_test.pyats_core.common.base_test.resolve_default_value"
+        ) as mock_resolve:
             mock_resolve.return_value = 60
 
             result = instance.get_default_value("timeout")
@@ -158,7 +156,9 @@ class TestGetDefaultValueIntegration:
         instance.data_model = {"defaults": {"iosxe": {"timeout": 45}}}
         instance.controller_type = "IOSXE"
 
-        with patch("nac_test.pyats_core.common.base_test._resolve") as mock_resolve:
+        with patch(
+            "nac_test.pyats_core.common.base_test.resolve_default_value"
+        ) as mock_resolve:
             mock_resolve.return_value = 45
 
             result = instance.get_default_value("timeout")
@@ -169,10 +169,7 @@ class TestGetDefaultValueIntegration:
 
 
 class TestErrorPropagation:
-    """Tests that verify errors propagate correctly from defaults_resolver to test classes.
-
-    Oliver's feedback: "Error propagation tests (BLOCKING test gaps)"
-    """
+    """Tests that verify errors propagate correctly from defaults_resolver to test classes."""
 
     def test_missing_defaults_block_error_propagates(
         self,

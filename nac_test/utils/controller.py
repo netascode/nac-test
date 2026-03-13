@@ -51,6 +51,8 @@ class ControllerConfig:
             (e.g., "defaults.apic", "defaults.sdwan").
         cache_key: The controller_type string passed to AuthCache by the auth adapter.
             None for controllers that don't have an auth adapter in nac-test-pyats-common.
+        alt_url_env_vars: Alternative environment variable names for the URL.
+            Used when a controller supports multiple URL env var names (e.g., IOSXE_HOST).
     """
 
     display_name: str
@@ -59,6 +61,7 @@ class ControllerConfig:
     required_env_vars: list[str]
     defaults_prefix: str
     cache_key: str | None = None
+    alt_url_env_vars: list[str] | None = None
 
 
 # Single source of truth for all controller configurations
@@ -117,6 +120,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
             "IOSXE_URL"
         ],  # Direct device access, no controller credentials
         defaults_prefix="defaults.iosxe",
+        alt_url_env_vars=["IOSXE_HOST"],  # Alternative env var for URL
     ),
 }
 
@@ -202,6 +206,9 @@ def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
     Examines environment variables to identify which controller types have
     complete credentials configured and which have partial/incomplete credentials.
 
+    This function also handles alternative URL environment variables (e.g., IOSXE_HOST
+    as an alternative to IOSXE_URL) when configured in the ControllerConfig.
+
     Returns:
         A tuple containing:
             - List of controller types with complete credentials
@@ -230,11 +237,25 @@ def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
                 present_vars.append(var)
                 logger.debug(f"  {controller_type}: Found {var}")
             else:
-                missing_vars.append(var)
-                if var in os.environ:
-                    logger.debug(f"  {controller_type}: Empty {var}")
-                else:
-                    logger.debug(f"  {controller_type}: Missing {var}")
+                # Check alternative URL env vars if this is the URL variable
+                alt_found = False
+                if var == config.url_env_var and config.alt_url_env_vars:
+                    for alt_var in config.alt_url_env_vars:
+                        alt_value = os.environ.get(alt_var)
+                        if alt_value and alt_value.strip():
+                            present_vars.append(alt_var)
+                            logger.debug(
+                                f"  {controller_type}: Found {alt_var} (alternative)"
+                            )
+                            alt_found = True
+                            break
+
+                if not alt_found:
+                    missing_vars.append(var)
+                    if var in os.environ:
+                        logger.debug(f"  {controller_type}: Empty {var}")
+                    else:
+                        logger.debug(f"  {controller_type}: Missing {var}")
 
         if present_vars and not missing_vars:
             # All required variables present and non-empty
@@ -398,3 +419,50 @@ def get_defaults_prefix(controller_type: str) -> str:
     """
     config = CONTROLLER_REGISTRY.get(controller_type)
     return config.defaults_prefix if config else f"defaults.{controller_type.lower()}"
+
+
+def get_controller_url(controller_type: str) -> str:
+    """Get the controller URL from environment variables.
+
+    Looks up the primary URL environment variable from CONTROLLER_REGISTRY, and
+    also checks alternative URL env vars if configured (e.g., IOSXE_HOST as an
+    alternative to IOSXE_URL).
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "IOSXE").
+
+    Returns:
+        The controller URL value from the environment.
+
+    Raises:
+        KeyError: If neither the primary nor any alternative URL env var is set.
+
+    Example:
+        >>> os.environ["ACI_URL"] = "https://apic.example.com"
+        >>> get_controller_url("ACI")
+        'https://apic.example.com'
+
+        >>> os.environ["IOSXE_HOST"] = "192.168.1.1"
+        >>> get_controller_url("IOSXE")  # Returns IOSXE_HOST when IOSXE_URL not set
+        '192.168.1.1'
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+
+    if config is None:
+        # Fallback for unknown controller types
+        return os.environ[f"{controller_type}_URL"]
+
+    # Try primary URL env var first
+    url_value = os.environ.get(config.url_env_var)
+    if url_value and url_value.strip():
+        return url_value.strip()
+
+    # Try alternative URL env vars if configured
+    if config.alt_url_env_vars:
+        for alt_var in config.alt_url_env_vars:
+            alt_value = os.environ.get(alt_var)
+            if alt_value and alt_value.strip():
+                return alt_value.strip()
+
+    # No URL found - raise KeyError with the primary var name
+    raise KeyError(config.url_env_var)

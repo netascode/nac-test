@@ -6,7 +6,7 @@
 This module verifies that the get_default_value() instance method on NACTestBase:
 - Auto-detects controller type from environment variables
 - Maps controller type to correct defaults prefix
-- Delegates to defaults_resolver.get_default_value with correct arguments
+- Delegates to defaults_resolver.resolve_default_value with correct arguments
 - Handles missing controller credentials gracefully
 
 Note:
@@ -48,7 +48,7 @@ class TestNACTestBaseDefaults:
         instance.controller_type = "ACI"
 
         with patch(
-            "nac_test.pyats_core.common.base_test._resolve",
+            "nac_test.pyats_core.common.base_test.resolve_default_value",
             return_value=sentinel.result,
         ) as mock_resolve:
             result = instance.get_default_value("fabric.name")
@@ -70,7 +70,7 @@ class TestNACTestBaseDefaults:
         instance.controller_type = "SDWAN"
 
         with patch(
-            "nac_test.pyats_core.common.base_test._resolve",
+            "nac_test.pyats_core.common.base_test.resolve_default_value",
             return_value=sentinel.result,
         ) as mock_resolve:
             result = instance.get_default_value("global.timeout")
@@ -90,7 +90,7 @@ class TestNACTestBaseDefaults:
         instance.controller_type = "CC"
 
         with patch(
-            "nac_test.pyats_core.common.base_test._resolve",
+            "nac_test.pyats_core.common.base_test.resolve_default_value",
             return_value=sentinel.result,
         ) as mock_resolve:
             result = instance.get_default_value("timeout")
@@ -110,7 +110,7 @@ class TestNACTestBaseDefaults:
         instance.controller_type = "IOSXE"
 
         with patch(
-            "nac_test.pyats_core.common.base_test._resolve",
+            "nac_test.pyats_core.common.base_test.resolve_default_value",
             return_value=sentinel.result,
         ) as mock_resolve:
             result = instance.get_default_value("timeout")
@@ -146,7 +146,7 @@ class TestNACTestBaseDefaults:
         instance.controller_type = "ACI"
 
         with patch(
-            "nac_test.pyats_core.common.base_test._resolve",
+            "nac_test.pyats_core.common.base_test.resolve_default_value",
             return_value=sentinel.result,
         ) as mock_resolve:
             result = instance.get_default_value(
@@ -174,7 +174,7 @@ class TestNACTestBaseDefaults:
         instance.controller_type = "ACI"
 
         with patch(
-            "nac_test.pyats_core.common.base_test._resolve",
+            "nac_test.pyats_core.common.base_test.resolve_default_value",
         ) as mock_resolve:
             instance.get_default_value("some.path")
 
@@ -193,7 +193,7 @@ class TestNACTestBaseDefaults:
         instance.controller_type = "ACI"
 
         with patch(
-            "nac_test.pyats_core.common.base_test._resolve",
+            "nac_test.pyats_core.common.base_test.resolve_default_value",
         ) as mock_resolve:
             instance.get_default_value("key")
 

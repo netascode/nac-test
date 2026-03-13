@@ -32,7 +32,7 @@ from nac_test.core.constants import (
 )
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.defaults_resolver import (
-    get_default_value as _resolve,
+    resolve_default_value,
 )
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
 from nac_test.pyats_core.common.types import (
@@ -47,6 +47,7 @@ from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.utils import sanitize_hostname
 from nac_test.utils.controller import (
     detect_controller_type,
+    get_controller_url,
     get_defaults_prefix,
 )
 from nac_test.utils.formatting import format_file_timestamp_ms
@@ -174,7 +175,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             self.logger.error(f"Controller detection failed: {e}")
             raise
 
-        self.controller_url = os.environ[f"{self.controller_type}_URL"]
+        self.controller_url = get_controller_url(self.controller_type)
         # USERNAME and PASSWORD are optional for some controller types (e.g., IOSXE)
         # D2D tests use device-specific credentials from inventory, not controller credentials
         self.username = os.environ.get(f"{self.controller_type}_USERNAME")
@@ -839,7 +840,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # No need to re-detect (would perform 21 env var lookups)
         defaults_prefix = get_defaults_prefix(self.controller_type)
 
-        return _resolve(
+        return resolve_default_value(
             self.data_model,
             *default_paths,
             defaults_prefix=defaults_prefix,

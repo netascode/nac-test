@@ -71,7 +71,7 @@ def ensure_defaults_block_exists(
         raise ValueError(missing_error)
 
 
-def get_default_value(
+def resolve_default_value(
     data_model: dict[str, Any],
     *default_paths: str,
     defaults_prefix: str,
@@ -98,8 +98,8 @@ def get_default_value(
     Args:
         data_model: The merged NAC data model containing configuration and defaults.
         *default_paths: One or more JMESPaths relative to the defaults prefix.
-            Single: get_default_value(data, "path.to.value", ...)
-            Cascade: get_default_value(data, "path1", "path2", "path3", ...)
+            Single: resolve_default_value(data, "path.to.value", ...)
+            Cascade: resolve_default_value(data, "path1", "path2", "path3", ...)
         defaults_prefix: JMESPath prefix for the defaults block.
         required: If True (default), raises ValueError when no value found.
             If False, returns None when no value found.
@@ -123,21 +123,21 @@ def get_default_value(
         ... }
 
         # Single path lookup
-        >>> get_default_value(
+        >>> resolve_default_value(
         ...     data, "global.timeout",
         ...     defaults_prefix="defaults.sdwan"
         ... )
         30
 
         # Cascade lookup (first non-None wins)
-        >>> get_default_value(
+        >>> resolve_default_value(
         ...     data, "device.custom_timeout", "global.timeout",
         ...     defaults_prefix="defaults.sdwan"
         ... )
         30
 
         # Optional value not found
-        >>> get_default_value(
+        >>> resolve_default_value(
         ...     data, "nonexistent.path",
         ...     defaults_prefix="defaults.sdwan",
         ...     required=False
@@ -146,7 +146,7 @@ def get_default_value(
     """
     if not default_paths:
         raise TypeError(
-            "get_default_value() requires at least one default_path argument"
+            "resolve_default_value() requires at least one default_path argument"
         )
 
     # Try each path in order, return the first non-None value

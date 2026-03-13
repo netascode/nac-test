@@ -21,7 +21,7 @@ import pytest
 
 from nac_test.pyats_core.common.defaults_resolver import (
     ensure_defaults_block_exists,
-    get_default_value,
+    resolve_default_value,
 )
 
 # =============================================================================
@@ -135,28 +135,32 @@ class TestEnsureDefaultsBlockExists:
                 missing_error=error_message,
             )
 
-    def test_custom_prefix_apic(self, apic_data_model: dict[str, Any]) -> None:
-        """Should work with defaults.apic prefix."""
+    @pytest.mark.parametrize(
+        "fixture_name,prefix",
+        [
+            pytest.param("apic_data_model", "defaults.apic", id="apic"),
+            pytest.param("sdwan_data_model", "defaults.sdwan", id="sdwan"),
+            pytest.param("catc_data_model", "defaults.catc", id="catc"),
+        ],
+    )
+    def test_architecture_prefix_validates(
+        self,
+        fixture_name: str,
+        prefix: str,
+        apic_data_model: dict[str, Any],
+        sdwan_data_model: dict[str, Any],
+        catc_data_model: dict[str, Any],
+    ) -> None:
+        """Should work with each architecture's defaults prefix."""
+        fixtures = {
+            "apic_data_model": apic_data_model,
+            "sdwan_data_model": sdwan_data_model,
+            "catc_data_model": catc_data_model,
+        }
         ensure_defaults_block_exists(
-            data_model=apic_data_model,
-            defaults_prefix="defaults.apic",
-            missing_error="APIC defaults file required.",
-        )
-
-    def test_custom_prefix_sdwan(self, sdwan_data_model: dict[str, Any]) -> None:
-        """Should work with defaults.sdwan prefix."""
-        ensure_defaults_block_exists(
-            data_model=sdwan_data_model,
-            defaults_prefix="defaults.sdwan",
-            missing_error="SDWAN defaults file required.",
-        )
-
-    def test_custom_prefix_catc(self, catc_data_model: dict[str, Any]) -> None:
-        """Should work with defaults.catc prefix."""
-        ensure_defaults_block_exists(
-            data_model=catc_data_model,
-            defaults_prefix="defaults.catc",
-            missing_error="CATC defaults file required.",
+            data_model=fixtures[fixture_name],
+            defaults_prefix=prefix,
+            missing_error=f"{prefix.split('.')[1].upper()} defaults file required.",
         )
 
     def test_wrong_architecture_prefix_raises(
@@ -185,7 +189,7 @@ class TestGetDefaultValueSinglePath:
 
     def test_single_path_value_found(self, sdwan_data_model: dict[str, Any]) -> None:
         """Should return correct value for single path lookup."""
-        result = get_default_value(
+        result = resolve_default_value(
             sdwan_data_model,
             "global.timeout",
             defaults_prefix="defaults.sdwan",
@@ -195,7 +199,7 @@ class TestGetDefaultValueSinglePath:
 
     def test_single_path_nested_value(self, apic_data_model: dict[str, Any]) -> None:
         """Should work with deep nesting."""
-        result = get_default_value(
+        result = resolve_default_value(
             apic_data_model,
             "tenants.l3outs.nodes.pod",
             defaults_prefix="defaults.apic",
@@ -207,7 +211,7 @@ class TestGetDefaultValueSinglePath:
         self, deeply_nested_data_model: dict[str, Any]
     ) -> None:
         """Should work with very deep nesting."""
-        result = get_default_value(
+        result = resolve_default_value(
             deeply_nested_data_model,
             "level1.level2.level3.level4.level5.value",
             defaults_prefix="defaults.apic",
@@ -220,7 +224,7 @@ class TestGetDefaultValueSinglePath:
     ) -> None:
         """Should raise ValueError when required value is missing."""
         with pytest.raises(ValueError, match="Required default value not found"):
-            get_default_value(
+            resolve_default_value(
                 sdwan_data_model,
                 "nonexistent.path",
                 defaults_prefix="defaults.sdwan",
@@ -231,7 +235,7 @@ class TestGetDefaultValueSinglePath:
         self, sdwan_data_model: dict[str, Any]
     ) -> None:
         """Should return None when optional value is missing."""
-        result = get_default_value(
+        result = resolve_default_value(
             sdwan_data_model,
             "nonexistent.path",
             defaults_prefix="defaults.sdwan",
@@ -240,69 +244,34 @@ class TestGetDefaultValueSinglePath:
 
         assert result is None
 
-    def test_falsy_value_false_returned(
-        self, data_model_with_falsy_values: dict[str, Any]
+    @pytest.mark.parametrize(
+        "path,expected_value",
+        [
+            pytest.param("settings.enabled", False, id="false"),
+            pytest.param("settings.count", 0, id="zero"),
+            pytest.param("settings.name", "", id="empty-string"),
+            pytest.param("settings.items", [], id="empty-list"),
+            pytest.param("settings.config", {}, id="empty-dict"),
+        ],
+    )
+    def test_falsy_value_returned_correctly(
+        self,
+        data_model_with_falsy_values: dict[str, Any],
+        path: str,
+        expected_value: Any,
     ) -> None:
-        """Should return False correctly (not treated as None)."""
-        result = get_default_value(
+        """Should return falsy values correctly (not treated as None)."""
+        result = resolve_default_value(
             data_model_with_falsy_values,
-            "settings.enabled",
+            path,
             defaults_prefix="defaults.apic",
         )
 
-        assert result is False
-
-    def test_falsy_value_zero_returned(
-        self, data_model_with_falsy_values: dict[str, Any]
-    ) -> None:
-        """Should return 0 correctly (not treated as None)."""
-        result = get_default_value(
-            data_model_with_falsy_values,
-            "settings.count",
-            defaults_prefix="defaults.apic",
-        )
-
-        assert result == 0
-
-    def test_falsy_value_empty_string_returned(
-        self, data_model_with_falsy_values: dict[str, Any]
-    ) -> None:
-        """Should return empty string correctly (not treated as None)."""
-        result = get_default_value(
-            data_model_with_falsy_values,
-            "settings.name",
-            defaults_prefix="defaults.apic",
-        )
-
-        assert result == ""
-
-    def test_falsy_value_empty_list_returned(
-        self, data_model_with_falsy_values: dict[str, Any]
-    ) -> None:
-        """Should return empty list correctly (not treated as None)."""
-        result = get_default_value(
-            data_model_with_falsy_values,
-            "settings.items",
-            defaults_prefix="defaults.apic",
-        )
-
-        assert result == []
-
-    def test_falsy_value_empty_dict_returned(
-        self, data_model_with_falsy_values: dict[str, Any]
-    ) -> None:
-        """Should return empty dict correctly (not treated as None)."""
-        result = get_default_value(
-            data_model_with_falsy_values,
-            "settings.config",
-            defaults_prefix="defaults.apic",
-        )
-
-        assert result == {}
+        assert result == expected_value
 
     def test_returns_dict_value(self, apic_data_model: dict[str, Any]) -> None:
         """Should return nested dict values."""
-        result = get_default_value(
+        result = resolve_default_value(
             apic_data_model,
             "tenants.l3outs.nodes",
             defaults_prefix="defaults.apic",
@@ -312,7 +281,7 @@ class TestGetDefaultValueSinglePath:
 
     def test_returns_string_value(self, apic_data_model: dict[str, Any]) -> None:
         """Should return string values."""
-        result = get_default_value(
+        result = resolve_default_value(
             apic_data_model,
             "tenants.l3outs.bgp_peers.admin_state",
             defaults_prefix="defaults.apic",
@@ -337,7 +306,7 @@ class TestGetDefaultValueCascade:
         self, sdwan_data_model: dict[str, Any]
     ) -> None:
         """Should return first non-None value in cascade."""
-        result = get_default_value(
+        result = resolve_default_value(
             sdwan_data_model,
             "global.timeout",
             "device.connection_timeout",
@@ -349,7 +318,7 @@ class TestGetDefaultValueCascade:
 
     def test_cascade_skips_none_values(self, sdwan_data_model: dict[str, Any]) -> None:
         """Should continue searching if first path returns None."""
-        result = get_default_value(
+        result = resolve_default_value(
             sdwan_data_model,
             "nonexistent.timeout",
             "global.timeout",
@@ -363,7 +332,7 @@ class TestGetDefaultValueCascade:
         self, sdwan_data_model: dict[str, Any]
     ) -> None:
         """Should return second path value when first is None."""
-        result = get_default_value(
+        result = resolve_default_value(
             sdwan_data_model,
             "missing.value",
             "device.os",
@@ -374,7 +343,7 @@ class TestGetDefaultValueCascade:
 
     def test_cascade_returns_third_path(self, sdwan_data_model: dict[str, Any]) -> None:
         """Should return third path value when first two are None."""
-        result = get_default_value(
+        result = resolve_default_value(
             sdwan_data_model,
             "missing.first",
             "missing.second",
@@ -389,7 +358,7 @@ class TestGetDefaultValueCascade:
     ) -> None:
         """Should raise ValueError if all paths missing and required."""
         with pytest.raises(ValueError, match="Required default value not found"):
-            get_default_value(
+            resolve_default_value(
                 sdwan_data_model,
                 "missing.path1",
                 "missing.path2",
@@ -402,7 +371,7 @@ class TestGetDefaultValueCascade:
         self, sdwan_data_model: dict[str, Any]
     ) -> None:
         """Should return None if all paths missing and optional."""
-        result = get_default_value(
+        result = resolve_default_value(
             sdwan_data_model,
             "missing.path1",
             "missing.path2",
@@ -415,7 +384,7 @@ class TestGetDefaultValueCascade:
 
     def test_cascade_with_many_paths(self, sdwan_data_model: dict[str, Any]) -> None:
         """Should handle many cascade paths correctly."""
-        result = get_default_value(
+        result = resolve_default_value(
             sdwan_data_model,
             "missing.a",
             "missing.b",
@@ -446,7 +415,7 @@ class TestGetDefaultValueErrorHandling:
         with pytest.raises(
             TypeError, match="requires at least one default_path argument"
         ):
-            get_default_value(
+            resolve_default_value(
                 sdwan_data_model,
                 defaults_prefix="defaults.sdwan",
             )
@@ -461,7 +430,7 @@ class TestGetDefaultValueErrorHandling:
         if the entire defaults block is missing).
         """
         with pytest.raises(ValueError, match="Required default value not found"):
-            get_default_value(
+            resolve_default_value(
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.apic",
@@ -472,7 +441,7 @@ class TestGetDefaultValueErrorHandling:
     ) -> None:
         """Error message should show attempted path for single path lookup."""
         with pytest.raises(ValueError) as exc_info:
-            get_default_value(
+            resolve_default_value(
                 sdwan_data_model,
                 "nonexistent.setting",
                 defaults_prefix="defaults.sdwan",
@@ -486,7 +455,7 @@ class TestGetDefaultValueErrorHandling:
     ) -> None:
         """Error message should show all attempted paths for cascade lookup."""
         with pytest.raises(ValueError) as exc_info:
-            get_default_value(
+            resolve_default_value(
                 sdwan_data_model,
                 "missing.path1",
                 "missing.path2",
@@ -508,7 +477,7 @@ class TestGetDefaultValueErrorHandling:
         when a value is not found in an empty data model.
         """
         with pytest.raises(ValueError, match="Required default value not found"):
-            get_default_value(
+            resolve_default_value(
                 empty_data_model,
                 "some.path",
                 defaults_prefix="defaults.apic",
@@ -521,7 +490,7 @@ class TestGetDefaultValueErrorHandling:
         when data_model is None (JMESPath will return None for any path search).
         """
         with pytest.raises(ValueError, match="Required default value not found"):
-            get_default_value(
+            resolve_default_value(
                 None,  # type: ignore[arg-type]
                 "some.path",
                 defaults_prefix="defaults.apic",
@@ -540,35 +509,47 @@ class TestArchitectureAgnostic:
     architecture prefixes (APIC, SD-WAN, Catalyst Center).
     """
 
-    def test_apic_prefix(self, apic_data_model: dict[str, Any]) -> None:
-        """Should work with defaults.apic prefix."""
-        result = get_default_value(
-            apic_data_model,
-            "fabric.name",
-            defaults_prefix="defaults.apic",
+    @pytest.mark.parametrize(
+        "fixture_name,prefix,path,expected_value",
+        [
+            pytest.param(
+                "apic_data_model",
+                "defaults.apic",
+                "fabric.name",
+                "test-fabric",
+                id="apic",
+            ),
+            pytest.param(
+                "sdwan_data_model", "defaults.sdwan", "device.os", "iosxe", id="sdwan"
+            ),
+            pytest.param(
+                "catc_data_model", "defaults.catc", "sites.area", "Global", id="catc"
+            ),
+        ],
+    )
+    def test_architecture_prefix_resolves_value(
+        self,
+        fixture_name: str,
+        prefix: str,
+        path: str,
+        expected_value: str,
+        apic_data_model: dict[str, Any],
+        sdwan_data_model: dict[str, Any],
+        catc_data_model: dict[str, Any],
+    ) -> None:
+        """Should work with each architecture's defaults prefix."""
+        fixtures = {
+            "apic_data_model": apic_data_model,
+            "sdwan_data_model": sdwan_data_model,
+            "catc_data_model": catc_data_model,
+        }
+        result = resolve_default_value(
+            fixtures[fixture_name],
+            path,
+            defaults_prefix=prefix,
         )
 
-        assert result == "test-fabric"
-
-    def test_sdwan_prefix(self, sdwan_data_model: dict[str, Any]) -> None:
-        """Should work with defaults.sdwan prefix."""
-        result = get_default_value(
-            sdwan_data_model,
-            "device.os",
-            defaults_prefix="defaults.sdwan",
-        )
-
-        assert result == "iosxe"
-
-    def test_catc_prefix(self, catc_data_model: dict[str, Any]) -> None:
-        """Should work with defaults.catc prefix."""
-        result = get_default_value(
-            catc_data_model,
-            "sites.area",
-            defaults_prefix="defaults.catc",
-        )
-
-        assert result == "Global"
+        assert result == expected_value
 
     def test_custom_architecture_prefix(self) -> None:
         """Should work with custom architecture prefix."""
@@ -576,7 +557,7 @@ class TestArchitectureAgnostic:
             "defaults": {"custom_arch": {"setting": {"value": "custom-value"}}}
         }
 
-        result = get_default_value(
+        result = resolve_default_value(
             custom_data_model,
             "setting.value",
             defaults_prefix="defaults.custom_arch",
@@ -584,53 +565,31 @@ class TestArchitectureAgnostic:
 
         assert result == "custom-value"
 
-    def test_custom_error_message_apic(self, empty_data_model: dict[str, Any]) -> None:
-        """Should raise value not found error for APIC (CLI validators ensure defaults exist).
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            pytest.param("defaults.apic", id="apic"),
+            pytest.param("defaults.sdwan", id="sdwan"),
+            pytest.param("defaults.catc", id="catc"),
+        ],
+    )
+    def test_error_message_includes_prefix(
+        self, empty_data_model: dict[str, Any], prefix: str
+    ) -> None:
+        """Should raise value not found error with prefix in message.
 
         Note: CLI validators handle defaults block validation. This test verifies
         the error message when a value is not found.
         """
         with pytest.raises(ValueError) as exc_info:
-            get_default_value(
+            resolve_default_value(
                 empty_data_model,
                 "some.path",
-                defaults_prefix="defaults.apic",
+                defaults_prefix=prefix,
             )
 
         assert "Required default value not found" in str(exc_info.value)
-        assert "defaults.apic.some.path" in str(exc_info.value)
-
-    def test_custom_error_message_sdwan(self, empty_data_model: dict[str, Any]) -> None:
-        """Should raise value not found error for SD-WAN (CLI validators ensure defaults exist).
-
-        Note: CLI validators handle defaults block validation. This test verifies
-        the error message when a value is not found.
-        """
-        with pytest.raises(ValueError) as exc_info:
-            get_default_value(
-                empty_data_model,
-                "some.path",
-                defaults_prefix="defaults.sdwan",
-            )
-
-        assert "Required default value not found" in str(exc_info.value)
-        assert "defaults.sdwan.some.path" in str(exc_info.value)
-
-    def test_custom_error_message_catc(self, empty_data_model: dict[str, Any]) -> None:
-        """Should raise value not found error for Catalyst Center (CLI validators ensure defaults exist).
-
-        Note: CLI validators handle defaults block validation. This test verifies
-        the error message when a value is not found.
-        """
-        with pytest.raises(ValueError) as exc_info:
-            get_default_value(
-                empty_data_model,
-                "some.path",
-                defaults_prefix="defaults.catc",
-            )
-
-        assert "Required default value not found" in str(exc_info.value)
-        assert "defaults.catc.some.path" in str(exc_info.value)
+        assert f"{prefix}.some.path" in str(exc_info.value)
 
 
 # =============================================================================
@@ -648,7 +607,7 @@ class TestEdgeCases:
         """Should work with single-level path."""
         data_model: dict[str, Any] = {"defaults": {"apic": {"timeout": 30}}}
 
-        result = get_default_value(
+        result = resolve_default_value(
             data_model,
             "timeout",
             defaults_prefix="defaults.apic",
@@ -662,7 +621,7 @@ class TestEdgeCases:
             "defaults": {"apic": {"config_v2": {"setting_1": {"value_2": "test"}}}}
         }
 
-        result = get_default_value(
+        result = resolve_default_value(
             data_model,
             "config_v2.setting_1.value_2",
             defaults_prefix="defaults.apic",
@@ -674,7 +633,7 @@ class TestEdgeCases:
         """Should treat explicit None value as not found."""
         data_model: dict[str, Any] = {"defaults": {"apic": {"setting": None}}}
 
-        result = get_default_value(
+        result = resolve_default_value(
             data_model,
             "setting",
             defaults_prefix="defaults.apic",
@@ -689,7 +648,7 @@ class TestEdgeCases:
         data_model: dict[str, Any] = {"defaults": {"apic": {"setting": None}}}
 
         with pytest.raises(ValueError, match="Required default value not found"):
-            get_default_value(
+            resolve_default_value(
                 data_model,
                 "setting",
                 defaults_prefix="defaults.apic",
@@ -700,7 +659,7 @@ class TestEdgeCases:
         """Should return list values correctly."""
         data_model: dict[str, Any] = {"defaults": {"apic": {"ports": [80, 443, 8080]}}}
 
-        result = get_default_value(
+        result = resolve_default_value(
             data_model,
             "ports",
             defaults_prefix="defaults.apic",
@@ -712,7 +671,7 @@ class TestEdgeCases:
         """Should return True correctly."""
         data_model: dict[str, Any] = {"defaults": {"apic": {"enabled": True}}}
 
-        result = get_default_value(
+        result = resolve_default_value(
             data_model,
             "enabled",
             defaults_prefix="defaults.apic",
@@ -724,7 +683,7 @@ class TestEdgeCases:
         """Should return float values correctly."""
         data_model: dict[str, Any] = {"defaults": {"apic": {"threshold": 0.95}}}
 
-        result = get_default_value(
+        result = resolve_default_value(
             data_model,
             "threshold",
             defaults_prefix="defaults.apic",
@@ -736,7 +695,7 @@ class TestEdgeCases:
         """Should return negative numbers correctly."""
         data_model: dict[str, Any] = {"defaults": {"apic": {"offset": -10}}}
 
-        result = get_default_value(
+        result = resolve_default_value(
             data_model,
             "offset",
             defaults_prefix="defaults.apic",
@@ -759,7 +718,7 @@ class TestEdgeCases:
             }
         }
 
-        result = get_default_value(
+        result = resolve_default_value(
             data_model,
             "tenants.tenant_5.vrfs.vrf_7.id",
             defaults_prefix="defaults.apic",
@@ -771,7 +730,7 @@ class TestEdgeCases:
         """Should default required parameter to True."""
         # Not passing required parameter should behave as required=True
         with pytest.raises(ValueError, match="Required default value not found"):
-            get_default_value(
+            resolve_default_value(
                 sdwan_data_model,
                 "nonexistent.path",
                 defaults_prefix="defaults.sdwan",
@@ -807,7 +766,7 @@ class TestEdgeCases:
         data_model: dict[str, Any] = {"defaults": {"apic": {"key": "value"}}}
 
         with pytest.raises(jmespath.exceptions.ParseError):
-            get_default_value(
+            resolve_default_value(
                 data_model,
                 "[invalid",
                 defaults_prefix="defaults.apic",
@@ -821,7 +780,7 @@ class TestEdgeCases:
 
         original = copy.deepcopy(apic_data_model)
 
-        get_default_value(
+        resolve_default_value(
             apic_data_model,
             "fabric.name",
             defaults_prefix="defaults.apic",
@@ -847,7 +806,7 @@ class TestEdgeCases:
 
         # Empty path becomes "defaults.apic." which is invalid JMESPath
         with pytest.raises(jmespath.exceptions.ParseError):
-            get_default_value(
+            resolve_default_value(
                 data_model,
                 "",
                 defaults_prefix="defaults.apic",
