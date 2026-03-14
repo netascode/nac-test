@@ -164,8 +164,7 @@ class CombinedOrchestrator:
             )
 
         # Clean up stale artifacts from previous runs before any framework executes
-        if self.output_dir.exists():
-            cleanup_output_dir(self.output_dir)
+        cleanup_output_dir(self.output_dir)
 
         # Discover test types (simple existence checks)
         has_pyats, has_robot = self._discover_test_types()

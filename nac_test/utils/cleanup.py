@@ -121,8 +121,13 @@ def cleanup_output_dir(output_dir: Path) -> None:
         dir_path = output_dir / dir_name
         if dir_path.exists():
             shutil.rmtree(dir_path, ignore_errors=True)
-            level = logging.INFO if dir_name in _RESULT_DIRS else logging.DEBUG
-            logger.log(level, f"Removed stale directory: {dir_path.name}/")
+            if not dir_path.exists():
+                if dir_name in _RESULT_DIRS:
+                    logger.info(f"Removed stale directory: {dir_path.name}/")
+                else:
+                    logger.debug(f"Removed stale directory: {dir_path.name}/")
+            else:
+                logger.warning(f"Failed to remove stale directory: {dir_path.name}/")
 
     # Remove root-level artifacts (files and symlinks/hard links).
     # is_symlink() is checked first to catch broken symlinks that exist() misses.
