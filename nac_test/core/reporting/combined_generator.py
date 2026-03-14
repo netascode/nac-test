@@ -21,7 +21,12 @@ from nac_test.core.constants import (
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
-from nac_test.core.types import CombinedResults, ControllerTypeKey, PreFlightFailure
+from nac_test.core.types import (
+    CombinedResults,
+    ControllerTypeKey,
+    ExecutionState,
+    PreFlightFailure,
+)
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
 from nac_test.utils.controller import get_display_name, get_env_var_prefix
 from nac_test.utils.url import extract_host
@@ -153,10 +158,15 @@ class CombinedReportGenerator:
                         continue
 
                     metadata = FRAMEWORK_METADATA.get(framework_key, {})
+                    report_path = metadata.get("report_path", "#")
                     test_type_stats[framework_key] = {
                         "title": metadata.get("title", framework_key),
                         "stats": test_results,
-                        "report_path": metadata.get("report_path", "#"),
+                        "report_path": report_path,
+                        "has_report": (
+                            test_results.state == ExecutionState.SUCCESS
+                            and (self.output_dir / report_path).exists()
+                        ),
                     }
 
             overall_stats = results if results is not None else CombinedResults()

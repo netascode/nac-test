@@ -8,9 +8,35 @@ import shutil
 import time
 from pathlib import Path
 
+from nac_test.core.constants import (
+    COMBINED_SUMMARY_FILENAME,
+    LOG_HTML,
+    OUTPUT_XML,
+    PYATS_RESULTS_DIRNAME,
+    REPORT_HTML,
+    ROBOT_RESULTS_DIRNAME,
+    XUNIT_XML,
+)
 from nac_test.pyats_core.discovery.test_type_resolver import VALID_TEST_TYPES
 
 logger = logging.getLogger(__name__)
+
+# Framework result directories removed upfront before each run so stale artifacts
+# from previous runs don't persist. pyats_results/ is also removed by
+# MultiArchiveReportGenerator during report generation; removing it here makes the
+# timing explicit and avoids mid-run dependencies.
+_RESULT_DIRS = (ROBOT_RESULTS_DIRNAME, PYATS_RESULTS_DIRNAME)
+
+# Root-level files written (or linked) by a combined run.
+# log.html/output.xml/report.html may be symlinks or hard links depending on the
+# platform; Path.unlink() handles both correctly.
+_ROOT_ARTIFACTS = (
+    LOG_HTML,
+    OUTPUT_XML,
+    REPORT_HTML,
+    XUNIT_XML,
+    COMBINED_SUMMARY_FILENAME,
+)
 
 
 def cleanup_pyats_runtime(workspace_path: Path | None = None) -> None:
@@ -64,19 +90,22 @@ def cleanup_old_test_outputs(output_dir: Path, days: int = 7) -> None:
             pass  # Best effort cleanup
 
 
-def cleanup_stale_test_artifacts(output_dir: Path) -> None:
-    """Clean up stale test artifacts that cause incorrect report aggregation.
+def cleanup_output_dir(output_dir: Path) -> None:
+    """Clean up stale artifacts in the output directory before a test run.
 
-    Targets ONLY the test type directories (api/, d2d/, default/) which contain
-    html_report_data_temp/*.jsonl files from interrupted runs. These stale JSONL
-    files get picked up during report generation and cause incorrect results.
+    Removes three categories of stale content so that artifacts present after
+    execution reliably reflect the current run:
 
-    Does NOT remove:
-        - Archive files (nac_test_job_*.zip): The orchestrator's ArchiveInspector
-          uses only the newest archive per type, so old archives don't cause issues.
-        - pyats_results/ directory: This is unconditionally removed and recreated
-          during report generation (multi_archive_generator.py), so cleaning it
-          here provides no benefit.
+    1. PyATS JSONL temp directories (api/, d2d/, default/) — stale *.jsonl files
+       from interrupted runs cause incorrect report aggregation.
+    2. Framework result directories (robot_results/, pyats_results/) — ensures no
+       output files from a prior run are mixed with the current run's results.
+    3. Root-level combined artifacts (log.html, xunit.xml, combined_summary.html,
+       etc.) — prevents stale files surfacing in the terminal summary or HTML
+       dashboard when a framework produces no results (e.g. filters match nothing).
+
+    Archive files (nac_test_job_*.zip) are intentionally preserved — the
+    ArchiveInspector always uses the newest archive per type.
 
     Args:
         output_dir: Base output directory for test results.
@@ -84,24 +113,31 @@ def cleanup_stale_test_artifacts(output_dir: Path) -> None:
     if not output_dir.exists():
         return
 
-    # Clean up test type directories (api/, d2d/, default/)
-    # These contain html_report_data_temp/ with potentially stale JSONL files
-    # from interrupted test runs (e.g., Ctrl+C)
-    # "default" is a safety net for tests run outside orchestration (see base_test.py)
-    dirs_to_clean = (*VALID_TEST_TYPES, "default")
-    dirs_removed = 0
-
-    for dir_name in dirs_to_clean:
+    # Remove all stale directories: PyATS JSONL temp dirs (api/, d2d/, default/) and
+    # framework result dirs (robot_results/, pyats_results/).
+    # "default" is a safety net for tests run outside orchestration (see base_test.py).
+    dirs_to_remove = (*VALID_TEST_TYPES, "default", *_RESULT_DIRS)
+    for dir_name in dirs_to_remove:
         dir_path = output_dir / dir_name
         if dir_path.exists():
-            try:
-                shutil.rmtree(dir_path, ignore_errors=True)
-                dirs_removed += 1
-                logger.debug(f"Removed stale test directory: {dir_path}")
-            except Exception as e:
-                logger.warning(f"Failed to clean directory {dir_path}: {e}")
+            shutil.rmtree(dir_path, ignore_errors=True)
+            if not dir_path.exists():
+                if dir_name in _RESULT_DIRS:
+                    logger.info(f"Removed stale directory: {dir_path.name}/")
+                else:
+                    logger.debug(f"Removed stale directory: {dir_path.name}/")
+            else:
+                logger.warning(f"Failed to remove stale directory: {dir_path.name}/")
 
-    if dirs_removed > 0:
-        logger.info(
-            f"Cleaned up {dirs_removed} stale test artifact director{'y' if dirs_removed == 1 else 'ies'}"
-        )
+    # Remove root-level artifacts (files and symlinks/hard links).
+    # is_symlink() is checked first to catch broken symlinks that exist() misses.
+    # Path.unlink() works for both regular files and symlinks/hard links.
+    for filename in _ROOT_ARTIFACTS:
+        path = output_dir / filename
+        if path.is_symlink() or path.exists():
+            try:
+                path.unlink()
+            except OSError as e:
+                logger.warning(f"Failed to remove {path.name}: {e}")
+            else:
+                logger.debug(f"Removed stale artifact: {filename}")

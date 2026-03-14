@@ -26,12 +26,14 @@ from nac_test.core.reporting.combined_generator import CombinedReportGenerator
 from nac_test.core.types import (
     CombinedResults,
     ControllerTypeKey,
+    ExecutionState,
     PreFlightFailure,
     TestResults,
 )
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
+from nac_test.utils.cleanup import cleanup_output_dir
 from nac_test.utils.controller import detect_controller_type, get_env_var_prefix
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
@@ -160,6 +162,9 @@ class CombinedOrchestrator:
                 "Production runs should use combined execution.",
                 fg=typer.colors.YELLOW,
             )
+
+        # Clean up stale artifacts from previous runs before any framework executes
+        cleanup_output_dir(self.output_dir)
 
         # Discover test types (simple existence checks)
         has_pyats, has_robot = self._discover_test_types()
@@ -366,15 +371,17 @@ class CombinedOrchestrator:
         typer.echo(terminal.format_test_summary(results))
         typer.echo("-" * 70)
 
-        # print absolute filenames in our summary to align with robot/rebot output
+        # Print absolute filenames to align with robot/rebot output.
+        # State == SUCCESS is defensive: cleanup_output_dir() removes stale files
+        # upfront, but the state check guards against cleanup being skipped.
         combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME
         if combined_dashboard.exists():
             typer.echo(f"Dashboard:  {combined_dashboard.resolve()}")
-        if results.robot is not None:
+        if results.robot is not None and results.robot.state == ExecutionState.SUCCESS:
             robot_log = self.output_dir / ROBOT_RESULTS_DIRNAME / "log.html"
             if robot_log.exists():
                 typer.echo(f"Robot:      {robot_log.resolve()}")
-        if results.api is not None:
+        if results.api is not None and results.api.state == ExecutionState.SUCCESS:
             api_summary = (
                 self.output_dir
                 / PYATS_RESULTS_DIRNAME
@@ -384,7 +391,7 @@ class CombinedOrchestrator:
             )
             if api_summary.exists():
                 typer.echo(f"PyATS API:  {api_summary.resolve()}")
-        if results.d2d is not None:
+        if results.d2d is not None and results.d2d.state == ExecutionState.SUCCESS:
             d2d_summary = (
                 self.output_dir
                 / PYATS_RESULTS_DIRNAME
