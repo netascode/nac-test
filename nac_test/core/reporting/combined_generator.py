@@ -153,10 +153,12 @@ class CombinedReportGenerator:
                         continue
 
                     metadata = FRAMEWORK_METADATA.get(framework_key, {})
+                    report_path = metadata.get("report_path", "#")
                     test_type_stats[framework_key] = {
                         "title": metadata.get("title", framework_key),
                         "stats": test_results,
-                        "report_path": metadata.get("report_path", "#"),
+                        "report_path": report_path,
+                        "has_report": (self.output_dir / report_path).exists(),
                     }
 
             overall_stats = results if results is not None else CombinedResults()

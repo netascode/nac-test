@@ -412,9 +412,11 @@
                     <span class="test-type-badge {{ test_type.lower() }}-badge">{{ test_type }}</span>
                     <h2>{{ framework_data.title }} Test Results</h2>
                 </div>
+                {% if framework_data.has_report %}
                 <a href="{{ framework_data.report_path }}" class="view-report-btn">
                     View Detailed Report →
                 </a>
+                {% endif %}
             </div>
             
             <div class="mini-stats">
