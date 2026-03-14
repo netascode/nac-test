@@ -399,9 +399,10 @@ class CombinedOrchestrator:
             )
             if d2d_summary.exists():
                 typer.echo(f"PyATS D2D:  {d2d_summary.resolve()}")
-        xunit_path = self.output_dir / "xunit.xml"
-        if xunit_path.exists():
-            typer.echo(f"xUnit:      {xunit_path.resolve()}")
+        if results.has_any_results:
+            xunit_path = self.output_dir / "xunit.xml"
+            if xunit_path.exists():
+                typer.echo(f"xUnit:      {xunit_path.resolve()}")
 
         typer.echo("=" * 70)
         typer.echo()
