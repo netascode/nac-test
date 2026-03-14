@@ -16,12 +16,17 @@ from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     HTML_REPORTS_DIRNAME,
     HTTP_FORBIDDEN_CODE,
+    PRE_FLIGHT_FAILURE_FILENAME,
     PYATS_RESULTS_DIRNAME,
     REPORT_TIMESTAMP_FORMAT,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
-from nac_test.core.types import CombinedResults, ControllerTypeKey, PreFlightFailure
+from nac_test.core.types import (
+    CombinedResults,
+    ControllerTypeKey,
+    PreFlightFailure,
+)
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
 from nac_test.utils.controller import get_display_name, get_env_var_prefix
 from nac_test.utils.url import extract_host
@@ -123,7 +128,10 @@ class CombinedReportGenerator:
         """Generate combined summary dashboard.
 
         Dispatches to the appropriate renderer based on the results state:
-        - If pre_flight_failure is set, renders the auth failure template
+        - If pre_flight_failure is set with no other results, generates child report
+          and hard-links it to combined_summary.html
+        - If pre_flight_failure is set and Robot results exist, includes pre-flight in
+          the combined dashboard with link to child report (TO BE DISCUSSED in design review)
         - Otherwise, renders the normal combined dashboard template
 
         Args:
@@ -133,14 +141,57 @@ class CombinedReportGenerator:
         Returns:
             Path to combined_summary.html, or None if generation fails.
         """
+        pre_flight_report_path: Path | None = None
+
         if results is not None and results.pre_flight_failure is not None:
-            return self._generate_pre_flight_failure_report(results.pre_flight_failure)
+            pre_flight_report_path = self._generate_pre_flight_failure_report(
+                results.pre_flight_failure
+            )
+
+            # If only pre-flight failed (no test results), hard-link to combined_summary
+            if not results.has_any_results:
+                if pre_flight_report_path:
+                    combined_path = self.output_dir / COMBINED_SUMMARY_FILENAME
+                    try:
+                        # we shouldn't need to cleanup, see #639
+                        combined_path.unlink(missing_ok=True)
+
+                        combined_path.hardlink_to(pre_flight_report_path)
+                        logger.info(
+                            "Hard-linked pre-flight report to combined dashboard: %s",
+                            combined_path,
+                        )
+                        return combined_path
+                    except OSError as e:
+                        logger.warning(
+                            "Failed to hard-link pre-flight report: %s",
+                            e,
+                        )
+                        # In a rare case of failure, let combined orchestrator
+                        # print the link to the pyats_results/pre-flight page
+                        # instead of the root-level dashboard
+                        return pre_flight_report_path
+                return None
 
         try:
             test_type_stats: dict[str, dict[str, Any]] = {}
 
             # Build per-framework stats for template rendering
             if results is not None:
+                # If pre-flight failed, mark API/D2D with link to pre-flight report
+                if results.pre_flight_failure is not None and pre_flight_report_path:
+                    relative_path = str(
+                        pre_flight_report_path.relative_to(self.output_dir)
+                    )
+                    for framework_key in ("API", "D2D"):
+                        metadata = FRAMEWORK_METADATA.get(framework_key, {})
+                        test_type_stats[framework_key] = {
+                            "title": metadata.get("title", framework_key),
+                            "stats": None,
+                            "report_path": relative_path,
+                            "is_pre_flight_failure": True,
+                        }
+
                 # Map CombinedResults attributes to framework keys
                 framework_mapping = [
                     ("API", results.api),
@@ -149,6 +200,8 @@ class CombinedReportGenerator:
                 ]
 
                 for framework_key, test_results in framework_mapping:
+                    if framework_key in test_type_stats:
+                        continue  # Already handled by pre-flight
                     if test_results is None:
                         continue
 
@@ -157,6 +210,7 @@ class CombinedReportGenerator:
                         "title": metadata.get("title", framework_key),
                         "stats": test_results,
                         "report_path": metadata.get("report_path", "#"),
+                        "is_pre_flight_failure": False,
                     }
 
             overall_stats = results if results is not None else CombinedResults()
@@ -191,23 +245,39 @@ class CombinedReportGenerator:
 
         Renders the auth_failure/report.html.j2 template with context
         derived from the PreFlightFailure dataclass. Writes to
-        combined_summary.html (not auth_failure_report.html).
+        pyats_results/pre_flight_failure.html as a child report.
 
         Args:
             failure: The pre-flight failure details.
 
         Returns:
-            Path to combined_summary.html, or None if generation fails.
+            Path to pre_flight_failure.html, or None if generation fails.
         """
         try:
-            self.output_dir.mkdir(parents=True, exist_ok=True)
+            failure_report_path = (
+                self.output_dir / PYATS_RESULTS_DIRNAME / PRE_FLIGHT_FAILURE_FILENAME
+            )
+            failure_report_path.parent.mkdir(parents=True, exist_ok=True)
 
             is_403 = failure.status_code == HTTP_FORBIDDEN_CODE
-            display_name = get_display_name(failure.controller_type)
-            env_var_prefix = get_env_var_prefix(failure.controller_type)
-            host = extract_host(failure.controller_url)
-            curl_example = _get_curl_example(
-                failure.controller_type, failure.controller_url
+
+            display_name = (
+                get_display_name(failure.controller_type)
+                if failure.controller_type
+                else None
+            )
+            env_var_prefix = (
+                get_env_var_prefix(failure.controller_type)
+                if failure.controller_type
+                else None
+            )
+            host = (
+                extract_host(failure.controller_url) if failure.controller_url else None
+            )
+            curl_example = (
+                _get_curl_example(failure.controller_type, failure.controller_url)
+                if failure.controller_type and failure.controller_url
+                else None
             )
             timestamp = datetime.now().strftime(REPORT_TIMESTAMP_FORMAT)
 
@@ -225,13 +295,10 @@ class CombinedReportGenerator:
                 timestamp=timestamp,
             )
 
-            combined_summary_path = self.output_dir / COMBINED_SUMMARY_FILENAME
-            combined_summary_path.write_text(html_content, encoding="utf-8")
+            failure_report_path.write_text(html_content, encoding="utf-8")
 
-            logger.info(
-                "Generated pre-flight failure report: %s", combined_summary_path
-            )
-            return combined_summary_path
+            logger.info("Generated pre-flight failure report: %s", failure_report_path)
+            return failure_report_path
 
         except Exception as e:
             logger.error("Failed to generate pre-flight failure report: %s", e)

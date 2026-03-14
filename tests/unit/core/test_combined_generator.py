@@ -6,13 +6,23 @@
 from pathlib import Path
 
 import pytest
+from pytest_mock import MockerFixture
 
-from nac_test.core.constants import COMBINED_SUMMARY_FILENAME
+from nac_test.core.constants import (
+    COMBINED_SUMMARY_FILENAME,
+    PRE_FLIGHT_FAILURE_FILENAME,
+    PYATS_RESULTS_DIRNAME,
+)
 from nac_test.core.reporting.combined_generator import (
     CombinedReportGenerator,
     _get_curl_example,
 )
-from nac_test.core.types import CombinedResults, PreFlightFailure, TestResults
+from nac_test.core.types import (
+    CombinedResults,
+    PreFlightFailure,
+    PreFlightFailureType,
+    TestResults,
+)
 
 
 @pytest.fixture
@@ -290,7 +300,7 @@ class TestPreFlightFailureReport:
     def test_auth_failure_generates_report(self, tmp_path: Path) -> None:
         """Auth failure produces combined_summary.html with failure details."""
         failure = PreFlightFailure(
-            failure_type="auth",
+            failure_type=PreFlightFailureType.AUTH,
             controller_type="ACI",
             controller_url="https://apic.test.local",
             detail="HTTP 401: Unauthorized",
@@ -312,7 +322,7 @@ class TestPreFlightFailureReport:
     ) -> None:
         """HTTP 401 must NOT trigger the 403-specific privileges/role guidance."""
         failure = PreFlightFailure(
-            failure_type="auth",
+            failure_type=PreFlightFailureType.AUTH,
             controller_type="ACI",
             controller_url="https://apic.test.local",
             detail="HTTP 401: Unauthorized",
@@ -332,7 +342,7 @@ class TestPreFlightFailureReport:
     def test_unreachable_failure_generates_report(self, tmp_path: Path) -> None:
         """Unreachable failure produces report with connection error context."""
         failure = PreFlightFailure(
-            failure_type="unreachable",
+            failure_type=PreFlightFailureType.UNREACHABLE,
             controller_type="SDWAN",
             controller_url="https://sdwan.test.local",
             detail="Connection timed out",
@@ -350,7 +360,7 @@ class TestPreFlightFailureReport:
     def test_403_failure_renders_privileges_guidance(self, tmp_path: Path) -> None:
         """HTTP 403 in detail triggers the is_403 template branch with role/permissions advice."""
         failure = PreFlightFailure(
-            failure_type="auth",
+            failure_type=PreFlightFailureType.AUTH,
             controller_type="CC",
             controller_url="https://catc.test.local",
             detail="HTTP 403: Forbidden",
@@ -368,10 +378,32 @@ class TestPreFlightFailureReport:
         assert "sufficient privileges" in content
         assert "role and permissions" in content
 
-    def test_no_legacy_auth_failure_report_generated(self, tmp_path: Path) -> None:
-        """Pre-flight failure must NOT produce the legacy auth_failure_report.html."""
+    def test_detection_failure_generates_report(self, tmp_path: Path) -> None:
+        """Detection failure produces report with env var setup guidance."""
         failure = PreFlightFailure(
-            failure_type="auth",
+            failure_type=PreFlightFailureType.DETECTION,
+            controller_type=None,
+            controller_url=None,
+            detail="No controller credentials found",
+        )
+        results = CombinedResults(pre_flight_failure=failure)
+        generator = CombinedReportGenerator(tmp_path)
+
+        report_path = generator.generate_combined_summary(results)
+
+        assert report_path is not None
+        content = report_path.read_text()
+        assert "Controller Detection Failed" in content
+        assert "ACI_URL" in content
+        assert "SDWAN_URL" in content
+        assert "CC_URL" in content
+
+    def test_hardlink_failure_falls_back_to_child_report(
+        self, tmp_path: Path, mocker: MockerFixture
+    ) -> None:
+        """When hardlink fails, return the child report path as fallback."""
+        failure = PreFlightFailure(
+            failure_type=PreFlightFailureType.AUTH,
             controller_type="ACI",
             controller_url="https://apic.test.local",
             detail="HTTP 401: Unauthorized",
@@ -380,13 +412,16 @@ class TestPreFlightFailureReport:
         results = CombinedResults(pre_flight_failure=failure)
         generator = CombinedReportGenerator(tmp_path)
 
+        mocker.patch.object(
+            Path, "hardlink_to", side_effect=OSError("Cross-device link")
+        )
+
         report_path = generator.generate_combined_summary(results)
 
         assert report_path is not None
-        # Only combined_summary.html should exist — no legacy standalone report
-        generated_files = [f.name for f in tmp_path.iterdir() if f.is_file()]
-        assert COMBINED_SUMMARY_FILENAME in generated_files
-        assert "auth_failure_report.html" not in generated_files
+        assert report_path.exists()
+        assert PYATS_RESULTS_DIRNAME in str(report_path)
+        assert report_path.name == PRE_FLIGHT_FAILURE_FILENAME
 
     def test_pre_flight_failure_exception_returns_none(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -400,7 +435,7 @@ class TestPreFlightFailureReport:
         monkeypatch.setattr(generator.env, "get_template", raise_error)
 
         failure = PreFlightFailure(
-            failure_type="auth",
+            failure_type=PreFlightFailureType.AUTH,
             controller_type="ACI",
             controller_url="https://apic.test.local",
             detail="HTTP 401: Unauthorized",

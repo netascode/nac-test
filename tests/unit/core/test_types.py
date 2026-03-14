@@ -15,11 +15,14 @@ from nac_test.core.constants import (
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
+    EXIT_PREFLIGHT_FAILURE,
 )
 from nac_test.core.types import (
     CombinedResults,
     ErrorType,
     ExecutionState,
+    PreFlightFailure,
+    PreFlightFailureType,
     PyATSResults,
     TestResults,
 )
@@ -366,6 +369,18 @@ class TestCombinedResultsExitCode:
         result = CombinedResults()
         assert result.exit_code == EXIT_DATA_ERROR
 
+    def test_exit_code_preflight_failure(self) -> None:
+        """Exit code 1 when pre-flight failure occurred."""
+        result = CombinedResults(
+            pre_flight_failure=PreFlightFailure(
+                failure_type=PreFlightFailureType.AUTH,
+                controller_type="ACI",
+                controller_url="https://apic.test.local",
+                detail="HTTP 401: Unauthorized",
+            )
+        )
+        assert result.exit_code == EXIT_PREFLIGHT_FAILURE
+
     def test_was_not_run_true_when_all_skipped(self) -> None:
         """was_not_run is True when all frameworks were intentionally skipped."""
         result = CombinedResults(
@@ -519,3 +534,70 @@ class TestCombinedResultsStringRepresentation:
         )
         expected = "CombinedResults(API: 5/5/0/0, D2D: 3/2/1/0, Robot: 10/8/1/1)"
         assert str(result) == expected
+
+
+class TestCombinedResultsHasAnyResults:
+    """Tests for CombinedResults.has_any_results property."""
+
+    def test_empty_results_has_no_results(self) -> None:
+        """has_any_results is False when no framework results are set."""
+        results = CombinedResults()
+        assert results.has_any_results is False
+
+    def test_with_api_results_has_results(self) -> None:
+        """has_any_results is True when API results are present."""
+        results = CombinedResults(api=TestResults(passed=1))
+        assert results.has_any_results is True
+
+    def test_with_d2d_results_has_results(self) -> None:
+        """has_any_results is True when D2D results are present."""
+        results = CombinedResults(d2d=TestResults(passed=1))
+        assert results.has_any_results is True
+
+    def test_with_robot_results_has_results(self) -> None:
+        """has_any_results is True when Robot results are present."""
+        results = CombinedResults(robot=TestResults(passed=1))
+        assert results.has_any_results is True
+
+    def test_with_all_results_has_results(self) -> None:
+        """has_any_results is True when all framework results are present."""
+        results = CombinedResults(
+            api=TestResults(passed=1),
+            d2d=TestResults(passed=2),
+            robot=TestResults(passed=3),
+        )
+        assert results.has_any_results is True
+
+    def test_with_empty_test_results_has_results(self) -> None:
+        """has_any_results is True even when TestResults are empty (0 tests).
+
+        The property checks if frameworks *ran*, not if they produced tests.
+        An empty TestResults object still indicates execution occurred.
+        """
+        results = CombinedResults(api=TestResults.empty())
+        assert results.has_any_results is True
+
+    def test_with_preflight_failure_only_has_no_results(self) -> None:
+        """has_any_results is False when only pre_flight_failure is set."""
+        results = CombinedResults(
+            pre_flight_failure=PreFlightFailure(
+                failure_type=PreFlightFailureType.AUTH,
+                detail="Auth failed",
+                controller_type="ACI",
+                controller_url="https://example.com",
+            )
+        )
+        assert results.has_any_results is False
+
+    def test_with_preflight_failure_and_robot_has_results(self) -> None:
+        """has_any_results is True when pre_flight_failure + Robot results exist."""
+        results = CombinedResults(
+            pre_flight_failure=PreFlightFailure(
+                failure_type=PreFlightFailureType.AUTH,
+                detail="Auth failed",
+                controller_type="ACI",
+                controller_url="https://example.com",
+            ),
+            robot=TestResults(passed=5, failed=1),
+        )
+        assert results.has_any_results is True

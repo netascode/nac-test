@@ -7,6 +7,7 @@ error messages to users. Supports both Unicode (interactive terminals)
 and ASCII (NO_COLOR/CI environments) output modes.
 """
 
+import unicodedata
 from dataclasses import dataclass
 
 import typer
@@ -22,9 +23,29 @@ ColorValue = str | int | tuple[int, int, int]
 BANNER_CONTENT_WIDTH: int = (
     78  # Leaves room for 2-char border within 80-column terminal
 )
-EMOJI_DISPLAY_WIDTH_ADJUSTMENT: int = (
-    2  # Emojis display as 2 chars wide but len() returns 1
-)
+
+
+def _get_visual_width(text: str) -> int:
+    """Calculate the display length of text accounting for wide characters.
+
+    Emojis and other wide characters (East Asian Width 'W' or 'F') display
+    as 2 columns but len() returns 1. This function calculates the actual
+    terminal display length.
+
+    Args:
+        text: The text string to measure.
+
+    Returns:
+        The display length in terminal columns.
+    """
+    length = 0
+    for char in text:
+        east_asian_width = unicodedata.east_asian_width(char)
+        if east_asian_width in ("W", "F"):
+            length += 2
+        else:
+            length += 1
+    return length
 
 
 @dataclass(frozen=True)
@@ -40,7 +61,6 @@ class BoxStyle:
         vertical: Vertical line character.
         mid_left: Middle-left junction character.
         mid_right: Middle-right junction character.
-        emoji_adjustment: Width adjustment for emoji characters (0 for ASCII, 2 for Unicode).
     """
 
     top_left: str
@@ -51,7 +71,6 @@ class BoxStyle:
     vertical: str
     mid_left: str
     mid_right: str
-    emoji_adjustment: int
 
 
 # Pre-defined box styles
@@ -64,7 +83,6 @@ ASCII_BOX_STYLE = BoxStyle(
     vertical="|",
     mid_left="+",
     mid_right="+",
-    emoji_adjustment=0,
 )
 
 UNICODE_BOX_STYLE = BoxStyle(
@@ -76,7 +94,6 @@ UNICODE_BOX_STYLE = BoxStyle(
     vertical="║",
     mid_left="╠",
     mid_right="╣",
-    emoji_adjustment=EMOJI_DISPLAY_WIDTH_ADJUSTMENT,
 )
 
 
@@ -121,17 +138,17 @@ def _build_bordered_line(content: str, width: int, style: BoxStyle) -> str:
 
 
 def _build_title_line(title: str, width: int, style: BoxStyle) -> str:
-    """Center title accounting for emoji display width adjustment.
+    """Center title accounting for emoji/wide character display width.
 
     Args:
         title: The title text.
         width: The inner width (content area).
-        style: The box style to use (for emoji adjustment).
+        style: The box style to use.
 
     Returns:
         A string with the title centered and wrapped in vertical borders.
     """
-    title_display_width = len(title) + style.emoji_adjustment
+    title_display_width = _get_visual_width(title)
     title_padding = (width - title_display_width) // 2
     remaining = width - title_padding - title_display_width
     return (
