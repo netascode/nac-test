@@ -86,16 +86,6 @@ class TestTestResultsFactoryMethods:
 
         assert result.error_type == ErrorType.GENERIC
 
-    def test_from_error_with_invalid_robot_args_error_type(self) -> None:
-        """from_error() stores INVALID_ROBOT_ARGS error type."""
-        result = TestResults.from_error(
-            "Invalid Robot arguments", ErrorType.INVALID_ROBOT_ARGS
-        )
-
-        assert result.state == ExecutionState.ERROR
-        assert result.reason == "Invalid Robot arguments"
-        assert result.error_type == ErrorType.INVALID_ROBOT_ARGS
-
     def test_from_error_with_interrupted_error_type(self) -> None:
         """from_error() stores INTERRUPTED error type."""
         result = TestResults.from_error(
@@ -449,37 +439,6 @@ class TestCombinedResultsExitCode:
                 "Robot Framework execution was interrupted", ErrorType.INTERRUPTED
             ),
             api=TestResults.from_error("API execution failed"),
-        )
-        assert result.exit_code == EXIT_INTERRUPTED
-
-    def test_exit_code_252_for_invalid_robot_args_error_type(self) -> None:
-        """Exit code 252 for INVALID_ROBOT_ARGS error type."""
-        result = CombinedResults(
-            robot=TestResults.from_error(
-                "Invalid arguments", ErrorType.INVALID_ROBOT_ARGS
-            )
-        )
-        assert result.exit_code == EXIT_DATA_ERROR
-
-    def test_exit_code_priority_invalid_robot_args_over_generic_errors(self) -> None:
-        """Exit code 252 (invalid args) is prioritized over generic errors (255)."""
-        result = CombinedResults(
-            robot=TestResults.from_error(
-                "Invalid arguments", ErrorType.INVALID_ROBOT_ARGS
-            ),
-            api=TestResults.from_error("API execution failed"),
-        )
-        assert result.exit_code == EXIT_DATA_ERROR
-
-    def test_exit_code_priority_interrupted_over_invalid_robot_args(self) -> None:
-        """Exit code 253 (interrupted) is prioritized over 252 (invalid args)."""
-        result = CombinedResults(
-            robot=TestResults.from_error(
-                "Execution was interrupted", ErrorType.INTERRUPTED
-            ),
-            api=TestResults.from_error(
-                "Invalid arguments", ErrorType.INVALID_ROBOT_ARGS
-            ),
         )
         assert result.exit_code == EXIT_INTERRUPTED
 

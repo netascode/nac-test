@@ -126,10 +126,8 @@ class RobotOrchestrator:
         Follows the same pattern as PyATSOrchestrator.run_tests().
 
         Returns:
-            TestResults with test execution results.
-
-        Raises:
-            RuntimeError: If pabot returns exit code 252 (invalid arguments).
+            TestResults with test execution results. Returns TestResults.empty()
+            if no tests matched the --include/--exclude filters (exit code 252).
         """
         # Create Robot Framework output directory (orchestrator owns its structure)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -172,11 +170,11 @@ class RobotOrchestrator:
             # Handle special exit codes - just log and return appropriate TestResults
             # User-facing error messages are handled centrally in main.py
             if exit_code == EXIT_DATA_ERROR:
-                # TODO(#643): introduce ErrorType.NO_TESTS_FOUND to replace INVALID_ROBOT_ARGS
-                # here — extra args are validated in main.py, so 252 means no test suites found
-                error_msg = "Invalid Robot Framework arguments or no tests found"
-                logger.error(error_msg)
-                return TestResults.from_error(error_msg, ErrorType.INVALID_ROBOT_ARGS)
+                # Exit code 252 means no tests matched filters (invalid args are caught
+                # pre-flight in main.py's validate_extra_args). Return empty results
+                # so the is_empty path handles the user message consistently.
+                logger.info("No Robot Framework tests were executed")
+                return TestResults.empty()
             elif exit_code == EXIT_INTERRUPTED:
                 error_msg = "Robot Framework execution was interrupted"
                 logger.error(error_msg)
