@@ -357,6 +357,8 @@ class CombinedResults:
             return EXIT_ERROR
         if self.has_failures:
             return min(self.failed, EXIT_FAILURE_CAP)
+        # was_not_run must precede is_empty: both evaluate to total==0,
+        # but SKIPPED (intentional) should return 0, not 252. See #645.
         if self.was_not_run:
             return 0
         if self.is_empty:
