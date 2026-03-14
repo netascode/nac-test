@@ -168,9 +168,8 @@ class RobotOrchestrator:
             # Handle special exit codes - just log and return appropriate TestResults
             # User-facing error messages are handled centrally in main.py
             if exit_code == EXIT_DATA_ERROR:
-                # Exit code 252 means no tests matched filters (invalid args are caught
-                # pre-flight in main.py's validate_extra_args). Return empty results
-                # so the is_empty path handles the user message consistently.
+                # Exit code 252 means no tests found, invalid args are caught
+                # pre-flight in main.py's validate_extra_args
                 logger.info("No Robot Framework tests were executed")
                 return TestResults.empty()
             elif exit_code == EXIT_INTERRUPTED:

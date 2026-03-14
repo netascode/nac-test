@@ -329,7 +329,9 @@ class CombinedResults:
             0: All tests passed, no errors OR all frameworks intentionally skipped
             1: Pre-flight failure (auth or controller detection failed)
             1-250: Number of test failures (capped at 250)
-            252: No tests found/executed across any framework
+            252: No tests found across any framework
+                 Note: invalid robot/pabot extra arguments are now caught in main() and
+                 no longer need to be inferred from test results
             253: Execution was interrupted (Ctrl+C, etc.)
             255: Execution errors occurred (has_errors is True)
 
