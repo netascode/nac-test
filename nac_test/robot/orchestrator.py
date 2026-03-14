@@ -170,8 +170,9 @@ class RobotOrchestrator:
             # Handle special exit codes - just log and return appropriate TestResults
             # User-facing error messages are handled centrally in main.py
             if exit_code == EXIT_DATA_ERROR:
-                # Exit code 252 means no tests found, invalid args are caught
-                # pre-flight in main.py's validate_extra_args
+                # Note: invalid Robot args are caught pre-flight by validate_extra_args.
+                # In the unlikely event the pabot parse_args API change goes unnoticed by CI,
+                # a genuine invalid-arg 252 may appear here as "no tests", which is a known limitation.
                 logger.info("No Robot Framework tests were executed")
                 return TestResults.empty()
             elif exit_code == EXIT_INTERRUPTED:

@@ -442,6 +442,14 @@ class TestCombinedResultsExitCode:
         )
         assert result.exit_code == EXIT_INTERRUPTED
 
+    def test_exit_code_error_prioritized_over_empty(self) -> None:
+        """Exit code 255 (error) takes priority over 252 (empty)."""
+        result = CombinedResults(
+            robot=TestResults.empty(),
+            api=TestResults.from_error("API execution failed"),
+        )
+        assert result.exit_code == EXIT_ERROR
+
 
 class TestCombinedResultsStateChecks:
     """Tests for CombinedResults state-checking properties."""

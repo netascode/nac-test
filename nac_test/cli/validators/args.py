@@ -29,7 +29,8 @@ try:
     _pabot_parse_args = parse_args
 except ImportError:
     logger.warning(
-        "pabot.arguments.parse_args not available, skipping pabot argument validation"
+        "pabot.arguments.parse_args not available; Robot Framework argument validation skipped. "
+        "Invalid extra args will not be caught until runtime."
     )
 
 
