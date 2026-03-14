@@ -20,7 +20,7 @@ from nac_test.core.constants import (
     SUMMARY_REPORT_FILENAME,
     XUNIT_XML,
 )
-from nac_test.core.types import ErrorType, TestResults
+from nac_test.core.types import ExecutionState, TestResults
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 
@@ -230,23 +230,23 @@ class TestRobotOrchestrator:
         assert stats.skipped == 0
 
     @patch("nac_test.robot.orchestrator.run_pabot")
-    def test_run_tests_handles_pabot_error_252(
+    def test_run_tests_handles_pabot_exit_252_as_empty(
         self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
     ) -> None:
-        """Test run_tests returns TestResults.from_error on pabot exit code 252 (invalid arguments)."""
+        """Test run_tests returns TestResults.empty() on pabot exit code 252 (no tests matched filters)."""
         # Mock RobotWriter instance methods
         orchestrator.robot_writer.write = MagicMock()
         orchestrator.robot_writer.write_merged_data_model = MagicMock()
 
-        # Mock pabot failure with exit code 252
+        # Mock pabot exit code 252 (no tests matched --include/--exclude filters)
         mock_pabot.return_value = 252
 
-        # Should return TestResults with error state
+        # Should return empty TestResults (not error) - "no tests executed" warning
         result = orchestrator.run_tests()
         assert isinstance(result, TestResults)
-        assert result.has_error
-        assert result.reason is not None
-        assert result.error_type == ErrorType.INVALID_ROBOT_ARGS
+        assert result.is_empty
+        assert result.state == ExecutionState.EMPTY
+        assert not result.has_error
 
     def test_run_tests_return_type(self, orchestrator: RobotOrchestrator) -> None:
         """Test run_tests returns TestResults with correct attributes."""

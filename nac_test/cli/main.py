@@ -375,7 +375,6 @@ def main(
             _print_cli_error(str(e))
             raise typer.Exit(EXIT_INVALID_ARGS) from None
         except DataError as e:
-            # Invalid Robot Framework argument rejected by pabot's parser
             _print_cli_error(f"Invalid Robot Framework argument: {e}")
             raise typer.Exit(EXIT_DATA_ERROR) from None
 
