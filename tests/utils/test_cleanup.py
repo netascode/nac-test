@@ -109,19 +109,15 @@ class TestCleanupStaleTestArtifacts:
         d2d_dir.mkdir()
         default_dir.mkdir()
 
-        original_rmtree = __import__("shutil").rmtree
+        real_exists = Path.exists
 
-        def rmtree_side_effect(
-            path: str | Path, *args: object, **kwargs: object
-        ) -> None:
-            if "d2d" in str(path):
-                pass
-            else:
-                original_rmtree(path, *args, **kwargs)
+        def exists_side_effect(self: Path) -> bool:
+            # Simulate d2d persisting after rmtree (silent failure)
+            if self == d2d_dir:
+                return True
+            return real_exists(self)
 
-        mocker.patch(
-            "nac_test.utils.cleanup.shutil.rmtree", side_effect=rmtree_side_effect
-        )
+        mocker.patch("nac_test.utils.cleanup.Path.exists", exists_side_effect)
 
         cleanup_stale_test_artifacts(tmp_path)
 

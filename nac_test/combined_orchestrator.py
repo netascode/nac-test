@@ -311,7 +311,7 @@ class CombinedOrchestrator:
                 logger.warning(f"Failed to merge xunit files: {e}")
             if merged_xunit:
                 logger.info(f"Merged xunit.xml: {merged_xunit}")
-            else:
+            elif not combined_results.is_empty:
                 logger.warning("No xunit files found to merge")
 
             self._print_execution_summary(combined_results, merged_xunit)
@@ -410,12 +410,19 @@ class CombinedOrchestrator:
         typer.echo("=" * 70)
 
         stale_files = []
+        # Root-level stale artifact detection covers Robot Framework artifacts only
+        # (log.html, output.xml, report.html) and the merged xunit.xml.
+        # PyATS artifacts under pyats_results/ are intentionally excluded:
+        # multi_archive_generator.py unconditionally recreates that directory each run.
         stale_artifacts = [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]
         for artifact in stale_artifacts:
             artifact_path = self.output_dir / artifact
             if not artifact_path.exists():
                 continue
 
+            # XUNIT_XML at root is written exclusively by merge_xunit_results.
+            # If merged_xunit_path is None (merge skipped or failed), any existing
+            # root xunit.xml is a stale artifact from a prior run.
             if artifact == XUNIT_XML and merged_xunit_path is not None:
                 continue
             if artifact in (LOG_HTML, OUTPUT_XML, REPORT_HTML):
