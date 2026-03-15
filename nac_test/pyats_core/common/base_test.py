@@ -22,7 +22,6 @@ from typing import (
 
 import httpx
 import markdown  # type: ignore[import-untyped]
-import yaml  # type: ignore[import-untyped]
 from pyats import aetest
 
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
@@ -44,6 +43,7 @@ from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.utils import sanitize_hostname
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.formatting import format_file_timestamp_ms
+from nac_test.utils.yaml import safe_load
 
 T = TypeVar("T")
 
@@ -806,7 +806,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             )
 
         with open(data_file) as f:
-            data = yaml.safe_load(f)
+            data = safe_load(f)
             return data if isinstance(data, dict) else {}
 
     # =========================================================================

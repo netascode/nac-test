@@ -36,6 +36,7 @@ from tests.e2e.config import (
     SUCCESS_SCENARIO,
     VERBOSE_SCENARIO,
     VERBOSE_WITH_INFO_SCENARIO,
+    WINDOWS_PYATS_SKIP_SCENARIO,
     E2EScenario,
 )
 from tests.e2e.mocks.mock_server import MockAPIServer
@@ -497,4 +498,19 @@ def e2e_dry_run_robot_fail_results(
         tmp_path_factory,
         class_mocker,
         extra_cli_args=["--dry-run"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_windows_pyats_skip_results(
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the Windows PyATS skip scenario once and cache results."""
+    return _run_e2e_scenario(
+        WINDOWS_PYATS_SKIP_SCENARIO,
+        None,
+        None,
+        tmp_path_factory,
+        class_mocker,
     )

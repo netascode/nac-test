@@ -21,6 +21,7 @@ from nac_test.core.constants import (
     LOG_HTML,
     OUTPUT_XML,
     PYATS_RESULTS_DIRNAME,
+    PYATS_SUPPORTED,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
@@ -173,6 +174,14 @@ class CombinedOrchestrator:
         if self.dev_pyats_only:
             has_robot = False
         if self.dev_robot_only:
+            has_pyats = False
+
+        # Skip PyATS on Windows (PyATS wheels are not available for this platform)
+        if has_pyats and not PYATS_SUPPORTED:
+            typer.secho(
+                "\n⚠️  PyATS tests found but skipped — PyATS is not supported on Windows.",
+                fg=typer.colors.YELLOW,
+            )
             has_pyats = False
 
         # Handle empty scenarios

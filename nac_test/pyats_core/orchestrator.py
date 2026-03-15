@@ -13,8 +13,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from nac_test.core.constants import (
     DEBUG_MODE,
     DRY_RUN_REASON,
@@ -53,6 +51,7 @@ from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
+from nac_test.utils.yaml import dump_to_stream
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +207,7 @@ class PyATSOrchestrator:
         reporter_config = self._build_reporter_config()
         config_path = temp_dir / "plugin_config.yaml"
         with open(config_path, "w") as f:
-            yaml.dump(reporter_config, f)
+            dump_to_stream(reporter_config, f)
         return config_path
 
     def _populate_test_status_from_archive(self, archive_path: Path) -> None:

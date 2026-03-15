@@ -19,6 +19,7 @@ from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
 
 pytestmark = [
     pytest.mark.integration,
+    pytest.mark.windows,
     pytest.mark.usefixtures("setup_bogus_controller_env"),
 ]
 
