@@ -7,12 +7,69 @@ from pathlib import Path
 import pytest
 
 from nac_test.core.constants import XUNIT_XML
+from nac_test.core.types import CombinedResults, ExecutionState, TestResults
 from nac_test.utils.xunit_merger import (
     XUnitStats,
     collect_xunit_files,
     merge_xunit_files,
     merge_xunit_results,
 )
+
+
+@pytest.fixture
+def results_all_executed() -> CombinedResults:
+    """CombinedResults with all frameworks executed (non-empty)."""
+    return CombinedResults(
+        robot=TestResults(passed=1, state=ExecutionState.SUCCESS),
+        api=TestResults(passed=1, state=ExecutionState.SUCCESS),
+        d2d=TestResults(passed=1, state=ExecutionState.SUCCESS),
+    )
+
+
+@pytest.fixture
+def results_robot_only() -> CombinedResults:
+    """CombinedResults with only robot tests executed."""
+    return CombinedResults(
+        robot=TestResults(passed=1, state=ExecutionState.SUCCESS),
+        api=None,
+        d2d=None,
+    )
+
+
+@pytest.fixture
+def results_api_only() -> CombinedResults:
+    """CombinedResults with only API tests executed."""
+    return CombinedResults(
+        robot=None,
+        api=TestResults(passed=1, state=ExecutionState.SUCCESS),
+        d2d=None,
+    )
+
+
+@pytest.fixture
+def results_d2d_only() -> CombinedResults:
+    """CombinedResults with only D2D tests executed."""
+    return CombinedResults(
+        robot=None,
+        api=None,
+        d2d=TestResults(passed=1, state=ExecutionState.SUCCESS),
+    )
+
+
+@pytest.fixture
+def results_empty() -> CombinedResults:
+    """CombinedResults with no tests executed (all None)."""
+    return CombinedResults(robot=None, api=None, d2d=None)
+
+
+@pytest.fixture
+def results_robot_empty() -> CombinedResults:
+    """CombinedResults with robot tests present but empty (total=0)."""
+    return CombinedResults(
+        robot=TestResults(state=ExecutionState.SUCCESS),
+        api=None,
+        d2d=None,
+    )
 
 
 class TestXUnitStats:
@@ -235,34 +292,40 @@ class TestMergeXunitFiles:
 
 
 class TestCollectXunitFiles:
-    def test_collects_robot_xunit(self, tmp_path: Path) -> None:
+    def test_collects_robot_xunit(
+        self, tmp_path: Path, results_robot_only: CombinedResults
+    ) -> None:
         robot_dir = tmp_path / "robot_results"
         robot_dir.mkdir()
         (robot_dir / XUNIT_XML).write_text("<testsuite/>")
 
-        files = collect_xunit_files(tmp_path)
+        files = collect_xunit_files(tmp_path, results_robot_only)
 
         assert len(files) == 1
         assert files[0] == (robot_dir / XUNIT_XML, "robot")
 
-    def test_collects_pyats_api_xunit(self, tmp_path: Path) -> None:
+    def test_collects_pyats_api_xunit(
+        self, tmp_path: Path, results_api_only: CombinedResults
+    ) -> None:
         api_dir = tmp_path / "pyats_results" / "api"
         api_dir.mkdir(parents=True)
         (api_dir / XUNIT_XML).write_text("<testsuite/>")
 
-        files = collect_xunit_files(tmp_path)
+        files = collect_xunit_files(tmp_path, results_api_only)
 
         assert len(files) == 1
         assert files[0] == (api_dir / XUNIT_XML, "pyats_api")
 
-    def test_collects_pyats_d2d_xunit_per_device(self, tmp_path: Path) -> None:
+    def test_collects_pyats_d2d_xunit_per_device(
+        self, tmp_path: Path, results_d2d_only: CombinedResults
+    ) -> None:
         d2d_dir = tmp_path / "pyats_results" / "d2d"
         for device in ["router1", "router2"]:
             device_dir = d2d_dir / device
             device_dir.mkdir(parents=True)
             (device_dir / XUNIT_XML).write_text("<testsuite/>")
 
-        files = collect_xunit_files(tmp_path)
+        files = collect_xunit_files(tmp_path, results_d2d_only)
 
         assert len(files) == 2
         paths = [f[0] for f in files]
@@ -273,7 +336,9 @@ class TestCollectXunitFiles:
         assert "pyats_d2d/router1" in sources
         assert "pyats_d2d/router2" in sources
 
-    def test_collects_all_xunit_sources(self, tmp_path: Path) -> None:
+    def test_collects_all_xunit_sources(
+        self, tmp_path: Path, results_all_executed: CombinedResults
+    ) -> None:
         (tmp_path / "robot_results").mkdir()
         (tmp_path / "robot_results" / XUNIT_XML).write_text("<testsuite/>")
 
@@ -285,7 +350,7 @@ class TestCollectXunitFiles:
             "<testsuite/>"
         )
 
-        files = collect_xunit_files(tmp_path)
+        files = collect_xunit_files(tmp_path, results_all_executed)
 
         assert len(files) == 3
         sources = [f[1] for f in files]
@@ -293,13 +358,79 @@ class TestCollectXunitFiles:
         assert "pyats_api" in sources
         assert "pyats_d2d/device1" in sources
 
-    def test_returns_empty_for_no_xunit_files(self, tmp_path: Path) -> None:
-        files = collect_xunit_files(tmp_path)
+    def test_returns_empty_for_no_xunit_files(
+        self, tmp_path: Path, results_empty: CombinedResults
+    ) -> None:
+        files = collect_xunit_files(tmp_path, results_empty)
+        assert files == []
+
+    def test_skips_stale_robot_xunit_when_robot_not_run(
+        self, tmp_path: Path, results_api_only: CombinedResults
+    ) -> None:
+        robot_dir = tmp_path / "robot_results"
+        robot_dir.mkdir()
+        (robot_dir / XUNIT_XML).write_text("<testsuite/>")
+
+        api_dir = tmp_path / "pyats_results" / "api"
+        api_dir.mkdir(parents=True)
+        (api_dir / XUNIT_XML).write_text("<testsuite/>")
+
+        files = collect_xunit_files(tmp_path, results_api_only)
+
+        assert len(files) == 1
+        assert files[0] == (api_dir / XUNIT_XML, "pyats_api")
+
+    def test_skips_stale_api_xunit_when_api_not_run(
+        self, tmp_path: Path, results_robot_only: CombinedResults
+    ) -> None:
+        robot_dir = tmp_path / "robot_results"
+        robot_dir.mkdir()
+        (robot_dir / XUNIT_XML).write_text("<testsuite/>")
+
+        api_dir = tmp_path / "pyats_results" / "api"
+        api_dir.mkdir(parents=True)
+        (api_dir / XUNIT_XML).write_text("<testsuite/>")
+
+        files = collect_xunit_files(tmp_path, results_robot_only)
+
+        assert len(files) == 1
+        assert files[0] == (robot_dir / XUNIT_XML, "robot")
+
+    def test_skips_stale_d2d_xunit_when_d2d_not_run(
+        self, tmp_path: Path, results_robot_only: CombinedResults
+    ) -> None:
+        robot_dir = tmp_path / "robot_results"
+        robot_dir.mkdir()
+        (robot_dir / XUNIT_XML).write_text("<testsuite/>")
+
+        d2d_dir = tmp_path / "pyats_results" / "d2d" / "device1"
+        d2d_dir.mkdir(parents=True)
+        (d2d_dir / XUNIT_XML).write_text("<testsuite/>")
+
+        files = collect_xunit_files(tmp_path, results_robot_only)
+
+        assert len(files) == 1
+        assert files[0] == (robot_dir / XUNIT_XML, "robot")
+
+    def test_skips_empty_robot_results(
+        self, tmp_path: Path, results_robot_empty: CombinedResults
+    ) -> None:
+        robot_dir = tmp_path / "robot_results"
+        robot_dir.mkdir()
+        (robot_dir / XUNIT_XML).write_text("<testsuite/>")
+
+        files = collect_xunit_files(tmp_path, results_robot_empty)
+
         assert files == []
 
 
 class TestMergeXunitResults:
     def test_merges_all_collected_files(self, tmp_path: Path) -> None:
+        results = CombinedResults(
+            robot=TestResults(passed=2, state=ExecutionState.SUCCESS),
+            api=TestResults(failed=1, state=ExecutionState.SUCCESS),
+        )
+
         robot_dir = tmp_path / "robot_results"
         robot_dir.mkdir()
         (robot_dir / XUNIT_XML).write_text(
@@ -321,7 +452,7 @@ class TestMergeXunitResults:
 </testsuite>"""
         )
 
-        result = merge_xunit_results(tmp_path)
+        result = merge_xunit_results(tmp_path, results)
 
         assert result is not None
         assert result == tmp_path / XUNIT_XML
@@ -332,7 +463,9 @@ class TestMergeXunitResults:
         assert root.get("tests") == "3"
         assert root.get("failures") == "1"
 
-    def test_returns_none_for_empty_output_dir(self, tmp_path: Path) -> None:
-        result = merge_xunit_results(tmp_path)
+    def test_returns_none_for_empty_output_dir(
+        self, tmp_path: Path, results_empty: CombinedResults
+    ) -> None:
+        result = merge_xunit_results(tmp_path, results_empty)
         assert result is None
         assert not (tmp_path / XUNIT_XML).exists()

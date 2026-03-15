@@ -24,6 +24,7 @@ from nac_test.core.constants import (
     ROBOT_RESULTS_DIRNAME,
     XUNIT_XML,
 )
+from nac_test.core.types import CombinedResults
 
 logger = logging.getLogger(__name__)
 
@@ -198,65 +199,76 @@ def merge_xunit_files(
     return output_path
 
 
-def collect_xunit_files(output_dir: Path) -> list[tuple[Path, str]]:
-    """Collect all xunit.xml files from the standard output directory structure.
+def collect_xunit_files(
+    output_dir: Path, results: CombinedResults
+) -> list[tuple[Path, str]]:
+    """Collect xunit.xml files only from frameworks that executed this run.
+
+    Only collects xunit files from frameworks that have non-empty results,
+    preventing stale xunit files from prior runs from being merged.
 
     Searches for:
-    - robot_results/xunit.xml (Robot Framework)
-    - pyats_results/api/xunit.xml (PyATS API tests)
-    - pyats_results/d2d/<device>/xunit.xml (PyATS D2D tests per device)
+    - robot_results/xunit.xml (Robot Framework) - only if robot results exist
+    - pyats_results/api/xunit.xml (PyATS API tests) - only if api results exist
+    - pyats_results/d2d/<device>/xunit.xml (PyATS D2D tests) - only if d2d results exist
 
     Args:
         output_dir: The base output directory.
+        results: CombinedResults with execution state for each framework.
 
     Returns:
-        List of tuples (file_path, source_identifier) for all found xunit files.
+        List of tuples (file_path, source_identifier) for all found xunit files
+        from frameworks that executed this run.
     """
     xunit_files: list[tuple[Path, str]] = []
 
-    # Robot Framework xunit
-    robot_xunit = output_dir / ROBOT_RESULTS_DIRNAME / XUNIT_XML
-    if robot_xunit.is_file():
-        xunit_files.append((robot_xunit, "robot"))
-        logger.debug(f"Found Robot xunit: {robot_xunit}")
+    # Robot Framework xunit (only if robot tests executed)
+    if results.robot is not None and not results.robot.is_empty:
+        robot_xunit = output_dir / ROBOT_RESULTS_DIRNAME / XUNIT_XML
+        if robot_xunit.is_file():
+            xunit_files.append((robot_xunit, "robot"))
+            logger.debug(f"Found Robot xunit: {robot_xunit}")
 
-    # PyATS API xunit
-    pyats_api_xunit = output_dir / PYATS_RESULTS_DIRNAME / "api" / XUNIT_XML
-    if pyats_api_xunit.is_file():
-        xunit_files.append((pyats_api_xunit, "pyats_api"))
-        logger.debug(f"Found PyATS API xunit: {pyats_api_xunit}")
+    # PyATS API xunit (only if api tests executed)
+    if results.api is not None and not results.api.is_empty:
+        pyats_api_xunit = output_dir / PYATS_RESULTS_DIRNAME / "api" / XUNIT_XML
+        if pyats_api_xunit.is_file():
+            xunit_files.append((pyats_api_xunit, "pyats_api"))
+            logger.debug(f"Found PyATS API xunit: {pyats_api_xunit}")
 
-    # PyATS D2D xunit files (one per device)
-    pyats_d2d_dir = output_dir / PYATS_RESULTS_DIRNAME / "d2d"
-    if pyats_d2d_dir.is_dir():
-        for device_dir in sorted(pyats_d2d_dir.iterdir()):
-            if device_dir.is_dir():
-                d2d_xunit = device_dir / XUNIT_XML
-                if d2d_xunit.is_file():
-                    device_name = device_dir.name
-                    xunit_files.append((d2d_xunit, f"pyats_d2d/{device_name}"))
-                    logger.debug(
-                        f"Found PyATS D2D xunit for {device_name}: {d2d_xunit}"
-                    )
+    # PyATS D2D xunit files (only if d2d tests executed)
+    if results.d2d is not None and not results.d2d.is_empty:
+        pyats_d2d_dir = output_dir / PYATS_RESULTS_DIRNAME / "d2d"
+        if pyats_d2d_dir.is_dir():
+            for device_dir in sorted(pyats_d2d_dir.iterdir()):
+                if device_dir.is_dir():
+                    d2d_xunit = device_dir / XUNIT_XML
+                    if d2d_xunit.is_file():
+                        device_name = device_dir.name
+                        xunit_files.append((d2d_xunit, f"pyats_d2d/{device_name}"))
+                        logger.debug(
+                            f"Found PyATS D2D xunit for {device_name}: {d2d_xunit}"
+                        )
 
     logger.info(f"Collected {len(xunit_files)} xunit files from {output_dir}")
     return xunit_files
 
 
-def merge_xunit_results(output_dir: Path) -> Path | None:
+def merge_xunit_results(output_dir: Path, results: CombinedResults) -> Path | None:
     """Convenience function to collect and merge all xunit files in output directory.
 
     This is the main entry point for the xunit merger. It:
-    1. Collects all xunit.xml files from standard locations
+    1. Collects xunit.xml files only from frameworks that executed this run
     2. Merges them into a single file at output_dir/xunit.xml
 
     Args:
         output_dir: The base output directory containing test results.
+        results: CombinedResults with execution state for each framework.
 
     Returns:
         Path to the merged xunit.xml file, or None if no files to merge.
     """
-    xunit_files = collect_xunit_files(output_dir)
+    xunit_files = collect_xunit_files(output_dir, results)
     if not xunit_files:
         logger.info("No xunit files found to merge")
         return None
