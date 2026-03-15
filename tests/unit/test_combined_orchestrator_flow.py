@@ -774,3 +774,160 @@ class TestExecutionSummary(TestCombinedOrchestratorFlow):
 
         # Summary should NOT be printed in render_only mode
         mock_print.assert_not_called()
+
+
+class TestStaleArtifactWarnings(TestCombinedOrchestratorFlow):
+    """Tests for stale artifact warning functionality."""
+
+    def test_warning_fires_when_stale_robot_files_present(
+        self, orchestrator: CombinedOrchestrator
+    ) -> None:
+        """Warning fires when stale Robot files present and Robot framework didn't run."""
+        # Create stale Robot artifacts in output directory
+        (orchestrator.output_dir / "log.html").touch()
+        (orchestrator.output_dir / "output.xml").touch()
+        (orchestrator.output_dir / "report.html").touch()
+
+        # Only PyATS tests discovered, Robot didn't run
+        empty_pyats_results = PyATSResults()
+
+        with patch.object(
+            orchestrator, "_discover_test_types", return_value=(True, False)
+        ):
+            with patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator"
+            ) as mock_pyats:
+                mock_pyats_instance = MagicMock()
+                mock_pyats_instance.run_tests.return_value = empty_pyats_results
+                mock_pyats.return_value = mock_pyats_instance
+
+                with patch(
+                    "nac_test.combined_orchestrator.CombinedReportGenerator"
+                ) as mock_generator:
+                    mock_gen_instance = MagicMock()
+                    mock_gen_instance.generate_combined_summary.return_value = None
+                    mock_generator.return_value = mock_gen_instance
+
+                    with patch("typer.echo"), patch("typer.secho") as mock_secho:
+                        orchestrator.run_tests()
+
+        assert mock_secho.call_count == 2
+
+        first_call = mock_secho.call_args_list[0]
+        warning_message = first_call[0][0]
+        assert "Stale artifacts from a previous run" in warning_message
+        assert first_call[1]["fg"] == "yellow"
+        assert first_call[1]["err"] is True
+
+        second_call = mock_secho.call_args_list[1]
+        files_message = second_call[0][0]
+        assert "log.html" in files_message
+        assert "output.xml" in files_message
+        assert "report.html" in files_message
+        assert second_call[1]["fg"] == "yellow"
+        assert second_call[1]["err"] is True
+
+    def test_warning_does_not_fire_when_run_was_clean(
+        self, orchestrator: CombinedOrchestrator, robot_results: TestResults
+    ) -> None:
+        """Warning does NOT fire when Robot framework ran and produced artifacts."""
+        # Create stale Robot artifacts in output directory
+        (orchestrator.output_dir / "log.html").touch()
+        (orchestrator.output_dir / "output.xml").touch()
+        (orchestrator.output_dir / "report.html").touch()
+
+        # Robot tests ran and produced results
+        with patch.object(
+            orchestrator, "_discover_test_types", return_value=(False, True)
+        ):
+            with patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator"
+            ) as mock_robot:
+                mock_robot_instance = MagicMock()
+                mock_robot_instance.run_tests.return_value = robot_results
+                mock_robot.return_value = mock_robot_instance
+
+                with patch(
+                    "nac_test.combined_orchestrator.CombinedReportGenerator"
+                ) as mock_generator:
+                    mock_gen_instance = MagicMock()
+                    mock_gen_instance.generate_combined_summary.return_value = None
+                    mock_generator.return_value = mock_gen_instance
+
+                    with patch("typer.echo"), patch("typer.secho") as mock_secho:
+                        orchestrator.run_tests()
+
+        # Warning should NOT have been called (Robot framework ran)
+        mock_secho.assert_not_called()
+
+    def test_warning_includes_correct_filenames(
+        self, orchestrator: CombinedOrchestrator
+    ) -> None:
+        """Warning includes correct file names when stale artifacts present."""
+        # Create only some stale Robot artifacts
+        (orchestrator.output_dir / "log.html").touch()
+        (orchestrator.output_dir / "xunit.xml").touch()
+        # Don't create output.xml and report.html
+
+        # Only PyATS tests discovered, Robot didn't run
+        empty_pyats_results = PyATSResults()
+
+        with patch.object(
+            orchestrator, "_discover_test_types", return_value=(True, False)
+        ):
+            with patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator"
+            ) as mock_pyats:
+                mock_pyats_instance = MagicMock()
+                mock_pyats_instance.run_tests.return_value = empty_pyats_results
+                mock_pyats.return_value = mock_pyats_instance
+
+                with patch(
+                    "nac_test.combined_orchestrator.CombinedReportGenerator"
+                ) as mock_generator:
+                    mock_gen_instance = MagicMock()
+                    mock_gen_instance.generate_combined_summary.return_value = None
+                    mock_generator.return_value = mock_gen_instance
+
+                    with patch("typer.echo"), patch("typer.secho") as mock_secho:
+                        orchestrator.run_tests()
+
+        assert mock_secho.call_count == 2
+        second_call = mock_secho.call_args_list[1]
+        files_message = second_call[0][0]
+        assert "log.html" in files_message
+        assert "xunit.xml" in files_message
+        assert "output.xml" not in files_message
+        assert "report.html" not in files_message
+
+    def test_no_warning_when_no_stale_files(
+        self, orchestrator: CombinedOrchestrator
+    ) -> None:
+        """No warning when no stale files present."""
+        # Don't create any stale artifacts
+
+        # Only PyATS tests discovered, Robot didn't run
+        empty_pyats_results = PyATSResults()
+
+        with patch.object(
+            orchestrator, "_discover_test_types", return_value=(True, False)
+        ):
+            with patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator"
+            ) as mock_pyats:
+                mock_pyats_instance = MagicMock()
+                mock_pyats_instance.run_tests.return_value = empty_pyats_results
+                mock_pyats.return_value = mock_pyats_instance
+
+                with patch(
+                    "nac_test.combined_orchestrator.CombinedReportGenerator"
+                ) as mock_generator:
+                    mock_gen_instance = MagicMock()
+                    mock_gen_instance.generate_combined_summary.return_value = None
+                    mock_generator.return_value = mock_gen_instance
+
+                    with patch("typer.echo"), patch("typer.secho") as mock_secho:
+                        orchestrator.run_tests()
+
+        # Warning should NOT have been called (no stale files)
+        mock_secho.assert_not_called()
