@@ -157,6 +157,8 @@ class CombinedReportGenerator:
                         "title": metadata.get("title", framework_key),
                         "stats": test_results,
                         "report_path": metadata.get("report_path", "#"),
+                        "has_report": test_results is not None
+                        and not test_results.is_empty,
                     }
 
             overall_stats = results if results is not None else CombinedResults()
