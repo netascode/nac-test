@@ -1,3 +1,5 @@
+# Actions are pinned to commit SHAs (not version tags) to prevent supply chain attacks.
+# Version comments (e.g., "# v6") allow Dependabot to track and update to newer versions.
 name: Release
 
 on:
@@ -8,11 +10,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82  # v7.5.0
         
       - name: Build and publish
         env:

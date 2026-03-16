@@ -1,3 +1,5 @@
+# Actions are pinned to commit SHAs (not version tags) to prevent supply chain attacks.
+# Version comments (e.g., "# v6") allow Dependabot to track and update to newer versions.
 name: Tests
 on:
   workflow_dispatch:
@@ -11,12 +13,14 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82  # v7.5.0
         with:
           enable-cache: true
 
@@ -27,7 +31,7 @@ jobs:
         run: bandit -r nac_test/ -ll -f json -o bandit-security-report.json
         
       - name: Upload security report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
         if: always()
         with:
           name: bandit-security-report
@@ -41,14 +45,14 @@ jobs:
       contents: write  # Required for dependabot to push lock file updates
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # For fork PRs, use merge commit; for same-repo PRs, use head ref
           ref: ${{ github.event.pull_request.head.sha || github.head_ref }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82  # v7.5.0
         with:
           enable-cache: true
 
@@ -72,12 +76,14 @@ jobs:
         run: bash scripts/license-headers.sh
 
       - name: Pre-commit Checks
-        uses: pre-commit/action@v3.0.1
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd  # v3.0.1
 
   test:
     name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     strategy:
       matrix:
         python:
@@ -87,10 +93,10 @@ jobs:
           - "3.13"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82  # v7.5.0
         with:
           enable-cache: true
 
@@ -108,6 +114,7 @@ jobs:
     needs: [security, lint, test]
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions: {}
     steps:
       - name: Check Job Success
         run: |
@@ -120,15 +127,28 @@ jobs:
           fi
         id: print_status
 
+      - name: Sanitize notification variables
+        run: |
+          # Safely escape commit message for JSON (handles newlines, quotes, special chars)
+          COMMIT_MSG=$(echo '${{ github.event.head_commit.message }}' | head -c 500 | jq -Rs .)
+          PR_TITLE=$(echo '${{ github.event.pull_request.title }}' | head -c 200 | jq -Rs .)
+          echo "SAFE_COMMIT_MSG=${COMMIT_MSG}" >> $GITHUB_ENV
+          echo "SAFE_PR_TITLE=${PR_TITLE}" >> $GITHUB_ENV
+
+      # Using direct curl to Webex API instead of a GitHub Action because:
+      # - qsnyder/action-wxt is unmaintained (last commit 2022, no releases)
+      # - Direct API call has no third-party action dependency to maintain
+      # - Gives full control over error handling and message format
       - name: Webex Notification
         if: always()
-        uses: qsnyder/action-wxt@master
-        env:
-          TOKEN: ${{ secrets.WEBEX_TOKEN }}
-          ROOMID: ${{ secrets.WEBEX_ROOM_ID }}
-          MESSAGE: |
-            [**[${{ env.jobSuccess }}] ${{ github.repository }} #${{ github.run_number }}**](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            * Commit: [${{ github.event.head_commit.message }}](${{ github.event.head_commit.url }})[${{ github.event.pull_request.title }}](${{ github.event.pull_request.html_url }})
-            * Author: ${{ github.event.sender.login }}
-            * Branch: ${{ github.ref }} ${{ github.head_ref }}
-            * Event: ${{ github.event_name }}
+        run: |
+          curl --silent --max-time 30 \
+            --request POST \
+            --url https://webexapis.com/v1/messages \
+            --header "Authorization: Bearer ${{ secrets.WEBEX_TOKEN }}" \
+            --header "Content-Type: application/json" \
+            --data '{
+              "roomId": "${{ secrets.WEBEX_ROOM_ID }}",
+              "markdown": "[**[${{ env.jobSuccess }}] ${{ github.repository }} #${{ github.run_number }}**](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n* Commit: [${{ env.SAFE_COMMIT_MSG }}](${{ github.event.head_commit.url }})${{ env.SAFE_PR_TITLE }}\n* Author: ${{ github.event.sender.login }}\n* Branch: ${{ github.ref }} ${{ github.head_ref }}\n* Event: ${{ github.event_name }}"
+            }' \
+            || echo "::warning::Webex notification failed"
