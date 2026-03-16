@@ -8,7 +8,11 @@ on:
       - "v*"
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
