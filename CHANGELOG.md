@@ -8,7 +8,7 @@ _Note: This changelog covers all 2.0.0 alpha and beta releases._
   - Initial support for ACI, SD-WAN, and Catalyst Center architectures
   - IOS-XE Direct-to-Device (D2D) SSH tests for SD-WAN and Catalyst Center
   - Experimental `--pyats` and `--robot` flags to limit test execution to one framework
-  - **Windows not supported**: pyATS libraries are not available on Windows. Use WSL2 as an alternative.
+  - **Windows**: Robot tests only — PyATS libraries are not available on Windows. For PyATS tests, use WSL2 as an alternative.
   - **macOS requires Python 3.12+**: Earlier Python versions have known fork/SSL incompatibilities causing crashes during pyATS execution.
 - **Combined Dashboard**: New `combined_summary.html` report linking Robot and pyATS summaries
 - **Merged xUnit Output**: Robot and pyATS results merged into single `xunit.xml` for CI/CD integration
