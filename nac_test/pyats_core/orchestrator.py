@@ -231,7 +231,9 @@ class PyATSOrchestrator:
 
         try:
             # Use ArchiveInspector to extract test results
-            archive_results = ArchiveInspector.extract_test_results(archive_path)
+            archive_results = ArchiveInspector.extract_test_results(
+                archive_path, self.test_dir
+            )
 
             # Merge results into test_status, only updating tests that are
             # missing completion status (e.g., still "EXECUTING")
@@ -312,6 +314,8 @@ class PyATSOrchestrator:
             # Set NAC_TEST_TYPE to differentiate API vs D2D test types for separate temp directories
             # This prevents race conditions where both test types write JSONL files to the same location
             env["NAC_TEST_TYPE"] = "api"
+            # Pass test_dir so plugin can compute relative test names
+            env["NAC_TEST_TEST_DIR"] = str(self.test_dir)
 
             # Execute and return the archive path
             assert self.subprocess_runner is not None  # Should be initialized by now

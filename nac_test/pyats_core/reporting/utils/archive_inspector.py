@@ -85,7 +85,9 @@ class ArchiveInspector:
             return "legacy"
 
     @staticmethod
-    def extract_test_results(archive_path: Path) -> dict[str, dict[str, Any]]:
+    def extract_test_results(
+        archive_path: Path, test_dir: Path
+    ) -> dict[str, dict[str, Any]]:
         """Extract test results from a PyATS archive's results.json.
 
         This method parses the results.json file within a PyATS archive and returns
@@ -94,6 +96,7 @@ class ArchiveInspector:
 
         Args:
             archive_path: Path to the PyATS archive zip file
+            test_dir: Test directory for computing relative paths
 
         Returns:
             Dictionary mapping test names to result info containing:
@@ -150,7 +153,7 @@ class ArchiveInspector:
             # the task name (e.g., "foo"). Using testscript ensures key consistency
             # between progress events and archive fallback.
             test_key = ArchiveInspector._derive_test_name_from_path(
-                task.get("testscript", ""), task_name
+                task.get("testscript", ""), task_name, test_dir
             )
 
             # Extract result from results.json
@@ -180,7 +183,9 @@ class ArchiveInspector:
         return results
 
     @staticmethod
-    def _derive_test_name_from_path(testscript: str, fallback_name: str) -> str:
+    def _derive_test_name_from_path(
+        testscript: str, fallback_name: str, test_dir: Path
+    ) -> str:
         """Derive a test name from the testscript path.
 
         This mirrors the logic in the PyATS progress plugin's _get_test_name()
@@ -190,6 +195,7 @@ class ArchiveInspector:
         Args:
             testscript: Full path to the test script file
             fallback_name: Fallback name if path cannot be parsed
+            test_dir: Test directory for computing relative paths
 
         Returns:
             Dot-notation test name (e.g., "nrfu.verify_device_status")
@@ -198,21 +204,13 @@ class ArchiveInspector:
             return fallback_name
 
         try:
-            path = Path(testscript)
-            parts = path.parts
-
-            # Find where 'tests' directory starts
-            try:
-                test_idx = parts.index("tests")
-                relevant_parts = parts[test_idx + 1 :]
-            except ValueError:
-                # If no 'tests' dir, use the whole path
-                relevant_parts = parts
-
-            # Remove .py extension and join with dots
-            name_parts = list(relevant_parts[:-1]) + [path.stem]
+            path = Path(testscript).resolve()
+            test_dir_resolved = test_dir.resolve()
+            relative_path = path.relative_to(test_dir_resolved)
+            parts = relative_path.parts
+            name_parts = list(parts[:-1]) + [relative_path.stem]
             return ".".join(name_parts)
-        except Exception:
+        except ValueError:
             return fallback_name
 
     @staticmethod

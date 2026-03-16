@@ -108,6 +108,7 @@ class DeviceExecutor:
                             / "merged_data_model_test_variables.yaml"
                         ),
                         "NAC_TEST_TYPE": "d2d",
+                        "NAC_TEST_TEST_DIR": str(self.test_dir),
                     }
                 )
 

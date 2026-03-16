@@ -158,20 +158,9 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
                 # If AST parsing fails, title will remain None
                 pass
 
-            # If no TITLE found, create a descriptive name from the path
+            # If no TITLE found, use the already-computed test_name (relative path)
             if not title:
-                # Convert path like "templates/apic/test/operational/tenants/l3out.py"
-                # to "apic.test.operational.tenants.l3out"
-                test_path = Path(task.testscript)
-
-                # Start from after 'templates' if it exists
-                if "templates" in test_path.parts:
-                    start_idx = test_path.parts.index("templates") + 1
-                    title = ".".join(test_path.parts[start_idx:])
-                    if title.endswith(".py"):
-                        title = title[:-3]
-                else:
-                    title = test_name  # Fall back to existing test_name
+                title = test_name
 
             # Get actual worker ID from task runtime
             worker_id = self._get_task_worker_id(task)
@@ -290,25 +279,33 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
         return self.worker_id
 
     def _get_test_name(self, testscript: str) -> str:
-        """Extract a clean test name from the test file path."""
+        """Extract a clean test name from the test file path.
+
+        Uses NAC_TEST_TEST_DIR environment variable to compute relative paths.
+        This env var is set by the orchestrator/device_executor.
+        """
         try:
-            # Convert path to dot notation like Robot does
-            # /path/to/tests/operational/tenants/l3out.py -> operational.tenants.l3out
-            path = Path(testscript)
-            parts = path.parts
+            path = Path(testscript).resolve()
 
-            # Find where 'tests' directory starts
-            try:
-                test_idx = parts.index("tests")
-                relevant_parts = parts[test_idx + 1 :]
-            except ValueError:
-                # If no 'tests' dir, use the whole path
-                relevant_parts = parts
+            test_dir = os.environ.get("NAC_TEST_TEST_DIR")
+            if test_dir:
+                test_dir_path = Path(test_dir).resolve()
+                try:
+                    relative_path = path.relative_to(test_dir_path)
+                    parts = relative_path.parts
+                    name_parts = list(parts[:-1]) + [relative_path.stem]
+                    return ".".join(name_parts)
+                except ValueError:
+                    logger.warning(
+                        f"Test script {testscript} is not under test_dir "
+                        f"{test_dir}, using filename only"
+                    )
+                    return path.stem
 
-            # Remove .py extension and join with dots
-            name_parts = list(relevant_parts[:-1]) + [path.stem]
-            return ".".join(name_parts)
+            logger.warning(
+                "NAC_TEST_TEST_DIR environment variable not set, using filename only"
+            )
+            return path.stem
         except Exception as e:
             logger.error(f"Failed to extract test name from {testscript}: {e}")
-            # Fallback to just the filename
             return Path(testscript).stem

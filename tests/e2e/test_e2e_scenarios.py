@@ -885,6 +885,38 @@ class E2ECombinedTestBase:
             "Missing consolidated PyATS discovery message in stdout"
         )
 
+    def test_stdout_pyats_test_names_are_relative(self, results: E2EResults) -> None:
+        """Verify PyATS progress reporter shows relative test names, not absolute paths (#653)."""
+        if not results.scenario.has_pyats_tests:
+            pytest.skip("No PyATS tests in this scenario")
+        if results.scenario.is_dry_run:
+            pytest.skip("Dry-run doesn't execute tests")
+
+        ansi_pattern = r"\x1b\[[0-9;]*m"
+        stdout = re.sub(ansi_pattern, "", results.filtered_stdout)
+
+        # Extract only the PyATS section (between markers) to avoid pabot output
+        pyats_start = stdout.find("Running PyATS tests")
+        pyats_end = stdout.find("Running Robot Framework tests")
+        if pyats_start != -1:
+            stdout = stdout[pyats_start : pyats_end if pyats_end != -1 else None]
+
+        # Pattern matches ProgressReporterPlugin output:
+        #   {timestamp} [PID:{pid}] [{worker_id}] [ID:{test_id}] {STATUS} {test_name}
+        progress_pattern = r"\[PID:\d+\]\s+\[\d+\]\s+\[ID:\d+\]\s+(?:EXECUTING|PASSED|FAILED|ERROR|SKIPPED|ABORTED|BLOCKED)\s+(\S+)"
+        matches = re.findall(progress_pattern, stdout)
+
+        assert matches, (
+            "No PyATS progress reporter output found in stdout. "
+            "Expected lines matching '[PID:X] [Y] [ID:Z] STATUS test_name'"
+        )
+
+        for test_name in matches:
+            assert not test_name.startswith("/"), (
+                f"Found absolute path in progress reporter output: '{test_name}'\n"
+                f"Test names should be relative (e.g., 'tests.verify_sdwan_sync')"
+            )
+
     def test_stdout_combined_summary_has_visual_spacing(
         self, results: E2EResults
     ) -> None:
