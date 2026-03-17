@@ -47,7 +47,7 @@ def _create_mock_path(path_str: str, content: str = "") -> Any:
         A MagicMock configured to behave like a Path object
     """
     mock = MagicMock()
-    mock.resolve.return_value = mock
+    mock.absolute.return_value = mock
     mock.as_posix.return_value = path_str
     mock.read_text.return_value = content
     mock.__str__ = MagicMock(return_value=path_str)  # type: ignore[method-assign]

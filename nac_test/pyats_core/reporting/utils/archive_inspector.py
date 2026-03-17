@@ -204,12 +204,8 @@ class ArchiveInspector:
             return fallback_name
 
         try:
-            path = Path(testscript).resolve()
-            test_dir_resolved = test_dir.resolve()
-            relative_path = path.relative_to(test_dir_resolved)
-            parts = relative_path.parts
-            name_parts = list(parts[:-1]) + [relative_path.stem]
-            return ".".join(name_parts)
+            relative_path = Path(testscript).absolute().relative_to(test_dir.absolute())
+            return ".".join((*relative_path.parts[:-1], relative_path.stem))
         except ValueError:
             return fallback_name
 

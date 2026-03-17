@@ -90,10 +90,11 @@ class PyATSOrchestrator:
             loglevel: Log level for PyATS output filtering
         """
         self.data_paths = data_paths
-        self.test_dir = Path(test_dir).resolve()
-        self.base_output_dir = Path(
-            output_dir
-        ).resolve()  # Store base directory for merged data file access (absolute)
+        # Use absolute() rather than resolve() to preserve symlinks — resolve() would
+        # follow symlinks in test_dir and break relative_to() comparisons in the plugin
+        # and archive_inspector when individual test files are symlinks into test_dir.
+        self.test_dir = Path(test_dir).absolute()
+        self.base_output_dir = Path(output_dir).absolute()
         self.output_dir = (
             self.base_output_dir / PYATS_RESULTS_DIRNAME
         )  # PyATS works in its own subdirectory

@@ -158,7 +158,8 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
                 # If AST parsing fails, title will remain None
                 pass
 
-            # If no TITLE found, use the already-computed test_name (relative path)
+            # If no TITLE found, use test_name as display title (relative dot-name,
+            # or bare stem if NAC_TEST_TEST_DIR is unset)
             if not title:
                 title = test_name
 
@@ -284,28 +285,24 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
         Uses NAC_TEST_TEST_DIR environment variable to compute relative paths.
         This env var is set by the orchestrator/device_executor.
         """
-        try:
-            path = Path(testscript).resolve()
+        path = Path(testscript).absolute()
 
-            test_dir = os.environ.get("NAC_TEST_TEST_DIR")
-            if test_dir:
-                test_dir_path = Path(test_dir).resolve()
-                try:
-                    relative_path = path.relative_to(test_dir_path)
-                    parts = relative_path.parts
-                    name_parts = list(parts[:-1]) + [relative_path.stem]
-                    return ".".join(name_parts)
-                except ValueError:
-                    logger.warning(
-                        f"Test script {testscript} is not under test_dir "
-                        f"{test_dir}, using filename only"
-                    )
-                    return path.stem
+        test_dir = os.environ.get("NAC_TEST_TEST_DIR")
+        if test_dir:
+            test_dir_path = Path(test_dir).absolute()
+            try:
+                relative_path = path.relative_to(test_dir_path)
+                parts = relative_path.parts
+                name_parts = list(parts[:-1]) + [relative_path.stem]
+                return ".".join(name_parts)
+            except ValueError:
+                logger.warning(
+                    f"Test script {testscript} is not under test_dir "
+                    f"{test_dir}, using filename only"
+                )
+                return path.stem
 
-            logger.warning(
-                "NAC_TEST_TEST_DIR environment variable not set, using filename only"
-            )
-            return path.stem
-        except Exception as e:
-            logger.error(f"Failed to extract test name from {testscript}: {e}")
-            return Path(testscript).stem
+        logger.warning(
+            "NAC_TEST_TEST_DIR environment variable not set, using filename only"
+        )
+        return path.stem

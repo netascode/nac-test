@@ -912,9 +912,9 @@ class E2ECombinedTestBase:
         )
 
         for test_name in matches:
-            assert not test_name.startswith("/"), (
-                f"Found absolute path in progress reporter output: '{test_name}'\n"
-                f"Test names should be relative (e.g., 'tests.verify_sdwan_sync')"
+            assert re.fullmatch(r"[\w.-]+", test_name), (
+                f"Expected a dot-notation test name, got: '{test_name}'\n"
+                f"Test names should be relative (e.g., 'nrfu.verify_sdwan_sync')"
             )
 
     def test_stdout_combined_summary_has_visual_spacing(
@@ -1091,12 +1091,41 @@ class TestE2EPyatsApiOnly(E2ECombinedTestBase):
 
     Scenario: PyATS API (1 pass), no Robot or D2D tests
     Expected: CLI exits with code 0, 100% success rate
+
+    Note: the test file is a symlink pointing outside templates/ — this
+    exercises the absolute() vs resolve() path in the progress plugin and
+    archive inspector (see issue #656).
     """
 
     @pytest.fixture
     def results(self, e2e_pyats_api_only_results: E2EResults) -> E2EResults:
         """Provide PyATS API-only scenario results."""
         return e2e_pyats_api_only_results
+
+    def test_stdout_symlinked_test_has_relative_name(self, results: E2EResults) -> None:
+        """Verify symlinked test file appears with its relative name, not an absolute path.
+
+        The fixture contains a test file that is a symlink pointing outside
+        templates/. If Path.resolve() is used instead of Path.absolute() anywhere
+        in the name-computation chain, relative_to() will fail and the name will
+        degrade to a bare stem with no directory prefix (e.g. just
+        'verify_aci_apic_appliance_operational_status' instead of
+        'tests.verify_aci_apic_appliance_operational_status').
+        """
+        ansi_pattern = r"\x1b\[[0-9;]*m"
+        stdout = re.sub(ansi_pattern, "", results.filtered_stdout)
+
+        progress_pattern = r"\[PID:\d+\]\s+\[\d+\]\s+\[ID:\d+\]\s+(?:EXECUTING|PASSED|FAILED|ERROR|SKIPPED|ABORTED|BLOCKED)\s+(\S+)"
+        test_names = re.findall(progress_pattern, stdout)
+
+        assert test_names, "No PyATS progress reporter output found in stdout"
+
+        for name in test_names:
+            assert name.startswith("tests."), (
+                f"PyATS test name '{name}' does not start with 'tests.' — "
+                f"symlinked test files may have had their path resolved through "
+                f"the symlink (resolve() instead of absolute())"
+            )
 
 
 # =============================================================================
