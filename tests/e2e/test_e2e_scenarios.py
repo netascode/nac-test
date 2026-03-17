@@ -912,7 +912,7 @@ class E2ECombinedTestBase:
         )
 
         for test_name in matches:
-            assert re.fullmatch(r"[\w.-]+", test_name), (
+            assert re.fullmatch(r"\w[\w.-]*", test_name), (
                 f"Expected a dot-notation test name, got: '{test_name}'\n"
                 f"Test names should be relative (e.g., 'nrfu.verify_sdwan_sync')"
             )

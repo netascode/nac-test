@@ -297,7 +297,7 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
                 return ".".join(name_parts)
             except ValueError:
                 logger.warning(
-                    f"Test script {testscript} is not under test_dir "
+                    f"Test script {testscript} (absolute: {path}) is not under test_dir "
                     f"{test_dir}, using filename only"
                 )
                 return path.stem
