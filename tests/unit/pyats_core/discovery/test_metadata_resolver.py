@@ -23,9 +23,9 @@ from unittest.mock import patch
 
 import pytest
 
+from nac_test.pyats_core.common.types import DEFAULT_TEST_TYPE
 from nac_test.pyats_core.discovery.test_type_resolver import (
     BASE_CLASS_MAPPING,
-    DEFAULT_TEST_TYPE,
     NoRecognizedBaseError,
     TestMetadataResolver,
 )

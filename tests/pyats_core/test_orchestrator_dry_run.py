@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from nac_test.core.constants import DRY_RUN_REASON
-from nac_test.pyats_core.discovery.test_type_resolver import (
+from nac_test.pyats_core.common.types import (
     PyatsDiscoveryResult,
     TestFileMetadata,
 )

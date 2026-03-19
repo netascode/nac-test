@@ -4,19 +4,9 @@
 """PyATS discovery components."""
 
 from .device_inventory import DeviceInventoryDiscovery
-from .tag_matcher import TagMatcher
 from .test_discovery import TestDiscovery
-from .test_type_resolver import (
-    PyatsDiscoveryResult,
-    TestFileMetadata,
-    TestMetadataResolver,
-)
 
 __all__ = [
-    "TagMatcher",
-    "TestDiscovery",
-    "PyatsDiscoveryResult",
-    "TestFileMetadata",
-    "TestMetadataResolver",
     "DeviceInventoryDiscovery",
+    "TestDiscovery",
 ]

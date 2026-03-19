@@ -10,6 +10,7 @@ throughout the NAC test automation framework.
 
 import sys
 from dataclasses import dataclass, field
+from functools import cached_property
 from pathlib import Path
 from typing import (
     Any,
@@ -30,7 +31,7 @@ from nac_test.pyats_core.reporting.types import ResultStatus
 DEFAULT_TEST_TYPE = "api"
 
 
-@dataclass
+@dataclass(slots=True)
 class TestFileMetadata:
     """Metadata extracted from a PyATS test file.
 
@@ -46,7 +47,7 @@ class TestFileMetadata:
     groups: list[str] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(frozen=True)
 class PyatsDiscoveryResult:
     """Result of PyATS test discovery with tag filtering applied.
 
@@ -58,11 +59,18 @@ class PyatsDiscoveryResult:
     during post-execution result splitting, replacing the previous pattern
     of re-parsing test files to determine their types.
 
+    This dataclass is frozen (immutable) after creation, enabling cached
+    properties for frequently accessed computed values.
+
     Attributes:
         api_tests: List of API test metadata (controller/REST tests)
         d2d_tests: List of D2D test metadata (Direct-to-Device/SSH tests)
-        skipped_files: List of (path, reason) tuples for files skipped during discovery
-        filtered_by_tags: Count of tests filtered out by tag patterns
+        skipped_files: List of (path, reason) tuples for files that failed validation
+                       (e.g., not a valid PyATS test, read errors). Does NOT include
+                       files excluded by tag filtering.
+        filtered_by_tags: Count of valid tests excluded by --include/--exclude tag
+                          patterns. These are intentional user exclusions, separate
+                          from skipped_files which represent processing failures.
         test_type_by_path: Pre-computed mapping of resolved paths to test types
     """
 
@@ -72,22 +80,22 @@ class PyatsDiscoveryResult:
     filtered_by_tags: int
     test_type_by_path: dict[Path, str] = field(default_factory=dict)
 
-    @property
+    @cached_property
     def all_tests(self) -> list[TestFileMetadata]:
         """All discovered tests (API + D2D combined)."""
         return self.api_tests + self.d2d_tests
 
-    @property
+    @cached_property
     def total_count(self) -> int:
         """Total number of discovered tests."""
         return len(self.api_tests) + len(self.d2d_tests)
 
-    @property
+    @cached_property
     def api_paths(self) -> list[Path]:
         """API test paths for execution."""
         return [t.path for t in self.api_tests]
 
-    @property
+    @cached_property
     def d2d_paths(self) -> list[Path]:
         """D2D test paths for execution."""
         return [t.path for t in self.d2d_tests]

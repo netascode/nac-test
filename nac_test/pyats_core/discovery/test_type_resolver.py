@@ -86,24 +86,11 @@ from pathlib import Path
 from typing import Final
 
 from nac_test.pyats_core.common.types import (
-    DEFAULT_TEST_TYPE,
-    PyatsDiscoveryResult,
     TestFileMetadata,
 )
 
 # Module-level constants
 VALID_TEST_TYPES: Final[set[str]] = {"api", "d2d"}
-
-# Re-export DEFAULT_TEST_TYPE for backward compatibility
-__all__ = [
-    "BASE_CLASS_MAPPING",
-    "DEFAULT_TEST_TYPE",
-    "NoRecognizedBaseError",
-    "PyatsDiscoveryResult",
-    "TestFileMetadata",
-    "TestMetadataResolver",
-    "VALID_TEST_TYPES",
-]
 
 # Base class to test type mapping
 # This dictionary maps known PyATS test base class names to their test types
@@ -230,9 +217,12 @@ class TestMetadataResolver:
                 base_name: str | None = None
 
                 if isinstance(base, ast.Name):
+                    # Direct inheritance: class MyTest(SSHTestBase)
                     base_name = base.id
                     self.logger.debug(f"  Direct base: {base_name}")
                 elif isinstance(base, ast.Attribute):
+                    # Qualified inheritance: class MyTest(module.SSHTestBase)
+                    # We only care about the class name, not the module
                     base_name = base.attr
                     self.logger.debug(f"  Qualified base: {base_name}")
 

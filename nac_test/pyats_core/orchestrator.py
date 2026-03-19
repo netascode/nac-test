@@ -619,13 +619,13 @@ class PyATSOrchestrator:
 
         # Note: Merged data file created by main.py (single source of truth)
 
-        execution_plan = self.test_discovery.discover_pyats_tests(
+        discovery_result = self.test_discovery.discover_pyats_tests(
             include_tags=self.include_tags,
             exclude_tags=self.exclude_tags,
         )
 
-        if not execution_plan.total_count:
-            if execution_plan.filtered_by_tags:
+        if not discovery_result.total_count:
+            if discovery_result.filtered_by_tags:
                 filter_desc = format_filter_description(
                     include=self.include_tags, exclude=self.exclude_tags
                 )
@@ -634,10 +634,10 @@ class PyATSOrchestrator:
                 print("No PyATS test files (*.py) found in test directory")
             return PyATSResults()
 
-        print(f"Discovered {execution_plan.total_count} PyATS test files")
+        print(f"Discovered {discovery_result.total_count} PyATS test files")
 
-        api_tests = execution_plan.api_paths
-        d2d_tests = execution_plan.d2d_paths
+        api_tests = discovery_result.api_paths
+        d2d_tests = discovery_result.d2d_paths
 
         # Dry-run mode: print discovered tests and return results without further execution
         if self.dry_run:
@@ -653,7 +653,7 @@ class PyATSOrchestrator:
 
         # Initialize progress reporter for output formatting
         self.progress_reporter = ProgressReporter(
-            total_tests=execution_plan.total_count, max_workers=self.max_workers
+            total_tests=discovery_result.total_count, max_workers=self.max_workers
         )
         self.test_status = {}
         self.start_time = datetime.now()
@@ -747,7 +747,7 @@ class PyATSOrchestrator:
 
             for test_name, test_info in self.test_status.items():
                 test_file = test_info.get("test_file")
-                test_type = execution_plan.get_test_type(test_file)
+                test_type = discovery_result.get_test_type(test_file)
 
                 if test_type == "d2d":
                     self.d2d_test_status[test_name] = test_info
