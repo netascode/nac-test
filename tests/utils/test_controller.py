@@ -15,6 +15,7 @@ from nac_test.utils.controller import (
     _format_multiple_credentials_error,
     _format_no_credentials_error,
     detect_controller_type,
+    get_controller_url,
 )
 
 
@@ -239,7 +240,7 @@ class TestHelperFunctions:
 
     def test_format_no_credentials_error(self) -> None:
         """Test formatting error message for no credentials."""
-        error_msg = _format_no_credentials_error({})
+        error_msg = _format_no_credentials_error()
 
         assert "No controller credentials found in environment" in error_msg
         assert "Controller credentials are required for ALL test types" in error_msg
@@ -380,3 +381,157 @@ class TestEdgeCases:
 
         result = detect_controller_type()
         assert result == "SDWAN"
+
+
+class TestIOSXEAlternativeURLEnvVar:
+    """Test IOSXE controller detection with alternative URL environment variables.
+
+    IOSXE supports both IOSXE_URL and IOSXE_HOST as the URL environment variable.
+    This was introduced to support alternative connection methods in XE-as-code.
+    """
+
+    @pytest.fixture(autouse=True)
+    def clean_environment(self) -> Generator[None, None, None]:
+        """Clean environment variables before and after each test."""
+        original_env = os.environ.copy()
+
+        # Remove all controller-related variables
+        for controller_vars in CREDENTIAL_PATTERNS.values():
+            for var in controller_vars:
+                os.environ.pop(var, None)
+
+        # Also remove IOSXE_HOST alternative
+        os.environ.pop("IOSXE_HOST", None)
+
+        yield
+
+        os.environ.clear()
+        os.environ.update(original_env)
+
+    def test_detect_iosxe_with_url(self) -> None:
+        """Test IOSXE detection with standard IOSXE_URL env var."""
+        os.environ["IOSXE_URL"] = "https://iosxe.example.com"
+
+        result = detect_controller_type()
+        assert result == "IOSXE"
+
+    def test_detect_iosxe_with_host(self) -> None:
+        """Test IOSXE detection with alternative IOSXE_HOST env var."""
+        os.environ["IOSXE_HOST"] = "192.168.1.1"
+
+        result = detect_controller_type()
+        assert result == "IOSXE"
+
+    def test_iosxe_url_takes_precedence_over_host(self) -> None:
+        """When both IOSXE_URL and IOSXE_HOST are set, URL takes precedence."""
+        os.environ["IOSXE_URL"] = "https://iosxe-url.example.com"
+        os.environ["IOSXE_HOST"] = "192.168.1.1"
+
+        result = detect_controller_type()
+        assert result == "IOSXE"
+
+        # Verify URL takes precedence in get_controller_url
+        url = get_controller_url("IOSXE")
+        assert url == "https://iosxe-url.example.com"
+
+    def test_get_controller_url_returns_iosxe_url(self) -> None:
+        """get_controller_url returns IOSXE_URL when set."""
+        os.environ["IOSXE_URL"] = "https://iosxe.example.com"
+
+        url = get_controller_url("IOSXE")
+        assert url == "https://iosxe.example.com"
+
+    def test_get_controller_url_returns_iosxe_host(self) -> None:
+        """get_controller_url returns IOSXE_HOST when IOSXE_URL is not set."""
+        os.environ["IOSXE_HOST"] = "192.168.1.1"
+
+        url = get_controller_url("IOSXE")
+        assert url == "192.168.1.1"
+
+    def test_get_controller_url_raises_when_neither_set(self) -> None:
+        """get_controller_url raises KeyError when neither URL nor HOST is set."""
+        # Neither IOSXE_URL nor IOSXE_HOST is set
+
+        with pytest.raises(KeyError) as exc_info:
+            get_controller_url("IOSXE")
+
+        assert "IOSXE_URL" in str(exc_info.value)
+
+    def test_get_controller_url_strips_whitespace(self) -> None:
+        """get_controller_url strips leading/trailing whitespace."""
+        os.environ["IOSXE_HOST"] = "  192.168.1.1  "
+
+        url = get_controller_url("IOSXE")
+        assert url == "192.168.1.1"
+
+    def test_get_controller_url_empty_url_falls_back_to_host(self) -> None:
+        """get_controller_url uses IOSXE_HOST when IOSXE_URL is empty."""
+        os.environ["IOSXE_URL"] = ""
+        os.environ["IOSXE_HOST"] = "192.168.1.1"
+
+        url = get_controller_url("IOSXE")
+        assert url == "192.168.1.1"
+
+    def test_get_controller_url_whitespace_url_falls_back_to_host(self) -> None:
+        """get_controller_url uses IOSXE_HOST when IOSXE_URL is only whitespace."""
+        os.environ["IOSXE_URL"] = "   "
+        os.environ["IOSXE_HOST"] = "192.168.1.1"
+
+        url = get_controller_url("IOSXE")
+        assert url == "192.168.1.1"
+
+
+class TestGetControllerUrl:
+    """Tests for get_controller_url function."""
+
+    @pytest.fixture(autouse=True)
+    def clean_environment(self) -> Generator[None, None, None]:
+        """Clean environment variables before and after each test."""
+        original_env = os.environ.copy()
+
+        for controller_vars in CREDENTIAL_PATTERNS.values():
+            for var in controller_vars:
+                os.environ.pop(var, None)
+
+        os.environ.pop("IOSXE_HOST", None)
+
+        yield
+
+        os.environ.clear()
+        os.environ.update(original_env)
+
+    @pytest.mark.parametrize(
+        "controller_type,url_env_var",
+        [
+            ("ACI", "ACI_URL"),
+            ("SDWAN", "SDWAN_URL"),
+            ("CC", "CC_URL"),
+            ("MERAKI", "MERAKI_URL"),
+            ("FMC", "FMC_URL"),
+            ("ISE", "ISE_URL"),
+            ("IOSXE", "IOSXE_URL"),
+        ],
+    )
+    def test_get_controller_url_returns_correct_value(
+        self, controller_type: str, url_env_var: str
+    ) -> None:
+        """Test that get_controller_url returns the correct URL for each controller."""
+        expected_url = f"https://{controller_type.lower()}.example.com"
+        os.environ[url_env_var] = expected_url
+
+        result = get_controller_url(controller_type)
+        assert result == expected_url
+
+    def test_get_controller_url_unknown_controller_fallback(self) -> None:
+        """Test fallback for unknown controller types."""
+        os.environ["UNKNOWN_URL"] = "https://unknown.example.com"
+
+        result = get_controller_url("UNKNOWN")
+        assert result == "https://unknown.example.com"
+
+    def test_get_controller_url_unknown_controller_raises_when_not_set(self) -> None:
+        """Test that unknown controller type raises KeyError when env var not set."""
+        with pytest.raises(KeyError) as exc_info:
+            get_controller_url("NONEXISTENT")
+
+        assert "NONEXISTENT_URL" in str(exc_info.value)

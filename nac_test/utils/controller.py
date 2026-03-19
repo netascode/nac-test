@@ -9,16 +9,33 @@ ALL test types (both API and D2D tests) as they determine the architecture conte
 
 The detection logic ensures exactly one controller type is configured at a time to prevent
 ambiguous test execution contexts.
+
+The module also provides a mapping from controller types to their defaults block prefixes,
+enabling automatic defaults resolution without per-architecture configuration. For example,
+when ACI_URL is detected, the framework automatically knows to look for defaults.apic in
+the merged NAC data model.
 """
 
 import logging
 import os
 from dataclasses import dataclass
-from typing import cast
+from typing import TypedDict, cast
 
 from nac_test.core.types import ControllerTypeKey
 
 logger = logging.getLogger(__name__)
+
+
+class CredentialSetStatus(TypedDict):
+    """Status of a controller credential set.
+
+    Attributes:
+        present: List of environment variable names that are set.
+        missing: List of environment variable names that are not set.
+    """
+
+    present: list[str]
+    missing: list[str]
 
 
 @dataclass(frozen=True)
@@ -30,15 +47,21 @@ class ControllerConfig:
         url_env_var: Environment variable name for the controller URL.
         env_var_prefix: Prefix for credential env vars (e.g., "ACI" → ACI_USERNAME).
         required_env_vars: List of environment variables required for this controller.
+        defaults_prefix: JMESPath prefix for the defaults block in NAC data models
+            (e.g., "defaults.apic", "defaults.sdwan").
         cache_key: The controller_type string passed to AuthCache by the auth adapter.
             None for controllers that don't have an auth adapter in nac-test-pyats-common.
+        alt_url_env_vars: Alternative environment variable names for the URL.
+            Used when a controller supports multiple URL env var names (e.g., IOSXE_HOST).
     """
 
     display_name: str
     url_env_var: str
     env_var_prefix: str
     required_env_vars: list[str]
+    defaults_prefix: str
     cache_key: str | None = None
+    alt_url_env_vars: list[str] | None = None
 
 
 # Single source of truth for all controller configurations
@@ -49,6 +72,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="ACI_URL",
         env_var_prefix="ACI",
         required_env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
+        defaults_prefix="defaults.apic",
         cache_key="ACI",
     ),
     "SDWAN": ControllerConfig(
@@ -56,6 +80,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="SDWAN_URL",
         env_var_prefix="SDWAN",
         required_env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
+        defaults_prefix="defaults.sdwan",
         cache_key="SDWAN_MANAGER",
     ),
     "CC": ControllerConfig(
@@ -63,6 +88,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="CC_URL",
         env_var_prefix="CC",
         required_env_vars=["CC_URL", "CC_USERNAME", "CC_PASSWORD"],
+        defaults_prefix="defaults.catc",
         cache_key="CC",
     ),
     "MERAKI": ControllerConfig(
@@ -70,18 +96,21 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="MERAKI_URL",
         env_var_prefix="MERAKI",
         required_env_vars=["MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"],
+        defaults_prefix="defaults.meraki",
     ),
     "FMC": ControllerConfig(
         display_name="Firepower Management Center",
         url_env_var="FMC_URL",
         env_var_prefix="FMC",
         required_env_vars=["FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"],
+        defaults_prefix="defaults.fmc",
     ),
     "ISE": ControllerConfig(
         display_name="ISE",
         url_env_var="ISE_URL",
         env_var_prefix="ISE",
         required_env_vars=["ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"],
+        defaults_prefix="defaults.ise",
     ),
     "IOSXE": ControllerConfig(
         display_name="IOS XE",
@@ -90,6 +119,8 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         required_env_vars=[
             "IOSXE_URL"
         ],  # Direct device access, no controller credentials
+        defaults_prefix="defaults.iosxe",
+        alt_url_env_vars=["IOSXE_HOST"],  # Alternative env var for URL
     ),
 }
 
@@ -142,7 +173,7 @@ def detect_controller_type() -> ControllerTypeKey:
 
     # Check for no credentials at all
     if not complete_sets and not partial_sets:
-        error_message = _format_no_credentials_error(partial_sets)
+        error_message = _format_no_credentials_error()
         logger.error("No controller credentials found in environment")
         raise ValueError(error_message)
 
@@ -152,9 +183,10 @@ def detect_controller_type() -> ControllerTypeKey:
             f"{controller}: missing {', '.join(info['missing'])}"
             for controller, info in partial_sets.items()
         ]
+        lines = "\n".join(f"  - {info}" for info in incomplete_info)
         error_message = (
             f"Incomplete controller credentials detected:\n"
-            f"{chr(10).join(f'  - {info}' for info in incomplete_info)}\n\n"
+            f"{lines}\n\n"
             f"Please provide ALL required environment variables for your controller type."
         )
         logger.error(f"Incomplete credentials: {partial_sets}")
@@ -168,16 +200,19 @@ def detect_controller_type() -> ControllerTypeKey:
     return controller_type
 
 
-def _find_credential_sets() -> tuple[list[str], dict[str, dict[str, list[str]]]]:
+def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
     """Find complete and partial credential sets in environment.
 
     Examines environment variables to identify which controller types have
     complete credentials configured and which have partial/incomplete credentials.
 
+    This function also handles alternative URL environment variables (e.g., IOSXE_HOST
+    as an alternative to IOSXE_URL) when configured in the ControllerConfig.
+
     Returns:
         A tuple containing:
             - List of controller types with complete credentials
-            - Dictionary mapping controller types to dict with "present" and "missing" lists
+            - Dictionary mapping controller types to CredentialSetStatus
 
     Example:
         >>> os.environ.update({"ACI_URL": "https://apic.local", "ACI_USERNAME": "admin"})
@@ -188,7 +223,7 @@ def _find_credential_sets() -> tuple[list[str], dict[str, dict[str, list[str]]]]
         {"ACI": {"present": ["ACI_URL", "ACI_USERNAME"], "missing": ["ACI_PASSWORD"]}}
     """
     complete_sets: list[str] = []
-    partial_sets: dict[str, dict[str, list[str]]] = {}
+    partial_sets: dict[str, CredentialSetStatus] = {}
 
     for controller_type, config in CONTROLLER_REGISTRY.items():
         required_vars = config.required_env_vars
@@ -202,11 +237,25 @@ def _find_credential_sets() -> tuple[list[str], dict[str, dict[str, list[str]]]]
                 present_vars.append(var)
                 logger.debug(f"  {controller_type}: Found {var}")
             else:
-                missing_vars.append(var)
-                if var in os.environ:
-                    logger.debug(f"  {controller_type}: Empty {var}")
-                else:
-                    logger.debug(f"  {controller_type}: Missing {var}")
+                # Check alternative URL env vars if this is the URL variable
+                alt_found = False
+                if var == config.url_env_var and config.alt_url_env_vars:
+                    for alt_var in config.alt_url_env_vars:
+                        alt_value = os.environ.get(alt_var)
+                        if alt_value and alt_value.strip():
+                            present_vars.append(alt_var)
+                            logger.debug(
+                                f"  {controller_type}: Found {alt_var} (alternative)"
+                            )
+                            alt_found = True
+                            break
+
+                if not alt_found:
+                    missing_vars.append(var)
+                    if var in os.environ:
+                        logger.debug(f"  {controller_type}: Empty {var}")
+                    else:
+                        logger.debug(f"  {controller_type}: Missing {var}")
 
         if present_vars and not missing_vars:
             # All required variables present and non-empty
@@ -271,23 +320,17 @@ def _format_multiple_credentials_error(controllers: list[str]) -> str:
     return message
 
 
-def _format_no_credentials_error(
-    partial_credentials: dict[str, dict[str, list[str]]],
-) -> str:
+def _format_no_credentials_error() -> str:
     """Format error message when no controller credentials are found.
 
     Creates a detailed error message with setup instructions when no controller
     credentials are detected in the environment.
 
-    Args:
-        partial_credentials: Dictionary of partial credential sets (not used here,
-            but included for consistency with the calling pattern).
-
     Returns:
         Formatted error message with setup guidance.
 
     Example:
-        >>> error = _format_no_credentials_error({})
+        >>> error = _format_no_credentials_error()
         >>> print(error)
         No controller credentials found in environment.
         ...
@@ -350,3 +393,76 @@ def get_env_var_prefix(controller_type: str) -> str:
     """
     config = CONTROLLER_REGISTRY.get(controller_type)
     return config.env_var_prefix if config else controller_type
+
+
+def get_defaults_prefix(controller_type: str) -> str:
+    """Get the JMESPath defaults prefix for a controller type.
+
+    Looks up the defaults_prefix from CONTROLLER_REGISTRY. If the controller type
+    is not registered, constructs a default prefix of "defaults.<controller_type_lower>"
+    for graceful degradation.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
+
+    Returns:
+        The JMESPath defaults prefix (e.g., "defaults.apic", "defaults.sdwan"),
+        or "defaults.<controller_type_lower>" if not found in registry.
+
+    Example:
+        >>> get_defaults_prefix("ACI")
+        'defaults.apic'
+        >>> get_defaults_prefix("SDWAN")
+        'defaults.sdwan'
+        >>> get_defaults_prefix("UNKNOWN")
+        'defaults.unknown'
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    return config.defaults_prefix if config else f"defaults.{controller_type.lower()}"
+
+
+def get_controller_url(controller_type: str) -> str:
+    """Get the controller URL from environment variables.
+
+    Looks up the primary URL environment variable from CONTROLLER_REGISTRY, and
+    also checks alternative URL env vars if configured (e.g., IOSXE_HOST as an
+    alternative to IOSXE_URL).
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "IOSXE").
+
+    Returns:
+        The controller URL value from the environment.
+
+    Raises:
+        KeyError: If neither the primary nor any alternative URL env var is set.
+
+    Example:
+        >>> os.environ["ACI_URL"] = "https://apic.example.com"
+        >>> get_controller_url("ACI")
+        'https://apic.example.com'
+
+        >>> os.environ["IOSXE_HOST"] = "192.168.1.1"
+        >>> get_controller_url("IOSXE")  # Returns IOSXE_HOST when IOSXE_URL not set
+        '192.168.1.1'
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+
+    if config is None:
+        # Fallback for unknown controller types
+        return os.environ[f"{controller_type}_URL"]
+
+    # Try primary URL env var first
+    url_value = os.environ.get(config.url_env_var)
+    if url_value and url_value.strip():
+        return url_value.strip()
+
+    # Try alternative URL env vars if configured
+    if config.alt_url_env_vars:
+        for alt_var in config.alt_url_env_vars:
+            alt_value = os.environ.get(alt_var)
+            if alt_value and alt_value.strip():
+                return alt_value.strip()
+
+    # No URL found - raise KeyError with the primary var name
+    raise KeyError(config.url_env_var)
