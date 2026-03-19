@@ -75,6 +75,15 @@ ENV/
 tmp/
 
 .mypy_cache/
+.ruff_cache/
+
+# Application execution logs (including Claude Code logs)
+logs/
+
+# Robot artifacts
+output.xml
+log.html
+report.html
 
 logs/
 
@@ -86,4 +95,10 @@ report.html
 # Pabot
 .pabotsuitenames
 
+<<<<<<< HEAD
 .claude/
+=======
+# Claude configuration
+.claude/
+CLAUDE.md
+>>>>>>> 903a1a2

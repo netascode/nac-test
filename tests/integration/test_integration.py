@@ -2,11 +2,15 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 import os
+<<<<<<< HEAD
 import re
 import shutil
 import tempfile
 from collections.abc import Iterator
 from pathlib import Path
+=======
+import filecmp
+>>>>>>> 903a1a2
 
 import pytest
 import yaml  # type: ignore
@@ -222,6 +226,7 @@ def test_nac_test_list_folder(tmpdir: str) -> None:
     assert result.exit_code == 0
 
 
+<<<<<<< HEAD
 def test_nac_test_list_chunked(tmpdir: str) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list_chunked/"
@@ -406,3 +411,38 @@ def test_nac_test_no_testlevelsplit(tmpdir: str) -> None:
         )
     finally:
         del os.environ["NAC_TEST_NO_TESTLEVELSPLIT"]
+=======
+@pytest.mark.parametrize(
+    "cli_args, expected_filename",
+    [
+        ([], "merged_data_model_test_variables.yaml"),
+        (["--merged-data-filename", "custom.yaml"], "custom.yaml"),
+    ],
+)
+def test_nac_test_render_output_model(
+    tmpdir: str, cli_args: list[str], expected_filename: str
+) -> None:
+    """Tests the creation of the merged data model YAML file."""
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data_merge/"
+    templates_path = "tests/integration/fixtures/templates/"
+    output_model_path = os.path.join(tmpdir, expected_filename)
+    expected_model_path = "tests/integration/fixtures/data_merge/result.yaml"
+
+    base_args = [
+        "-d",
+        os.path.join(data_path, "file1.yaml"),
+        "-d",
+        os.path.join(data_path, "file2.yaml"),
+        "-t",
+        templates_path,
+        "-o",
+        tmpdir,
+        "--render-only",
+    ]
+
+    result = runner.invoke(nac_test.cli.main.app, base_args + cli_args)
+    assert result.exit_code == 0
+    assert os.path.exists(output_model_path)
+    assert filecmp.cmp(output_model_path, expected_model_path, shallow=False)
+>>>>>>> 903a1a2

@@ -115,6 +115,7 @@ def run_pabot(
             "xunit.xml",
         ]
     )
+<<<<<<< HEAD:nac_test/pabot.py
 
     # Parse and validate extra arguments against valid robot arguments. Exceptions related to illegal
     # args are caught here, and a rc is returned
@@ -129,3 +130,13 @@ def run_pabot(
     logger.info("Running pabot with args: %s", " ".join(args))
     exit_code: int = pabot.pabot.main_program(args)
     return exit_code
+=======
+    try:
+        pabot.pabot.main(args)
+    except SystemExit as e:
+        # Pabot calls sys.exit() when done - this is normal behavior
+        # Don't re-raise to allow nac-test runtime tracking to complete
+        if e.code != 0:
+            # Non-zero exit code indicates failure - re-raise to maintain error handling
+            raise
+>>>>>>> 903a1a2:nac_test/robot/pabot.py
