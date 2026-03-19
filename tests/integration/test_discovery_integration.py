@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Integration tests for TestDiscovery with TestTypeResolver.
+"""Integration tests for TestDiscovery with TestMetadataResolver.
 
-This module validates the integration between TestDiscovery and TestTypeResolver,
+This module validates the integration between TestDiscovery and TestMetadataResolver,
 testing the three-tier test type detection strategy:
 
     1. **AST Analysis** (Primary): Base class inheritance detection
@@ -17,6 +17,7 @@ Test Categories:
     - TestEdgeCases: Tests mixed scenarios and error handling
     - TestRelaxedPathRequirements: Tests for issue #475 - arbitrary directory naming
     - TestExcludePaths: Tests directory exclusion functionality
+    - TestTagFiltering: Tests tag-based filtering using include/exclude patterns
 """
 
 from pathlib import Path
@@ -48,8 +49,8 @@ class TestTenant(NACTestBase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         assert len(api_tests) == 1
         assert len(d2d_tests) == 0
@@ -71,8 +72,8 @@ class TestOSPF(SSHTestBase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         assert len(api_tests) == 0
         assert len(d2d_tests) == 1
@@ -100,8 +101,8 @@ class TestDeviceSSH(SSHTestBase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         # Should be D2D based on base class (AST priority)
         assert len(api_tests) == 0
@@ -128,8 +129,8 @@ class TestEPG(APICTestBase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         # APICTestBase should be detected as API
         assert len(api_tests) == 1
@@ -156,8 +157,8 @@ class TestInterfaces(IOSXETestBase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         # IOSXETestBase should be detected as D2D
         assert len(api_tests) == 0
@@ -190,8 +191,8 @@ class TestTenant(aetest.Testcase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         assert len(api_tests) == 1
         assert len(d2d_tests) == 0
@@ -215,8 +216,8 @@ class TestRouting(aetest.Testcase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         assert len(api_tests) == 0
         assert len(d2d_tests) == 1
@@ -251,8 +252,8 @@ class TestSSH(aetest.Testcase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         assert len(api_tests) == 1
         assert len(d2d_tests) == 1
@@ -276,8 +277,8 @@ class TestOSPF(aetest.Testcase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         assert len(api_tests) == 0
         assert len(d2d_tests) == 1
@@ -314,8 +315,8 @@ class TestCustom(CustomTestBase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         # Should default to API
         assert len(api_tests) == 1
@@ -339,8 +340,8 @@ class TestFeature(aetest.Testcase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         # Should default to API
         assert len(api_tests) == 1
@@ -382,8 +383,8 @@ class TestVRFDevice(SSHTestBase):
 
         # Discover and categorize
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         # Both types should be detected in same directory
         assert len(api_tests) == 1
@@ -399,8 +400,8 @@ class TestVRFDevice(SSHTestBase):
 
         # Discover and categorize
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         assert len(api_tests) == 0
         assert len(d2d_tests) == 0
@@ -424,8 +425,8 @@ class TestOSPFNeighbors(SSHTestBase):
 
         # Discover and categorize
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
         # Should detect D2D even in deeply nested structure
         assert len(api_tests) == 0
@@ -469,11 +470,11 @@ class Test(aetest.Testcase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert "verify_test.py" in str(files[0])
-        assert not any("__pycache__" in str(f) for f in files)
+        assert plan.total_count == 1
+        assert "verify_test.py" in str(plan.all_tests[0])
+        assert not any("__pycache__" in str(t.path) for t in plan.all_tests)
 
     def test_skips_underscore_prefixed_files(self, tmp_path: Path) -> None:
         """Test that files starting with underscore are skipped."""
@@ -503,11 +504,11 @@ class Helper(aetest.Testcase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert "verify_test.py" in str(files[0])
-        assert not any("_helper.py" in str(f) for f in files)
+        assert plan.total_count == 1
+        assert "verify_test.py" in str(plan.all_tests[0])
+        assert not any("_helper.py" in str(t.path) for t in plan.all_tests)
 
     def test_skips_init_files(self, tmp_path: Path) -> None:
         """Test that __init__.py files are skipped."""
@@ -537,11 +538,11 @@ class Init(aetest.Testcase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert "verify_test.py" in str(files[0])
-        assert not any("__init__.py" in str(f) for f in files)
+        assert plan.total_count == 1
+        assert "verify_test.py" in str(plan.all_tests[0])
+        assert not any("__init__.py" in str(t.path) for t in plan.all_tests)
 
     def test_skips_files_without_aetest_decorators(self, tmp_path: Path) -> None:
         """Test that files with nac_test import but no @aetest decorators are skipped."""
@@ -569,12 +570,12 @@ class Helper:
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, skipped = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert "verify_test.py" in str(files[0])
+        assert plan.total_count == 1
+        assert "verify_test.py" in str(plan.all_tests[0])
         # The helper file should be in skipped list
-        skipped_names = [str(p) for p, _ in skipped]
+        skipped_names = [str(p) for p, _ in plan.skipped_files]
         assert any("helper_module.py" in name for name in skipped_names)
 
     def test_skips_files_without_nac_test_imports(self, tmp_path: Path) -> None:
@@ -604,12 +605,12 @@ class ThirdParty(aetest.Testcase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, skipped = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert "verify_test.py" in str(files[0])
+        assert plan.total_count == 1
+        assert "verify_test.py" in str(plan.all_tests[0])
         # The third party file should be in skipped list
-        skipped_names = [str(p) for p, _ in skipped]
+        skipped_names = [str(p) for p, _ in plan.skipped_files]
         assert any("third_party_test.py" in name for name in skipped_names)
 
     def test_skipped_files_logging_with_many_files(self, tmp_path: Path) -> None:
@@ -640,10 +641,10 @@ class Invalid(aetest.Testcase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, skipped = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert len(skipped) == 7  # All 7 invalid files should be skipped
+        assert plan.total_count == 1
+        assert len(plan.skipped_files) == 7  # All 7 invalid files should be skipped
 
     def test_has_pyats_tests_skips_non_python_files(self, tmp_path: Path) -> None:
         """Test that has_pyats_tests() skips non-.py files."""
@@ -724,10 +725,10 @@ class TestD2D{i}(SSHTestBase):
 
         # Time the categorization
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
         start_time = time.perf_counter()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
         elapsed = time.perf_counter() - start_time
 
         # Verify results
@@ -762,10 +763,10 @@ class TestFeature(NACTestBase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert "verify_feature.py" in str(files[0])
+        assert plan.total_count == 1
+        assert "verify_feature.py" in str(plan.all_tests[0])
 
     def test_root_level_test_file(self, tmp_path: Path) -> None:
         """Test that test files at root level are discovered."""
@@ -781,10 +782,10 @@ class TestRoot(NACTestBase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert "verify_root.py" in str(files[0])
+        assert plan.total_count == 1
+        assert "verify_root.py" in str(plan.all_tests[0])
 
     def test_custom_project_structure(self, tmp_path: Path) -> None:
         """Test discovery in completely custom project structures."""
@@ -803,12 +804,12 @@ class TestConnectivity(SSHTestBase):
 """)
 
         discovery = TestDiscovery(tmp_path)
-        files, _ = discovery.discover_pyats_tests()
-        api_tests, d2d_tests = discovery.categorize_tests_by_type(files)
+        plan = discovery.discover_pyats_tests()
+        api_tests, d2d_tests = plan.api_paths, plan.d2d_paths
 
-        assert len(files) == 1
+        assert len(api_tests) == 0
         assert len(d2d_tests) == 1
-        assert "verify_connectivity.py" in str(files[0])
+        assert "verify_connectivity.py" in str(d2d_tests[0])
 
     def test_has_pyats_tests_returns_true_on_first_match(self, tmp_path: Path) -> None:
         """Test that has_pyats_tests() returns True and exits early on first match."""
@@ -909,11 +910,11 @@ class TestSomething(NACTestBase):
 """)
 
         discovery = TestDiscovery(tmp_path, exclude_paths=[filters_dir])
-        files, _ = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert "verify_test.py" in str(files[0])
-        assert not any("custom_filter.py" in str(f) for f in files)
+        assert plan.total_count == 1
+        assert "verify_test.py" in str(plan.all_tests[0])
+        assert not any("custom_filter.py" in str(t.path) for t in plan.all_tests)
 
     def test_exclude_multiple_directories(self, tmp_path: Path) -> None:
         """Test excluding multiple directories."""
@@ -955,10 +956,10 @@ class TestSomething(NACTestBase):
         discovery = TestDiscovery(
             tmp_path, exclude_paths=[filters_dir, jinja_tests_dir]
         )
-        files, _ = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert "verify_test.py" in str(files[0])
+        assert plan.total_count == 1
+        assert "verify_test.py" in str(plan.all_tests[0])
 
     def test_exclude_nested_directory(self, tmp_path: Path) -> None:
         """Test that nested directories within exclude paths are also excluded."""
@@ -990,7 +991,433 @@ class TestSomething(NACTestBase):
 """)
 
         discovery = TestDiscovery(tmp_path, exclude_paths=[exclude_dir])
-        files, _ = discovery.discover_pyats_tests()
+        plan = discovery.discover_pyats_tests()
 
-        assert len(files) == 1
-        assert "verify_test.py" in str(files[0])
+        assert plan.total_count == 1
+        assert "verify_test.py" in str(plan.all_tests[0])
+
+
+class TestTagFiltering:
+    """Test tag-based filtering of PyATS tests.
+
+    These tests verify that pyATS tests can be filtered based on their
+    `groups` class attribute using Robot Framework tag pattern semantics.
+    """
+
+    def test_include_filter_single_tag(self, tmp_path: Path) -> None:
+        """Test filtering tests with a single include tag."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_health.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealth(NACTestBase):
+    groups = ["health"]
+
+    @aetest.test
+    def test_health(self):
+        pass
+""")
+
+        (test_dir / "test_bgp.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestBGP(NACTestBase):
+    groups = ["bgp"]
+
+    @aetest.test
+    def test_bgp(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests(include_tags=["health"])
+
+        assert plan.total_count == 1
+        assert "test_health.py" in str(plan.all_tests[0])
+
+    def test_include_filter_multiple_tags_or(self, tmp_path: Path) -> None:
+        """Test filtering tests with multiple include tags (OR logic)."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_health.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealth(NACTestBase):
+    groups = ["health"]
+
+    @aetest.test
+    def test_health(self):
+        pass
+""")
+
+        (test_dir / "test_bgp.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestBGP(NACTestBase):
+    groups = ["bgp"]
+
+    @aetest.test
+    def test_bgp(self):
+        pass
+""")
+
+        (test_dir / "test_ospf.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestOSPF(NACTestBase):
+    groups = ["ospf"]
+
+    @aetest.test
+    def test_ospf(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests(include_tags=["health", "bgp"])
+
+        assert plan.total_count == 2
+        filenames = [t.path.name for t in plan.all_tests]
+        assert "test_health.py" in filenames
+        assert "test_bgp.py" in filenames
+        assert "test_ospf.py" not in filenames
+
+    def test_exclude_filter_single_tag(self, tmp_path: Path) -> None:
+        """Test filtering tests with a single exclude tag."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_health.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealth(NACTestBase):
+    groups = ["health"]
+
+    @aetest.test
+    def test_health(self):
+        pass
+""")
+
+        (test_dir / "test_nrfu.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestNRFU(NACTestBase):
+    groups = ["nrfu"]
+
+    @aetest.test
+    def test_nrfu(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests(include_tags=["health"])
+
+        assert plan.total_count == 1
+        assert "test_health.py" in str(plan.all_tests[0])
+
+    def test_combined_include_exclude(self, tmp_path: Path) -> None:
+        """Test combined include and exclude filtering."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_health_fast.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealthFast(NACTestBase):
+    groups = ["health"]
+
+    @aetest.test
+    def test_health_fast(self):
+        pass
+""")
+
+        (test_dir / "test_health_slow.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealthSlow(NACTestBase):
+    groups = ["health", "nrfu"]
+
+    @aetest.test
+    def test_health_slow(self):
+        pass
+""")
+
+        (test_dir / "test_bgp.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestBGP(NACTestBase):
+    groups = ["bgp"]
+
+    @aetest.test
+    def test_bgp(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests(
+            include_tags=["health"], exclude_tags=["nrfu"]
+        )
+
+        assert plan.total_count == 1
+        assert "test_health_fast.py" in str(plan.all_tests[0])
+
+    def test_tests_without_groups_included_when_no_filters(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that tests without groups are included when no filters."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_no_groups.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestNoGroups(NACTestBase):
+    @aetest.test
+    def test_something(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests()
+
+        assert plan.total_count == 1
+        assert "test_no_groups.py" in str(plan.all_tests[0])
+
+    def test_tests_without_groups_excluded_when_include_filter(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that tests without groups are excluded when include filter is set."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_no_groups.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestNoGroups(NACTestBase):
+    @aetest.test
+    def test_something(self):
+        pass
+""")
+
+        (test_dir / "test_health.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealth(NACTestBase):
+    groups = ["health"]
+
+    @aetest.test
+    def test_health(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests(include_tags=["health"])
+
+        assert plan.total_count == 1
+        assert "test_health.py" in str(plan.all_tests[0])
+
+    def test_tests_without_groups_included_when_only_exclude_filter(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that tests without groups are included when only exclude filter."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_no_groups.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestNoGroups(NACTestBase):
+    @aetest.test
+    def test_something(self):
+        pass
+""")
+
+        (test_dir / "test_nrfu.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestNRFU(NACTestBase):
+    groups = ["nrfu"]
+
+    @aetest.test
+    def test_nrfu(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests(exclude_tags=["nrfu"])
+
+        assert plan.total_count == 1
+        assert "test_no_groups.py" in str(plan.all_tests[0])
+
+    def test_all_tests_filtered_out_returns_empty(self, tmp_path: Path) -> None:
+        """Test that empty list is returned when all tests are filtered out."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_bgp.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestBGP(NACTestBase):
+    groups = ["bgp"]
+
+    @aetest.test
+    def test_bgp(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests(include_tags=["health"])
+
+        assert plan.total_count == 0
+
+    def test_robot_or_pattern(self, tmp_path: Path) -> None:
+        """Test Robot Framework OR pattern (healthORbgp)."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_health.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealth(NACTestBase):
+    groups = ["health"]
+
+    @aetest.test
+    def test_health(self):
+        pass
+""")
+
+        (test_dir / "test_bgp.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestBGP(NACTestBase):
+    groups = ["bgp"]
+
+    @aetest.test
+    def test_bgp(self):
+        pass
+""")
+
+        (test_dir / "test_ospf.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestOSPF(NACTestBase):
+    groups = ["ospf"]
+
+    @aetest.test
+    def test_ospf(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests(include_tags=["healthORbgp"])
+
+        assert plan.total_count == 2
+        filenames = [t.path.name for t in plan.all_tests]
+        assert "test_health.py" in filenames
+        assert "test_bgp.py" in filenames
+
+    def test_robot_and_pattern(self, tmp_path: Path) -> None:
+        """Test Robot Framework AND pattern (healthANDbgp)."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_health_bgp.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealthBGP(NACTestBase):
+    groups = ["health", "bgp"]
+
+    @aetest.test
+    def test_health_bgp(self):
+        pass
+""")
+
+        (test_dir / "test_health.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealth(NACTestBase):
+    groups = ["health"]
+
+    @aetest.test
+    def test_health(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests(include_tags=["healthANDbgp"])
+
+        assert plan.total_count == 1
+        assert "test_health_bgp.py" in str(plan.all_tests[0])
+
+    def test_robot_wildcard_pattern(self, tmp_path: Path) -> None:
+        """Test Robot Framework wildcard pattern (health*)."""
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir(parents=True)
+
+        (test_dir / "test_health_basic.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealthBasic(NACTestBase):
+    groups = ["health_basic"]
+
+    @aetest.test
+    def test_health_basic(self):
+        pass
+""")
+
+        (test_dir / "test_healthcheck.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestHealthcheck(NACTestBase):
+    groups = ["healthcheck"]
+
+    @aetest.test
+    def test_healthcheck(self):
+        pass
+""")
+
+        (test_dir / "test_bgp.py").write_text("""
+from pyats import aetest
+from nac_test.pyats_core.common.base_test import NACTestBase
+
+class TestBGP(NACTestBase):
+    groups = ["bgp"]
+
+    @aetest.test
+    def test_bgp(self):
+        pass
+""")
+
+        discovery = TestDiscovery(tmp_path)
+        plan = discovery.discover_pyats_tests(include_tags=["health*"])
+
+        assert plan.total_count == 2
+        filenames = [t.path.name for t in plan.all_tests]
+        assert "test_health_basic.py" in filenames
+        assert "test_healthcheck.py" in filenames
+        assert "test_bgp.py" not in filenames

@@ -231,6 +231,8 @@ class TestCombinedOrchestratorController:
                     dry_run=False,
                     verbose=False,
                     loglevel=DEFAULT_LOGLEVEL,
+                    include_tags=[],
+                    exclude_tags=[],
                 )
 
                 # Verify run_tests was called on the instance
@@ -400,6 +402,8 @@ class TestCombinedOrchestratorController:
                     dry_run=False,
                     verbose=False,
                     loglevel=DEFAULT_LOGLEVEL,
+                    include_tags=[],
+                    exclude_tags=[],
                 )
 
                 # Verify run_tests was called on the instance

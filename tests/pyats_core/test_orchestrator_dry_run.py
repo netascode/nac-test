@@ -9,9 +9,30 @@ from unittest.mock import patch
 import pytest
 
 from nac_test.core.constants import DRY_RUN_REASON
+from nac_test.pyats_core.discovery.test_type_resolver import (
+    TestExecutionPlan,
+    TestFileMetadata,
+)
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
 from .conftest import PyATSTestDirs
+
+
+def _make_execution_plan(
+    api_paths: list[Path], d2d_paths: list[Path]
+) -> TestExecutionPlan:
+    """Create a TestExecutionPlan from path lists for test mocking."""
+    api_tests = [TestFileMetadata(path=p, test_type="api") for p in api_paths]
+    d2d_tests = [TestFileMetadata(path=p, test_type="d2d") for p in d2d_paths]
+    test_type_by_path = {p.resolve(): "api" for p in api_paths}
+    test_type_by_path.update({p.resolve(): "d2d" for p in d2d_paths})
+    return TestExecutionPlan(
+        api_tests=api_tests,
+        d2d_tests=d2d_tests,
+        skipped_files=[],
+        filtered_by_tags=0,
+        test_type_by_path=test_type_by_path,
+    )
 
 
 class TestOrchestratorDryRun:
@@ -36,21 +57,15 @@ class TestOrchestratorDryRun:
             dry_run=True,
         )
 
-        mock_api_tests = [api_test]
-        mock_d2d_tests: list[Path] = []
+        mock_plan = _make_execution_plan([api_test], [])
 
-        with (
-            patch.object(
-                orchestrator.test_discovery, "discover_pyats_tests"
-            ) as mock_discover,
-            patch.object(
-                orchestrator.test_discovery, "categorize_tests_by_type"
-            ) as mock_categorize,
-            patch.object(orchestrator, "validate_environment"),
-        ):
-            mock_discover.return_value = (mock_api_tests, [])
-            mock_categorize.return_value = (mock_api_tests, mock_d2d_tests)
-            result = orchestrator.run_tests()
+        with patch.object(
+            orchestrator.test_discovery, "discover_pyats_tests"
+        ) as mock_discover:
+            mock_discover.return_value = mock_plan
+
+            with patch.object(orchestrator, "validate_environment"):
+                result = orchestrator.run_tests()
 
         # Verify dry-run output
         captured = capsys.readouterr()
@@ -84,18 +99,15 @@ class TestOrchestratorDryRun:
             dry_run=True,
         )
 
-        with (
-            patch.object(
-                orchestrator.test_discovery, "discover_pyats_tests"
-            ) as mock_discover,
-            patch.object(
-                orchestrator.test_discovery, "categorize_tests_by_type"
-            ) as mock_categorize,
-            patch.object(orchestrator, "validate_environment"),
-        ):
-            mock_discover.return_value = ([api_test, d2d_test], [])
-            mock_categorize.return_value = ([api_test], [d2d_test])
-            result = orchestrator.run_tests()
+        mock_plan = _make_execution_plan([api_test], [d2d_test])
+
+        with patch.object(
+            orchestrator.test_discovery, "discover_pyats_tests"
+        ) as mock_discover:
+            mock_discover.return_value = mock_plan
+
+            with patch.object(orchestrator, "validate_environment"):
+                result = orchestrator.run_tests()
 
         # Both API and D2D should have not_run results
         assert result.api is not None
@@ -118,19 +130,18 @@ class TestOrchestratorDryRun:
             dry_run=True,
         )
 
-        with (
-            patch.object(
-                orchestrator.test_discovery, "discover_pyats_tests"
-            ) as mock_discover,
-            patch.object(
-                orchestrator.test_discovery, "categorize_tests_by_type"
-            ) as mock_categorize,
-            patch.object(orchestrator, "validate_environment"),
-            patch.object(orchestrator, "_execute_api_tests_standard") as mock_execute,
-        ):
-            mock_discover.return_value = ([api_test], [])
-            mock_categorize.return_value = ([api_test], [])
-            orchestrator.run_tests()
+        mock_plan = _make_execution_plan([api_test], [])
+
+        with patch.object(
+            orchestrator.test_discovery, "discover_pyats_tests"
+        ) as mock_discover:
+            mock_discover.return_value = mock_plan
+
+            with patch.object(orchestrator, "validate_environment"):
+                with patch.object(
+                    orchestrator, "_execute_api_tests_standard"
+                ) as mock_execute:
+                    orchestrator.run_tests()
 
         mock_execute.assert_not_called()
 
@@ -149,14 +160,15 @@ class TestOrchestratorDryRun:
             dry_run=True,
         )
 
-        with (
-            patch.object(
-                orchestrator.test_discovery, "discover_pyats_tests"
-            ) as mock_discover,
-            patch.object(orchestrator, "validate_environment"),
-        ):
-            mock_discover.return_value = ([], [])
-            result = orchestrator.run_tests()
+        mock_plan = _make_execution_plan([], [])
+
+        with patch.object(
+            orchestrator.test_discovery, "discover_pyats_tests"
+        ) as mock_discover:
+            mock_discover.return_value = mock_plan
+
+            with patch.object(orchestrator, "validate_environment"):
+                result = orchestrator.run_tests()
 
         # Should return empty results (no tests found message)
         captured = capsys.readouterr()

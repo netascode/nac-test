@@ -514,3 +514,75 @@ def e2e_windows_pyats_skip_results(
         tmp_path_factory,
         class_mocker,
     )
+
+
+@pytest.fixture(scope="class")
+def e2e_tag_filter_include_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    from tests.e2e.config import TAG_FILTER_INCLUDE_SCENARIO
+
+    return _run_e2e_scenario(
+        TAG_FILTER_INCLUDE_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--include", "bgp"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_tag_filter_exclude_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    from tests.e2e.config import TAG_FILTER_EXCLUDE_SCENARIO
+
+    return _run_e2e_scenario(
+        TAG_FILTER_EXCLUDE_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--exclude", "ospf"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_tag_filter_combined_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    from tests.e2e.config import TAG_FILTER_COMBINED_SCENARIO
+
+    return _run_e2e_scenario(
+        TAG_FILTER_COMBINED_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--include", "api-only"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_tag_filter_no_match_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    from tests.e2e.config import TAG_FILTER_NO_MATCH_SCENARIO
+
+    return _run_e2e_scenario(
+        TAG_FILTER_NO_MATCH_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--exclude", "bgpORospf"],
+    )

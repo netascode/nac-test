@@ -9,6 +9,8 @@ throughout the NAC test automation framework.
 """
 
 import sys
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import (
     Any,
     Generic,
@@ -31,6 +33,83 @@ else:
     from typing_extensions import TypedDict
 
 from nac_test.pyats_core.reporting.types import ResultStatus
+
+DEFAULT_TEST_TYPE = "api"
+
+
+@dataclass
+class TestFileMetadata:
+    """Metadata extracted from a PyATS test file.
+
+    Attributes:
+        path: Absolute path to the test file
+        test_type: The test type ("api" or "d2d")
+        groups: List of group tags from the test class's `groups` attribute.
+                Empty list if no groups are defined.
+    """
+
+    path: Path
+    test_type: str
+    groups: list[str] = field(default_factory=list)
+
+
+@dataclass
+class TestExecutionPlan:
+    """Complete test execution context from discovery through results analysis.
+
+    This dataclass carries all information needed for test execution and
+    post-execution analysis in a single pass, eliminating the need for:
+    - Separate categorization calls after discovery
+    - Re-instantiating TestMetadataResolver post-execution
+
+    The pre-computed `test_type_by_path` dictionary enables O(1) lookups
+    during post-execution result splitting, replacing the previous pattern
+    of re-parsing test files to determine their types.
+
+    Attributes:
+        api_tests: List of API test metadata (controller/REST tests)
+        d2d_tests: List of D2D test metadata (Direct-to-Device/SSH tests)
+        skipped_files: List of (path, reason) tuples for files skipped during discovery
+        filtered_by_tags: Count of tests filtered out by tag patterns
+        test_type_by_path: Pre-computed mapping of resolved paths to test types
+    """
+
+    api_tests: list[TestFileMetadata]
+    d2d_tests: list[TestFileMetadata]
+    skipped_files: list[tuple[Path, str]]
+    filtered_by_tags: int
+    test_type_by_path: dict[Path, str] = field(default_factory=dict)
+
+    @property
+    def all_tests(self) -> list[TestFileMetadata]:
+        """All discovered tests (API + D2D combined)."""
+        return self.api_tests + self.d2d_tests
+
+    @property
+    def total_count(self) -> int:
+        """Total number of discovered tests."""
+        return len(self.api_tests) + len(self.d2d_tests)
+
+    @property
+    def api_paths(self) -> list[Path]:
+        """API test paths for execution."""
+        return [t.path for t in self.api_tests]
+
+    @property
+    def d2d_paths(self) -> list[Path]:
+        """D2D test paths for execution."""
+        return [t.path for t in self.d2d_tests]
+
+    def get_test_type(self, test_file: Path | str | None) -> str:
+        """Get test type for a file path. Used post-execution for status splitting."""
+        if test_file is None:
+            return DEFAULT_TEST_TYPE
+        path = (
+            Path(test_file).resolve()
+            if isinstance(test_file, str)
+            else test_file.resolve()
+        )
+        return self.test_type_by_path.get(path, DEFAULT_TEST_TYPE)
 
 
 class ApiDetails(TypedDict, total=False):

@@ -59,9 +59,7 @@ ROBOT_TIMESTAMP_FORMAT_NO_MS: str = "%Y%m%d %H:%M:%S"
 # Exit codes
 # Note: EXIT_SUCCESS (0) is intentionally not defined here - zero is a universal
 # POSIX convention that never changes, so a named constant adds no clarity.
-EXIT_INVALID_ARGS: int = (
-    2  # Invalid nac-test arguments (aligns with POSIX/Typer convention)
-)
+EXIT_INVALID_ARGS: int = 2  # Invalid nac-test arguments
 EXIT_FAILURE_CAP: int = 250  # Maximum failure count reported (1-250)
 EXIT_DATA_ERROR: int = 252  # Invalid Robot Framework arguments OR no tests found (matches Robot Framework naming)
 EXIT_INTERRUPTED: int = 253  # Execution was interrupted (Ctrl+C, etc.)
