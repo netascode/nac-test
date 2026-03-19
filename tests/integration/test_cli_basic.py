@@ -18,6 +18,7 @@ import nac_test.cli.main
 
 pytestmark = [
     pytest.mark.integration,
+    pytest.mark.windows,
 ]
 
 

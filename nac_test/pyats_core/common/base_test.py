@@ -21,8 +21,7 @@ from typing import (
 )
 
 import httpx
-import markdown  # type: ignore[import-untyped]
-import yaml  # type: ignore[import-untyped]
+import markdown
 from pyats import aetest
 
 import nac_test.pyats_core.reporting.step_interceptor as interceptor_module
@@ -31,6 +30,9 @@ from nac_test.core.constants import (
     PYATS_RESULTS_DIRNAME,
 )
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
+from nac_test.pyats_core.common.defaults_resolver import (
+    resolve_default_value,
+)
 from nac_test.pyats_core.common.retry_strategy import SmartRetry
 from nac_test.pyats_core.common.types import (
     ApiDetails,
@@ -42,8 +44,13 @@ from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.utils import sanitize_hostname
-from nac_test.utils.controller import detect_controller_type
+from nac_test.utils.controller import (
+    detect_controller_type,
+    get_controller_url,
+    get_defaults_prefix,
+)
 from nac_test.utils.formatting import format_file_timestamp_ms
+from nac_test.utils.yaml import safe_load
 
 T = TypeVar("T")
 
@@ -82,39 +89,6 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         "ERRORED": ResultStatus.ERRORED,
         "INFO": ResultStatus.INFO,
     }
-
-    # def __init_subclass__(cls, **kwargs):
-    #     """Enforce required class variables in subclasses.
-
-    #     This method validates that concrete test classes define required
-    #     class variables for proper test metadata and reporting.
-
-    #     Args:
-    #         **kwargs: Additional keyword arguments passed to super().__init_subclass__
-
-    #     Raises:
-    #         TypeError: If required class variables are not defined
-    #     """
-    #     super().__init_subclass__(**kwargs)
-
-    #     # Skip validation for known abstract intermediate classes
-    #     # These classes extend NACTestBase but are still meant to be subclassed
-    #     abstract_classes = {
-    #         'APICTestBase',
-    #         'SSHTestBase',
-    #         'NACTestBase'  # Include self to handle edge cases
-    #     }
-
-    #     if cls.__name__ in abstract_classes:
-    #         return
-
-    #     # Enforce TEST_TYPE_NAME for concrete test classes
-    #     if not hasattr(cls, 'TEST_TYPE_NAME') or cls.TEST_TYPE_NAME is None:
-    #         raise TypeError(
-    #             f"{cls.__name__} must define TEST_TYPE_NAME class variable. "
-    #             f"Example: TEST_TYPE_NAME = 'BGP Peer' or 'Bridge Domain' or 'BFD Session'. "
-    #             f"This should be a human-readable name for the type of network element being tested."
-    #         )
 
     @classmethod
     @lru_cache(maxsize=1)
@@ -182,7 +156,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         return html
 
-    @aetest.setup  # type: ignore[untyped-decorator]
+    @aetest.setup  # type: ignore[misc]
     def setup(self) -> None:
         """Common setup for all tests"""
         # Configure test-specific logger
@@ -201,9 +175,11 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             self.logger.error(f"Controller detection failed: {e}")
             raise
 
-        self.controller_url = os.environ[f"{self.controller_type}_URL"]
-        self.username = os.environ[f"{self.controller_type}_USERNAME"]
-        self.password = os.environ[f"{self.controller_type}_PASSWORD"]
+        self.controller_url = get_controller_url(self.controller_type)
+        # USERNAME and PASSWORD are optional for some controller types (e.g., IOSXE)
+        # D2D tests use device-specific credentials from inventory, not controller credentials
+        self.username = os.environ.get(f"{self.controller_type}_USERNAME")
+        self.password = os.environ.get(f"{self.controller_type}_PASSWORD")
 
         # Connection pool is shared within process (for API tests)
         self.pool = ConnectionPool()
@@ -806,8 +782,70 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             )
 
         with open(data_file) as f:
-            data = yaml.safe_load(f)
+            data = safe_load(f)
             return data if isinstance(data, dict) else {}
+
+    def get_default_value(
+        self,
+        *default_paths: str,
+        required: bool = True,
+    ) -> Any | None:
+        """Read default value(s) from defaults block with cascade/fallback support.
+
+        This method allows test classes to read default configuration values from
+        the merged NAC data model. It supports cascade behavior - when multiple
+        paths are provided, the first non-None value found is returned.
+
+        Architecture Detection:
+            The defaults prefix is automatically determined from the controller type
+            detected via environment variables (ACI_URL, SDWAN_URL, etc.). No manual
+            configuration is needed - the framework automatically maps:
+            - ACI (ACI_URL) → defaults.apic
+            - SD-WAN (SDWAN_URL) → defaults.sdwan
+            - Catalyst Center (CC_URL) → defaults.catc
+            - IOS-XE (IOSXE_URL) → defaults.iosxe
+            - Meraki (MERAKI_URL) → defaults.meraki
+            - FMC (FMC_URL) → defaults.fmc
+            - ISE (ISE_URL) → defaults.ise
+
+        Args:
+            *default_paths: One or more JMESPaths relative to the auto-detected prefix.
+                Single path: self.get_default_value("tenants.l3outs.nodes.pod")
+                Cascade: self.get_default_value("path1", "path2", "path3")
+            required: If True (default), raises ValueError when no value found.
+                If False, returns None when no value found.
+
+        Returns:
+            The first non-None default value found from the provided paths.
+            Returns None only if required=False and no value exists.
+
+        Raises:
+            ValueError: If no controller environment is detected, or if required
+                value is not found at any of the specified paths.
+            TypeError: If no paths are provided.
+
+        Example:
+            class MyACITest(APICTestBase):
+                def get_items_to_verify(self):
+                    # Auto-detects ACI_URL → uses "defaults.apic" prefix
+                    default_pod = self.get_default_value("tenants.l3outs.nodes.pod")
+
+                    # Cascade - returns first found
+                    default_admin = self.get_default_value(
+                        "tenants.l3outs.bgp_peers.admin_state",
+                        "tenants.bgp_peers.admin_state",
+                    )
+        """
+        # Use controller type already detected in setup()
+        # No need to re-detect (would perform 21 env var lookups)
+        defaults_prefix = get_defaults_prefix(self.controller_type)
+
+        return resolve_default_value(
+            self.data_model,
+            *default_paths,
+            defaults_prefix=defaults_prefix,
+            required=required,
+        )
 
     # =========================================================================
     # API-SPECIFIC METHODS (for API/HTTP-based tests)
@@ -2495,7 +2533,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 reason if reason else f"Test completed with status: {status}",
             )
 
-    @aetest.cleanup  # type: ignore[untyped-decorator]
+    @aetest.cleanup  # type: ignore[misc]
     def cleanup(self) -> None:
         """Clean up test resources and save test results.
 

@@ -18,6 +18,23 @@ import pytest
 
 from tests.e2e.mocks.mock_server import MockAPIServer
 
+
+def assert_is_link_to(link: Path, source: Path) -> None:
+    """Assert that link points to source as either a hard link or symlink."""
+    if link.is_symlink():
+        assert link.resolve() == source, (
+            f"Symlink points to wrong location:\n"
+            f"  Expected: {source}\n"
+            f"  Got: {link.resolve()}"
+        )
+    else:
+        assert link.stat().st_ino == source.stat().st_ino, (
+            f"Hard link mismatch:\n"
+            f"  Link inode: {link.stat().st_ino}\n"
+            f"  Source inode: {source.stat().st_ino}"
+        )
+
+
 # Path to the mock API configuration file
 MOCK_API_CONFIG_PATH = Path(__file__).parent / "e2e" / "mocks" / "mock_api_config.yaml"
 

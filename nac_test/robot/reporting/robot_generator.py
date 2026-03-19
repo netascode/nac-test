@@ -120,7 +120,7 @@ class RobotReportGenerator:
 
             # Write summary report
             summary_path = self.robot_results_dir / SUMMARY_REPORT_FILENAME
-            summary_path.write_text(html_content)
+            summary_path.write_text(html_content, encoding="utf-8")
 
             logger.info(f"Generated Robot summary report: {summary_path}")
             logger.info(
