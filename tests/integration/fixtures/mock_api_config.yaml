@@ -373,6 +373,37 @@ endpoints:
           deviceModel: "vedge-C8000V"
           personality: "vedge"
 
+  # Catalyst Center Authentication
+  - name: "Catalyst Center Authentication"
+    path_pattern: "/dna/system/api/v1/auth/token"
+    match_type: "exact"
+    method: "POST"
+    status_code: 200
+    response_data:
+      Token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NzU2ZDJhYmEyZTg1NzNkMGY1ZTNhNjgiLCJhdXRoU291cmNlIjoiaW50ZXJuYWwiLCJ0ZW5hbnROYW1lIjoiVE5UMCIsInJvbGVzIjpbIjY3NTZkMmFiYTJlODU3M2QwZjVlM2E1MiJdLCJ0ZW5hbnRJZCI6IjY3NTZkMmFiYTJlODU3M2QwZjVlM2E0OSIsImV4cCI6MTczNzM4MzYwOSwidXNlcm5hbWUiOiJhZG1pbiJ9.KvRo3_XZ8yK1vH2Gm9Lp7Qn6rE5dN4cO8wT1sY0mU3jF9xW2hA6kB8vP5lN7qI4oR3eD1fJ0gS2tU9nM6pL8iV4rB7cZ5kW1xN0yH3qG6mD9vF2sE8jT4nL7oP1wR5bA"
+
+  # Catalyst Center System Health
+  - name: "Catalyst Center System Health"
+    path_pattern: "/dna/intent/api/v1/diagnostics/system/health"
+    match_type: "contains"
+    method: "GET"
+    status_code: 200
+    response_data:
+      healthEvents:
+        - severity: 2
+          hostname: "kdna-dnac-03-vm.cisco.com"
+          instance: "kdna-dnac-03-vm.cisco.com:Internet URL Access"
+          subDomain: "Internet Access"
+          domain: "System"
+          description: "The following URLs are not reachable directly: http://validation.identrust.com/crl/hydrantidcao1.crl, http://commercial.ocsp.identrust.com."
+          state: "NotOk"
+          timestamp: "1765977209566"
+          status: "Warning"
+      hostname: "kdna-dnac-03-vm.cisco.com"
+      version: "1"
+      cimcaddress:
+        - "Cimc is not configured, please configure it from Settings->System Health Page."
+
   # SD-WAN Manager endpoints
   - name: "SD-WAN Manager Device Health"
     path_pattern: "/dataservice/health/devices"
