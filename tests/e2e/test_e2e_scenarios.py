@@ -18,6 +18,7 @@ This approach:
 """
 
 import logging
+import re
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -529,6 +530,140 @@ class E2ECombinedTestBase:
         assert abs(stats.success_rate - expected_rate) < 0.1, (
             f"Expected {expected_rate:.1f}% success rate, got {stats.success_rate}%"
         )
+
+    # -------------------------------------------------------------------------
+    # Hostname Display Tests (for D2D scenarios)
+    # -------------------------------------------------------------------------
+
+    def test_hostnames_in_console_output(self, results: E2EResults) -> None:
+        """Verify hostnames appear in console output with correct format."""
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
+
+        from tests.e2e.html_helpers import verify_hostname_in_console_output
+
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
+        assert results.scenario.expected_d2d_hostnames is not None
+        found_hostnames = verify_hostname_in_console_output(
+            results.stdout, results.scenario.expected_d2d_hostnames
+        )
+        assert len(found_hostnames) > 0, "No hostnames found in console output"
+
+    def test_hostnames_in_d2d_summary_table(self, results: E2EResults) -> None:
+        """Verify hostnames appear in PyATS D2D summary table."""
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
+
+        from tests.e2e.html_helpers import assert_hostname_display_in_summary
+
+        summary_path = (
+            results.output_dir
+            / PYATS_RESULTS_DIRNAME
+            / "d2d"
+            / HTML_REPORTS_DIRNAME
+            / SUMMARY_REPORT_FILENAME
+        )
+
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
+        assert results.scenario.expected_d2d_hostnames is not None
+        found_hostnames = assert_hostname_display_in_summary(
+            summary_path, results.scenario.expected_d2d_hostnames
+        )
+        assert len(found_hostnames) > 0, "No hostnames found in summary table"
+
+    def test_hostnames_in_d2d_detail_pages(self, results: E2EResults) -> None:
+        """Verify hostnames appear in PyATS D2D detail page headers."""
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
+
+        from tests.e2e.html_helpers import assert_hostname_display_in_detail_pages
+
+        # Find all D2D HTML detail files
+        d2d_reports_dir = (
+            results.output_dir / PYATS_RESULTS_DIRNAME / "d2d" / HTML_REPORTS_DIRNAME
+        )
+        detail_files = list(d2d_reports_dir.glob("*.html"))
+        # Exclude summary report
+        detail_files = [f for f in detail_files if f.name != SUMMARY_REPORT_FILENAME]
+
+        assert len(detail_files) > 0, "No D2D detail HTML files found"
+
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
+        assert results.scenario.expected_d2d_hostnames is not None
+        found_hostnames = assert_hostname_display_in_detail_pages(
+            detail_files, results.scenario.expected_d2d_hostnames
+        )
+        assert len(found_hostnames) > 0, "No hostnames found in detail pages"
+
+    def test_hostnames_in_d2d_html_filenames(self, results: E2EResults) -> None:
+        """Verify hostnames are included in D2D HTML filenames."""
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
+
+        from nac_test.utils import sanitize_hostname
+        from tests.e2e.html_helpers import assert_hostname_in_filenames
+
+        # Guaranteed by E2EScenario.validate() when has_pyats_d2d_tests > 0
+        assert results.scenario.expected_d2d_hostnames is not None
+        sanitized_hostnames = [
+            sanitize_hostname(hostname)
+            for hostname in results.scenario.expected_d2d_hostnames
+        ]
+
+        # Find all D2D HTML detail files
+        d2d_reports_dir = (
+            results.output_dir / PYATS_RESULTS_DIRNAME / "d2d" / HTML_REPORTS_DIRNAME
+        )
+        detail_files = list(d2d_reports_dir.glob("*.html"))
+        # Exclude summary report (doesn't have hostname in filename)
+        detail_files = [f for f in detail_files if f.name != SUMMARY_REPORT_FILENAME]
+
+        assert len(detail_files) > 0, "No D2D detail HTML files found"
+
+        assert_hostname_in_filenames(detail_files, sanitized_hostnames)
+
+    def test_api_tests_have_no_hostname(self, results: E2EResults) -> None:
+        """Verify PyATS API tests do not show hostnames (API tests don't have devices)."""
+        if not results.scenario.has_pyats_api_tests:
+            pytest.skip("No PyATS API tests in this scenario")
+
+        # Check API summary table - should not contain any hostnames with parentheses
+        api_summary_path = (
+            results.output_dir
+            / PYATS_RESULTS_DIRNAME
+            / "api"
+            / HTML_REPORTS_DIRNAME
+            / SUMMARY_REPORT_FILENAME
+        )
+
+        html_content = load_html_file(api_summary_path)
+
+        # If we have D2D hostnames defined, make sure they don't appear in API reports
+        if results.scenario.expected_d2d_hostnames:
+            for hostname in results.scenario.expected_d2d_hostnames:
+                assert f"({hostname})" not in html_content, (
+                    f"Found hostname '{hostname}' in API summary, but API tests should not have hostnames"
+                )
+
+    def test_hostname_sanitization_in_filenames(self, results: E2EResults) -> None:
+        """Verify special characters in hostnames are properly sanitized in filenames."""
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
+
+        # Find all D2D HTML detail files
+        d2d_reports_dir = (
+            results.output_dir / PYATS_RESULTS_DIRNAME / "d2d" / HTML_REPORTS_DIRNAME
+        )
+        detail_files = list(d2d_reports_dir.glob("*.html"))
+        detail_files = [f for f in detail_files if f.name != SUMMARY_REPORT_FILENAME]
+
+        for file_path in detail_files:
+            filename = file_path.name
+            # Verify filename only contains safe characters (alphanumeric, underscore, dash, dot)
+            unsafe_chars = re.findall(r"[^a-zA-Z0-9._-]", filename)
+            assert len(unsafe_chars) == 0, (
+                f"Filename contains unsafe characters: {filename} -> {unsafe_chars}"
+            )
 
 
 # =============================================================================
