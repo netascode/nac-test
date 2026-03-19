@@ -14,7 +14,12 @@ from nac_test.core.constants import (
     EXIT_INTERRUPTED,
     EXIT_INVALID_ARGS,
 )
-from nac_test.core.types import CombinedResults, ErrorType, TestResults
+from nac_test.core.types import (
+    CombinedResults,
+    ErrorType,
+    PreFlightFailure,
+    TestResults,
+)
 
 from .conftest import run_cli_with_temp_dirs
 
@@ -60,6 +65,17 @@ class TestMainExitCodes:
                 CombinedResults(robot=TestResults(passed=0, failed=300, skipped=0)),
                 EXIT_FAILURE_CAP,
             ),
+            (
+                CombinedResults(
+                    pre_flight_failure=PreFlightFailure(
+                        failure_type="auth",
+                        controller_type="ACI",
+                        controller_url="https://apic.test.local",
+                        detail="HTTP 401: Unauthorized",
+                    )
+                ),
+                1,
+            ),
         ],
         ids=[
             "all_tests_passed",
@@ -70,6 +86,7 @@ class TestMainExitCodes:
             "error_prioritized_over_failures",
             "robot_invalid_args_prioritized_over_other_errors",
             "failure_count_capped_at_250",
+            "preflight_failure_returns_255",
         ],
     )
     @patch("nac_test.cli.main.CombinedOrchestrator")

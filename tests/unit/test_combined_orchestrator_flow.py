@@ -11,6 +11,7 @@ These tests verify the orchestration flow using mocks to ensure:
 """
 
 import os
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -19,6 +20,7 @@ from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.types import CombinedResults, PyATSResults, TestResults
+from tests.unit.conftest import AUTH_SUCCESS
 
 
 class TestCombinedOrchestratorFlow:
@@ -38,6 +40,25 @@ class TestCombinedOrchestratorFlow:
         monkeypatch.setenv("ACI_URL", "https://apic.test.com")
         monkeypatch.setenv("ACI_USERNAME", "admin")
         monkeypatch.setenv("ACI_PASSWORD", "password")
+
+    @pytest.fixture(autouse=True)
+    def _mock_preflight_auth(self) -> Generator[None, None, None]:
+        """Mock controller detection and preflight auth for all tests.
+
+        These are only reached when has_pyats=True and not render_only,
+        but having them present for all tests is harmless.
+        """
+        with (
+            patch(
+                "nac_test.combined_orchestrator.detect_controller_type",
+                return_value="ACI",
+            ),
+            patch(
+                "nac_test.combined_orchestrator.preflight_auth_check",
+                return_value=AUTH_SUCCESS,
+            ),
+        ):
+            yield
 
     @pytest.fixture
     def orchestrator(self, tmp_path: Path) -> CombinedOrchestrator:

@@ -15,6 +15,7 @@ from typing import Any
 from robot.api import ExecutionResult
 from robot.result import ResultVisitor
 
+from nac_test.core.constants import ROBOT_TIMESTAMP_FORMAT, ROBOT_TIMESTAMP_FORMAT_NO_MS
 from nac_test.core.types import TestResults
 
 logger = logging.getLogger(__name__)
@@ -127,11 +128,11 @@ class TestDataCollector(ResultVisitor):
             return None
         try:
             # Try with milliseconds first
-            return datetime.strptime(timestamp_str, "%Y%m%d %H:%M:%S.%f")
+            return datetime.strptime(timestamp_str, ROBOT_TIMESTAMP_FORMAT)
         except ValueError:
             try:
                 # Try without milliseconds
-                return datetime.strptime(timestamp_str, "%Y%m%d %H:%M:%S")
+                return datetime.strptime(timestamp_str, ROBOT_TIMESTAMP_FORMAT_NO_MS)
             except ValueError:
                 logger.warning(f"Failed to parse timestamp: {timestamp_str}")
                 return None

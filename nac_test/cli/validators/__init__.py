@@ -13,5 +13,21 @@ Note:
 
 from nac_test.cli.validators.aci_defaults import validate_aci_defaults
 from nac_test.cli.validators.common import is_architecture_active
+from nac_test.cli.validators.controller_auth import (
+    AuthCheckResult,
+    preflight_auth_check,
+)
+from nac_test.core.error_classification import AuthOutcome
+from nac_test.utils.controller import CONTROLLER_REGISTRY, ControllerConfig
+from nac_test.utils.url import extract_host
 
-__all__ = ["is_architecture_active", "validate_aci_defaults"]
+__all__ = [
+    "AuthCheckResult",
+    "AuthOutcome",
+    "CONTROLLER_REGISTRY",
+    "ControllerConfig",
+    "extract_host",
+    "is_architecture_active",
+    "preflight_auth_check",
+    "validate_aci_defaults",
+]

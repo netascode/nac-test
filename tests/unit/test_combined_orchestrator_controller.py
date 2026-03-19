@@ -10,10 +10,12 @@ import pytest
 import typer
 from _pytest.monkeypatch import MonkeyPatch
 
+from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import EXIT_ERROR
 from nac_test.core.types import PyATSResults
 from nac_test.utils.logging import DEFAULT_LOGLEVEL
+from tests.unit.conftest import AUTH_SUCCESS
 
 PYATS_TEST_FILE_CONTENT = """
 # PyATS test file
@@ -33,23 +35,20 @@ class TestCombinedOrchestratorController:
     def _clean_env(self, clean_controller_env: None) -> None:
         """Apply shared clean_controller_env fixture to all tests in this class."""
 
-    def test_combined_orchestrator_detects_controller_on_init(
+    def test_controller_type_is_none_after_init(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
     ) -> None:
-        """Test that CombinedOrchestrator detects controller type during initialization."""
-        # Set up ACI credentials
+        """Controller type should be None after __init__ (detection deferred to run_tests)."""
         monkeypatch.setenv("ACI_URL", "https://apic.test.com")
         monkeypatch.setenv("ACI_USERNAME", "admin")
         monkeypatch.setenv("ACI_PASSWORD", "password")
 
-        # Create test directories
         data_dir = tmp_path / "data"
         data_dir.mkdir()
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         output_dir = tmp_path / "output"
 
-        # Initialize CombinedOrchestrator
         orchestrator = CombinedOrchestrator(
             data_paths=[data_dir],
             templates_dir=templates_dir,
@@ -57,33 +56,89 @@ class TestCombinedOrchestratorController:
             merged_data_filename="merged.yaml",
         )
 
-        # Verify controller type was detected
-        assert orchestrator.controller_type == "ACI"
+        # Controller detection is now deferred to run_tests()
+        assert orchestrator.controller_type is None
 
-    def test_combined_orchestrator_exits_on_detection_failure(
+    def test_controller_detected_during_run_tests(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
     ) -> None:
-        """Test that CombinedOrchestrator exits gracefully when controller detection fails."""
-        # No controller credentials set (already cleaned by fixture)
-        # Create test directories
+        """Controller type should be detected when run_tests() is called with PyATS tests."""
+        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
+        monkeypatch.setenv("ACI_USERNAME", "admin")
+        monkeypatch.setenv("ACI_PASSWORD", "password")
+
         data_dir = tmp_path / "data"
         data_dir.mkdir()
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         output_dir = tmp_path / "output"
+        output_dir.mkdir()
 
-        # Mock typer.secho to prevent output
-        with patch("typer.secho"):
-            # Initialize should raise typer.Exit
+        orchestrator = CombinedOrchestrator(
+            data_paths=[data_dir],
+            templates_dir=templates_dir,
+            output_dir=output_dir,
+            merged_data_filename="merged.yaml",
+            dev_pyats_only=True,
+        )
+
+        assert orchestrator.controller_type is None
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.preflight_auth_check",
+                return_value=AUTH_SUCCESS,
+            ),
+            patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats,
+            patch("nac_test.combined_orchestrator.CombinedReportGenerator") as mock_gen,
+            patch("typer.echo"),
+            patch("typer.secho"),
+            patch.object(CombinedOrchestrator, "_check_python_version"),
+        ):
+            mock_instance = MagicMock()
+            mock_instance.run_tests.return_value = PyATSResults()
+            mock_pyats.return_value = mock_instance
+            mock_gen_instance = MagicMock()
+            mock_gen_instance.generate_combined_summary.return_value = None
+            mock_gen.return_value = mock_gen_instance
+
+            orchestrator.run_tests()
+
+        # Controller should now be detected
+        assert orchestrator.controller_type == "ACI"
+
+    def test_detection_failure_exits_during_run_tests(self, tmp_path: Path) -> None:
+        """Detection failure should raise typer.Exit during run_tests(), not __init__."""
+        # No controller credentials set (already cleaned by fixture)
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        # __init__ should succeed without credentials
+        orchestrator = CombinedOrchestrator(
+            data_paths=[data_dir],
+            templates_dir=templates_dir,
+            output_dir=output_dir,
+            merged_data_filename="merged.yaml",
+            dev_pyats_only=True,
+        )
+
+        # run_tests() should fail when PyATS tests found but no credentials
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch("typer.secho"),
+        ):
             with pytest.raises(typer.Exit) as exc_info:
-                CombinedOrchestrator(
-                    data_paths=[data_dir],
-                    templates_dir=templates_dir,
-                    output_dir=output_dir,
-                    merged_data_filename="merged.yaml",
-                )
+                orchestrator.run_tests()
 
-            # Exit code should be 255
             assert exc_info.value.exit_code == EXIT_ERROR
 
     def test_combined_orchestrator_passes_controller_to_pyats(
@@ -111,6 +166,14 @@ class TestCombinedOrchestratorController:
         merged_file = output_dir / "merged.yaml"
         merged_file.write_text("merged: data")
 
+        sdwan_auth = AuthCheckResult(
+            success=True,
+            reason=AuthOutcome.SUCCESS,
+            controller_type="SDWAN",
+            controller_url="https://vmanage.test.com",
+            detail="OK",
+        )
+
         # Initialize CombinedOrchestrator
         orchestrator = CombinedOrchestrator(
             data_paths=[data_dir],
@@ -119,9 +182,6 @@ class TestCombinedOrchestratorController:
             merged_data_filename="merged.yaml",
             dev_pyats_only=True,  # Run PyATS only mode
         )
-
-        # Verify controller type was detected
-        assert orchestrator.controller_type == "SDWAN"
 
         # Mock discovery to return PyATS tests found
         with patch.object(
@@ -146,8 +206,12 @@ class TestCombinedOrchestratorController:
                     )
                     mock_generator.return_value = mock_gen_instance
 
-                    # Mock typer functions and version check (we're testing controller detection, not version)
+                    # Mock preflight auth and typer functions
                     with (
+                        patch(
+                            "nac_test.combined_orchestrator.preflight_auth_check",
+                            return_value=sdwan_auth,
+                        ),
                         patch("typer.secho"),
                         patch("typer.echo"),
                         patch.object(CombinedOrchestrator, "_check_python_version"),
@@ -212,17 +276,13 @@ class TestCombinedOrchestratorController:
 
         # Initialize CombinedOrchestrator with render_only=True
         # This should NOT raise typer.Exit despite missing credentials
-        with patch(
-            "nac_test.combined_orchestrator.detect_controller_type"
-        ) as mock_detect:
-            orchestrator = CombinedOrchestrator(
-                data_paths=[data_dir],
-                templates_dir=templates_dir,
-                output_dir=output_dir,
-                merged_data_filename="merged.yaml",
-                render_only=True,  # Critical: render-only mode
-            )
-            mock_detect.assert_not_called()
+        orchestrator = CombinedOrchestrator(
+            data_paths=[data_dir],
+            templates_dir=templates_dir,
+            output_dir=output_dir,
+            merged_data_filename="merged.yaml",
+            render_only=True,  # Critical: render-only mode
+        )
 
         # Verify controller_type is empty (no detection occurred)
         assert orchestrator.controller_type is None
@@ -236,11 +296,18 @@ class TestCombinedOrchestratorController:
                 mock_robot_instance = MagicMock()
                 mock_robot.return_value = mock_robot_instance
 
-                # Mock typer functions to suppress output
-                with patch("typer.echo"), patch("typer.secho"):
+                with (
+                    patch(
+                        "nac_test.combined_orchestrator.detect_controller_type"
+                    ) as mock_detect,
+                    patch("typer.echo"),
+                    patch("typer.secho"),
+                ):
                     # Run tests
                     orchestrator.run_tests()
 
+            # detect_controller_type should NOT be called in render-only mode
+            mock_detect.assert_not_called()
             # CRITICAL ASSERTION: PyATSOrchestrator must NEVER be instantiated
             mock_pyats.assert_not_called()
             # Robot must be called
@@ -271,6 +338,14 @@ class TestCombinedOrchestratorController:
         merged_file = output_dir / "merged.yaml"
         merged_file.write_text("merged: data")
 
+        cc_auth = AuthCheckResult(
+            success=True,
+            reason=AuthOutcome.SUCCESS,
+            controller_type="CC",
+            controller_url="https://cc.test.com",
+            detail="OK",
+        )
+
         # Initialize CombinedOrchestrator (production mode - no dev flags)
         orchestrator = CombinedOrchestrator(
             data_paths=[data_dir],
@@ -279,8 +354,8 @@ class TestCombinedOrchestratorController:
             merged_data_filename="merged.yaml",
         )
 
-        # Verify controller type was detected
-        assert orchestrator.controller_type == "CC"
+        # Controller type should be None after init (deferred to run_tests)
+        assert orchestrator.controller_type is None
 
         # Mock PyATSOrchestrator and discovery
         with patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats:
@@ -300,8 +375,12 @@ class TestCombinedOrchestratorController:
                 )
                 mock_discovery.return_value = mock_discovery_instance
 
-                # Mock typer functions and version check (we're testing controller detection, not version)
+                # Mock preflight auth and typer functions
                 with (
+                    patch(
+                        "nac_test.combined_orchestrator.preflight_auth_check",
+                        return_value=cc_auth,
+                    ),
                     patch("typer.echo"),
                     patch.object(CombinedOrchestrator, "_check_python_version"),
                 ):
