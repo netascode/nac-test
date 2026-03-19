@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
 """PyATS test discovery functionality.
 
 This module handles discovering and categorizing PyATS test files.

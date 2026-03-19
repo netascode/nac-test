@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import sys
+import tempfile
 import time
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
@@ -657,7 +658,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         """Emergency dump messages to disk when all else fails.
 
         This is the last resort to ensure test results are never lost.
-        Dumps to a JSON file in the user's output directory (or /tmp as fallback).
+        Dumps to a JSON file in the user's output directory (or system temp dir as fallback).
 
         Args:
             messages: List of messages that couldn't be sent
@@ -682,9 +683,9 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                         "Cannot create emergency directory in output dir: %s", e
                     )
 
-            # Fallback to /tmp if output_dir not available or not writable
+            # Fallback to system temp dir if output_dir not available or not writable
             if dump_file is None:
-                dump_file = Path(f"/tmp/{filename}")
+                dump_file = Path(tempfile.gettempdir()) / filename
 
             # Prepare data for dumping
             dump_data: dict[str, Any] = {
@@ -722,15 +723,17 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 json.dump(dump_data, f, indent=2, default=str)
 
             # Log with clear indication of location
-            if "/tmp/" in str(dump_file):
+            temp_dir = Path(tempfile.gettempdir())
+            if dump_file.parent == temp_dir:
                 self.logger.error(
                     "EMERGENCY: PyATS reporter failed! %d messages saved to: %s",
                     len(messages),
                     dump_file,
                 )
                 self.logger.warning(
-                    "Note: Emergency dump is in /tmp (output dir was not accessible). "
-                    "Copy this file before reboot!"
+                    "Note: Emergency dump is in %s (output dir was not accessible). "
+                    "Copy this file before reboot!",
+                    temp_dir,
                 )
             else:
                 self.logger.error(

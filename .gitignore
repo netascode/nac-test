@@ -75,7 +75,9 @@ ENV/
 tmp/
 
 .mypy_cache/
+.ruff_cache/
 
+# Application execution logs (including Claude Code logs)
 logs/
 
 # Robot artifacts
@@ -86,4 +88,9 @@ report.html
 # Pabot
 .pabotsuitenames
 
+# Claude configuration
 .claude/
+CLAUDE.md
+
+# bandit security report, if generated
+bandit-security-report.json

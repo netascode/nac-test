@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# -*- coding: utf-8 -*-
-
 """Test result collector for PyATS HTML reporting.
 
 This module provides a process-safe collector for test results and command/API
