@@ -6,8 +6,10 @@ import re
 import shutil
 import tempfile
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
+import yaml  # type: ignore
 from robot import run as robot_run  # type: ignore[attr-defined]
 from typer.testing import CliRunner
 
@@ -25,6 +27,31 @@ def temp_cwd_dir() -> Iterator[str]:
     yield temp_dir
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
+
+
+def verify_file_content(expected_yaml_path: Path, output_dir: Path) -> None:
+    """Verify that files in output_dir match the expected content from YAML.
+
+    Args:
+        expected_yaml_path: Path to YAML file with structure {filename: content}
+        output_dir: Base directory where the files should exist
+
+    Raises:
+        AssertionError: If any file content doesn't match expected content
+    """
+    with open(expected_yaml_path) as f:
+        expected_files = yaml.safe_load(f)
+
+    for filename, expected_content in expected_files.items():
+        file_path = output_dir / filename
+        assert file_path.exists(), f"Expected file does not exist: {file_path}"
+
+        actual_content = file_path.read_text()
+        assert actual_content.strip() == expected_content.strip(), (
+            f"Content mismatch in {filename}:\n"
+            f"Expected:\n{expected_content}\n"
+            f"Actual:\n{actual_content}"
+        )
 
 
 def test_nac_test(tmpdir: str) -> None:
@@ -210,10 +237,11 @@ def test_nac_test_list_chunked(tmpdir: str) -> None:
             tmpdir,
         ],
     )
-    assert os.path.exists(os.path.join(tmpdir, "ABC", "test1_001.robot"))
-    assert os.path.exists(os.path.join(tmpdir, "ABC", "test1_002.robot"))
-    assert os.path.exists(os.path.join(tmpdir, "DEF", "test1_001.robot"))
     assert result.exit_code == 0
+    assert not os.path.exists(os.path.join(tmpdir, "ABC", "test1.robot"))
+    assert not os.path.exists(os.path.join(tmpdir, "DEF", "test1.robot"))
+    # files and their content are checked here
+    verify_file_content(Path(templates_path) / "expected_content.yaml", Path(tmpdir))
 
 
 def test_nac_test_verbosity_debug(tmpdir: str) -> None:
