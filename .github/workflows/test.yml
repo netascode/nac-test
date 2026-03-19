@@ -3,13 +3,6 @@ on:
   workflow_dispatch:
   pull_request:
   push:
-    branches:
-      - main
-      # Temporary: release/pyats-integration-v1.1-beta is the MVP feature branch
-      # that all PyATS integration PRs merge into before eventually going to main.
-      # This ensures CI runs on the integrated state after each merge.
-      # Remove this line once the branch is merged to main.
-      - release/pyats-integration-v1.1-beta
 
 jobs:
   security:
