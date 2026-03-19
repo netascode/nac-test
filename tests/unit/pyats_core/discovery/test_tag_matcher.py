@@ -8,12 +8,17 @@ for pyATS tests using Robot Framework tag pattern semantics.
 
 Test Structure:
     - TestBasicMatching: Tests simple tag matching without patterns
-    - TestIncludePatterns: Tests include-only filtering
-    - TestExcludePatterns: Tests exclude-only filtering
+    - TestIncludePatterns: Tests include-only filtering (parametrized)
+    - TestExcludePatterns: Tests exclude-only filtering (parametrized)
     - TestCombinedPatterns: Tests combined include and exclude filtering
-    - TestRobotPatternSemantics: Tests Robot Framework pattern syntax (AND, OR, NOT, wildcards)
-    - TestEdgeCases: Tests edge cases like empty tags, None values, etc.
+    - TestRobotPatternSemantics: Tests Robot Framework pattern syntax (parametrized)
+    - TestEdgeCases: Tests edge cases like empty tags, None values, etc. (parametrized)
+    - TestFormatFilterDescription: Tests format_filter_description helper (parametrized)
 """
+
+from collections.abc import Sequence
+
+import pytest
 
 from nac_test.pyats_core.discovery.tag_matcher import (
     TagMatcher,
@@ -33,23 +38,25 @@ class TestBasicMatching:
         assert matcher.should_include([])
         assert matcher.should_include(None)
 
-    def test_has_filters_false_when_empty(self) -> None:
-        """Test has_filters is False when no filters configured."""
-        matcher = TagMatcher()
-        assert matcher.has_filters is False
-
-        matcher2 = TagMatcher(include=[], exclude=[])
-        assert matcher2.has_filters is False
-
-    def test_has_filters_true_with_include(self) -> None:
-        """Test has_filters is True when include patterns are set."""
-        matcher = TagMatcher(include=["health"])
-        assert matcher.has_filters is True
-
-    def test_has_filters_true_with_exclude(self) -> None:
-        """Test has_filters is True when exclude patterns are set."""
-        matcher = TagMatcher(exclude=["nrfu"])
-        assert matcher.has_filters is True
+    @pytest.mark.parametrize(
+        ("include", "exclude", "expected"),
+        [
+            (None, None, False),
+            ([], [], False),
+            (["health"], None, True),
+            (None, ["nrfu"], True),
+            (["health"], ["nrfu"], True),
+        ],
+    )
+    def test_has_filters(
+        self,
+        include: list[str] | None,
+        exclude: list[str] | None,
+        expected: bool,
+    ) -> None:
+        """Test has_filters property with various configurations."""
+        matcher = TagMatcher(include=include, exclude=exclude)
+        assert matcher.has_filters is expected
 
     def test_repr(self) -> None:
         """Test string representation of TagMatcher."""
@@ -62,202 +69,209 @@ class TestBasicMatching:
 
 
 class TestIncludePatterns:
-    """Test include-only tag filtering."""
+    """Test include-only tag filtering (parametrized)."""
 
-    def test_simple_include_match(self) -> None:
-        """Test matching a simple include pattern."""
-        matcher = TagMatcher(include=["health"])
-
-        assert matcher.should_include(["health"])
-        assert matcher.should_include(["health", "bgp"])
-        assert not matcher.should_include(["nrfu"])
-        assert not matcher.should_include([])
-
-    def test_multiple_include_patterns_or(self) -> None:
-        """Test that multiple include patterns use OR logic."""
-        matcher = TagMatcher(include=["health", "bgp"])
-
-        assert matcher.should_include(["health"])
-        assert matcher.should_include(["bgp"])
-        assert matcher.should_include(["health", "bgp"])
-        assert not matcher.should_include(["ospf"])
-
-    def test_include_with_empty_tags(self) -> None:
-        """Test that empty tags don't match include patterns."""
-        matcher = TagMatcher(include=["health"])
-
-        assert not matcher.should_include([])
-        assert not matcher.should_include(None)
-
-    def test_include_case_insensitive(self) -> None:
-        """Test that tag matching is case-insensitive (Robot semantics)."""
-        matcher = TagMatcher(include=["HEALTH"])
-
-        assert matcher.should_include(["health"])
-        assert matcher.should_include(["Health"])
-        assert matcher.should_include(["HEALTH"])
+    @pytest.mark.parametrize(
+        ("include", "tags", "expected"),
+        [
+            # Simple include match
+            (["health"], ["health"], True),
+            (["health"], ["health", "bgp"], True),
+            (["health"], ["nrfu"], False),
+            (["health"], [], False),
+            # Multiple include patterns (OR logic)
+            (["health", "bgp"], ["health"], True),
+            (["health", "bgp"], ["bgp"], True),
+            (["health", "bgp"], ["health", "bgp"], True),
+            (["health", "bgp"], ["ospf"], False),
+            # Empty tags don't match
+            (["health"], [], False),
+            (["health"], None, False),
+            # Case insensitive (Robot semantics)
+            (["HEALTH"], ["health"], True),
+            (["HEALTH"], ["Health"], True),
+            (["HEALTH"], ["HEALTH"], True),
+        ],
+    )
+    def test_include_filtering(
+        self, include: list[str], tags: list[str] | None, expected: bool
+    ) -> None:
+        """Test include pattern matching with various inputs."""
+        matcher = TagMatcher(include=include)
+        assert matcher.should_include(tags) is expected
 
 
 class TestExcludePatterns:
-    """Test exclude-only tag filtering."""
+    """Test exclude-only tag filtering (parametrized)."""
 
-    def test_simple_exclude_match(self) -> None:
-        """Test matching a simple exclude pattern."""
-        matcher = TagMatcher(exclude=["nrfu"])
-
-        assert not matcher.should_include(["nrfu"])
-        assert not matcher.should_include(["nrfu", "health"])
-        assert matcher.should_include(["health"])
-        assert matcher.should_include([])
-
-    def test_multiple_exclude_patterns(self) -> None:
-        """Test multiple exclude patterns."""
-        matcher = TagMatcher(exclude=["nrfu", "slow"])
-
-        assert not matcher.should_include(["nrfu"])
-        assert not matcher.should_include(["slow"])
-        assert not matcher.should_include(["nrfu", "slow"])
-        assert matcher.should_include(["health"])
-        assert matcher.should_include(["bgp"])
-
-    def test_exclude_with_empty_tags(self) -> None:
-        """Test that empty tags don't match exclude patterns."""
-        matcher = TagMatcher(exclude=["nrfu"])
-
-        assert matcher.should_include([])
-        assert matcher.should_include(None)
-
-    def test_exclude_case_insensitive(self) -> None:
-        """Test that exclude matching is case-insensitive."""
-        matcher = TagMatcher(exclude=["NRFU"])
-
-        assert not matcher.should_include(["nrfu"])
-        assert not matcher.should_include(["Nrfu"])
-        assert not matcher.should_include(["NRFU"])
+    @pytest.mark.parametrize(
+        ("exclude", "tags", "expected"),
+        [
+            # Simple exclude match
+            (["nrfu"], ["nrfu"], False),
+            (["nrfu"], ["nrfu", "health"], False),
+            (["nrfu"], ["health"], True),
+            (["nrfu"], [], True),
+            # Multiple exclude patterns
+            (["nrfu", "slow"], ["nrfu"], False),
+            (["nrfu", "slow"], ["slow"], False),
+            (["nrfu", "slow"], ["nrfu", "slow"], False),
+            (["nrfu", "slow"], ["health"], True),
+            (["nrfu", "slow"], ["bgp"], True),
+            # Empty tags don't match exclude
+            (["nrfu"], [], True),
+            (["nrfu"], None, True),
+            # Case insensitive
+            (["NRFU"], ["nrfu"], False),
+            (["NRFU"], ["Nrfu"], False),
+            (["NRFU"], ["NRFU"], False),
+        ],
+    )
+    def test_exclude_filtering(
+        self, exclude: list[str], tags: list[str] | None, expected: bool
+    ) -> None:
+        """Test exclude pattern matching with various inputs."""
+        matcher = TagMatcher(exclude=exclude)
+        assert matcher.should_include(tags) is expected
 
 
 class TestCombinedPatterns:
     """Test combined include and exclude filtering."""
 
-    def test_exclude_takes_priority(self) -> None:
-        """Test that exclude patterns take priority over include."""
-        matcher = TagMatcher(include=["health"], exclude=["nrfu"])
-
-        assert not matcher.should_include(["health", "nrfu"])
-        assert matcher.should_include(["health"])
-        assert not matcher.should_include(["bgp"])
-
-    def test_combined_realistic_scenario(self) -> None:
-        """Test a realistic filtering scenario."""
-        matcher = TagMatcher(include=["health", "bgp"], exclude=["nrfu"])
-
-        assert matcher.should_include(["health"])
-        assert matcher.should_include(["bgp"])
-        assert not matcher.should_include(["health", "nrfu"])
-        assert not matcher.should_include(["ospf"])
-        assert not matcher.should_include(["nrfu"])
+    @pytest.mark.parametrize(
+        ("include", "exclude", "tags", "expected"),
+        [
+            # Exclude takes priority over include
+            (["health"], ["nrfu"], ["health", "nrfu"], False),
+            (["health"], ["nrfu"], ["health"], True),
+            (["health"], ["nrfu"], ["bgp"], False),
+            # Realistic scenario
+            (["health", "bgp"], ["nrfu"], ["health"], True),
+            (["health", "bgp"], ["nrfu"], ["bgp"], True),
+            (["health", "bgp"], ["nrfu"], ["health", "nrfu"], False),
+            (["health", "bgp"], ["nrfu"], ["ospf"], False),
+            (["health", "bgp"], ["nrfu"], ["nrfu"], False),
+        ],
+    )
+    def test_combined_filtering(
+        self,
+        include: list[str],
+        exclude: list[str],
+        tags: list[str],
+        expected: bool,
+    ) -> None:
+        """Test combined include and exclude pattern matching."""
+        matcher = TagMatcher(include=include, exclude=exclude)
+        assert matcher.should_include(tags) is expected
 
 
 class TestRobotPatternSemantics:
-    """Test Robot Framework tag pattern syntax."""
+    """Test Robot Framework tag pattern syntax (parametrized)."""
 
-    def test_or_pattern(self) -> None:
-        """Test OR pattern (healthORbgp)."""
-        matcher = TagMatcher(include=["healthORbgp"])
+    @pytest.mark.parametrize(
+        ("pattern", "tags", "expected"),
+        [
+            # OR pattern (healthORbgp)
+            ("healthORbgp", ["health"], True),
+            ("healthORbgp", ["bgp"], True),
+            ("healthORbgp", ["health", "bgp"], True),
+            ("healthORbgp", ["ospf"], False),
+            # AND pattern (healthANDbgp)
+            ("healthANDbgp", ["health", "bgp"], True),
+            ("healthANDbgp", ["health"], False),
+            ("healthANDbgp", ["bgp"], False),
+            # NOT pattern (healthNOTnrfu)
+            ("healthNOTnrfu", ["health"], True),
+            ("healthNOTnrfu", ["health", "bgp"], True),
+            ("healthNOTnrfu", ["health", "nrfu"], False),
+            ("healthNOTnrfu", ["nrfu"], False),
+            ("healthNOTnrfu", ["bgp"], False),
+            # Ampersand AND pattern (health&bgp)
+            ("health&bgp", ["health", "bgp"], True),
+            ("health&bgp", ["health"], False),
+            ("health&bgp", ["bgp"], False),
+        ],
+    )
+    def test_boolean_patterns(
+        self, pattern: str, tags: list[str], expected: bool
+    ) -> None:
+        """Test OR, AND, NOT, and ampersand patterns."""
+        matcher = TagMatcher(include=[pattern])
+        assert matcher.should_include(tags) is expected
 
-        assert matcher.should_include(["health"])
-        assert matcher.should_include(["bgp"])
-        assert matcher.should_include(["health", "bgp"])
-        assert not matcher.should_include(["ospf"])
-
-    def test_and_pattern(self) -> None:
-        """Test AND pattern (healthANDbgp)."""
-        matcher = TagMatcher(include=["healthANDbgp"])
-
-        assert matcher.should_include(["health", "bgp"])
-        assert not matcher.should_include(["health"])
-        assert not matcher.should_include(["bgp"])
-
-    def test_not_pattern(self) -> None:
-        """Test NOT pattern (healthNOTnrfu)."""
-        matcher = TagMatcher(include=["healthNOTnrfu"])
-
-        assert matcher.should_include(["health"])
-        assert matcher.should_include(["health", "bgp"])
-        assert not matcher.should_include(["health", "nrfu"])
-        assert not matcher.should_include(["nrfu"])
-        assert not matcher.should_include(["bgp"])
-
-    def test_wildcard_pattern(self) -> None:
-        """Test wildcard patterns (*)."""
-        matcher = TagMatcher(include=["health*"])
-
-        assert matcher.should_include(["health"])
-        assert matcher.should_include(["healthcheck"])
-        assert matcher.should_include(["health_bgp"])
-        assert not matcher.should_include(["bgp"])
-
-    def test_question_mark_wildcard(self) -> None:
-        """Test single-character wildcard (?)."""
-        matcher = TagMatcher(include=["bgp?"])
-
-        assert matcher.should_include(["bgp1"])
-        assert matcher.should_include(["bgpX"])
-        assert not matcher.should_include(["bgp"])
-        assert not matcher.should_include(["bgp12"])
-
-    def test_ampersand_and_pattern(self) -> None:
-        """Test ampersand AND pattern (health&bgp)."""
-        matcher = TagMatcher(include=["health&bgp"])
-
-        assert matcher.should_include(["health", "bgp"])
-        assert not matcher.should_include(["health"])
-        assert not matcher.should_include(["bgp"])
-
-    def test_underscore_ignored(self) -> None:
-        """Test that underscores are ignored in matching (Robot semantics)."""
-        matcher = TagMatcher(include=["health_check"])
-
-        assert matcher.should_include(["healthcheck"])
-        assert matcher.should_include(["health_check"])
-        assert matcher.should_include(["health__check"])
+    @pytest.mark.parametrize(
+        ("pattern", "tags", "expected"),
+        [
+            # Wildcard pattern (*)
+            ("health*", ["health"], True),
+            ("health*", ["healthcheck"], True),
+            ("health*", ["health_bgp"], True),
+            ("health*", ["bgp"], False),
+            # Question mark wildcard (?)
+            ("bgp?", ["bgp1"], True),
+            ("bgp?", ["bgpX"], True),
+            ("bgp?", ["bgp"], False),
+            ("bgp?", ["bgp12"], False),
+            # Underscore ignored (Robot semantics)
+            ("health_check", ["healthcheck"], True),
+            ("health_check", ["health_check"], True),
+            ("health_check", ["health__check"], True),
+        ],
+    )
+    def test_wildcard_patterns(
+        self, pattern: str, tags: list[str], expected: bool
+    ) -> None:
+        """Test wildcard and underscore handling patterns."""
+        matcher = TagMatcher(include=[pattern])
+        assert matcher.should_include(tags) is expected
 
 
 class TestEdgeCases:
-    """Test edge cases and special scenarios."""
+    """Test edge cases and special scenarios (parametrized)."""
 
-    def test_none_include_exclude(self) -> None:
-        """Test initialization with None values."""
-        matcher = TagMatcher(include=None, exclude=None)
+    @pytest.mark.parametrize(
+        ("include", "exclude", "has_filters", "tags", "expected"),
+        [
+            # None values
+            (None, None, False, ["any"], True),
+            # Empty lists
+            ([], [], False, ["any"], True),
+        ],
+    )
+    def test_initialization_edge_cases(
+        self,
+        include: list[str] | None,
+        exclude: list[str] | None,
+        has_filters: bool,
+        tags: list[str],
+        expected: bool,
+    ) -> None:
+        """Test initialization with None and empty list values."""
+        matcher = TagMatcher(include=include, exclude=exclude)
+        assert matcher.has_filters is has_filters
+        assert matcher.should_include(tags) is expected
 
-        assert not matcher.has_filters
-        assert matcher.should_include(["any"])
-
-    def test_empty_list_include_exclude(self) -> None:
-        """Test initialization with empty lists."""
-        matcher = TagMatcher(include=[], exclude=[])
-
-        assert not matcher.has_filters
-        assert matcher.should_include(["any"])
-
-    def test_single_tag_list(self) -> None:
-        """Test matching with single-element tag lists."""
-        matcher = TagMatcher(include=["health"])
-
-        assert matcher.should_include(["health"])
-
-    def test_many_tags(self) -> None:
-        """Test matching with many tags."""
-        matcher = TagMatcher(include=["health"])
-        tags = ["health", "bgp", "ospf", "nrfu", "sanity", "regression"]
-
-        assert matcher.should_include(tags)
-
-    def test_tags_as_tuple(self) -> None:
-        """Test that tags can be passed as a tuple."""
-        matcher = TagMatcher(include=["health"])
-
-        assert matcher.should_include(("health", "bgp"))
+    @pytest.mark.parametrize(
+        ("include", "tags", "expected"),
+        [
+            # Single tag list
+            (["health"], ["health"], True),
+            # Many tags
+            (
+                ["health"],
+                ["health", "bgp", "ospf", "nrfu", "sanity", "regression"],
+                True,
+            ),
+            # Tags as tuple
+            (["health"], ("health", "bgp"), True),
+        ],
+    )
+    def test_tag_formats(
+        self, include: list[str], tags: Sequence[str], expected: bool
+    ) -> None:
+        """Test various tag format inputs."""
+        matcher = TagMatcher(include=include)
+        assert matcher.should_include(tags) is expected
 
     def test_include_as_tuple(self) -> None:
         """Test that include patterns can be passed as a tuple."""
@@ -266,58 +280,70 @@ class TestEdgeCases:
         assert matcher.should_include(["health"])
         assert matcher.should_include(["bgp"])
 
-    def test_special_characters_in_tags(self) -> None:
-        """Test tags with special characters."""
-        matcher = TagMatcher(include=["bgp-v4"])
-
-        assert matcher.should_include(["bgp-v4"])
-
-    def test_numeric_looking_tags(self) -> None:
-        """Test tags that look like numbers."""
-        matcher = TagMatcher(include=["v1"])
-
-        assert matcher.should_include(["v1"])
-        assert not matcher.should_include(["v2"])
+    @pytest.mark.parametrize(
+        ("include", "tags", "expected"),
+        [
+            # Special characters in tags
+            (["bgp-v4"], ["bgp-v4"], True),
+            # Numeric-looking tags
+            (["v1"], ["v1"], True),
+            (["v1"], ["v2"], False),
+        ],
+    )
+    def test_special_characters(
+        self, include: list[str], tags: list[str], expected: bool
+    ) -> None:
+        """Test tags with special characters and numeric-looking values."""
+        matcher = TagMatcher(include=include)
+        assert matcher.should_include(tags) is expected
 
 
 class TestFormatFilterDescription:
-    """Test format_filter_description helper and TagMatcher.__str__."""
+    """Test format_filter_description helper and TagMatcher.__str__ (parametrized)."""
 
-    def test_include_only(self) -> None:
-        result = format_filter_description(include=["bgp"])
-        assert result == "include: 'bgp'"
+    @pytest.mark.parametrize(
+        ("include", "exclude", "expected"),
+        [
+            # Basic formatting
+            (["bgp"], None, "include: 'bgp'"),
+            (None, ["ospf"], "exclude: 'ospf'"),
+            (["bgp"], ["health"], "include: 'bgp', exclude: 'health'"),
+            # Empty returns empty string
+            (None, None, ""),
+            ([], [], ""),
+            # Multiple patterns
+            (
+                ["bgp", "ospf"],
+                ["nrfuANDhealth"],
+                "include: 'bgp', 'ospf', exclude: 'nrfu AND health'",
+            ),
+        ],
+    )
+    def test_basic_formatting(
+        self, include: list[str] | None, exclude: list[str] | None, expected: str
+    ) -> None:
+        """Test basic format_filter_description output."""
+        result = format_filter_description(include=include, exclude=exclude)
+        assert result == expected
 
-    def test_exclude_only(self) -> None:
-        result = format_filter_description(exclude=["ospf"])
-        assert result == "exclude: 'ospf'"
-
-    def test_include_and_exclude(self) -> None:
-        result = format_filter_description(include=["bgp"], exclude=["health"])
-        assert result == "include: 'bgp', exclude: 'health'"
-
-    def test_or_pattern_formatting(self) -> None:
-        result = format_filter_description(exclude=["bgpORospf"])
-        assert result == "exclude: 'bgp OR ospf'"
-
-    def test_and_pattern_formatting(self) -> None:
-        result = format_filter_description(include=["healthANDbgp"])
-        assert result == "include: 'health AND bgp'"
-
-    def test_multiple_patterns(self) -> None:
-        result = format_filter_description(
-            include=["bgp", "ospf"], exclude=["nrfuANDhealth"]
-        )
-        assert result == "include: 'bgp', 'ospf', exclude: 'nrfu AND health'"
-
-    def test_empty_returns_empty_string(self) -> None:
-        result = format_filter_description()
-        assert result == ""
-
-    def test_none_values_returns_empty_string(self) -> None:
-        result = format_filter_description(include=None, exclude=None)
-        assert result == ""
+    @pytest.mark.parametrize(
+        ("include", "exclude", "expected"),
+        [
+            # OR pattern formatting
+            (None, ["bgpORospf"], "exclude: 'bgp OR ospf'"),
+            # AND pattern formatting
+            (["healthANDbgp"], None, "include: 'health AND bgp'"),
+        ],
+    )
+    def test_pattern_formatting(
+        self, include: list[str] | None, exclude: list[str] | None, expected: str
+    ) -> None:
+        """Test pattern expansion in format_filter_description."""
+        result = format_filter_description(include=include, exclude=exclude)
+        assert result == expected
 
     def test_str_matches_format_filter_description(self) -> None:
+        """Test TagMatcher.__str__ matches format_filter_description."""
         matcher = TagMatcher(include=["bgpORospf"], exclude=["health"])
         assert str(matcher) == format_filter_description(
             include=["bgpORospf"], exclude=["health"]
