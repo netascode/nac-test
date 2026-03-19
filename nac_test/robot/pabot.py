@@ -7,12 +7,14 @@ import pabot.pabot
 
 def run_pabot(
     path: Path,
-    include: list[str] = [],
-    exclude: list[str] = [],
+    include: list[str] | None = None,
+    exclude: list[str] | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> None:
     """Run pabot"""
+    include = include or []
+    exclude = exclude or []
     args = ["--pabotlib", "--pabotlibport", "0"]
     if verbose:
         args.append("--verbose")

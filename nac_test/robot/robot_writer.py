@@ -9,7 +9,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from jinja2 import (  # type: ignore
     ChainableUndefined,
@@ -17,8 +17,7 @@ from jinja2 import (  # type: ignore
     FileSystemLoader,
     Undefined,
 )
-
-from nac_test.data_merger import DataMerger
+from nac_yaml import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -35,16 +34,14 @@ class RobotWriter:
         data_paths: list[Path],
         filters_path: Path | None,
         tests_path: Path | None,
-        include_tags: list[str] = [],
-        exclude_tags: list[str] = [],
+        include_tags: list[str] | None = None,
+        exclude_tags: list[str] | None = None,
     ) -> None:
-        self.data = DataMerger.merge_data_files(data_paths)
-        # Convert OrderedDict to dict once during initialization instead of per-template
-        # This eliminates expensive JSON round-trip serialization for each template render
-        self.template_data = self._convert_data_model_for_templates(self.data)
+        logger.info("Loading yaml files from %s", data_paths)
+        self.data = yaml.load_yaml_files(data_paths)
         self.filters: dict[str, Any] = {}
-        self.include_tags = include_tags
-        self.exclude_tags = exclude_tags
+        self.include_tags = include_tags or []
+        self.exclude_tags = exclude_tags or []
         if filters_path:
             logger.info("Loading filters")
             for filename in os.listdir(filters_path):
@@ -75,36 +72,6 @@ class RobotWriter:
                             spec.loader.exec_module(mod)
                             self.tests[mod.Test.name] = mod.Test
 
-    def _convert_data_model_for_templates(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Convert nested OrderedDict to dict to avoid duplicate dict keys.
-
-        This method performs the same conversion that was previously done per-template,
-        but centralizes it during initialization for performance efficiency.
-
-        Args:
-            data: Raw data model from DataMerger (may contain OrderedDict structures)
-
-        Returns:
-            Converted data model safe for Jinja template rendering
-
-        Note:
-            JSON round-trip approach is used as it's safe for all serializable data
-            and handles nested OrderedDict structures reliably.
-        """
-        logger.debug(
-            "Converting data model for template rendering (one-time conversion)"
-        )
-        try:
-            # JSON round-trip to convert nested OrderedDict to dict
-            # This preserves all data while fixing duplicate key issues (e.g., 'tag' fields)
-            converted_data = cast(dict[str, Any], json.loads(json.dumps(data)))
-            logger.debug("Data model conversion completed successfully")
-            return converted_data
-        except Exception as e:
-            logger.warning(f"Data model conversion failed: {e}. Using original data.")
-            # Fallback to original data if conversion fails
-            return data
-
     def render_template(
         self, template_path: Path, output_path: Path, env: Environment, **kwargs: Any
     ) -> None:
@@ -117,8 +84,10 @@ class RobotWriter:
         pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 
         template = env.get_template(str(template_path))
-        # Use pre-converted data model (converted once during initialization)
-        result = template.render(self.template_data, **kwargs)
+        # hack to convert nested ordereddict to dict, to avoid duplicate dict keys
+        # json roundtrip should be safe as everything should be serializable
+        data = json.loads(json.dumps(self.data))
+        result = template.render(data, **kwargs)
 
         # remove extra empty lines
         lines = result.splitlines()
@@ -137,7 +106,10 @@ class RobotWriter:
             file.write(result)
 
     def _fix_duplicate_path(self, *paths: str) -> Path:
-        """Helper function to detect existing paths with non-matching case. Returns a unique path to work with case-insensitve filesystems."""
+        """Helper function to detect existing paths with non-matching case.
+
+        Returns a unique path to work with case-insensitive filesystems.
+        """
         directory = os.path.join(*paths[:-1])
         if os.path.exists(directory):
             entries = os.listdir(directory)
@@ -148,7 +120,7 @@ class RobotWriter:
 
     def write(self, templates_path: Path, output_path: Path) -> None:
         """Render Robot test suites."""
-        env = Environment(
+        env = Environment(  # nosec B701
             loader=FileSystemLoader(templates_path),
             undefined=StrictChainableUndefined,
             lstrip_blocks=True,
@@ -163,7 +135,7 @@ class RobotWriter:
             for filename in files:
                 if Path(filename).suffix not in [".robot", ".resource", ".j2"]:
                     logger.info(
-                        "Skip file with unknown file extension (not one of .robot, .resource or .j2): %s",
+                        "Skip file with unknown file extension: %s",
                         Path(dir, filename),
                     )
                     out = Path(output_path, os.path.relpath(dir, templates_path))
@@ -180,8 +152,10 @@ class RobotWriter:
                 try:
                     with open(Path(dir, filename)) as file:
                         content = file.read()
-                except (OSError, IOError) as e:
-                    logger.warning("Could not open/read file: %s - %s", Path(dir, filename), e)
+                except OSError as e:
+                    logger.warning(
+                        "Could not open/read file: %s - %s", Path(dir, filename), e
+                    )
                     continue
                 for match in re.finditer(pattern, content):
                     params = match.group().split(" ")
@@ -192,7 +166,7 @@ class RobotWriter:
                         next_template = True
                         path = params[2].split(".")
                         attr = params[3]
-                        elem = self.template_data
+                        elem = self.data
                         for p in path:
                             elem = elem.get(p, {})
                         if not isinstance(elem, list):
@@ -228,19 +202,3 @@ class RobotWriter:
 
                 o_path = Path(output_path, rel, filename)
                 self.render_template(t_path, o_path, env)
-
-    def write_merged_data_model(
-        self,
-        output_directory: Path,
-        filename: str = "merged_data_model_test_variables.yaml",
-    ) -> None:
-        """Writes the merged data model to a specified YAML file.
-
-        This method takes the internal, merged data dictionary (`self.data`)
-        and writes it to a YAML file in the specified output directory.
-
-        Args:
-            output_directory: The directory where the YAML file will be saved.
-            filename: The name of the output YAML file.
-        """
-        DataMerger.write_merged_data_model(self.data, output_directory, filename)
