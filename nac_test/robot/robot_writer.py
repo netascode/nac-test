@@ -172,9 +172,10 @@ class RobotWriter:
                         if not isinstance(elem, list):
                             continue
                         for item in elem:
-                            value = str(item.get(attr))
-                            if value is None:
+                            attr_value = item.get(attr)
+                            if attr_value is None:
                                 continue
+                            value = str(attr_value)
                             extra: dict[str, Any] = {}
                             if "[" in params[4]:
                                 index = params[4].split("[")[1].split("]")[0]
