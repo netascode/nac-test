@@ -29,6 +29,7 @@ from nac_test.core.constants import (
     PYATS_RESULTS_DIRNAME,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    XUNIT_XML,
 )
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 from tests.e2e.conftest import E2EResults
@@ -72,6 +73,21 @@ class E2ECombinedTestBase:
     def results(self) -> E2EResults:
         """Override in subclass to provide scenario-specific results."""
         raise NotImplementedError("Subclass must provide results fixture")
+
+    @pytest.fixture
+    def parsed_xunit(self, results: E2EResults) -> ET.Element | None:
+        """Parse merged xunit.xml once per scenario, return root element or None."""
+        xunit_path = results.output_dir / XUNIT_XML
+        if not xunit_path.is_file():
+            return None
+        tree = ET.parse(xunit_path)
+        return tree.getroot()
+
+    def test_executing_tests_and_generating_reports(self, results: E2EResults) -> None:
+        """Just to indicate in pytest -v that the test execution is happening."""
+        output_files = list(results.output_dir.rglob("*"))
+        print("\n".join(str(f.relative_to(results.output_dir)) for f in output_files))
+        pass
 
     # -------------------------------------------------------------------------
     # CLI Behavior Tests
@@ -665,6 +681,97 @@ class E2ECombinedTestBase:
                 f"Filename contains unsafe characters: {filename} -> {unsafe_chars}"
             )
 
+    # -------------------------------------------------------------------------
+    # Merged xunit.xml Tests
+    # -------------------------------------------------------------------------
+
+    def test_merged_xunit_exists_at_root(self, results: E2EResults) -> None:
+        """Verify merged xunit.xml exists at root and is not a symlink."""
+        xunit_path = results.output_dir / XUNIT_XML
+        assert xunit_path.exists(), "Missing merged xunit.xml at root"
+        assert xunit_path.is_file(), "xunit.xml should be a file (not symlink)"
+        assert not xunit_path.is_symlink(), "xunit.xml should not be a symlink"
+
+    def test_merged_xunit_is_valid_xml(self, parsed_xunit: ET.Element | None) -> None:
+        """Verify merged xunit.xml is valid XML with testsuites root."""
+        assert parsed_xunit is not None, "xunit.xml missing or unparseable"
+        assert parsed_xunit.tag == "testsuites", (
+            f"Expected root 'testsuites', got '{parsed_xunit.tag}'"
+        )
+
+    def test_merged_xunit_has_correct_total_tests(
+        self, results: E2EResults, parsed_xunit: ET.Element | None
+    ) -> None:
+        """Verify merged xunit.xml has correct total test count."""
+        assert parsed_xunit is not None, "xunit.xml missing or unparseable"
+        expected_total = results.scenario.expected_total_tests
+        actual_total = int(parsed_xunit.get("tests", 0))
+        assert actual_total == expected_total, (
+            f"xunit tests count mismatch: expected {expected_total}, got {actual_total}"
+        )
+
+    def test_merged_xunit_has_correct_failures(
+        self, results: E2EResults, parsed_xunit: ET.Element | None
+    ) -> None:
+        """Verify merged xunit.xml has correct failure count."""
+        assert parsed_xunit is not None, "xunit.xml missing or unparseable"
+        expected_failures = results.scenario.expected_total_failed
+        actual_failures = int(parsed_xunit.get("failures", 0))
+        assert actual_failures == expected_failures, (
+            f"xunit failures mismatch: expected {expected_failures}, got {actual_failures}"
+        )
+
+    def test_merged_xunit_contains_expected_testsuites(
+        self, results: E2EResults, parsed_xunit: ET.Element | None
+    ) -> None:
+        """Verify merged xunit.xml contains testsuites from all test sources."""
+        assert parsed_xunit is not None, "xunit.xml missing or unparseable"
+        testsuites = parsed_xunit.findall("testsuite")
+        testsuite_names = [ts.get("name", "") for ts in testsuites]
+
+        if results.scenario.has_robot_tests:
+            assert any("robot:" in name for name in testsuite_names), (
+                f"Missing robot testsuite in merged xunit. Found: {testsuite_names}"
+            )
+
+        if results.scenario.has_pyats_api_tests:
+            assert any("pyats_api:" in name for name in testsuite_names), (
+                f"Missing pyats_api testsuite in merged xunit. Found: {testsuite_names}"
+            )
+
+        if results.scenario.has_pyats_d2d_tests:
+            assert any("pyats_d2d/" in name for name in testsuite_names), (
+                f"Missing pyats_d2d testsuite in merged xunit. Found: {testsuite_names}"
+            )
+
+    def test_robot_xunit_exists_in_subdirectory(self, results: E2EResults) -> None:
+        """Verify Robot xunit.xml exists in robot_results/ subdirectory."""
+        if not results.scenario.has_robot_tests:
+            pytest.skip("No Robot tests in this scenario")
+        robot_xunit = results.output_dir / ROBOT_RESULTS_DIRNAME / XUNIT_XML
+        assert robot_xunit.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/{XUNIT_XML}"
+
+    def test_pyats_api_xunit_exists_in_subdirectory(self, results: E2EResults) -> None:
+        """Verify PyATS API xunit.xml exists in pyats_results/api/ subdirectory."""
+        if not results.scenario.has_pyats_api_tests:
+            pytest.skip("No PyATS API tests in this scenario")
+        api_xunit = results.output_dir / PYATS_RESULTS_DIRNAME / "api" / XUNIT_XML
+        assert api_xunit.exists(), f"Missing {PYATS_RESULTS_DIRNAME}/api/{XUNIT_XML}"
+
+    def test_pyats_d2d_xunit_exists_in_subdirectory(self, results: E2EResults) -> None:
+        if not results.scenario.has_pyats_d2d_tests:
+            pytest.skip("No PyATS D2D tests in this scenario")
+
+        assert results.scenario.expected_d2d_hostnames
+        d2d_dir = results.output_dir / PYATS_RESULTS_DIRNAME / "d2d"
+        xunit_files = list(d2d_dir.glob("*/xunit.xml"))
+
+        assert len(xunit_files) == len(results.scenario.expected_d2d_hostnames), (
+            f"Expected {len(results.scenario.expected_d2d_hostnames)} xunit.xml files "
+            f"for hostnames {results.scenario.expected_d2d_hostnames}, "
+            f"found {len(xunit_files)} in {d2d_dir}"
+        )
+
 
 # =============================================================================
 # SUCCESS SCENARIO TESTS
@@ -694,11 +801,12 @@ class TestE2ESuccess(E2ECombinedTestBase):
             COMBINED_SUMMARY_FILENAME,
             ROBOT_RESULTS_DIRNAME,
             PYATS_RESULTS_DIRNAME,
-            # Backward-compat symlinks
+            # Backward-compat symlinks (output.xml, log.html, report.html)
             "output.xml",
             "log.html",
             "report.html",
-            "xunit.xml",
+            # Merged xunit.xml (combined from Robot + PyATS, not a symlink)
+            XUNIT_XML,
         }
         missing = expected - root_items
         assert not missing, f"Missing expected items at root: {missing}"

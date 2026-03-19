@@ -25,6 +25,7 @@ from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.logging import VerbosityLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
+from nac_test.utils.xunit_merger import merge_xunit_results
 
 logger = logging.getLogger(__name__)
 
@@ -38,13 +39,14 @@ class CombinedOrchestrator:
     Output structure:
         output_dir/
         ├── combined_summary.html     # Unified dashboard (all frameworks)
+        ├── xunit.xml                 # Merged xunit from Robot + PyATS (for CI/CD)
         ├── robot_results/            # Robot Framework artifacts
         │   ├── output.xml, log.html, report.html, xunit.xml
         │   └── summary_report.html
         ├── output.xml, log.html...   # Symlinks to robot_results/ (backward compat)
         └── pyats_results/            # PyATS artifacts
-            ├── api/html_reports/summary_report.html
-            └── d2d/html_reports/summary_report.html
+            ├── api/html_reports/summary_report.html, xunit.xml
+            └── d2d/<device>/xunit.xml, html_reports/summary_report.html
     """
 
     def __init__(
@@ -231,6 +233,16 @@ class CombinedOrchestrator:
             )
             if combined_path:
                 typer.echo(f"   ✅ Combined dashboard: {combined_path}")
+
+            merged_xunit = None
+            try:
+                merged_xunit = merge_xunit_results(self.output_dir)
+            except Exception as e:
+                logger.warning(f"Failed to merge xunit files: {e}")
+            if merged_xunit:
+                typer.echo(f"   ✅ Merged xunit.xml: {merged_xunit}")
+            else:
+                logger.warning("No xunit files found to merge")
 
             self._print_execution_summary(has_pyats, has_robot, combined_results)
 
