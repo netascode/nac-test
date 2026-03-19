@@ -12,6 +12,7 @@ Common fixtures (mock_api_server, class_mocker, etc.) are inherited
 from the global tests/conftest.py.
 """
 
+import os
 import tempfile
 from collections.abc import Generator
 from dataclasses import dataclass
@@ -175,6 +176,7 @@ def _run_e2e_scenario(
     sdwan_user_testbed: str | None,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
+    output_path_relative: bool = False,
     extra_cli_args: list[str] | None = None,
     extra_env_vars: dict[str, str] | None = None,
 ) -> E2EResults:
@@ -188,6 +190,7 @@ def _run_e2e_scenario(
         sdwan_user_testbed: Path to the testbed YAML (None if not required).
         tmp_path_factory: Pytest temp path factory.
         class_mocker: Class-scoped monkeypatch.
+        output_path_relative: Whether to pass a cwd-relative output path to the CLI.
         extra_cli_args: Additional CLI arguments to pass (e.g., ["--dry-run", "--verbose"]).
         extra_env_vars: Additional environment variables to set (e.g., {"NAC_TEST_DEBUG": "true"}).
 
@@ -206,6 +209,12 @@ def _run_e2e_scenario(
 
     # Create scenario-specific temp directory
     output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
+    output_arg = str(output_dir)
+
+    if output_path_relative:
+        # pathlib-only alternatives are more convoluted here, while relpath
+        # directly expresses the cross-directory relative path we need.
+        output_arg = os.path.relpath(output_dir, Path.cwd())
 
     arch = scenario.architecture
     if mock_api_server:
@@ -228,7 +237,7 @@ def _run_e2e_scenario(
         "-t",
         scenario.templates_path,
         "-o",
-        str(output_dir),
+        output_arg,
     ]
 
     if scenario.requires_testbed and sdwan_user_testbed:
@@ -313,6 +322,24 @@ def e2e_mixed_results(
         sdwan_user_testbed,
         tmp_path_factory,
         class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_mixed_relative_output_results(
+    mock_api_server: MockAPIServer,
+    sdwan_user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the mixed scenario (same as above) with a relative output path."""
+    return _run_e2e_scenario(
+        MIXED_SCENARIO,
+        mock_api_server,
+        sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+        output_path_relative=True,
     )
 
 
