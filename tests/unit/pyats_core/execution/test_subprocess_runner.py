@@ -24,6 +24,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
+from nac_test.utils.logging import LogLevel
 
 
 @pytest.fixture
@@ -262,3 +263,36 @@ def test_init_does_not_use_sys_executable(
 
     mock_sys_executable.assert_not_called()
     assert runner.pyats_executable == str(fake_pyats_executable)
+
+
+# --- Command building test (loglevel flag mapping) ---
+
+
+@pytest.mark.parametrize(
+    "loglevel,expected_verbose_count,expected_quiet_count",
+    [
+        (LogLevel.DEBUG, 1, 0),
+        (LogLevel.INFO, 0, 0),
+        (LogLevel.WARNING, 0, 1),
+        (LogLevel.ERROR, 0, 2),
+        (LogLevel.CRITICAL, 0, 3),
+    ],
+)
+def test_build_command_loglevel_to_cli_flags(
+    temp_output_dir: Path,
+    mock_output_handler: Mock,
+    loglevel: LogLevel,
+    expected_verbose_count: int,
+    expected_quiet_count: int,
+) -> None:
+    """Test that loglevel maps to correct CLI flags (--verbose, --quiet)."""
+    runner = SubprocessRunner(temp_output_dir, mock_output_handler, loglevel=loglevel)
+    cmd = runner._build_command(
+        job_file_path=Path("/tmp/job.py"),
+        plugin_config_file="/tmp/plugin.yaml",
+        pyats_config_file="/tmp/pyats.conf",
+        archive_name="test_archive.zip",
+    )
+
+    assert cmd.count("--verbose") == expected_verbose_count
+    assert cmd.count("--quiet") == expected_quiet_count

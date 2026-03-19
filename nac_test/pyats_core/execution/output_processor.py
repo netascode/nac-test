@@ -5,15 +5,38 @@
 
 import json
 import logging
-import os
 import re
 import time
 from typing import Any
 
 from nac_test.pyats_core.progress import ProgressReporter
+from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.terminal import terminal
 
 logger = logging.getLogger(__name__)
+
+# PyATS log format: %COMPONENT-LEVEL: (e.g., %EASYPY-DEBUG:, %AETEST-INFO:)
+_PYATS_LOG_PATTERN = re.compile(r"%\w+-(\w+):")
+
+# Patterns to always suppress
+_SUPPRESS_PATTERN = re.compile(
+    r"^(?:"
+    r"\s*$|"  # Empty/whitespace lines
+    r"\+[-=]+\+$|"  # PyATS table borders: +----+ or +====+
+    r"\|.*\|$|"  # PyATS table content: |...|
+    r"[-=]+$|"  # Separator lines: ---- or ====
+    r".*Starting section|"  # Section start messages
+    r".*Starting testcase"  # Test start messages
+    r")"
+)
+
+# Critical patterns to show
+_CRITICAL_PATTERN = re.compile(
+    r"ERROR|FAILED|CRITICAL|Traceback|Exception.*Error|RECOVER(Y|ED)"
+)
+
+# Table formatting indicators (for filtering critical matches inside tables)
+_TABLE_LINE_PATTERN = re.compile(r"^[|+]")
 
 
 class OutputProcessor:
@@ -23,15 +46,21 @@ class OutputProcessor:
         self,
         progress_reporter: ProgressReporter | None = None,
         test_status: dict[str, Any] | None = None,
+        verbose: bool = False,
+        loglevel: LogLevel = DEFAULT_LOGLEVEL,
     ):
         """Initialize output processor.
 
         Args:
             progress_reporter: Progress reporter instance for test progress tracking
             test_status: Dictionary reference for tracking test status
+            verbose: Enable verbose output (section progress, verbose errors)
+            loglevel: Log level for filtering PyATS log output
         """
         self.progress_reporter = progress_reporter
         self.test_status = test_status or {}
+        self.verbose = verbose
+        self.loglevel = loglevel
 
     def process_line(self, line: str) -> None:
         """Process output line, looking for our progress events.
@@ -54,9 +83,7 @@ class OutputProcessor:
 
                 self._handle_progress_event(event)
             except json.JSONDecodeError:
-                # If parsing fails, show the line in debug mode
-                if os.environ.get("PYATS_DEBUG"):
-                    print(f"Failed to parse progress event: {line}")
+                logger.debug(f"Failed to parse progress event: {line}")
             except Exception as e:
                 logger.error(f"Error processing progress event: {e}", exc_info=True)
         else:
@@ -167,11 +194,11 @@ class OutputProcessor:
             # be called for tests that error during setup
             self._finalize_orphaned_tests(event)
 
-        elif event_type == "section_start" and os.environ.get("PYATS_DEBUG"):
-            # In debug mode, show section progress
+        # TODO: Decide whether to keep section progress as print() or convert to logger.debug()
+        elif event_type == "section_start" and self.verbose:
             print(f"  -> Section {event['section']} starting")
 
-        elif event_type == "section_end" and os.environ.get("PYATS_DEBUG"):
+        elif event_type == "section_end" and self.verbose:
             print(f"  -> Section {event['section']} {event['result']}")
 
     def _finalize_orphaned_tests(self, job_end_event: dict[str, Any]) -> None:
@@ -238,56 +265,34 @@ class OutputProcessor:
     def _should_show_line(self, line: str) -> bool:
         """Determine if line should be shown to user.
 
-        Filter out verbose PyATS output while keeping important information.
-
         Args:
             line: Output line to check
 
         Returns:
             True if line should be shown, False otherwise
         """
-        # In debug mode, show everything
-        if os.environ.get("PYATS_DEBUG"):
+        # Early exits:
+        # - running without --verbose flag shows nothing
+        # - DEBUG verbosity shows everything
+        if not self.verbose:
+            return False
+        if self.loglevel == LogLevel.DEBUG:
             return True
 
-        # Always suppress these patterns for clean console output
-        suppress_patterns = [
-            r"%HTTPX-INFO:",
-            r"%AETEST-INFO:",
-            r"%AETEST-ERROR:",  # We'll show our own error summary
-            r"%EASYPY-INFO:",
-            r"%WARNINGS-WARNING:",
-            r"%GENIE-INFO:",
-            r"%UNICON-INFO:",
-            r"%SCRIPT-INFO:",  # Suppress script-level info logs from tests
-            r"NAC_PROGRESS_PLUGIN:",  # Suppress plugin debug output
-            r"^\s*$",  # Empty lines
-            r"^\+[-=]+\+$",  # PyATS table borders
-            r"^\|.*\|$",  # PyATS table content
-            r"^[-=]+$",  # Separator lines
-            r"Starting section",  # Section start messages
-            r"Starting testcase",  # Test start messages
-        ]
+        # Check for PyATS log format: %COMPONENT-LEVEL:
+        pyats_match = _PYATS_LOG_PATTERN.search(line)
+        if pyats_match:
+            return True
 
-        for pattern in suppress_patterns:
-            if re.search(pattern, line):
+        # At WARNING+ (default), only show critical messages
+        if self.loglevel >= LogLevel.WARNING:
+            if _CRITICAL_PATTERN.search(line) and not _TABLE_LINE_PATTERN.match(line):
+                return True
+        else:
+            # At INFO loglevel: suppress formatting noise, show critical info
+            if _SUPPRESS_PATTERN.match(line):
                 return False
-
-        # Show critical information
-        show_patterns = [
-            r"ERROR",
-            r"FAILED",
-            r"CRITICAL",
-            r"Traceback",
-            r"Exception.*Error",
-            r"RECOVERED",  # Controller recovered messages
-            r"RECOVERY",  # Controller recovery messages
-        ]
-
-        for pattern in show_patterns:
-            if re.search(pattern, line, re.IGNORECASE):
-                # But still suppress if it's part of PyATS formatting
-                if not any(re.search(p, line) for p in [r"^\|", r"^\+"]):
-                    return True
+            if _CRITICAL_PATTERN.search(line) and not _TABLE_LINE_PATTERN.match(line):
+                return True
 
         return False

@@ -1,6 +1,11 @@
 # 2.0.0
 
-- nac-test 2.0 no longer supports Windows as the pyats libraries are not
+- Added `--verbose` CLI argument to enable verbose output for nac-test,  Robot Framework, and PyATS execution
+- Replace `--verbosity` with `--loglevel` CLI argument to control log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- Deprecate `--verbosity` argument (hidden alias for `--loglevel`, will be removed in future version)
+- Remove `NAC_VALIDATE_VERBOSITY` environment variable (was incorrectly named, use `NAC_TEST_LOGLEVEL` instead)
+- Rename `NO_TESTLEVELSPLIT` to `NAC_TEST_DISABLE_TESTLEVELSPLIT`; now requires explicit `true`/`yes`/`1` to disable (previously any non-empty value would disable)
+- nac-test 2.0.0 no longer supports Windows as the pyats libraries are not
   available on this platform. Please use WSL2 (Windows Subsystem for Linux)
   as an alternative runtime on Windows devices.
 

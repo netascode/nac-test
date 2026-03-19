@@ -6,6 +6,7 @@
 import os
 import tempfile
 
+from nac_test._env import get_bool_env, get_positive_numeric_env
 from nac_test.core.constants import (
     CONNECTION_CLOSE_DELAY,
     # Concurrency
@@ -26,39 +27,44 @@ from nac_test.core.constants import (
 )
 
 # PyATS-specific worker calculation constants
-MIN_WORKERS = 2
-MAX_WORKERS = 32
-MAX_WORKERS_HARD_LIMIT = 50
-MEMORY_PER_WORKER_GB = 0.35
-DEFAULT_CPU_MULTIPLIER = 2
-LOAD_AVERAGE_THRESHOLD = 0.8
+MIN_WORKERS: int = 2
+MAX_WORKERS: int = 32
+MAX_WORKERS_HARD_LIMIT: int = 50
+MEMORY_PER_WORKER_GB: float = 0.35
+DEFAULT_CPU_MULTIPLIER: int = 2
+LOAD_AVERAGE_THRESHOLD: float = 0.8
 
 # PyATS-specific file paths
-AUTH_CACHE_DIR = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
+AUTH_CACHE_DIR: str = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
 
 # pushed to pyats device connection settings to speed up disconnects (default is 10s/1s)
 PYATS_POST_DISCONNECT_WAIT_SECONDS: int = 0
 PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS: int = 0
 
 # Multi-job execution configuration (to avoid reporter crashes)
-TESTS_PER_JOB = 15  # Reduced from 20 for safety margin - each test ~1500 steps
-MAX_PARALLEL_JOBS = 2  # Conservative parallelism to avoid resource exhaustion
-JOB_RETRY_ATTEMPTS = 1  # Retry failed jobs once
+TESTS_PER_JOB: int = 15  # Reduced from 20 for safety margin - each test ~1500 steps
+MAX_PARALLEL_JOBS: int = 2  # Conservative parallelism to avoid resource exhaustion
+JOB_RETRY_ATTEMPTS: int = 1  # Retry failed jobs once
 
-# PyATS subprocess output handling
-DEFAULT_BUFFER_LIMIT = 10 * 1024 * 1024  # 10MB - handles large PyATS output lines
 
-# Sentinel-based IPC synchronization timeout (seconds)
-# Expected sync time: <100ms under normal conditions
-# This timeout protects against deadlock if sentinel mechanism fails
-# Default: 5.0 seconds (50x expected latency, should never be hit under normal operation)
-_sentinel_timeout_env = os.getenv("NAC_TEST_SENTINEL_TIMEOUT", "5.0")
-try:
-    SENTINEL_TIMEOUT_SECONDS: float = float(_sentinel_timeout_env)
-    if SENTINEL_TIMEOUT_SECONDS <= 0:
-        raise ValueError("Timeout must be positive")
-except ValueError:
-    SENTINEL_TIMEOUT_SECONDS = 5.0  # Fallback to safe default
+# NOTE: The following environment variables remain as undocumented internal tuning
+# knobs, not exposed as CLI flags or documented in README. Consider converting to
+# proper constants with CLI flags in a future release if user demand warrants it:
+# - NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT
+# - NAC_TEST_PYATS_PIPE_DRAIN_DELAY
+# - NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT
+# - NAC_TEST_PYATS_BATCH_SIZE
+# - NAC_TEST_PYATS_BATCH_TIMEOUT
+# - NAC_TEST_PYATS_QUEUE_SIZE
+# - NAC_TEST_PYATS_MEMORY_LIMIT_MB
+
+# PyATS subprocess output buffer limit
+# PyATS tests can generate extremely large output lines (100KB+ JSON responses from API calls).
+# asyncio's default 64KB buffer would trigger `LimitOverrunError` and cause nac-test to hang.
+# Default: 10MB - configurable via NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT environment variable
+PYATS_OUTPUT_BUFFER_LIMIT: int = get_positive_numeric_env(
+    "NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT", 10 * 1024 * 1024, int
+)
 
 # macOS subprocess pipe drain configuration (secondary fallback for backward compatibility)
 # Used as fallback when sentinel-based synchronization is unavailable (e.g., old plugins
@@ -66,12 +72,42 @@ except ValueError:
 # macOS has different pipe buffering behavior that requires extra time for kernel flush
 # Default: 100ms on macOS (balances reliability vs performance), 1ms on Linux
 # These values can be overridden via environment variables for CI tuning
-PIPE_DRAIN_DELAY_SECONDS: float = float(
-    os.getenv("NAC_TEST_PIPE_DRAIN_DELAY", "0.1" if IS_MACOS else "0.001")
+_pipe_drain_default = 0.1 if IS_MACOS else 0.001
+PIPE_DRAIN_DELAY_SECONDS: float = get_positive_numeric_env(
+    "NAC_TEST_PYATS_PIPE_DRAIN_DELAY", _pipe_drain_default, float
 )
-PIPE_DRAIN_TIMEOUT_SECONDS: float = float(
-    os.getenv("NAC_TEST_PIPE_DRAIN_TIMEOUT", "2.0")
+PIPE_DRAIN_TIMEOUT_SECONDS: float = get_positive_numeric_env(
+    "NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT", 2.0, float
 )
+
+# Batching reporter configuration
+# Controls how PyATS reporter messages are batched for efficient transmission
+
+# Enable batching reporter: buffers step messages instead of sending immediately
+# Set NAC_TEST_BATCHING_REPORTER=true to enable (experimental)
+BATCHING_REPORTER_ENABLED: bool = get_bool_env("NAC_TEST_BATCHING_REPORTER")
+
+# Batch size: number of messages accumulated before flush (default: 200)
+BATCH_SIZE: int = get_positive_numeric_env("NAC_TEST_PYATS_BATCH_SIZE", 200, int)
+
+# Batch timeout: seconds before auto-flush even if batch incomplete (default: 0.5s)
+BATCH_TIMEOUT_SECONDS: float = get_positive_numeric_env(
+    "NAC_TEST_PYATS_BATCH_TIMEOUT", 0.5, float
+)
+
+# Overflow queue size: maximum overflow queue size for burst handling (default: 5000)
+OVERFLOW_QUEUE_SIZE: int = get_positive_numeric_env(
+    "NAC_TEST_PYATS_QUEUE_SIZE", 5000, int
+)
+
+# Overflow memory limit: maximum memory for overflow queue in MB (default: 500MB)
+OVERFLOW_MEMORY_LIMIT_MB: int = get_positive_numeric_env(
+    "NAC_TEST_PYATS_MEMORY_LIMIT_MB", 500, int
+)
+
+# Overflow directory override: user-specified directory for overflow files
+# Default: system temp directory (tempfile.gettempdir()/nac_test_overflow)
+OVERFLOW_DIR_OVERRIDE: str | None = os.environ.get("NAC_TEST_PYATS_OVERFLOW_DIR")
 
 # Re-export all constants for backward compatibility
 __all__ = [
@@ -100,11 +136,17 @@ __all__ = [
     "MAX_PARALLEL_JOBS",
     "JOB_RETRY_ATTEMPTS",
     # Subprocess handling
-    "DEFAULT_BUFFER_LIMIT",
-    # Platform detection, sentinel sync, and pipe drain configuration
+    "PYATS_OUTPUT_BUFFER_LIMIT",
+    # Platform detection and pipe drain configuration
     "IS_MACOS",
     "IS_UNSUPPORTED_MACOS_PYTHON",
-    "SENTINEL_TIMEOUT_SECONDS",
     "PIPE_DRAIN_DELAY_SECONDS",
     "PIPE_DRAIN_TIMEOUT_SECONDS",
+    # Batching reporter
+    "BATCHING_REPORTER_ENABLED",
+    "BATCH_SIZE",
+    "BATCH_TIMEOUT_SECONDS",
+    "OVERFLOW_QUEUE_SIZE",
+    "OVERFLOW_MEMORY_LIMIT_MB",
+    "OVERFLOW_DIR_OVERRIDE",
 ]
