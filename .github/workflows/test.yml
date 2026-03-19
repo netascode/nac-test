@@ -49,6 +49,9 @@ jobs:
       - name: Install mypy
         run: uv tool install mypy
 
+      - name: Check License Headers
+        run: bash scripts/license-headers.sh
+
       - name: Pre-commit Checks
         uses: pre-commit/action@v3.0.1
 
