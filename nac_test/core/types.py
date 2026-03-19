@@ -7,6 +7,13 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import cached_property
 
+from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
+    EXIT_ERROR,
+    EXIT_FAILURE_CAP,
+    EXIT_INTERRUPTED,
+)
+
 
 class ExecutionState(str, Enum):
     """Execution state for test results.
@@ -22,6 +29,18 @@ class ExecutionState(str, Enum):
     EMPTY = "empty"
     SKIPPED = "skipped"
     ERROR = "error"
+
+
+class ErrorType(Enum):
+    """Categorized error types for exit code determination.
+
+    Used by TestResults.from_error() to indicate specific error conditions
+    that map to different exit codes in CombinedResults.exit_code.
+    """
+
+    GENERIC = "generic"
+    INVALID_ROBOT_ARGS = "invalid_robot_args"
+    INTERRUPTED = "interrupted"
 
 
 @dataclass
@@ -62,6 +81,7 @@ class TestResults:
     other: int = 0
     reason: str | None = None
     state: ExecutionState = ExecutionState.SUCCESS
+    error_type: ErrorType | None = None
 
     @property
     def total(self) -> int:
@@ -89,7 +109,9 @@ class TestResults:
         return cls(state=ExecutionState.SKIPPED, reason=reason)
 
     @classmethod
-    def from_error(cls, reason: str) -> "TestResults":
+    def from_error(
+        cls, reason: str, error_type: ErrorType = ErrorType.GENERIC
+    ) -> "TestResults":
         """Create TestResults representing an execution error.
 
         Use when test execution failed due to a framework or infrastructure error
@@ -97,11 +119,12 @@ class TestResults:
 
         Args:
             reason: Error message describing what went wrong
+            error_type: Category of error for exit code determination
 
         Returns:
             TestResults with zero counts, reason recorded, and ERROR state
         """
-        return cls(reason=reason, state=ExecutionState.ERROR)
+        return cls(reason=reason, state=ExecutionState.ERROR, error_type=error_type)
 
     @property
     def success_rate(self) -> float:
@@ -135,23 +158,6 @@ class TestResults:
     def was_not_run(self) -> bool:
         """Check if tests were intentionally not run."""
         return self.state == ExecutionState.SKIPPED
-
-    @property
-    def exit_code(self) -> int:
-        """Calculate appropriate exit code per Robot Framework convention.
-
-        Exit codes:
-            0: All tests passed, no errors
-            1-250: Number of test failures (capped at 250)
-            255: Execution errors occurred (has_error is True)
-
-        This is not yet used, will be refined with #469
-        """
-        if self.has_error:
-            return 255
-        if self.has_failures:
-            return min(self.failed, 250)
-        return 0
 
     def __str__(self) -> str:
         """Concise string representation: total/passed/failed/skipped[/other]."""
@@ -255,6 +261,11 @@ class CombinedResults:
         return [r.reason for r in self._results if r.reason is not None]
 
     @property
+    def was_not_run(self) -> bool:
+        """Check if all frameworks were intentionally not run (e.g., render-only mode)."""
+        return bool(self._results) and all(r.was_not_run for r in self._results)
+
+    @property
     def success_rate(self) -> float:
         """Combined success rate excluding skipped tests (0.0-100.0)."""
         tests_with_results = self.total - self.skipped
@@ -282,14 +293,32 @@ class CombinedResults:
         """Calculate appropriate exit code per Robot Framework convention.
 
         Exit codes:
-            0: All tests passed, no errors
+            0: All tests passed, no errors OR all frameworks intentionally skipped
             1-250: Number of test failures (capped at 250)
+            252: No tests found/executed across any framework OR Robot Framework invalid arguments
+            253: Execution was interrupted (Ctrl+C, etc.)
             255: Execution errors occurred (has_errors is True)
 
-        This is not yet used, will be refined with #469
+        Priority (highest to lowest): 253 (interrupted) > 252 (data error) > 255 (generic)
+
+        Why this priority? Interrupted (253) is highest because it's the most actionable
+        signal for CI/CD - the user explicitly stopped execution. Data errors (252) come
+        next as they indicate a configuration problem. Generic errors (255) are lowest
+        as they may be transient infrastructure issues.
         """
         if self.has_errors:
-            return 255
+            error_types = [
+                r.error_type for r in self._results if r.error_type is not None
+            ]
+            if ErrorType.INTERRUPTED in error_types:
+                return EXIT_INTERRUPTED
+            if ErrorType.INVALID_ROBOT_ARGS in error_types:
+                return EXIT_DATA_ERROR
+            return EXIT_ERROR
         if self.has_failures:
-            return min(self.failed, 250)
+            return min(self.failed, EXIT_FAILURE_CAP)
+        if self.was_not_run:
+            return 0
+        if self.is_empty:
+            return EXIT_DATA_ERROR
         return 0

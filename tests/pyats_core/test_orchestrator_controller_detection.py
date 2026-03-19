@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
+from nac_test.core.constants import EXIT_ERROR
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
 
@@ -81,8 +82,8 @@ class TestOrchestratorControllerDetection:
                 merged_data_filename="merged_data.yaml",
             )
 
-        # Verify it exits with code 1
-        assert exc_info.value.code == 1
+        # Verify it exits with EXIT_ERROR (255) for infrastructure errors
+        assert exc_info.value.code == EXIT_ERROR
 
     def test_orchestrator_handles_multiple_controllers_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -115,8 +116,8 @@ class TestOrchestratorControllerDetection:
                 merged_data_filename="merged_data.yaml",
             )
 
-        # Verify it exits with code 1
-        assert exc_info.value.code == 1
+        # Verify it exits with EXIT_ERROR (255) for infrastructure errors
+        assert exc_info.value.code == EXIT_ERROR
 
     def test_validate_environment_uses_detected_controller(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
