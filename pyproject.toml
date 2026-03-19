@@ -51,6 +51,7 @@ dependencies = [
     "markdown>=3.8.2",
     "errorhandler>=2.0",
     "typing_extensions>=4.0; python_version < '3.11'",
+    "filelock>=3.0.0",
 ]
 
 [project.urls]
@@ -79,6 +80,7 @@ dev = [
     "bandit[toml]>=1.8.6",
     "flask>=3.1",
     "mypy>=1.17.1",
+    "nac-test-pyats-common>=0.1.0",  # Required for integration tests
     "pre-commit>=4.3.0",
     "pytest>=8.4.2",
     "pytest-cov~=4.1",  # Genie dependency does not support pytest-cov 6.x yet

@@ -14,6 +14,8 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
+from nac_test.pyats_core.reporting.utils.archive_security import validate_archive_paths
+
 logger = logging.getLogger(__name__)
 
 
@@ -70,8 +72,13 @@ class ArchiveAggregator:
 
                 try:
                     with zipfile.ZipFile(device_archive, "r") as zf:
+                        # Validate archive paths before extraction (Zip Slip protection)
+                        validate_archive_paths(zf, device_dir)
                         zf.extractall(device_dir)
                     logger.debug(f"Extracted {device_archive} to {device_dir}")
+                except ValueError as e:
+                    logger.error(f"Security error extracting {device_archive}: {e}")
+                    continue
                 except Exception as e:
                     logger.error(f"Failed to extract {device_archive}: {e}")
                     continue
