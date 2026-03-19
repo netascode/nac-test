@@ -11,7 +11,7 @@ import logging
 import os
 from pathlib import Path
 
-import yaml  # type: ignore[import-untyped]
+from nac_test.utils.yaml import YAMLError, safe_load
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +166,7 @@ def _file_contains_defaults_structure(file_path: Path) -> bool:
             return False
 
         content = file_path.read_text(encoding="utf-8")
-        data = yaml.safe_load(content)
+        data = safe_load(content)
 
         # Verify actual YAML structure: data['defaults']['apic']
         if isinstance(data, dict):
@@ -175,6 +175,6 @@ def _file_contains_defaults_structure(file_path: Path) -> bool:
                 return "apic" in defaults
         return False
 
-    except (yaml.YAMLError, OSError, UnicodeDecodeError):
+    except (YAMLError, OSError, UnicodeDecodeError):
         # If we can't read or parse the file, skip it
         return False
