@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+# -*- coding: utf-8 -*-
+
 """Archive aggregation utilities for PyATS device-centric testing.
 
 This module handles aggregation of multiple device-specific archives into
@@ -77,7 +82,7 @@ class ArchiveAggregator:
             with zipfile.ZipFile(
                 aggregated_archive_path, "w", zipfile.ZIP_DEFLATED
             ) as zf:
-                for root, dirs, files in os.walk(temp_dir):
+                for root, _dirs, files in os.walk(temp_dir):
                     for file in files:
                         file_path = Path(root) / file
                         # Calculate archive name relative to temp_dir

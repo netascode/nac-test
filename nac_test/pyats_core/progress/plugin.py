@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """PyATS plugin for emitting structured progress events.
 
 This plugin integrates with PyATS's official plugin system to provide

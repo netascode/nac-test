@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+# -*- coding: utf-8 -*-
+
 """Unicon connection utilities for manual Connection object construction.
 
 This module provides helper functions to construct Unicon Connection objects
@@ -6,6 +11,7 @@ when the 'start' parameter is missing or improperly formatted.
 """
 
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +150,7 @@ def _build_console_command(device_path: str) -> str:
 
 
 def build_connection_start_list(
-    connections: list[dict],
+    connections: list[dict[str, Any]],
 ) -> list[str]:
     """Build a list of start commands for multi-connection scenarios.
 
@@ -176,8 +182,8 @@ def build_connection_start_list(
     for i, conn in enumerate(connections):
         try:
             cmd = build_connection_start_command(
-                protocol=conn.get("protocol"),
-                host=conn.get("host"),
+                protocol=conn["protocol"],
+                host=conn["host"],
                 port=conn.get("port"),
                 username=conn.get("username"),
                 ssh_options=conn.get("ssh_options"),

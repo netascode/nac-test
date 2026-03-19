@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Main PyATS orchestration logic for nac-test."""
 
 import asyncio
@@ -9,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
@@ -503,6 +506,20 @@ class PyATSOrchestrator:
                     d2d_tests
                 )
 
+                # Display any skipped devices
+                skipped = self.device_inventory_discovery.skipped_devices
+                if skipped:
+                    print()  # Blank line before warnings
+                    for skip_info in skipped:
+                        device_id = skip_info.get("device_id", "<unknown>")
+                        reason = skip_info.get("reason", "Unknown error")
+                        print(
+                            terminal.warning(
+                                f"WARNING - Skipping device {device_id}: {reason}"
+                            )
+                        )
+                    print()  # Blank line after warnings
+
                 if devices:
                     print(
                         f"Found {len(d2d_tests)} D2D test(s) - using device-centric execution"
@@ -654,7 +671,7 @@ class PyATSOrchestrator:
                         print(f"{f'{archive_type.upper()} Reports:'}   {report_dir}")
             else:
                 # Single archive - show its report location
-                for archive_type, archive_result in result["results"].items():
+                for _archive_type, archive_result in result["results"].items():
                     if archive_result.get("status") == "success":
                         report_dir = Path(archive_result.get("report_dir", ""))
                         summary_report = report_dir / "summary_report.html"

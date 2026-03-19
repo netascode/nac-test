@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Connection broker service for managing persistent device connections.
 
 This service runs as a long-lived daemon process that:
@@ -12,6 +15,7 @@ import json
 import logging
 import os
 import tempfile
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -89,10 +93,10 @@ class ConnectionBroker:
             # Load testbed using pyATS loader
             self.testbed = loader.load(str(self.testbed_path))
 
-            logger.info(f"Loaded testbed with {len(self.testbed.devices)} devices")
+            logger.info(f"Loaded testbed with {len(self.testbed.devices)} devices")  # type: ignore[attr-defined]
 
             # Initialize connection locks for all devices
-            for hostname in self.testbed.devices:
+            for hostname in self.testbed.devices:  # type: ignore[attr-defined]
                 self.connection_locks[hostname] = asyncio.Lock()
 
         except Exception as e:
@@ -279,7 +283,7 @@ class ConnectionBroker:
             logger.error("No testbed loaded")
             return None
 
-        if hostname not in self.testbed.devices:
+        if hostname not in self.testbed.devices:  # type: ignore[unreachable, attr-defined]
             logger.error(f"Device {hostname} not found in testbed")
             return None
 
@@ -414,7 +418,7 @@ class ConnectionBroker:
         logger.info("Connection broker shutdown complete")
 
     @asynccontextmanager
-    async def run_context(self):
+    async def run_context(self) -> AsyncGenerator["ConnectionBroker", None]:
         """Context manager for running the broker."""
         try:
             await self.start()

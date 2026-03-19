@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Async HTML report generator for nac-test PyATS framework.
 
 This module provides asynchronous report generation capabilities that are

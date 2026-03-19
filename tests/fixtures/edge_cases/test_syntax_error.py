@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test file with syntax error for graceful handling.
 
 This fixture has intentional syntax errors to verify the resolver

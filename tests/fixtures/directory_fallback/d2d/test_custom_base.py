@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test in /d2d/ directory with custom base for fallback testing.
 
 This fixture has a class with a custom base class but is located

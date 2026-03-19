@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+# -*- coding: utf-8 -*-
+
 """Generic base test class for all architectures."""
 
 import asyncio
@@ -907,7 +912,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                     # Also catch generic Exception in case httpx raises something unexpected
 
                     # Don't retry on non-HTTP exceptions (like programming errors)
-                    if not isinstance(e, (httpx.HTTPError, httpx.RemoteProtocolError)):
+                    if not isinstance(e, httpx.HTTPError | httpx.RemoteProtocolError):
                         # Check if it's a network/HTTP related error
                         error_msg = str(e).lower()
                         if not any(
@@ -950,12 +955,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                         error_type = "Server disconnected"
                     elif isinstance(
                         e,
-                        (
-                            httpx.ConnectTimeout,
-                            httpx.ReadTimeout,
-                            httpx.WriteTimeout,
-                            httpx.PoolTimeout,
-                        ),
+                        httpx.ConnectTimeout
+                        | httpx.ReadTimeout
+                        | httpx.WriteTimeout
+                        | httpx.PoolTimeout,
                     ):
                         error_type = "Timeout"
                     elif isinstance(e, httpx.HTTPStatusError):
@@ -1690,7 +1693,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         self.logger.warning(f"{len(skipped_results)} {test_type} verifications skipped")
 
         # Log first few skipped items as examples
-        for i, result in enumerate(skipped_results[:5]):  # Limit to first 5
+        for _i, result in enumerate(skipped_results[:5]):  # Limit to first 5
             try:
                 context = self.extract_step_context(result)
                 reason = result.get("reason", "Unknown reason")
@@ -2320,7 +2323,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             f"{len(skipped_results)} {resource_type} verifications skipped"
         )
 
-        for i, result in enumerate(skipped_results[:5]):
+        for _i, result in enumerate(skipped_results[:5]):
             context = result.get("context", {})
             identifier = self.build_identifier(context)
             reason = result.get("reason", "Unknown reason")

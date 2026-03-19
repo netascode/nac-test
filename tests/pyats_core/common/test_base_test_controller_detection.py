@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test base_test.py controller detection integration."""
 
 from unittest.mock import patch

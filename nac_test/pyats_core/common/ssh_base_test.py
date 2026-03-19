@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 import asyncio
 import json
 import logging
@@ -189,7 +192,7 @@ class SSHTestBase(NACTestBase):
             # Raise with a clear message that will be caught by the calling method
             raise ConnectionError(
                 f"Device connection failed: {hostname}\nError: {str(e)}"
-            )
+            ) from e
 
         # 2. Create and attach the command cache
         self.command_cache = CommandCache(hostname)

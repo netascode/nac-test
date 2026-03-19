@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """PyATS subprocess execution functionality."""
 
 import asyncio
@@ -21,7 +24,7 @@ class SubprocessRunner:
     def __init__(
         self,
         output_dir: Path,
-        output_handler: Callable[[str], None],
+        output_handler: Callable[[str], None] | None,
         plugin_config_path: Path | None = None,
     ):
         """Initialize the subprocess runner.

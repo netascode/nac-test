@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test D2D multiple inheritance with mixin classes.
 
 This fixture validates that the resolver correctly detects D2D test type

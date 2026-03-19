@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Test file with no recognized base class.
 
 This fixture contains classes that do not inherit from any recognized

@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+# -*- coding: utf-8 -*-
+
 """Command cache implementation for SSH device testing.
 
 This module provides per-device command output caching to eliminate redundant

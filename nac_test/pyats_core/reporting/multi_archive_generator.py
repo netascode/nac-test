@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+# -*- coding: utf-8 -*-
+
 """Multi-archive report generator for PyATS test results.
 
 This module handles generation of HTML reports from multiple PyATS archives,

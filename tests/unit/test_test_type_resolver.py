@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Unit tests for TestTypeResolver.
 
 This module tests the TestTypeResolver class which is responsible for detecting

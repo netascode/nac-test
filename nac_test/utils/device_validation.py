@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+# -*- coding: utf-8 -*-
+
 """Device validation utilities for SSH/D2D test architectures.
 
 This module provides validation functions to ensure device inventory

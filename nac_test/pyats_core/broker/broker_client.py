@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+# -*- coding: utf-8 -*-
+
 """Broker client for communicating with the connection broker service.
 
 This client is used by test subprocesses to execute commands on devices
@@ -71,7 +76,7 @@ class BrokerClient:
             except Exception as e:
                 logger.error(f"Failed to connect to broker: {e}")
                 await self.disconnect()
-                raise ConnectionError(f"Cannot connect to broker: {e}")
+                raise ConnectionError(f"Cannot connect to broker: {e}") from e
 
     async def disconnect(self) -> None:
         """Disconnect from the broker service."""

@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+# -*- coding: utf-8 -*-
+
 """Archive extraction utilities for PyATS reporting.
 
 This module handles extraction of PyATS archives and preservation of HTML reports
@@ -123,7 +128,7 @@ class ArchiveExtractor:
 
             # Re-create the archive with HTML reports included
             with zipfile.ZipFile(latest_archive, "w", zipfile.ZIP_DEFLATED) as zip_ref:
-                for root, dirs, files in os.walk(temp_path):
+                for root, _dirs, files in os.walk(temp_path):
                     for file in files:
                         file_path = Path(root) / file
                         arcname = file_path.relative_to(temp_path)

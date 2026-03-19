@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+# -*- coding: utf-8 -*-
+
 """Combined orchestrator for sequential PyATS and Robot Framework test execution."""
 
 import logging
@@ -92,7 +97,7 @@ class CombinedOrchestrator:
             typer.secho(
                 f"\n❌ Controller detection failed:\n{e}", fg=typer.colors.RED, err=True
             )
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
 
     def run_tests(self) -> None:
         """Main entry point for combined test execution.

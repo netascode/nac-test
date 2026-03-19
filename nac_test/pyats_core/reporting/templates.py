@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Utility functions for working with Jinja2 templates.
 
 This module provides Jinja2 environment configuration and custom filters

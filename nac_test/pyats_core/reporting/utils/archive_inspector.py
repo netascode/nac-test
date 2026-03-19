@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """Utility for inspecting PyATS archive contents without full extraction.
 
 This module provides lightweight inspection of PyATS archives to display

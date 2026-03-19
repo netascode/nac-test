@@ -1,8 +1,11 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
 """PyATS testbed generation functionality."""
 
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 
 class TestbedGenerator:
@@ -32,8 +35,8 @@ class TestbedGenerator:
             "port": device.get("port", 22),
         }
 
-        # Override protocol/port if connection_options is present and pased
-        # This allows per-device SSH port/protocol customization from test_inventory.yaml
+        # Override protocol/port if connection_options is present
+        # This allows per-device SSH port/protocol customization
         if device.get("connection_options"):
             opts = device["connection_options"]
             if "protocol" in opts:
@@ -74,7 +77,7 @@ class TestbedGenerator:
         }
 
         # Convert to YAML
-        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
+        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)  # type: ignore[no-any-return]
 
     @staticmethod
     def generate_consolidated_testbed_yaml(devices: list[dict[str, Any]]) -> str:
@@ -150,4 +153,4 @@ class TestbedGenerator:
             }
 
         # Convert to YAML
-        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)
+        return yaml.dump(testbed, default_flow_style=False, sort_keys=False)  # type: ignore[no-any-return]
