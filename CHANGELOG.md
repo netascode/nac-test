@@ -1,26 +1,4 @@
-# 1.2.3
-
-- Exclude jsonpath-ng 1.8.0 due to upstream regression (#603)
-
-# 1.2.2
-
-- Add NETCONF related packages
-
-# 1.2.1
-
-- Fix path handling on Windows platform
-
-# 1.2.0
-
-- Add `--processes` CLI argument to configure the number of parallel processes for test execution
-- Increase robot loglevel to `DEBUG` when verbosity of `nac-tool` is set to `DEBUG`
-- Add `robotframework-jmespath` as a direct dependency
-- Add support for test case parallelization for capable suites
-- Return Robot/Pabot exit codes and improve error messages
-- Add support for passing extra Robot Framework options to `nac-test`
-- EXPERIMENTAL: Add support for chunking templates using the `iterate_list_chunked` directive
-
-# 1.1.0
+# 1.1.0 (unreleased)
 
 - Enhance error handling and logging
 - Migrate to `uv` package manager
