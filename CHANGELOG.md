@@ -1,13 +1,41 @@
 # 2.0.0
 
-- Added `--verbose` CLI argument to enable verbose output for nac-test,  Robot Framework, and PyATS execution
-- Replace `--verbosity` with `--loglevel` CLI argument to control log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-- Deprecate `--verbosity` argument (hidden alias for `--loglevel`, will be removed in future version)
-- Remove `NAC_VALIDATE_VERBOSITY` environment variable (was incorrectly named, use `NAC_TEST_LOGLEVEL` instead)
-- Rename `NO_TESTLEVELSPLIT` to `NAC_TEST_DISABLE_TESTLEVELSPLIT`; now requires explicit `true`/`yes`/`1` to disable (previously any non-empty value would disable)
-- nac-test 2.0.0 no longer supports Windows as the pyats libraries are not
-  available on this platform. Please use WSL2 (Windows Subsystem for Linux)
-  as an alternative runtime on Windows devices.
+_Note: This changelog covers all 2.0.0 alpha and beta releases._
+
+## Major Features
+
+- **pyATS Integration** (EXPERIMENTAL): Full support for pyATS operational test cases
+  - Initial support for ACI, SD-WAN, and Catalyst Center architectures
+  - IOS-XE Direct-to-Device (D2D) SSH tests for SD-WAN and Catalyst Center
+  - Experimental `--pyats` and `--robot` flags to limit test execution to one framework
+  - **Windows not supported**: pyATS libraries are not available on Windows. Use WSL2 as an alternative.
+  - **macOS requires Python 3.12+**: Earlier Python versions have known fork/SSL incompatibilities causing crashes during pyATS execution.
+- **Combined Dashboard**: New `combined_summary.html` report linking Robot and pyATS summaries
+- **Merged xUnit Output**: Robot and pyATS results merged into single `xunit.xml` for CI/CD integration
+- **Diagnostic Collection**: `--diagnostic` flag wraps execution to collect troubleshooting info (env, packages, logs)
+- **Fail-Fast Authentication**: Controller authentication validated before pyATS test execution starts
+
+## Breaking Changes
+
+- **Robot artifacts moved**: Output files (`log.html`, `report.html`, etc.) now created in `robot_results/` subdirectory; symlinks in root directory for backward compatibility
+- **RESTinstance removed from core dependencies**: The `RESTinstance` Robot library has been removed. Users who still need RESTinstance can install it separately alongside nac-test.
+
+## CLI Changes
+
+- **Added `--verbose`**: Enables verbose output for nac-test, Robot Framework, and pyATS execution
+- **Added `--loglevel`** (replaces `--verbosity`): Control log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- **Deprecated `--verbosity`**: Hidden alias for `--loglevel`, will be removed in future version
+
+## Environment Variable Changes
+
+- **Renamed**: `NO_TESTLEVELSPLIT` → `NAC_TEST_DISABLE_TESTLEVELSPLIT` (now requires explicit `true`/`yes`/`1`)
+- **Removed**: `NAC_VALIDATE_VERBOSITY` (was incorrectly named; use `NAC_TEST_LOGLEVEL`)
+
+## Other Improvements
+
+- Upgraded pabot to 5.2.2
+- Streamlined CLI output with cleaner progress reporting
+- `--minimal-reports` reduces pyATS HTML report size by 80-95% (only failed tests include full details)
 
 # 1.2.2
 
