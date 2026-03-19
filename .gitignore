@@ -92,6 +92,8 @@ output.xml
 log.html
 report.html
 
+logs/
+
 # Pabot
 .pabotsuitenames
 
