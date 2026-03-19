@@ -20,7 +20,7 @@ import os
 import re
 from pathlib import Path
 
-from nac_test.pyats_core.common.types import TestExecutionPlan, TestFileMetadata
+from nac_test.pyats_core.common.types import PyatsDiscoveryResult, TestFileMetadata
 
 from .tag_matcher import TagMatcher
 from .test_type_resolver import TestMetadataResolver
@@ -130,7 +130,7 @@ class TestDiscovery:
         self,
         include_tags: list[str] | None = None,
         exclude_tags: list[str] | None = None,
-    ) -> TestExecutionPlan:
+    ) -> PyatsDiscoveryResult:
         """Discover, filter, and categorize PyATS tests into an execution plan.
 
         This is the primary entry point for test discovery. It performs:
@@ -138,7 +138,7 @@ class TestDiscovery:
         2. Filtering: Apply include/exclude tag patterns
         3. Categorization: Sort tests into API vs D2D based on base class
 
-        The returned TestExecutionPlan carries all information needed for
+        The returned PyatsDiscoveryResult carries all information needed for
         test execution and post-execution result analysis, including a
         pre-computed path-to-type mapping for O(1) lookups.
 
@@ -149,7 +149,7 @@ class TestDiscovery:
                          Tests with matching groups are filtered out.
 
         Returns:
-            TestExecutionPlan with categorized tests and lookup table
+            PyatsDiscoveryResult with categorized tests and lookup table
         """
         api_tests: list[TestFileMetadata] = []
         d2d_tests: list[TestFileMetadata] = []
@@ -215,7 +215,7 @@ class TestDiscovery:
             f"Categorized {len(api_tests)} API tests and {len(d2d_tests)} D2D tests"
         )
 
-        return TestExecutionPlan(
+        return PyatsDiscoveryResult(
             api_tests=api_tests,
             d2d_tests=d2d_tests,
             skipped_files=skipped_files,

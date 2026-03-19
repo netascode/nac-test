@@ -7,7 +7,7 @@ from .device_inventory import DeviceInventoryDiscovery
 from .tag_matcher import TagMatcher
 from .test_discovery import TestDiscovery
 from .test_type_resolver import (
-    TestExecutionPlan,
+    PyatsDiscoveryResult,
     TestFileMetadata,
     TestMetadataResolver,
 )
@@ -15,7 +15,7 @@ from .test_type_resolver import (
 __all__ = [
     "TagMatcher",
     "TestDiscovery",
-    "TestExecutionPlan",
+    "PyatsDiscoveryResult",
     "TestFileMetadata",
     "TestMetadataResolver",
     "DeviceInventoryDiscovery",

@@ -25,13 +25,6 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import TypedDict
 
-# Python 3.10 doesn't allow inheriting from both TypedDict and Generic.
-# Use typing_extensions for 3.10 compatibility, standard typing for 3.11+.
-if sys.version_info >= (3, 11):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-
 from nac_test.pyats_core.reporting.types import ResultStatus
 
 DEFAULT_TEST_TYPE = "api"
@@ -54,13 +47,12 @@ class TestFileMetadata:
 
 
 @dataclass
-class TestExecutionPlan:
-    """Complete test execution context from discovery through results analysis.
+class PyatsDiscoveryResult:
+    """Result of PyATS test discovery with tag filtering applied.
 
-    This dataclass carries all information needed for test execution and
-    post-execution analysis in a single pass, eliminating the need for:
-    - Separate categorization calls after discovery
-    - Re-instantiating TestMetadataResolver post-execution
+    Contains categorized test files (API vs D2D) and metadata needed for
+    execution and post-execution result analysis. This is PyATS-specific;
+    Robot Framework tests flow through a separate discovery path.
 
     The pre-computed `test_type_by_path` dictionary enables O(1) lookups
     during post-execution result splitting, replacing the previous pattern

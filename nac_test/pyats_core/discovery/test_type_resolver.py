@@ -87,7 +87,7 @@ from typing import Final
 
 from nac_test.pyats_core.common.types import (
     DEFAULT_TEST_TYPE,
-    TestExecutionPlan,
+    PyatsDiscoveryResult,
     TestFileMetadata,
 )
 
@@ -99,7 +99,7 @@ __all__ = [
     "BASE_CLASS_MAPPING",
     "DEFAULT_TEST_TYPE",
     "NoRecognizedBaseError",
-    "TestExecutionPlan",
+    "PyatsDiscoveryResult",
     "TestFileMetadata",
     "TestMetadataResolver",
     "VALID_TEST_TYPES",

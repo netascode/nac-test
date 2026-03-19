@@ -10,7 +10,7 @@ import pytest
 
 from nac_test.core.constants import DRY_RUN_REASON
 from nac_test.pyats_core.discovery.test_type_resolver import (
-    TestExecutionPlan,
+    PyatsDiscoveryResult,
     TestFileMetadata,
 )
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
@@ -20,13 +20,13 @@ from .conftest import PyATSTestDirs
 
 def _make_execution_plan(
     api_paths: list[Path], d2d_paths: list[Path]
-) -> TestExecutionPlan:
-    """Create a TestExecutionPlan from path lists for test mocking."""
+) -> PyatsDiscoveryResult:
+    """Create a PyatsDiscoveryResult from path lists for test mocking."""
     api_tests = [TestFileMetadata(path=p, test_type="api") for p in api_paths]
     d2d_tests = [TestFileMetadata(path=p, test_type="d2d") for p in d2d_paths]
     test_type_by_path = {p.resolve(): "api" for p in api_paths}
     test_type_by_path.update({p.resolve(): "d2d" for p in d2d_paths})
-    return TestExecutionPlan(
+    return PyatsDiscoveryResult(
         api_tests=api_tests,
         d2d_tests=d2d_tests,
         skipped_files=[],
