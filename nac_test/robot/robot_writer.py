@@ -114,7 +114,7 @@ class RobotWriter:
         # create output directory if it does not exist yet
         pathlib.Path(os.path.dirname(output_path)).mkdir(parents=True, exist_ok=True)
 
-        template = env.get_template(str(template_path))
+        template = env.get_template(template_path.as_posix())
         # hack to convert nested ordereddict to dict, to avoid duplicate dict keys
         # json roundtrip should be safe as everything should be serializable
         data_source = custom_data if custom_data is not None else self.data
