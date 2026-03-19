@@ -11,10 +11,9 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
 from nac_test.pyats_core.execution.job_generator import JobGenerator
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
-
-from .testbed_generator import TestbedGenerator
 
 logger = logging.getLogger(__name__)
 

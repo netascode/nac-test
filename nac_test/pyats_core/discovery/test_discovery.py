@@ -21,9 +21,8 @@ import re
 from pathlib import Path
 
 from nac_test.pyats_core.common.types import PyatsDiscoveryResult, TestFileMetadata
-
-from .tag_matcher import TagMatcher
-from .test_type_resolver import TestMetadataResolver
+from nac_test.pyats_core.discovery.tag_matcher import TagMatcher
+from nac_test.pyats_core.discovery.test_type_resolver import TestMetadataResolver
 
 logger = logging.getLogger(__name__)
 
