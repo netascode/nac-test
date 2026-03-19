@@ -2,6 +2,7 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 import logging
+import os
 import sys
 from enum import Enum
 from pathlib import Path
@@ -15,6 +16,8 @@ import nac_test.robot_writer
 app = typer.Typer(add_completion=False)
 
 logger = logging.getLogger(__name__)
+
+ORDERING_FILE = "ordering.txt"
 
 
 def configure_logging(level: str) -> None:
@@ -210,11 +213,16 @@ def main(
     """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
     configure_logging(verbosity)
 
+    if "NAC_TEST_NO_TESTLEVELSPLIT" not in os.environ:
+        ordering_file = output / ORDERING_FILE
+    else:
+        ordering_file = None
+
     try:
         writer = nac_test.robot_writer.RobotWriter(
             data, filters, tests, include, exclude
         )
-        writer.write(templates, output)
+        writer.write(templates, output, ordering_file=ordering_file)
         if not render_only:
             nac_test.pabot.run_pabot(
                 output,
@@ -223,6 +231,7 @@ def main(
                 processes,
                 dry_run,
                 verbosity == VerbosityLevel.DEBUG,
+                ordering_file=ordering_file,
             )
     except Exception as e:
         logger.error(f"Error during execution: {e}")
