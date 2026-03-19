@@ -34,7 +34,7 @@ dependencies = [
     "robotframework>=7.3.2",
     "robotframework-jmespath",
     "robotframework-jsonlibrary>=0.5",
-    "robotframework-pabot>=4.3.2",
+    "robotframework-pabot>=5.2.2",
     "robotframework-requests>=0.9.7",
     "ruamel.yaml>=0.18.15",
     "typer>=0.17.4",
