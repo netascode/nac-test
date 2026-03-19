@@ -26,3 +26,11 @@ PROGRESS_UPDATE_INTERVAL = 0.5  # seconds
 # Debug mode - enables progressive disclosure of error details
 # Set NAC_TEST_DEBUG=true for developer-level error context
 DEBUG_MODE = os.environ.get("NAC_TEST_DEBUG", "").lower() == "true"
+
+# Output directory structure - single source of truth for directory layout
+# These define the standardized paths for test results and reports
+PYATS_RESULTS_DIRNAME = "pyats_results"
+ROBOT_RESULTS_DIRNAME = "robot_results"
+HTML_REPORTS_DIRNAME = "html_reports"
+SUMMARY_REPORT_FILENAME = "summary_report.html"
+COMBINED_SUMMARY_FILENAME = "combined_summary.html"
