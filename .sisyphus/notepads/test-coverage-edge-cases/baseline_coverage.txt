@@ -1,0 +1,165 @@
+BASELINE TEST COVERAGE REPORT
+Captured: 2026-02-14 (Sat)
+Command: uv run pytest --cov=nac_test --cov-report=term tests/unit/
+
+==================== SUMMARY ====================
+Exit Code: 0
+Tests Passed: 162
+Total Coverage: 31%
+
+==================== KEY MODULE COVERAGE ====================
+nac_test/pyats_core/execution/subprocess_runner.py       167 Stmts    146 Miss    13% Cover
+nac_test/robot/pabot.py                                   62 Stmts     16 Miss    74% Cover
+nac_test/robot/orchestrator.py                           110 Stmts      2 Miss    98% Cover
+nac_test/robot/reporting/robot_output_parser.py           65 Stmts     10 Miss    85% Cover
+nac_test/core/types.py                                   105 Stmts     21 Miss    80% Cover
+
+==================== FULL COVERAGE REPORT ====================
+   Building nac-test @ file:///Users/oboehmer/Documents/DD/nac-test
+      Built nac-test @ file:///Users/oboehmer/Documents/DD/nac-test
+Uninstalled 1 package in 1ms
+Installed 1 package in 2ms
+============================= test session starts ==============================
+platform darwin -- Python 3.12.10, pytest-9.0.1, pluggy-1.6.0
+rootdir: /Users/oboehmer/Documents/DD/nac-test
+configfile: pyproject.toml
+plugins: anyio-4.12.1, mock-3.15.1, xdist-3.8.0, cov-4.1.0
+collected 162 items
+
+tests/unit/core/test_combined_generator.py ......                        [  3%]
+tests/unit/robot/test_orchestrator.py ................                   [ 13%]
+tests/unit/robot/test_robot_generator.py .......                         [ 17%]
+tests/unit/robot/test_robot_output_parser.py ..........                  [ 24%]
+tests/unit/test_archive_inspector.py ...........................         [ 40%]
+tests/unit/test_combined_orchestrator_controller.py ....                 [ 43%]
+tests/unit/test_combined_orchestrator_flow.py ..............             [ 51%]
+tests/unit/test_pabot_args.py ......                                     [ 55%]
+tests/unit/test_ssh_base_test_validation.py ...                          [ 57%]
+tests/unit/test_terminal_error_messages.py ....                          [ 59%]
+tests/unit/test_test_type_resolver.py .................................. [ 80%]
+...                                                                      [ 82%]
+tests/unit/test_testbed_generator.py ....................                [ 95%]
+tests/unit/test_testbed_generator_merge.py ........                      [100%]
+
+=============================== warnings summary ===============================
+nac_test/core/types.py:9
+  /Users/oboehmer/Documents/DD/nac-test/nac_test/core/types.py:9: PytestCollectionWarning: cannot collect test class 'TestResults' because it has a __init__ constructor (from: tests/unit/core/test_combined_generator.py)
+    @dataclass
+
+.venv/lib/python3.12/site-packages/robot/utils/__init__.py:244
+.venv/lib/python3.12/site-packages/robot/utils/__init__.py:244
+.venv/lib/python3.12/site-packages/robot/utils/__init__.py:244
+.venv/lib/python3.12/site-packages/robot/utils/__init__.py:244
+  /Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages/robot/utils/__init__.py:244: DeprecationWarning: 'robot.utils.PY2' is deprecated and will be removed in Robot Framework 9.0.
+    warnings.warn(
+
+.venv/lib/python3.12/site-packages/robot/utils/__init__.py:244
+.venv/lib/python3.12/site-packages/robot/utils/__init__.py:244
+.venv/lib/python3.12/site-packages/robot/utils/__init__.py:244
+.venv/lib/python3.12/site-packages/robot/utils/__init__.py:244
+  /Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages/robot/utils/__init__.py:244: DeprecationWarning: 'robot.utils.is_unicode' is deprecated and will be removed in Robot Framework 9.0.
+    warnings.warn(
+
+nac_test/core/types.py:9
+  /Users/oboehmer/Documents/DD/nac-test/nac_test/core/types.py:9: PytestCollectionWarning: cannot collect test class 'TestResults' because it has a __init__ constructor (from: tests/unit/core/test_combined_generator.py)
+    @dataclass
+
+nac_test/core/types.py:9
+  /Users/oboehmer/Documents/DD/nac-test/nac_test/core/types.py:9: PytestCollectionWarning: cannot collect test class 'TestResults' because it has a __init__ constructor (from: tests/unit/test_combined_orchestrator_flow.py)
+    @dataclass
+
+nac_test/pyats_core/discovery/test_type_resolver.py:151
+  /Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/discovery/test_type_resolver.py:151: PytestCollectionWarning: cannot collect test class 'TestTypeResolver' because it has a __init__ constructor (from: tests/unit/test_test_type_resolver.py)
+    class TestTypeResolver:
+
+tests/unit/test_ssh_base_test_validation.py::TestSSHTestBaseValidation::test_validation_called_for_valid_device
+  /Users/oboehmer/Documents/DD/nac-test/nac_test/utils/asyncio_utils.py:34: DeprecationWarning: There is no current event loop
+    loop = asyncio.get_event_loop()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+--------- coverage: platform darwin, python 3.12.10-final-0 ----------
+Name                                                        Stmts   Miss  Cover
+-------------------------------------------------------------------------------
+nac_test/__init__.py                                            5      2    60%
+nac_test/cli/__init__.py                                        0      0   100%
+nac_test/cli/main.py                                           83     83     0%
+nac_test/combined_orchestrator.py                             141      9    94%
+nac_test/core/__init__.py                                       3      0   100%
+nac_test/core/constants.py                                     11      0   100%
+nac_test/core/models.py                                        18      0   100%
+nac_test/core/reporting/__init__.py                             2      0   100%
+nac_test/core/reporting/combined_generator.py                  36      3    92%
+nac_test/core/types.py                                        105     21    80%
+nac_test/data_merger.py                                        21      3    86%
+nac_test/exceptions.py                                         14     14     0%
+nac_test/pyats_core/__init__.py                                 1      0   100%
+nac_test/pyats_core/broker/__init__.py                          1      0   100%
+nac_test/pyats_core/broker/broker_client.py                   119     90    24%
+nac_test/pyats_core/broker/connection_broker.py               234    203    13%
+nac_test/pyats_core/common/__init__.py                         1      0   100%
+nac_test/pyats_core/common/auth_cache.py                       57     57     0%
+nac_test/pyats_core/common/base_test.py                       729    637    13%
+nac_test/pyats_core/common/connection_pool.py                  34     21    38%
+nac_test/pyats_core/common/retry_strategy.py                   36     22    39%
+nac_test/pyats_core/common/ssh_base_test.py                   136     87    36%
+nac_test/pyats_core/common/subprocess_auth.py                  82     82     0%
+nac_test/pyats_core/common/types.py                            38      3    92%
+nac_test/pyats_core/constants.py                              26      3    88%
+nac_test/pyats_core/discovery/__init__.py                       3      0   100%
+nac_test/pyats_core/discovery/device_inventory.py              51     40    22%
+nac_test/pyats_core/discovery/test_discovery.py               55     48    13%
+nac_test/pyats_core/discovery/test_type_resolver.py            77      0   100%
+nac_test/pyats_core/execution/__init__.py                       4      0   100%
+nac_test/pyats_core/execution/device/__init__.py               3      0   100%
+nac_test/pyats_core/execution/device/device_executor.py        57     42    26%
+nac_test/pyats_core/execution/device/testbed_generator.py      68      4    94%
+nac_test/pyats_core/execution/job_generator.py                 18      9    50%
+nac_test/pyats_core/execution/output_processor.py             103     88    15%
+nac_test/pyats_core/execution/subprocess_runner.py            167    146    13%
+nac_test/pyats_core/http/__init__.py                            2      0   100%
+nac_test/pyats_core/http/subprocess_client.py                 166    109    34%
+nac_test/pyats_core/orchestrator.py                           330    287    13%
+nac_test/pyats_core/progress/__init__.py                        2      0   100%
+nac_test/pyats_core/progress/plugin.py                        131    131     0%
+nac_test/pyats_core/progress/reporter.py                       42     30    29%
+nac_test/pyats_core/reporting/__init__.py                       6      0   100%
+nac_test/pyats_core/reporting/batching_reporter.py            431    361    16%
+nac_test/pyats_core/reporting/collector.py                     67     53    21%
+nac_test/pyats_core/reporting/generator.py                    143    125    13%
+nac_test/pyats_core/reporting/multi_archive_generator.py      171    147    14%
+nac_test/pyats_core/reporting/step_interceptor.py             152    124    18%
+nac_test/pyats_core/reporting/summary_printer.py              137    121    12%
+nac_test/pyats_core/reporting/templates.py                    100     63    37%
+nac_test/pyats_core/reporting/types.py                         20      0   100%
+nac_test/pyats_core/reporting/utils/__init__.py                0      0   100%
+nac_test/pyats_core/reporting/utils/archive_aggregator.py      58     47    19%
+nac_test/pyats_core/reporting/utils/archive_extractor.py       60     36    40%
+nac_test/pyats_core/reporting/utils/archive_inspector.py       97     33    66%
+nac_test/pyats_core/reporting/utils/archive_security.py         8      0   100%
+nac_test/pyats_core/ssh/__init__.py                            1      0   100%
+nac_test/pyats_core/ssh/command_cache.py                       35     25    29%
+nac_test/pyats_core/ssh/connection_manager.py                 140    140     0%
+nac_test/pyats_core/ssh/connection_utils.py                    56     56     0%
+nac_test/robot/__init__.py                                      4      0   100%
+nac_test/robot/orchestrator.py                                110      2    98%
+nac_test/robot/pabot.py                                        62     16    74%
+nac_test/robot/reporting/__init__.py                           3      0   100%
+nac_test/robot/reporting/robot_generator.py                    52      8    85%
+nac_test/robot/reporting/robot_output_parser.py                65     10    85%
+nac_test/robot/robot_writer.py                                280    222    21%
+nac_test/utils/__init__.py                                    10      0   100%
+nac_test/utils/asyncio_utils.py                               11      5    55%
+nac_test/utils/cleanup.py                                     29     22    24%
+nac_test/utils/controller.py                                  70     23    67%
+nac_test/utils/device_validation.py                            15      1    93%
+nac_test/utils/environment.py                                 46     29    37%
+nac_test/utils/file_discovery.py                              36     32    11%
+nac_test/utils/logging.py                                     23     12    48%
+nac_test/utils/path_setup.py                                  51     42    18%
+nac_test/utils/system_resources.py                            62     47    24%
+nac_test/utils/terminal.py                                    94     10    89%
+-------------------------------------------------------------------------------
+TOTAL                                                        5917   4086    31%
+
+======================= 162 passed, 13 warnings in 6.91s =======================

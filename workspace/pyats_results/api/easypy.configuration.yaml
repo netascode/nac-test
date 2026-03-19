@@ -1,0 +1,171 @@
+components:
+  job:
+    class: <class 'pyats.easypy.job.Job'>
+  mailbot:
+    class: <class 'pyats.easypy.email.MailBot'>
+  reporter:
+    class: <class 'pyats.easypy.reporter.ae.AEReporter'>
+  runinfo:
+    class: <class 'pyats.easypy.runinfo.base.RunInfo'>
+plugins:
+  AbstractPlugin:
+    class: <class 'genie.abstract.plugin.AbstractPlugin'>
+    enabled: true
+    kwargs: {}
+    module: genie.abstract.plugin
+    name: AbstractPlugin
+    order: 160.0
+  ArchiveConfigPlugin:
+    class: <class 'pyats.easypy.plugins.debug.ArchiveConfigPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.debug
+    name: ArchiveConfigPlugin
+    order: 55.0
+  CopyJobfileToRunInfo:
+    class: <class 'pyats.easypy.plugins.debug.CopyJobfileToRunInfo'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.debug
+    name: CopyJobfileToRunInfo
+    order: 30.0
+  CopyManifestFileToRunInfo:
+    class: <class 'pyats.easypy.plugins.debug.CopyManifestFileToRunInfo'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.debug
+    name: CopyManifestFileToRunInfo
+    order: 31.0
+  EnvironmentDebugPlugin:
+    class: <class 'pyats.easypy.plugins.debug.EnvironmentDebugPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.debug
+    name: EnvironmentDebugPlugin
+    order: 70.0
+  FileServerPlugin:
+    class: <class 'genie.libs.filetransferutils.fileserver.plugin.FileServerPlugin'>
+    enabled: true
+    kwargs: {}
+    module: genie.libs.filetransferutils.fileserver.plugin
+    name: FileServerPlugin
+    order: 61
+  HTMLLogsPlugin:
+    class: <class 'pyats.easypy.plugins.htmllogs.HTMLLogsPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.htmllogs
+    name: HTMLLogsPlugin
+    order: 130.0
+  'HealthCheckPlugin:':
+    class: <class 'genie.libs.health.plugin.HealthCheckPlugin'>
+    enabled: true
+    kwargs: {}
+    module: genie.libs.health.plugin
+    name: 'HealthCheckPlugin:'
+    order: 161.0
+  JobLogPlugin:
+    class: <class 'pyats.easypy.plugins.logs.JobLogPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.logs
+    name: JobLogPlugin
+    order: 40.0
+  KleenexPlugin:
+    class: <class 'pyats.easypy.plugins.kleenex.KleenexPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.kleenex
+    name: KleenexPlugin
+    order: 90.0
+  LiveviewPlugin:
+    class: <class 'pyats.easypy.plugins.logs.LiveviewPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.logs
+    name: LiveviewPlugin
+    order: 35.0
+  LogWarnings:
+    class: <class 'pyats.easypy.plugins.logs.LogWarnings'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.logs
+    name: LogWarnings
+    order: 10.0
+  'MapleCleanPlugin:':
+    class: <class 'genie.libs.sdk.triggers.blitz.maple_converter.plugin.MapleCleanPlugin'>
+    enabled: true
+    kwargs: {}
+    module: genie.libs.sdk.triggers.blitz.maple_converter
+    name: 'MapleCleanPlugin:'
+    order: 130
+  ProgressReporterPlugin:
+    class: <class 'nac_test.pyats_core.progress.plugin.ProgressReporterPlugin'>
+    enabled: true
+    kwargs: {}
+    module: nac_test.pyats_core.progress.plugin
+    name: ProgressReporterPlugin
+    order: 1.0
+  ReplayPlugin:
+    class: <class 'pyats.easypy.plugins.replay.ReplayPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.replay
+    name: ReplayPlugin
+    order: 140.0
+  RerunPlugin:
+    class: <class 'pyats.easypy.plugins.rerun.RerunPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.rerun
+    name: RerunPlugin
+    order: 110.0
+  RetryPlugin:
+    class: <class 'pyats.easypy.plugins.retry.RetryPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.retry
+    name: RetryPlugin
+    order: 115.0
+  RuninfoSymlinkPlugin:
+    class: <class 'pyats.easypy.plugins.runinfo.RuninfoSymlinkPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.runinfo
+    name: RuninfoSymlinkPlugin
+    order: 20.0
+  TaskLogPlugin:
+    class: <class 'pyats.easypy.plugins.logs.TaskLogPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.logs
+    name: TaskLogPlugin
+    order: 50.0
+  TaskResultsPlugin:
+    class: <class 'pyats.easypy.plugins.runinfo.TaskResultsPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.runinfo
+    name: TaskResultsPlugin
+    order: 100.0
+  TestbedPlugin:
+    class: <class 'pyats.easypy.plugins.testbed.TestbedPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.testbed
+    name: TestbedPlugin
+    order: 60.0
+  TipsPlugin:
+    class: <class 'pyats.easypy.plugins.tips.TipsPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.tips
+    name: TipsPlugin
+    order: 150.0
+  XunitPlugin:
+    class: <class 'pyats.easypy.plugins.xunit.XunitPlugin'>
+    enabled: true
+    kwargs: {}
+    module: pyats.easypy.plugins.xunit
+    name: XunitPlugin
+    order: 120.0

@@ -1,0 +1,10 @@
+{
+  "active_plan": "/Users/oboehmer/Documents/DD/nac-test/.sisyphus/plans/gha-security-remediation.md",
+  "started_at": "2026-03-16T13:25:34.595Z",
+  "session_ids": [
+    "ses_309430219ffew5mzqLFrM8JMAm",
+    "ses_30306bd66ffe1lMDT8BRU1bXUh"
+  ],
+  "plan_name": "gha-security-remediation",
+  "worktree_path": "/Users/oboehmer/Documents/DD/nac-test"
+}

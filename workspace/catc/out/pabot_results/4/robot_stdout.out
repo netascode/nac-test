@@ -1,0 +1,39 @@
+==============================================================================
+Out                                                                           
+==============================================================================
+Out.Robot                                                                     
+==============================================================================
+Out.Robot.Config                                                              
+==============================================================================
+Out.Robot.Config.Fabric                                                       
+==============================================================================
+Out.Robot.Config.Fabric.Fabric Sites :: Verify Fabric Sites Configuration     
+==============================================================================
+Verify Fabric Site Global/Poland/Krakow                               Validating fabric site Global/Poland/Krakow
+Site ID for Global/Poland/Krakow: 07e53493-19df-406f-a72e-042e957884c5
+Fabric site ID: 3cf026bd-f2c6-45a1-ae4c-b327f7e29e4a
+Fabric site Global/Poland/Krakow validation completed
+| PASS |
+------------------------------------------------------------------------------
+Verify Fabric Site Global/Poland/Warsaw                               Validating fabric site Global/Poland/Warsaw
+Site ID for Global/Poland/Warsaw: b531ca39-6e99-4c7f-8dde-392f543eeaa0
+Fabric site ID: 40f5ed97-a778-4d00-b6f1-eb3816fd476d
+Fabric site Global/Poland/Warsaw validation completed
+| PASS |
+------------------------------------------------------------------------------
+Out.Robot.Config.Fabric.Fabric Sites :: Verify Fabric Sites Config... | PASS |
+2 tests, 2 passed, 0 failed
+==============================================================================
+Out.Robot.Config.Fabric                                               | PASS |
+2 tests, 2 passed, 0 failed
+==============================================================================
+Out.Robot.Config                                                      | PASS |
+2 tests, 2 passed, 0 failed
+==============================================================================
+Out.Robot                                                             | PASS |
+2 tests, 2 passed, 0 failed
+==============================================================================
+Out                                                                   | PASS |
+2 tests, 2 passed, 0 failed
+==============================================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out/pabot_results/4/output.xml

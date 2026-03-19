@@ -1,0 +1,15 @@
+
+2026-02-07 13:23:19,970: %UNICON-INFO: +++ sd-dc-c8kv-01 logfile /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results_comparison/pyats_results/sd-dc-c8kv-01-cli-6999866226.log +++
+
+2026-02-07 13:23:19,972: %UNICON-INFO: +++ Unicon plugin iosxe/sdwan (unicon.plugins.iosxe.sdwan) +++
+
+2026-02-07 13:23:32,066: %UNICON-INFO: +++ connection to spawn: ssh -l mock_user 10.100.1.1 -p 22, id: 4515529120 +++
+
+2026-02-07 13:23:32,071: %UNICON-INFO: connection to sd-dc-c8kv-01
+
+
+
+2026-02-07 13:24:58,445: %UNICON-INFO: +++ connection to spawn: ssh -l mock_user 10.100.1.1 -p 22, id: 4525797456 +++
+
+2026-02-07 13:24:58,446: %UNICON-INFO: connection to sd-dc-c8kv-01
+

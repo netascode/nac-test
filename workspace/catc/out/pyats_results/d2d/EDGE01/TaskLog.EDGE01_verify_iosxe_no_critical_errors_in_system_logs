@@ -1,0 +1,33 @@
+0: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=0.1/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+1: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=0.2/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: |             Starting testcase VerifyNoCriticalErrorsInSystemLogs             |
+2: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=0.3/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+3: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=3.1/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+4: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=3.2/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: |                            Starting section setup                            |
+5: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=3.3/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+6: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %SCRIPT-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: Batching reporter initialized successfully (batch size: 200, flush timeout: 0.5s)
+7: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %SCRIPT-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: Connecting to device EDGE01 via connection broker
+8: OBOEHMER-M-5D76: 2026-01-30T16:56:27: %AETEST-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: The result of section setup is => PASSED
+9: OBOEHMER-M-5D76: 2026-01-30T16:56:27: %AETEST-6-INFO: %[part=9.1/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+10: OBOEHMER-M-5D76: 2026-01-30T16:56:27: %AETEST-6-INFO: %[part=9.2/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: |                   Starting section test_system_log_health                    |
+11: OBOEHMER-M-5D76: 2026-01-30T16:56:27: %AETEST-6-INFO: %[part=9.3/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+12: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %SCRIPT-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: System Log Verification Verification Summary:
+13: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %SCRIPT-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]:   - Total configurations processed: 1
+14: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %SCRIPT-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]:   - Passed: 1
+15: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %SCRIPT-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]:   - Failed: 0
+16: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %SCRIPT-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]:   - Skipped: 0
+17: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[part=17.1/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +..............................................................................+
+18: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[part=17.2/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: :                   Starting STEP 1: System Log Verification                   :
+19: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[part=17.3/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +..............................................................................+
+20: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: The result of STEP 1: System Log Verification is => PASSED
+21: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[part=21.1/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +..........................................................+
+22: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[part=21.2/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: :                       STEPS Report                       :
+23: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[part=21.3/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +..........................................................+
+24: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: STEP 1 - System Log Verification                  Passed    
+25: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: ............................................................
+26: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: The result of section test_system_log_health is => PASSED
+27: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[part=27.1/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+28: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[part=27.2/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: |                           Starting section cleanup                           |
+29: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[part=27.3/3][pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+30: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %SCRIPT-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: Batching reporter shutdown complete - processed 0 messages in 0 batches
+31: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: The result of section cleanup is => PASSED
+32: OBOEHMER-M-5D76: 2026-01-30T16:56:29: %AETEST-6-INFO: %[pid=71237][pname=EDGE01_verify_iosxe_no_critical_errors_in_system_logs]: The result of testcase VerifyNoCriticalErrorsInSystemLogs is => PASSED

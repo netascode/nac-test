@@ -1,0 +1,77 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpoy73kt7x_api_job.py --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmphdkqw12c_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out --archive-name nac_test_job_20260130_165556_070.zip --no-archive-subdir --no-mail --no-xml-report
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmpoy73kt7x_api_job
+    Result       : PASSED
+    Start time   : 2026-01-30 16:56:07.305694+01:00
+    Stop time    : 2026-01-30 16:56:11.682829+01:00
+    Elapsed time : 0:00:05
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out/nac_test_job_20260130_165556_070.zip
+
+Total Tasks    : 3 
+
+Overall Stats
+    Passed     : 3
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 3
+
+Success Rate   : 100.00 %
+
+Section Stats
+    Passed     : 9
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 9
+
+Section Success Rate   : 100.00 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+verify_dnac_catalyst_center_system_health_no_critical_events: verif...    PASSED
+verify_dnac_catalyst_center_system_health_no_critical_events: verif...    PASSED
+verify_dnac_network_device_management_state: verify_dnac_network_de...    PASSED
+verify_dnac_network_device_management_state: verify_dnac_network_de...    PASSED
+verify_dnac_physical_topology_link_status: verify_dnac_physical_top...    PASSED
+verify_dnac_physical_topology_link_status: verify_dnac_physical_top...    PASSED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+verify_dnac_catalyst_center_system_health_no_critical_events: verif...    PASSED
+`-- VerifyCatCSystemHealthNoCriticalEvents                                PASSED
+    |-- setup                                                             PASSED
+    |-- test_system_health_no_critical_events                             PASSED
+    |   `-- STEP 1: Catalyst Center System Health Events Verification     PASSED
+    `-- cleanup                                                           PASSED
+verify_dnac_network_device_management_state: verify_dnac_network_de...    PASSED
+`-- VerifyDnacNetworkDeviceManagementState                                PASSED
+    |-- setup                                                             PASSED
+    |-- test_network_device_management_state                              PASSED
+    |   `-- STEP 1: Network Device Management State Verification          PASSED
+    `-- cleanup                                                           PASSED
+verify_dnac_physical_topology_link_status: verify_dnac_physical_top...    PASSED
+`-- VerifyPhysicalTopologyLinkStatus                                      PASSED
+    |-- setup                                                             PASSED
+    |-- test_physical_topology_link_status                                PASSED
+    |   `-- STEP 1: Physical Topology Link Status Verification            PASSED
+    `-- cleanup                                                           PASSED

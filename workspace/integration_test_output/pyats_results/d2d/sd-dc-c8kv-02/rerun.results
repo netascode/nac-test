@@ -1,0 +1,19 @@
+# rerun.results file that contains the information of each task and their
+# testcases.
+# Please Check the following link for more information:
+# https://pubhub.devnetcloud.com/media/pyats/docs/easypy/rerun.html
+sd-dc-c8kv-02_test_broker_pooling_1:
+  testcases:
+  - name: BrokerPoolingTest1
+    result: PASSED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/tests/integration/fixtures/templates_broker/tests/test_broker_pooling_1.py
+sd-dc-c8kv-02_test_broker_pooling_2:
+  testcases:
+  - name: BrokerPoolingTest2
+    result: PASSED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/tests/integration/fixtures/templates_broker/tests/test_broker_pooling_2.py
+sd-dc-c8kv-02_test_broker_pooling_3:
+  testcases:
+  - name: BrokerPoolingTest3
+    result: PASSED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/tests/integration/fixtures/templates_broker/tests/test_broker_pooling_3.py

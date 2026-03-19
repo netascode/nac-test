@@ -1,0 +1,9 @@
+--suite Nac Tmp Sxlajtj3.Suite 1.Disabled-Concurrent
+--suite Nac Tmp Sxlajtj3.Suite 1.Empty Suite
+--test Nac Tmp Sxlajtj3.Suite 1.Concurrent.Concurrent Test 1
+--test Nac Tmp Sxlajtj3.Suite 1.Concurrent.Concurrent Test 2
+--test Nac Tmp Sxlajtj3.Suite 1.Mixedcase-Concurrent.Mixed Case Concurrent Test 1
+--test Nac Tmp Sxlajtj3.Suite 1.Mixedcase-Concurrent.Mixed Case Concurrent Test 2
+--suite Nac Tmp Sxlajtj3.Suite 1.Non-Concurrent
+--test Nac Tmp Sxlajtj3.Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 1
+--test Nac Tmp Sxlajtj3.Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 2

@@ -1,0 +1,35 @@
+==============================================================================
+Out                                                                           
+==============================================================================
+Out.Tests                                                                     
+==============================================================================
+Out.Tests.Robot                                                               
+==============================================================================
+Out.Tests.Robot.Config                                                        
+==============================================================================
+Out.Tests.Robot.Config.Fabric                                                 
+==============================================================================
+Out.Tests.Robot.Config.Fabric.L2 Virtual Networks :: Verify L2 Virtual Netw...
+==============================================================================
+Get L2 Virtual Networks                                               L2 Virtual Networks API Response: {'response': [{'id': '14089d04-6465-4b5f-bb04-dfdd552368ad', 'fabricId': '3cf026bd-f2c6-45a1-ae4c-b327f7e29e4a', 'vlanName': '192_168_102_0-Printers', 'vlanId': 1024, 'trafficType': 'DATA', 'isFabricEnabledWireless': False, 'isMultipleIpToMacAddresses': False, 'associatedLayer3VirtualNetworkName': 'Printers'}, {'id': '229d2c65-4eef-458e-8a07-c31bd391d544', 'fabricId': '40f5ed97-a778-4d00-b6f1-eb3816fd476d', 'vlanName': '192_168_200_0-Campus', 'vlanId': 1023, 'trafficType': 'DATA', 'isFabricEnabledWireless': False, 'isMultipleIpToMacAddresses': False, 'associatedLayer3VirtualNetworkName': 'Campus'}, {'id': '7bf7e374-48b3-4bd5-a447-0ea1808b9116', 'fabricId': '40f5ed97-a778-4d00-b6f1-eb3816fd476d', 'vlanName': '192_168_203_0-BYOD', 'vlanId': 1022, 'trafficType': 'DATA', 'isFabricEnabledWireless': False, 'isMultipleIpToMacAddresses': False, 'associatedLayer3VirtualNetworkName': 'BYOD'}, {'id': '8c3e06d9-3745-41a5-b38f-5ac1ac240cfe', 'fabricId': '40f5ed97-a778-4d00-b6f1-eb3816fd476d', 'vlanName': '192_168_202_0-Printers', 'vlanId': 1024, 'trafficType': 'DATA', 'isFabricEnabledWireless': False, 'isMultipleIpToMacAddresses': False, 'associatedLayer3VirtualNetworkName': 'Printers'}, {'id': 'a5119139-80a9-4118-9328-c6e7804a8f23', 'fabricId': '3cf026bd-f2c6-45a1-ae4c-b327f7e29e4a', 'vlanName': '192_168_101_0-Guest', 'vlanId': 1021, 'trafficType': 'DATA', 'isFabricEnabledWireless': False, 'isMultipleIpToMacAddresses': False, 'associatedLayer3VirtualNetworkName': 'Guest'}, {'id': 'b1b267be-cc43-47f0-8a1f-6a1ce7c07301', 'fabricId': '3cf026bd-f2c6-45a1-ae4c-b327f7e29e4a', 'vlanName': '192_168_100_0-Campus', 'vlanId': 1023, 'trafficType': 'DATA', 'isFabricEnabledWireless': False, 'isMultipleIpToMacAddresses': False, 'associatedLayer3VirtualNetworkName': 'Campus'}, {'id': 'd3162d7f-b4fa-412d-ba42-c857d85c9a8a', 'fabricId': '40f5ed97-a778-4d00-b6f1-eb3816fd476d', 'vlanName': '192_168_201_0-Guest', 'vlanId': 1021, 'trafficType': 'DATA', 'isFabricEnabledWireless': False, 'isMultipleIpToMacAddresses': False, 'associatedLayer3VirtualNetworkName': 'Guest'}, {'id': 'e7891ac9-acf5-491a-9848-e846fcc0d289', 'fabricId': '3cf026bd-f2c6-45a1-ae4c-b327f7e29e4a', 'vlanName': '192_168_103_0-BYOD', 'vlanId': 1022, 'trafficType': 'DATA', 'isFabricEnabledWireless': False, 'isMultipleIpToMacAddresses': False, 'associatedLayer3VirtualNetworkName': 'BYOD'}], 'version': '1.0'}
+| PASS |
+------------------------------------------------------------------------------
+Out.Tests.Robot.Config.Fabric.L2 Virtual Networks :: Verify L2 Vir... | PASS |
+1 test, 1 passed, 0 failed
+==============================================================================
+Out.Tests.Robot.Config.Fabric                                         | PASS |
+1 test, 1 passed, 0 failed
+==============================================================================
+Out.Tests.Robot.Config                                                | PASS |
+1 test, 1 passed, 0 failed
+==============================================================================
+Out.Tests.Robot                                                       | PASS |
+1 test, 1 passed, 0 failed
+==============================================================================
+Out.Tests                                                             | PASS |
+1 test, 1 passed, 0 failed
+==============================================================================
+Out                                                                   | PASS |
+1 test, 1 passed, 0 failed
+==============================================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out/pabot_results/17/output.xml

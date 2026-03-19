@@ -1,0 +1,15 @@
+3: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[part=3.1/3][pid=98432][pname=MainProcess]: +------------------------------------------------------------------------------+
+4: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[part=3.2/3][pid=98432][pname=MainProcess]: |                          Bringup/Clean Information                           |
+5: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[part=3.3/3][pid=98432][pname=MainProcess]: +------------------------------------------------------------------------------+
+6: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[pid=98432][pname=MainProcess]: {'bringup': {}, 'cleaners': {}, 'devices': {}}
+
+7: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[part=7.1/3][pid=98432][pname=MainProcess]: +------------------------------------------------------------------------------+
+8: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[part=7.2/3][pid=98432][pname=MainProcess]: |           Bringup/Clean Information after applying clean templates           |
+9: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[part=7.3/3][pid=98432][pname=MainProcess]: +------------------------------------------------------------------------------+
+10: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[pid=98432][pname=MainProcess]: {'bringup': {}, 'cleaners': {}, 'devices': {}}
+
+0: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[pid=2701][pname=verify_dnac_catalyst_center_system_health_no_critical_events]: Starting task execution: verify_dnac_catalyst_center_system_health_no_critical_events
+1: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[pid=2701][pname=verify_dnac_catalyst_center_system_health_no_critical_events]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-02T15:25:07: %EASYPY-6-INFO: %[pid=2701][pname=verify_dnac_catalyst_center_system_health_no_critical_events]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates-mini/tests/pyats/verify_dnac_catalyst_center_system_health_no_critical_events.py
+11: OBOEHMER-M-5D76: 2026-02-02T15:25:11: %GENIE-6-INFO: %[pid=98432][pname=MainProcess]: Saving Abstract Tree...
+12: OBOEHMER-M-5D76: 2026-02-02T15:25:11: %GENIE-6-INFO: %[pid=98432][pname=MainProcess]: Abstract Tree saved

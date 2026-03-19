@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites disabled="0" errors="0" failures="1" tests="1" time="1.809909">
+	<testsuite disabled="0" errors="0" failures="1" name="1_verify_sdwan_sync" skipped="0" tests="1" time="1.809909">
+		<testcase name="001_VerifySDWANManagerEdgeConfigSync" time="1.809909">
+			<failure type="failure" message="Test failed"> Please see the trade link to view the log: </failure>
+			<system-err># FIXME: fill this with the STDERR of the test run</system-err>
+		</testcase>
+	</testsuite>
+</testsuites>

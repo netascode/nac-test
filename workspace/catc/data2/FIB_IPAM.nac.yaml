@@ -1,0 +1,39 @@
+---
+catalyst_center:
+  network_settings:
+    ip_pools:
+      - name: Overlay
+        ip_address_space: IPv4
+        ip_pools_reservations:
+          - name: CampusVN2-IPPool
+            prefix_length: 24
+            subnet: 192.168.200.0
+            gateway: 192.168.200.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: GuestVN2-IPPool
+            prefix_length: 24
+            subnet: 192.168.201.0
+            gateway: 192.168.201.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: PrintersVN2-IPPool
+            prefix_length: 24
+            subnet: 192.168.202.0
+            gateway: 192.168.202.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: BYOD2-IPPool
+            prefix_length: 24
+            subnet: 192.168.203.0
+            gateway: 192.168.203.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11

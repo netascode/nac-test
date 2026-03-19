@@ -1,0 +1,27 @@
+testbed:
+  name: testbed_FIAB
+  credentials:
+    default:
+      username: '%ENV{IOSXE_USERNAME}'
+      password: '%ENV{IOSXE_PASSWORD}'
+devices:
+  FIAB:
+    alias: FIAB
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: '%ENV{IOSXE_USERNAME}'
+        password: '%ENV{IOSXE_PASSWORD}'
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.130.33
+        port: 22
+        arguments:
+          init_config_commands: []
+          operating_mode: true
+    custom:
+      abstraction:
+        order:
+        - os

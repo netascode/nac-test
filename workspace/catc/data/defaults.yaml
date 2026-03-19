@@ -1,0 +1,101 @@
+---
+defaults:
+  catalyst_center:
+    authentication_templates:
+      name: No Authentication
+      dot1x_to_mab_fallback_timeout: 21
+      wake_on_lan: false
+      number_of_hosts: Unlimited
+      authentication_order: dot1x
+      bpdu_guard: true
+    network_profiles:
+      wireless:
+        ssid_details:
+          interface_name: management
+    templates:
+      force_push_template: true
+      description: ""
+      language: JINJA
+      composite: false
+      copying_config: true
+      redeploy_template: NEVER
+    pnp:
+      devices:
+        type: Default
+        protocol: SSH2
+        image_skip: true
+    inventory:
+      devices:
+        role_source: MANUAL
+    sites:
+      areas:
+        parent_name: Global
+      floors:
+        height: 3
+        length: 30
+        rf_model: Cubes And Walled Offices
+        width: 30
+        units_of_measure: feet
+    network_settings:
+      ip_pools:
+        type: Generic
+        ip_address_space: IPv4
+        ip_pools_reservations:
+          type: Generic
+          ipv4:
+            prefix: true
+          ipv6:
+            address_space: false
+      device_credentials:
+        https_write_credentials:
+          port: 443
+        https_read_credentials:
+          port: 443
+        snmpv3_credentials:
+          auth_type: SHA
+          privacy_type: AES128
+      telemetry:
+        wired_data_collection: true
+        enable_netflow_collector_on_devices: false
+        wireless_telemetry: false
+        catalyst_center_as_snmp_server: true
+        catalyst_center_as_syslog_server: true
+        catalyst_center_as_network_collector: true
+    fabric:
+      transits:
+        type: IP_BASED_TRANSIT
+        routing_protocol_name: BGP
+        multicast_over_sda_transit: false
+      fabric_sites:
+        authentication_template:
+          name: No Authentication
+        pub_sub_enabled: false
+        anycast_gateways:
+          layer2_flooding: false
+          auto_generate_vlan_name: false
+          multiple_ip_to_mac_addresses: false
+          wireless_pool: false
+          traffic_type: DATA
+          ip_directed_broadcast: false
+          intra_subnet_routing_enabled: false
+          critical_pool: false
+    wireless:
+      rf_profiles:
+        default_rf_profile: false
+      enterprise_ssids:
+        basic_service_set_client_idle_timeout: 300
+        client_exclusion_timeout: 180
+        enable_basic_service_set_max_idle: true
+        enable_broadcast_ssid: true
+        enable_client_exclusion: true
+        enable_directed_multicast_service: true
+        enable_fast_lane: false
+        enable_mac_filtering: false
+        enable_neighbor_list: true
+        enable_session_time_out: true
+        fast_transition: Adaptive
+        mfp_client_protection: Optional
+        nas_options: []
+        radio_policy: Triple band operation(2.4GHz, 5GHz and 6GHz)
+        traffic_type: data
+        session_time_out: 1800

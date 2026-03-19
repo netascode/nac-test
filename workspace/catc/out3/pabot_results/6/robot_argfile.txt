@@ -1,0 +1,17 @@
+--suite Out3.Config.Fabric.L2 Virtual Networks
+--skiponfailure non-critical
+--variable CALLER_ID:b5f2c42603fe4063be52c0b913a7606c
+--variable PABOTLIBURI:127.0.0.1:64604
+--variable PABOTEXECUTIONPOOLID:9
+--variable PABOTISLASTEXECUTIONINPOOL:0
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:6
+--variable PABOTLASTLEVEL:Out3.Config.Fabric.L2 Virtual Networks
+--outputdir out3/pabot_results/6
+--xunit NONE
+--listener RobotStackTracer
+--log NONE
+--report NONE
+--consolecolors off
+--consolemarkers off
+out3

@@ -1,0 +1,27 @@
+testbed:
+  name: testbed_EDGE01
+  credentials:
+    default:
+      username: '%ENV{IOSXE_USERNAME}'
+      password: '%ENV{IOSXE_PASSWORD}'
+devices:
+  EDGE01:
+    alias: EDGE01
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: '%ENV{IOSXE_USERNAME}'
+        password: '%ENV{IOSXE_PASSWORD}'
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.130.1
+        port: 22
+        arguments:
+          init_config_commands: []
+          operating_mode: true
+    custom:
+      abstraction:
+        order:
+        - os

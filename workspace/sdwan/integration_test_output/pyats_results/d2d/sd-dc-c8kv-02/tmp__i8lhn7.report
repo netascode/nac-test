@@ -1,0 +1,61 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp__i8lhn7.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpo_rovgco.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp9llp_d0j_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/integration_test_output --archive-name pyats_archive_device_sd-dc-c8kv-02 --no-archive-subdir --no-mail --no-xml-report --verbose
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmp__i8lhn7
+    Result       : PASSED
+    Start time   : 2026-01-28 16:44:39.558386+01:00
+    Stop time    : 2026-01-28 16:44:56.203037+01:00
+    Elapsed time : 0:00:17
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/integration_test_output/pyats_archive_device_sd-dc-c8kv-02
+
+Total Tasks    : 1 
+
+Overall Stats
+    Passed     : 1
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 1
+
+Success Rate   : 100.00 %
+
+Section Stats
+    Passed     : 3
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 3
+
+Section Success Rate   : 100.00 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+sd-dc-c8kv-02_verify_iosxe_all_sd_wan_control_connections_are_up: v...    PASSED
+sd-dc-c8kv-02_verify_iosxe_all_sd_wan_control_connections_are_up: v...    PASSED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+sd-dc-c8kv-02_verify_iosxe_all_sd_wan_control_connections_are_up: v...    PASSED
+`-- VerifySdwanControlConnectionsState                                    PASSED
+    |-- setup                                                             PASSED
+    |-- test_sdwan_control_connections_state                              PASSED
+    |   `-- STEP 1: SD-WAN Control Connection Verification                PASSED
+    `-- cleanup                                                           PASSED

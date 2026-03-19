@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Out" tests="84" errors="0" failures="0" skipped="0" time="10.666" timestamp="2026-01-30T17:03:09.220646">
+<testsuite name="Robot" tests="42" errors="0" failures="0" skipped="0" time="7.655" timestamp="2026-01-30T17:03:09.998000">
+<testsuite name="Config" tests="42" errors="0" failures="0" skipped="0" time="7.655" timestamp="2026-01-30T17:03:09.998000">
+<testsuite name="Devices" tests="8" errors="0" failures="0" skipped="0" time="6.042" timestamp="2026-01-30T17:03:10.009000">
+<testsuite name="Devices" tests="8" errors="0" failures="0" skipped="0" time="6.042" timestamp="2026-01-30T17:03:10.010000">
+<testcase classname="Out.Robot.Config.Devices.Devices" name="Get Device Inventory" time="3.095">
+</testcase>
+<testcase classname="Out.Robot.Config.Devices.Devices" name="Get Device Tags" time="0.501">
+</testcase>
+<testcase classname="Out.Robot.Config.Devices.Devices" name="Verify Device BR10" time="0.730">
+</testcase>
+<testcase classname="Out.Robot.Config.Devices.Devices" name="Verify Device EDGE01" time="0.023">
+</testcase>
+<testcase classname="Out.Robot.Config.Devices.Devices" name="Verify Device EDGE02" time="0.022">
+</testcase>
+<testcase classname="Out.Robot.Config.Devices.Devices" name="Verify Device FIAB" time="0.022">
+</testcase>
+<testcase classname="Out.Robot.Config.Devices.Devices" name="Verify Device Transit-CP-1" time="0.022">
+</testcase>
+<testcase classname="Out.Robot.Config.Devices.Devices" name="Verify Device C9800-CL-WLC" time="0.021">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Device Inventory in Catalyst Center"/>
+</properties>
+</testsuite>
+</testsuite>
+<testsuite name="Fabric" tests="34" errors="0" failures="0" skipped="0" time="10.372" timestamp="2026-01-30T17:03:09.999000">
+<testsuite name="Anycast Gateways" tests="12" errors="0" failures="0" skipped="0" time="6.126" timestamp="2026-01-30T17:03:10.099972">
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Check Anycast Gateways Configuration in Data Model" time="0.001">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Get Anycast Gateways" time="1.392">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Verify Anycast Gateways for Fabric Site Global/Poland/Krakow" time="1.297">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Validate CampusVN-IPPool" time="0.070">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Validate GuestVN-IPPool" time="0.083">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Validate BYOD-IPPool" time="0.069">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Validate PrintersVN-IPPool" time="0.069">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Verify Anycast Gateways for Fabric Site Global/Poland/Warsaw" time="0.022">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Validate CampusVN2-IPPool" time="0.076">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Validate GuestVN2-IPPool" time="0.071">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Validate BYOD2-IPPool" time="0.077">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Anycast Gateways" name="Validate PrintersVN2-IPPool" time="0.067">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Anycast Gateways Configuration"/>
+</properties>
+</testsuite>
+<testsuite name="Authentication Templates" tests="4" errors="0" failures="0" skipped="0" time="4.147" timestamp="2026-01-30T17:03:10.071407">
+<testcase classname="Out.Robot.Config.Fabric.Authentication Templates" name="Get Fabric Zones" time="0.720">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Authentication Templates" name="Get Authentication Profiles" time="0.331">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Authentication Templates" name="Verify Authentication Template for Fabric Site Global/Poland/Krakow" time="1.223">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Authentication Templates" name="Verify Authentication Template for Fabric Site Global/Poland/Warsaw" time="0.066">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Authentication Templates Configuration"/>
+</properties>
+</testsuite>
+<testsuite name="Extranet" tests="2" errors="0" failures="0" skipped="0" time="3.746" timestamp="2026-01-30T17:03:10.062532">
+<testcase classname="Out.Robot.Config.Fabric.Extranet" name="Get Extranet Policies" time="0.908">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Extranet" name="Get Fabric Sites Data" time="0.357">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Fabric Extranet Policies in Catalyst Center"/>
+</properties>
+</testsuite>
+<testsuite name="Fabric Sites" tests="2" errors="0" failures="0" skipped="0" time="5.284" timestamp="2026-01-30T17:03:09.999612">
+<testcase classname="Out.Robot.Config.Fabric.Fabric Sites" name="Verify Fabric Site Global/Poland/Krakow" time="1.969">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Fabric Sites" name="Verify Fabric Site Global/Poland/Warsaw" time="0.029">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Fabric Sites Configuration"/>
+</properties>
+</testsuite>
+<testsuite name="Fabric Zones" tests="1" errors="0" failures="0" skipped="0" time="4.360" timestamp="2026-01-30T17:03:10.008389">
+<testcase classname="Out.Robot.Config.Fabric.Fabric Zones" name="Get Fabric Zones" time="1.231">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Fabric Zones Configuration"/>
+</properties>
+</testsuite>
+<testsuite name="L2 Virtual Networks" tests="1" errors="0" failures="0" skipped="0" time="4.254" timestamp="2026-01-30T17:03:10.059788">
+<testcase classname="Out.Robot.Config.Fabric.L2 Virtual Networks" name="Get L2 Virtual Networks" time="1.385">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify L2 Virtual Networks Configuration"/>
+</properties>
+</testsuite>
+<testsuite name="L3 Handoffs" tests="4" errors="0" failures="0" skipped="0" time="7.610" timestamp="2026-01-30T17:03:10.043222">
+<testcase classname="Out.Robot.Config.Fabric.L3 Handoffs" name="Get API Data For L3 Handoffs" time="2.059">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.L3 Handoffs" name="Verify SDA Transit L3 Handoff for BR10" time="1.069">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.L3 Handoffs" name="Verify IP Transit L3 Handoff BR10 - BGP65002 - GigabitEthernet1/0/3 - Campus" time="0.619">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.L3 Handoffs" name="Verify SDA Transit L3 Handoff for FIAB" time="0.723">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Layer 3 Handoffs (IP Transit and SDA Transit)"/>
+</properties>
+</testsuite>
+<testsuite name="L3 Virtual Networks" tests="4" errors="0" failures="0" skipped="0" time="4.537" timestamp="2026-01-30T17:03:10.058479">
+<testcase classname="Out.Robot.Config.Fabric.L3 Virtual Networks" name="Get Fabric Zones" time="0.800">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.L3 Virtual Networks" name="Get L3 Virtual Networks" time="0.367">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.L3 Virtual Networks" name="Verify L3 Virtual Networks for Fabric Site Global/Poland/Krakow" time="1.245">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.L3 Virtual Networks" name="Verify L3 Virtual Networks for Fabric Site Global/Poland/Warsaw" time="0.043">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify L3 Virtual Networks Association for Fabric Sites and Fabric Zones"/>
+</properties>
+</testsuite>
+<testsuite name="Multicast" tests="1" errors="0" failures="0" skipped="0" time="3.146" timestamp="2026-01-30T17:03:10.023540">
+<testcase classname="Out.Robot.Config.Fabric.Multicast" name="Get Fabric Sites Data" time="0.761">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Fabric Multicast Configurations in Catalyst Center"/>
+</properties>
+</testsuite>
+<testsuite name="Transits" tests="3" errors="0" failures="0" skipped="0" time="4.187" timestamp="2026-01-30T17:03:10.045023">
+<testcase classname="Out.Robot.Config.Fabric.Transits" name="Get Transit Networks" time="1.749">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Transits" name="Verify Transit BGP65002" time="0.038">
+</testcase>
+<testcase classname="Out.Robot.Config.Fabric.Transits" name="Verify Transit SDA-TRANSIT" time="0.044">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Transit Networks"/>
+</properties>
+</testsuite>
+</testsuite>
+</testsuite>
+</testsuite>
+<testsuite name="Tests" tests="42" errors="0" failures="0" skipped="0" time="11.122" timestamp="2026-01-30T17:03:10.046000">
+<testsuite name="Robot" tests="42" errors="0" failures="0" skipped="0" time="11.122" timestamp="2026-01-30T17:03:10.046000">
+<testsuite name="Config" tests="42" errors="0" failures="0" skipped="0" time="11.122" timestamp="2026-01-30T17:03:10.047000">
+<testsuite name="Devices" tests="8" errors="0" failures="0" skipped="0" time="4.452" timestamp="2026-01-30T17:03:10.051232">
+<testsuite name="Devices" tests="8" errors="0" failures="0" skipped="0" time="4.450" timestamp="2026-01-30T17:03:10.053216">
+<testcase classname="Out.Tests.Robot.Config.Devices.Devices" name="Get Device Inventory" time="1.424">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Devices.Devices" name="Get Device Tags" time="0.470">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Devices.Devices" name="Verify Device BR10" time="0.620">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Devices.Devices" name="Verify Device EDGE01" time="0.023">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Devices.Devices" name="Verify Device EDGE02" time="0.022">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Devices.Devices" name="Verify Device FIAB" time="0.022">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Devices.Devices" name="Verify Device Transit-CP-1" time="0.022">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Devices.Devices" name="Verify Device C9800-CL-WLC" time="0.022">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Device Inventory in Catalyst Center"/>
+</properties>
+</testsuite>
+</testsuite>
+<testsuite name="Fabric" tests="34" errors="0" failures="0" skipped="0" time="12.053" timestamp="2026-01-30T17:03:10.050000">
+<testsuite name="Anycast Gateways" tests="12" errors="0" failures="0" skipped="0" time="6.666" timestamp="2026-01-30T17:03:10.217034">
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Check Anycast Gateways Configuration in Data Model" time="0.000">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Get Anycast Gateways" time="1.560">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Verify Anycast Gateways for Fabric Site Global/Poland/Krakow" time="1.253">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Validate CampusVN-IPPool" time="0.070">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Validate GuestVN-IPPool" time="0.079">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Validate BYOD-IPPool" time="0.069">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Validate PrintersVN-IPPool" time="0.068">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Verify Anycast Gateways for Fabric Site Global/Poland/Warsaw" time="0.023">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Validate CampusVN2-IPPool" time="0.079">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Validate GuestVN2-IPPool" time="0.070">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Validate BYOD2-IPPool" time="0.078">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Anycast Gateways" name="Validate PrintersVN2-IPPool" time="0.068">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Anycast Gateways Configuration"/>
+</properties>
+</testsuite>
+<testsuite name="Authentication Templates" tests="4" errors="0" failures="0" skipped="0" time="5.220" timestamp="2026-01-30T17:03:10.050848">
+<testcase classname="Out.Tests.Robot.Config.Fabric.Authentication Templates" name="Get Fabric Zones" time="0.910">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Authentication Templates" name="Get Authentication Profiles" time="0.521">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Authentication Templates" name="Verify Authentication Template for Fabric Site Global/Poland/Krakow" time="1.224">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Authentication Templates" name="Verify Authentication Template for Fabric Site Global/Poland/Warsaw" time="0.067">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Authentication Templates Configuration"/>
+</properties>
+</testsuite>
+<testsuite name="Extranet" tests="2" errors="0" failures="0" skipped="0" time="3.052" timestamp="2026-01-30T17:03:13.545587">
+<testcase classname="Out.Tests.Robot.Config.Fabric.Extranet" name="Get Extranet Policies" time="1.235">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Extranet" name="Get Fabric Sites Data" time="0.337">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Fabric Extranet Policies in Catalyst Center"/>
+</properties>
+</testsuite>
+<testsuite name="Fabric Sites" tests="2" errors="0" failures="0" skipped="0" time="3.380" timestamp="2026-01-30T17:03:14.151207">
+<testcase classname="Out.Tests.Robot.Config.Fabric.Fabric Sites" name="Verify Fabric Site Global/Poland/Krakow" time="1.602">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Fabric Sites" name="Verify Fabric Site Global/Poland/Warsaw" time="0.038">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Fabric Sites Configuration"/>
+</properties>
+</testsuite>
+<testsuite name="Fabric Zones" tests="1" errors="0" failures="0" skipped="0" time="2.558" timestamp="2026-01-30T17:03:14.569329">
+<testcase classname="Out.Tests.Robot.Config.Fabric.Fabric Zones" name="Get Fabric Zones" time="0.919">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Fabric Zones Configuration"/>
+</properties>
+</testsuite>
+<testsuite name="L2 Virtual Networks" tests="1" errors="0" failures="0" skipped="0" time="2.364" timestamp="2026-01-30T17:03:14.630766">
+<testcase classname="Out.Tests.Robot.Config.Fabric.L2 Virtual Networks" name="Get L2 Virtual Networks" time="0.856">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify L2 Virtual Networks Configuration"/>
+</properties>
+</testsuite>
+<testsuite name="L3 Handoffs" tests="4" errors="0" failures="0" skipped="0" time="4.761" timestamp="2026-01-30T17:03:14.670573">
+<testcase classname="Out.Tests.Robot.Config.Fabric.L3 Handoffs" name="Get API Data For L3 Handoffs" time="1.331">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.L3 Handoffs" name="Verify SDA Transit L3 Handoff for BR10" time="0.536">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.L3 Handoffs" name="Verify IP Transit L3 Handoff BR10 - BGP65002 - GigabitEthernet1/0/3 - Campus" time="0.520">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.L3 Handoffs" name="Verify SDA Transit L3 Handoff for FIAB" time="0.727">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Layer 3 Handoffs (IP Transit and SDA Transit)"/>
+</properties>
+</testsuite>
+<testsuite name="L3 Virtual Networks" tests="4" errors="0" failures="0" skipped="0" time="3.578" timestamp="2026-01-30T17:03:14.771305">
+<testcase classname="Out.Tests.Robot.Config.Fabric.L3 Virtual Networks" name="Get Fabric Zones" time="0.722">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.L3 Virtual Networks" name="Get L3 Virtual Networks" time="0.193">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.L3 Virtual Networks" name="Verify L3 Virtual Networks for Fabric Site Global/Poland/Krakow" time="0.742">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.L3 Virtual Networks" name="Verify L3 Virtual Networks for Fabric Site Global/Poland/Warsaw" time="0.082">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify L3 Virtual Networks Association for Fabric Sites and Fabric Zones"/>
+</properties>
+</testsuite>
+<testsuite name="Multicast" tests="1" errors="0" failures="0" skipped="0" time="2.418" timestamp="2026-01-30T17:03:14.912931">
+<testcase classname="Out.Tests.Robot.Config.Fabric.Multicast" name="Get Fabric Sites Data" time="0.886">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Fabric Multicast Configurations in Catalyst Center"/>
+</properties>
+</testsuite>
+<testsuite name="Transits" tests="3" errors="0" failures="0" skipped="0" time="3.221" timestamp="2026-01-30T17:03:14.975938">
+<testcase classname="Out.Tests.Robot.Config.Fabric.Transits" name="Get Transit Networks" time="1.396">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Transits" name="Verify Transit BGP65002" time="0.060">
+</testcase>
+<testcase classname="Out.Tests.Robot.Config.Fabric.Transits" name="Verify Transit SDA-TRANSIT" time="0.049">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Transit Networks"/>
+</properties>
+</testsuite>
+</testsuite>
+</testsuite>
+</testsuite>
+</testsuite>
+<properties>
+<property name="Documentation" value="[https://pabot.org/?ref=log|Pabot] result from 22 executions."/>
+</properties>
+</testsuite>

@@ -1,0 +1,136 @@
+22: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.logs.JobLogPlugin object at 0x113f8dbe0>: pre_job
+23: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.debug.ArchiveConfigPlugin object at 0x11416a180>: pre_job
+24: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.debug.ArchiveConfigPlugin object at 0x11416a180>: pre_job
+25: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.testbed.TestbedPlugin object at 0x11416bad0>: pre_job
+26: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Verifying testbed file...
+27: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument run
+28: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument job
+29: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py
+30: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: loading yaml file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpoyryw148.yaml
+31: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument run
+32: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument job
+33: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py
+34: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: Using a default key as pyATS configuration under [secrets] string.key was not specified.
+35: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: Using a default key as pyATS configuration under [secrets] string.key was not specified.
+36: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: Using a default key as pyATS configuration under [secrets] string.key was not specified.
+37: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: Using a default key as pyATS configuration under [secrets] string.key was not specified.
+38: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %TOPOLOGY-7-DEBUG: %[pid=36270][pname=MainProcess]: Credential credentials not found, trying default ...
+39: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %TOPOLOGY-7-DEBUG: %[pid=36270][pname=MainProcess]: Credential credentials not found, trying default ...
+40: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.testbed.TestbedPlugin object at 0x11416bad0>: pre_job
+41: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <genie.libs.filetransferutils.fileserver.plugin.FileServerPlugin object at 0x11416bb90>: pre_job
+42: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <genie.libs.filetransferutils.fileserver.plugin.FileServerPlugin object at 0x11416bb90>: pre_job
+43: OBOEHMER-M-5D76: 2026-01-28T16:45:05: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.debug.EnvironmentDebugPlugin object at 0x113f8d070>: pre_job
+44: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.debug.EnvironmentDebugPlugin object at 0x113f8d070>: pre_job
+45: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.kleenex.KleenexPlugin object at 0x11416bcb0>: pre_job
+46: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Preparing clean
+47: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument run
+48: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument job
+49: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py
+50: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument run
+51: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument job
+52: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py
+53: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument run
+54: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument job
+55: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py
+56: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %CLEAN-7-DEBUG: %[pid=36270][pname=MainProcess]: Did not find bringup class defined in clean configuration.
+57: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %CLEAN-7-DEBUG: %[pid=36270][pname=MainProcess]: None is not a valid action for templates!
+58: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[part=58.1/3][pid=36270][pname=MainProcess]: +------------------------------------------------------------------------------+
+59: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[part=58.2/3][pid=36270][pname=MainProcess]: |                          Bringup/Clean Information                           |
+60: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[part=58.3/3][pid=36270][pname=MainProcess]: +------------------------------------------------------------------------------+
+61: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[pid=36270][pname=MainProcess]: {'bringup': {}, 'cleaners': {}, 'devices': {}}
+
+62: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Skipping dynamic bringup since no logical testbed has been specified.
+63: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument run
+64: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument job
+65: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py
+66: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument run
+67: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument job
+68: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py
+69: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument run
+70: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument job
+71: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: parser skipping argument /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py
+72: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %CLEAN-7-DEBUG: %[pid=36270][pname=MainProcess]: Did not find bringup class defined in clean configuration.
+73: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[part=73.1/3][pid=36270][pname=MainProcess]: +------------------------------------------------------------------------------+
+74: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[part=73.2/3][pid=36270][pname=MainProcess]: |           Bringup/Clean Information after applying clean templates           |
+75: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[part=73.3/3][pid=36270][pname=MainProcess]: +------------------------------------------------------------------------------+
+76: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[pid=36270][pname=MainProcess]: {'bringup': {}, 'cleaners': {}, 'devices': {}}
+
+77: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Skipping clean since the -invoke_clean parameter was not specified.
+78: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.kleenex.KleenexPlugin object at 0x11416bcb0>: pre_job
+79: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.runinfo.TaskResultsPlugin object at 0x11416bbc0>: pre_job
+80: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.runinfo.TaskResultsPlugin object at 0x11416bbc0>: pre_job
+81: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.rerun.RerunPlugin object at 0x11416bc50>: pre_job
+82: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.rerun.RerunPlugin object at 0x11416bc50>: pre_job
+83: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.retry.RetryPlugin object at 0x11416bc20>: pre_job
+84: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.retry.RetryPlugin object at 0x11416bc20>: pre_job
+85: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <genie.libs.sdk.triggers.blitz.maple_converter.plugin.MapleCleanPlugin object at 0x112fba300>: pre_job
+86: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <genie.libs.sdk.triggers.blitz.maple_converter.plugin.MapleCleanPlugin object at 0x112fba300>: pre_job
+87: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <genie.abstract.plugin.AbstractPlugin object at 0x11416bfe0>: pre_job
+88: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <genie.abstract.plugin.AbstractPlugin object at 0x11416bfe0>: pre_job
+89: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %GIT-7-DEBUG: %[pid=36270][pname=MainProcess]: sys.platform='darwin', git_executable='git'
+90: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: Loading: /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py
+91: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=36270][pname=MainProcess]: Loaded: <module 'pyats.easypy.jobs.tmp6js1q21q' from '/var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py'>
+92: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %NAC_TEST-6-INFO: %[pid=36270][pname=MainProcess]: Initialized DeviceConnectionManager with max_concurrent=1
+0: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %REPORTER-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Client (pid: 37629, socket: /Users/oboehmer/.pyats/runinfo/tmp6js1q21q_2026Jan28_16_45_04_018948/reporter.sock) trying to connect to Server (socket: /Users/oboehmer/.pyats/runinfo/tmp6js1q21q_2026Jan28_16_45_04_018948/reporter.sock)
+1: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %REPORTER-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Client (pid: 37629, socket: /Users/oboehmer/.pyats/runinfo/tmp6js1q21q_2026Jan28_16_45_04_018948/reporter.sock) is connected to socket at /Users/oboehmer/.pyats/runinfo/tmp6js1q21q_2026Jan28_16_45_04_018948/reporter.sock
+2: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %REPORTER-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Client (pid: 37629, socket: /Users/oboehmer/.pyats/runinfo/tmp6js1q21q_2026Jan28_16_45_04_018948/reporter.sock) is now registered with server
+3: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %UTILS-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Resetting SIGINT handler
+4: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Starting task execution: P3-E2_verify_iosxe_no_critical_errors_in_system_logs
+5: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]:     test harness = pyats.aetest
+6: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-6-INFO: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/tests/integration/fixtures/templates_pyats_qs/catc/tests/verify_iosxe_no_critical_errors_in_system_logs.py
+7: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <nac_test.pyats_core.progress.plugin.ProgressReporterPlugin object at 0x10d17cb00>: pre_task
+8: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Finished running plugin <nac_test.pyats_core.progress.plugin.ProgressReporterPlugin object at 0x10d17cb00>: pre_task
+9: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <pyats.easypy.plugins.logs.JobLogPlugin object at 0x113f8dbe0>: pre_task
+10: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Finished running plugin <pyats.easypy.plugins.logs.JobLogPlugin object at 0x113f8dbe0>: pre_task
+11: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <pyats.easypy.plugins.logs.TaskLogPlugin object at 0x11416b710>: pre_task
+13: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Finished running plugin <pyats.easypy.plugins.logs.TaskLogPlugin object at 0x11416b710>: pre_task
+14: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <pyats.easypy.plugins.kleenex.KleenexPlugin object at 0x11416bcb0>: pre_task
+15: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Finished running plugin <pyats.easypy.plugins.kleenex.KleenexPlugin object at 0x11416bcb0>: pre_task
+16: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <pyats.easypy.plugins.rerun.RerunPlugin object at 0x11416bc50>: pre_task
+17: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Finished running plugin <pyats.easypy.plugins.rerun.RerunPlugin object at 0x11416bc50>: pre_task
+18: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <genie.libs.sdk.triggers.blitz.maple_converter.plugin.MapleCleanPlugin object at 0x112fba300>: pre_task
+19: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Finished running plugin <genie.libs.sdk.triggers.blitz.maple_converter.plugin.MapleCleanPlugin object at 0x112fba300>: pre_task
+20: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <genie.libs.health.plugin.HealthCheckPlugin object at 0x11416bfb0>: pre_task
+21: OBOEHMER-M-5D76: 2026-01-28T16:45:10: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Finished running plugin <genie.libs.health.plugin.HealthCheckPlugin object at 0x11416bfb0>: pre_task
+249: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <genie.libs.health.plugin.HealthCheckPlugin object at 0x11416bfb0>: post_task
+250: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Finished running plugin <genie.libs.health.plugin.HealthCheckPlugin object at 0x11416bfb0>: post_task
+251: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <pyats.easypy.plugins.kleenex.KleenexPlugin object at 0x11416bcb0>: post_task
+252: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Finished running plugin <pyats.easypy.plugins.kleenex.KleenexPlugin object at 0x11416bcb0>: post_task
+253: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <pyats.easypy.plugins.logs.TaskLogPlugin object at 0x11416b710>: post_task
+255: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Finished running plugin <pyats.easypy.plugins.logs.TaskLogPlugin object at 0x11416b710>: post_task
+256: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=37629][pname=P3-E2_verify_iosxe_no_critical_errors_in_system_logs]: Running plugin <pyats.easypy.plugins.logs.JobLogPlugin object at 0x113f8dbe0>: post_task
+93: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %GIT-7-DEBUG: %[pid=36270][pname=MainProcess]: sys.platform='darwin', git_executable='git'
+94: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Reporting section names: []
+95: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Section type: SetupSection, section result: passed
+96: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Section type: TestSection, section result: passed
+97: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Section type: CleanupSection, section result: passed
+98: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <genie.abstract.plugin.AbstractPlugin object at 0x11416bfe0>: post_job
+99: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %GENIE-6-INFO: %[pid=36270][pname=MainProcess]: Saving Abstract Tree...
+100: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %GENIE-7-DEBUG: %[part=100.1/7][pid=36270][pname=MainProcess]: default_revision: latest
+101: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %GENIE-7-DEBUG: %[part=100.2/7][pid=36270][pname=MainProcess]: features:
+102: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %GENIE-7-DEBUG: %[part=100.3/7][pid=36270][pname=MainProcess]:   parser:
+103: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %GENIE-7-DEBUG: %[part=100.4/7][pid=36270][pname=MainProcess]:     commands:
+104: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %GENIE-7-DEBUG: %[part=100.5/7][pid=36270][pname=MainProcess]:       show logging:
+105: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %GENIE-7-DEBUG: %[part=100.6/7][pid=36270][pname=MainProcess]:       - '|iosxe||||||||'
+106: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %GENIE-7-DEBUG: %[part=100.7/7][pid=36270][pname=MainProcess]: version: 1
+107: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %GENIE-6-INFO: %[pid=36270][pname=MainProcess]: Abstract Tree saved
+108: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <genie.abstract.plugin.AbstractPlugin object at 0x11416bfe0>: post_job
+109: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.tips.TipsPlugin object at 0x112f5c0e0>: post_job
+110: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.tips.TipsPlugin object at 0x112f5c0e0>: post_job
+111: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.replay.ReplayPlugin object at 0x11416bec0>: post_job
+112: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.replay.ReplayPlugin object at 0x11416bec0>: post_job
+113: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.htmllogs.HTMLLogsPlugin object at 0x11416bd70>: post_job
+114: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.htmllogs.HTMLLogsPlugin object at 0x11416bd70>: post_job
+115: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.xunit.XunitPlugin object at 0x112ca5af0>: post_job
+116: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.xunit.XunitPlugin object at 0x112ca5af0>: post_job
+117: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.rerun.RerunPlugin object at 0x11416bc50>: post_job
+118: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.rerun.RerunPlugin object at 0x11416bc50>: post_job
+119: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.runinfo.TaskResultsPlugin object at 0x11416bbc0>: post_job
+120: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.runinfo.TaskResultsPlugin object at 0x11416bbc0>: post_job
+121: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.kleenex.KleenexPlugin object at 0x11416bcb0>: post_job
+122: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.kleenex.KleenexPlugin object at 0x11416bcb0>: post_job
+123: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <genie.libs.filetransferutils.fileserver.plugin.FileServerPlugin object at 0x11416bb90>: post_job
+124: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <genie.libs.filetransferutils.fileserver.plugin.FileServerPlugin object at 0x11416bb90>: post_job
+125: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.testbed.TestbedPlugin object at 0x11416bad0>: post_job
+126: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Finished running plugin <pyats.easypy.plugins.testbed.TestbedPlugin object at 0x11416bad0>: post_job
+127: OBOEHMER-M-5D76: 2026-01-28T16:45:28: %EASYPY-7-DEBUG: %[pid=36270][pname=MainProcess]: Running plugin <pyats.easypy.plugins.logs.JobLogPlugin object at 0x113f8dbe0>: post_job

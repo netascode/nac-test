@@ -1,0 +1,18 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.10, pytest-9.0.2, pluggy-1.6.0 -- /Users/oboehmer/Documents/DD/nac-test/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/oboehmer/Documents/DD/nac-test
+configfile: pyproject.toml
+plugins: anyio-4.12.1, mock-3.15.1, xdist-3.8.0, cov-4.1.0, pytest_httpserver-1.1.5
+collecting ... collected 8 items
+
+tests/utils/test_cleanup.py::TestCleanupStaleTestArtifacts::test_removes_test_type_directories PASSED [ 12%]
+tests/utils/test_cleanup.py::TestCleanupStaleTestArtifacts::test_preserves_expected_paths[nac_test_job_api_20250224.zip-True] PASSED [ 25%]
+tests/utils/test_cleanup.py::TestCleanupStaleTestArtifacts::test_preserves_expected_paths[nac_test_job_d2d_20250224.zip-True] PASSED [ 37%]
+tests/utils/test_cleanup.py::TestCleanupStaleTestArtifacts::test_preserves_expected_paths[pyats_results-False] PASSED [ 50%]
+tests/utils/test_cleanup.py::TestCleanupStaleTestArtifacts::test_preserves_expected_paths[robot_results-False] PASSED [ 62%]
+tests/utils/test_cleanup.py::TestCleanupStaleTestArtifacts::test_preserves_expected_paths[merged_data_model.yaml-True] PASSED [ 75%]
+tests/utils/test_cleanup.py::TestCleanupStaleTestArtifacts::test_handles_nonexistent_directory PASSED [ 87%]
+tests/utils/test_cleanup.py::TestCleanupStaleTestArtifacts::test_handles_empty_directory PASSED [100%]
+
+============================== 8 passed in 0.03s ===============================

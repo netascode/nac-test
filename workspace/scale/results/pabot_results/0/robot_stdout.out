@@ -1,0 +1,19 @@
+==============================================================================
+Results
+==============================================================================
+Results.Config
+==============================================================================
+Results.Config.Test :: Robot Framework test that always passes
+==============================================================================
+Robot Test sd-dc-c8kv-01 Passes :: Test for device sd-dc-c8kv-01 -... | PASS |
+------------------------------------------------------------------------------
+Results.Config.Test :: Robot Framework test that always passes        | PASS |
+1 test, 1 passed, 0 failed
+==============================================================================
+Results.Config                                                        | PASS |
+1 test, 1 passed, 0 failed
+==============================================================================
+Results                                                               | PASS |
+1 test, 1 passed, 0 failed
+==============================================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pabot_results/0/output.xml

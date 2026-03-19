@@ -1,0 +1,1856 @@
+diff --git a/nac_test/cli/main.py b/nac_test/cli/main.py
+index 71e49ac..f3c5313 100644
+--- a/nac_test/cli/main.py
++++ b/nac_test/cli/main.py
+@@ -162,7 +162,7 @@ DryRun = Annotated[
+     bool,
+     typer.Option(
+         "--dry-run",
+-        help="Dry run flag. See robot dry run mode.",
++        help="Dry run mode: validates test structure without execution.",
+         envvar="NAC_TEST_DRY_RUN",
+     ),
+ ]
+diff --git a/nac_test/combined_orchestrator.py b/nac_test/combined_orchestrator.py
+index b82bfd3..04b6e21 100644
+--- a/nac_test/combined_orchestrator.py
++++ b/nac_test/combined_orchestrator.py
+@@ -83,7 +83,7 @@ class CombinedOrchestrator:
+             include_tags: Tags to include (Robot only)
+             exclude_tags: Tags to exclude (Robot only)
+             render_only: Only render tests without executing (Robot only)
+-            dry_run: Dry run mode (Robot only)
++            dry_run: Dry run mode (skips actual test execution)
+             processes: Number of parallel processes for Robot test execution (Robot only)
+             extra_args: Additional Robot Framework arguments to pass to pabot (Robot only)
+             max_parallel_devices: Max parallel devices for PyATS D2D tests
+@@ -177,7 +177,8 @@ class CombinedOrchestrator:
+         combined_results = CombinedResults()
+ 
+         if has_pyats and not self.render_only:
+-            typer.echo("\n🧪 Running PyATS tests...\n")
++            mode_suffix = " (dry-run)" if self.dry_run else ""
++            typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
+             self._check_python_version()
+ 
+             pyats_orchestrator = PyATSOrchestrator(
+@@ -188,6 +189,7 @@ class CombinedOrchestrator:
+                 minimal_reports=self.minimal_reports,
+                 custom_testbed_path=self.custom_testbed_path,
+                 controller_type=self.controller_type,
++                dry_run=self.dry_run,
+             )
+             if self.max_parallel_devices is not None:
+                 pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
+@@ -198,7 +200,8 @@ class CombinedOrchestrator:
+             combined_results.d2d = pyats_results.d2d
+ 
+         if has_robot:
+-            typer.echo("\n🤖 Running Robot Framework tests...\n")
++            mode_suffix = " (dry-run)" if self.dry_run else ""
++            typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")
+ 
+             robot_orchestrator = RobotOrchestrator(
+                 data_paths=self.data_paths,
+diff --git a/nac_test/core/reporting/combined_generator.py b/nac_test/core/reporting/combined_generator.py
+index 07e6cdb..cba1f05 100644
+--- a/nac_test/core/reporting/combined_generator.py
++++ b/nac_test/core/reporting/combined_generator.py
+@@ -7,8 +7,6 @@ Generates a unified dashboard at the root level, rendering statistics
+ passed in from the orchestrators.
+ """
+ 
+-from __future__ import annotations
+-
+ import logging
+ from datetime import datetime
+ from pathlib import Path
+diff --git a/nac_test/pyats_core/orchestrator.py b/nac_test/pyats_core/orchestrator.py
+index 078e1b3..b37841a 100644
+--- a/nac_test/pyats_core/orchestrator.py
++++ b/nac_test/pyats_core/orchestrator.py
+@@ -62,6 +62,7 @@ class PyATSOrchestrator:
+         minimal_reports: bool = False,
+         custom_testbed_path: Path | None = None,
+         controller_type: str | None = None,
++        dry_run: bool = False,
+     ):
+         """Initialize the PyATS orchestrator.
+ 
+@@ -74,6 +75,7 @@ class PyATSOrchestrator:
+             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
+             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
+                 If not provided, will be detected automatically.
++            dry_run: If True, validate test structure without executing tests
+         """
+         self.data_paths = data_paths
+         self.test_dir = Path(test_dir).resolve()
+@@ -86,6 +88,7 @@ class PyATSOrchestrator:
+         self.merged_data_filename = merged_data_filename
+         self.minimal_reports = minimal_reports
+         self.custom_testbed_path = custom_testbed_path
++        self.dry_run = dry_run
+ 
+         # Track test status by type for combined summary
+         self.api_test_status: dict[str, dict[str, Any]] = {}
+@@ -524,6 +527,38 @@ class PyATSOrchestrator:
+ 
+         return PyATSResults(api=api_results, d2d=d2d_results)
+ 
++    def _print_dry_run_summary(
++        self, api_tests: list[Path], d2d_tests: list[Path]
++    ) -> None:
++        """Print dry-run summary showing tests that would be executed.
++
++        Args:
++            api_tests: List of discovered API test files
++            d2d_tests: List of discovered D2D test files
++
++        Returns:
++            None
++        """
++        print("\n" + "=" * 70)
++        print("🔍 DRY-RUN MODE: Showing tests that would be executed")
++        print("=" * 70)
++
++        if api_tests:
++            print(f"\n📋 API Tests ({len(api_tests)}):")
++            for test_file in sorted(api_tests):
++                rel_path = test_file.relative_to(self.test_dir)
++                print(f"   • {rel_path}")
++
++        if d2d_tests:
++            print(f"\n📋 D2D/SSH Tests ({len(d2d_tests)}):")
++            for test_file in sorted(d2d_tests):
++                rel_path = test_file.relative_to(self.test_dir)
++                print(f"   • {rel_path}")
++
++        print("\n" + "=" * 70)
++        print("✅ PyATS dry-run complete (no tests executed)")
++        print("=" * 70 + "\n")
++
+     def run_tests(self) -> PyATSResults:
+         """Main entry point - triggers the async execution flow.
+ 
+@@ -559,7 +594,6 @@ class PyATSOrchestrator:
+ 
+         # Pre-flight check and setup
+         self.validate_environment()
+-        self.output_dir.mkdir(parents=True, exist_ok=True)
+ 
+         # Note: Merged data file created by main.py (single source of truth)
+ 
+@@ -579,6 +613,13 @@ class PyATSOrchestrator:
+             print(terminal.error(str(e)))
+             raise
+ 
++        # Dry-run mode: print discovered tests and return results without further execution
++        if self.dry_run:
++            self._print_dry_run_summary(api_tests, d2d_tests)
++            api_result = TestResults.not_run("dry-run mode") if api_tests else None
++            d2d_result = TestResults.not_run("dry-run mode") if d2d_tests else None
++            return PyATSResults(api=api_result, d2d=d2d_result)
++
+         breakdown_parts = []
+         if api_tests:
+             breakdown_parts.append(f"{len(api_tests)} api")
+@@ -588,6 +629,9 @@ class PyATSOrchestrator:
+         print(f"Discovered {len(test_files)} PyATS test files{breakdown}")
+         print(f"Running with {self.max_workers} parallel workers")
+ 
++        # Create output directory only when actually executing tests (not in dry-run mode)
++        self.output_dir.mkdir(parents=True, exist_ok=True)
++
+         # Initialize progress reporter for output formatting
+         self.progress_reporter = ProgressReporter(
+             total_tests=len(test_files), max_workers=self.max_workers
+diff --git a/nac_test/utils/logging.py b/nac_test/utils/logging.py
+index b0dd8bf..43014dc 100644
+--- a/nac_test/utils/logging.py
++++ b/nac_test/utils/logging.py
+@@ -1,11 +1,41 @@
+ # SPDX-License-Identifier: MPL-2.0
+ # Copyright (c) 2025 Daniel Schmidt
+-
+ """Logging configuration utilities for nac-test framework."""
+ 
+ import logging
+ import sys
+ from enum import Enum
++from typing import TYPE_CHECKING, TextIO, cast
++
++# Generic type syntax (StreamHandler[TextIO]) requires Python 3.11+
++# Use TYPE_CHECKING guard for 3.10 compatibility while preserving type info
++if TYPE_CHECKING:
++    _StreamHandlerBase = logging.StreamHandler[TextIO]
++else:
++    _StreamHandlerBase = logging.StreamHandler
++
++
++class CurrentStreamHandler(_StreamHandlerBase):
++    """StreamHandler that always uses the current sys.stdout/stderr.
++
++    This prevents 'I/O operation on closed file' errors when sys.stdout
++    is replaced (e.g., by pytest's output capturing) after the handler
++    is created.
++    """
++
++    def __init__(self, stream_name: str = "stdout") -> None:
++        self.stream_name = stream_name  # MUST come BEFORE super().__init__()
++        super().__init__()
++
++    @property  # type: ignore[override]
++    def stream(self) -> TextIO:
++        """Get the current stream from sys module."""
++        return cast(TextIO, getattr(sys, self.stream_name))
++
++    @stream.setter
++    def stream(self, value: TextIO) -> None:
++        """Ignore attempts to set stream - we always use current sys.stdout/stderr."""
++        pass
+ 
+ 
+ class VerbosityLevel(str, Enum):
+@@ -44,7 +74,18 @@ def configure_logging(level: str | VerbosityLevel) -> None:
+ 
+     # Configure root logger
+     logger = logging.getLogger()
+-    handler = logging.StreamHandler(sys.stdout)
++
++    # Only remove StreamHandlers pointing to stdout/stderr
++    for handler in logger.handlers[:]:
++        if isinstance(handler, logging.StreamHandler) and handler.stream in (
++            sys.stdout,
++            sys.stderr,
++        ):
++            logger.removeHandler(handler)
++
++    # Use CurrentStreamHandler to always reference the current sys.stdout
++    # This prevents "I/O operation on closed file" errors in test environments
++    handler = CurrentStreamHandler("stdout")
+     handler.setFormatter(logging.Formatter("%(levelname)s - %(message)s"))
+     logger.addHandler(handler)
+     logger.setLevel(log_level)
+diff --git a/tests/e2e/config.py b/tests/e2e/config.py
+index 44af66c..4801618 100644
+--- a/tests/e2e/config.py
++++ b/tests/e2e/config.py
+@@ -48,6 +48,7 @@ class E2EScenario:
+     architecture: str = (
+         ""  # Controller type: "SDWAN", "ACI", "CC" - determines env var prefix
+     )
++    is_dry_run: bool = False  # Dry-run mode: validates structure without execution
+ 
+     # Expected CLI behavior
+     expected_exit_code: int = 0
+@@ -346,32 +347,62 @@ PYATS_CC_SCENARIO = E2EScenario(
+     expected_d2d_hostnames=["sd-dc-c8kv-01", "sd-dc-c8kv-02"],
+ )
+ 
++DRY_RUN_SCENARIO = E2EScenario(
++    name="dry_run_robot_pyats",
++    description="Dry-run mode - Robot (2 validated) + PyATS (discovered, not executed)",
++    data_path=f"{_FIXTURE_BASE}/mixed/data.yaml",
++    templates_path=f"{_FIXTURE_BASE}/mixed/templates",
++    requires_testbed=True,
++    architecture="SDWAN",
++    is_dry_run=True,
++    expected_exit_code=0,
++    expected_robot_passed=2,
++    expected_robot_failed=0,
++    expected_robot_skipped=0,
++    expected_pyats_api_passed=0,
++    expected_pyats_api_failed=0,
++    expected_pyats_api_skipped=0,
++    expected_pyats_d2d_passed=0,
++    expected_pyats_d2d_failed=0,
++    expected_pyats_d2d_skipped=0,
++)
+ 
+-# All scenarios for parameterized testing
+-ALL_SCENARIOS = [
+-    SUCCESS_SCENARIO,
+-    ALL_FAIL_SCENARIO,
+-    MIXED_SCENARIO,
+-    ROBOT_ONLY_SCENARIO,
+-    PYATS_API_ONLY_SCENARIO,
+-    PYATS_D2D_ONLY_SCENARIO,
+-    PYATS_CC_SCENARIO,
+-]
+-
+-
+-def get_scenario_by_name(name: str) -> E2EScenario:
+-    """Get a scenario by its name.
+-
+-    Args:
+-        name: The scenario name to look up.
+-
+-    Returns:
+-        The matching E2EScenario.
++DRY_RUN_PYATS_ONLY_SCENARIO = E2EScenario(
++    name="dry_run_pyats_only",
++    description="Dry-run mode - PyATS API only (no Robot tests)",
++    data_path=f"{_FIXTURE_BASE}/pyats_api_only/data.yaml",
++    templates_path=f"{_FIXTURE_BASE}/pyats_api_only/templates",
++    requires_testbed=False,
++    architecture="ACI",
++    is_dry_run=True,
++    expected_exit_code=0,
++    expected_robot_passed=0,
++    expected_robot_failed=0,
++    expected_robot_skipped=0,
++    expected_pyats_api_passed=0,
++    expected_pyats_api_failed=0,
++    expected_pyats_api_skipped=0,
++    expected_pyats_d2d_passed=0,
++    expected_pyats_d2d_failed=0,
++    expected_pyats_d2d_skipped=0,
++)
+ 
+-    Raises:
+-        KeyError: If no scenario with that name exists.
+-    """
+-    for scenario in ALL_SCENARIOS:
+-        if scenario.name == name:
+-            return scenario
+-    raise KeyError(f"No scenario found with name: {name}")
++DRY_RUN_ROBOT_FAIL_SCENARIO = E2EScenario(
++    name="dry_run_robot_fail",
++    description="Dry-run mode - Robot only with non-existent keyword (1 fail)",
++    data_path=f"{_FIXTURE_BASE}/dry_run_robot_fail/data.yaml",
++    templates_path=f"{_FIXTURE_BASE}/dry_run_robot_fail/templates",
++    requires_testbed=False,
++    architecture="SDWAN",
++    is_dry_run=True,
++    expected_exit_code=1,
++    expected_robot_passed=0,
++    expected_robot_failed=1,
++    expected_robot_skipped=0,
++    expected_pyats_api_passed=0,
++    expected_pyats_api_failed=0,
++    expected_pyats_api_skipped=0,
++    expected_pyats_d2d_passed=0,
++    expected_pyats_d2d_failed=0,
++    expected_pyats_d2d_skipped=0,
++)
+diff --git a/tests/e2e/conftest.py b/tests/e2e/conftest.py
+index ad1b50d..758f62f 100644
+--- a/tests/e2e/conftest.py
++++ b/tests/e2e/conftest.py
+@@ -48,6 +48,26 @@ class E2EResults:
+     filtered_stdout: str
+     cli_result: Any  # typer.testing.Result
+ 
++    @property
++    def has_robot_results(self) -> bool:
++        """Robot always produces output (even in dry-run mode)."""
++        return self.scenario.has_robot_tests
++
++    @property
++    def has_pyats_api_results(self) -> bool:
++        """PyATS API results exist only when not in dry-run mode."""
++        return self.scenario.has_pyats_api_tests and not self.scenario.is_dry_run
++
++    @property
++    def has_pyats_d2d_results(self) -> bool:
++        """PyATS D2D results exist only when not in dry-run mode."""
++        return self.scenario.has_pyats_d2d_tests and not self.scenario.is_dry_run
++
++    @property
++    def has_pyats_results(self) -> bool:
++        """Any PyATS results exist."""
++        return self.has_pyats_api_results or self.has_pyats_d2d_results
++
+ 
+ # =============================================================================
+ # Session-scoped fixtures
+@@ -112,10 +132,11 @@ devices:
+ 
+ def _run_e2e_scenario(
+     scenario: E2EScenario,
+-    mock_api_server: MockAPIServer,
++    mock_api_server: MockAPIServer | None,
+     sdwan_user_testbed: str | None,
+     tmp_path_factory: pytest.TempPathFactory,
+     class_mocker: pytest.MonkeyPatch,
++    extra_cli_args: list[str] | None = None,
+ ) -> E2EResults:
+     """Execute an E2E scenario and return results.
+ 
+@@ -123,20 +144,29 @@ def _run_e2e_scenario(
+ 
+     Args:
+         scenario: The scenario configuration to execute.
+-        mock_api_server: The mock API server instance.
++        mock_api_server: The mock API server instance (can be None, for example for dry-run scenarios).
+         sdwan_user_testbed: Path to the testbed YAML (None if not required).
+         tmp_path_factory: Pytest temp path factory.
+         class_mocker: Class-scoped monkeypatch.
++        extra_cli_args: Additional CLI arguments to pass (e.g., ["--dry-run"]).
+ 
+     Returns:
+         E2EResults containing all execution results.
++
++    Raises:
++        ValueError: If scenario configuration is invalid (via scenario.validate()).
+     """
++    # Validate scenario configuration before execution
++    scenario.validate()
++
+     # Create scenario-specific temp directory
+     output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
+ 
+-    # Configure environment - use architecture as env var prefix
+-    arch = scenario.architecture  # e.g., "SDWAN", "ACI", "CC"
+-    class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
++    arch = scenario.architecture
++    if mock_api_server:
++        class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
++    else:
++        class_mocker.setenv(f"{arch}_URL", "<not-set>")
+     class_mocker.setenv(f"{arch}_USERNAME", "mock_user")
+     class_mocker.setenv(f"{arch}_PASSWORD", "mock_pass")
+     # IOSXE credentials needed for D2D tests (device access)
+@@ -159,6 +189,10 @@ def _run_e2e_scenario(
+     if scenario.requires_testbed and sdwan_user_testbed:
+         cli_args.extend(["--testbed", sdwan_user_testbed])
+ 
++    # Add extra CLI arguments (e.g., --dry-run)
++    if extra_cli_args:
++        cli_args.extend(extra_cli_args)
++
+     # Execute CLI
+     runner = CliRunner()
+     result = runner.invoke(nac_test.cli.main.app, cli_args)
+@@ -321,3 +355,58 @@ def e2e_pyats_cc_results(
+         tmp_path_factory,
+         class_mocker,
+     )
++
++
++@pytest.fixture(scope="class")
++def e2e_dry_run_results(
++    sdwan_user_testbed: str,
++    tmp_path_factory: pytest.TempPathFactory,
++    class_mocker: pytest.MonkeyPatch,
++) -> E2EResults:
++    """Execute the dry-run scenario (mixed fixtures with --dry-run flag)."""
++    from tests.e2e.config import DRY_RUN_SCENARIO
++
++    return _run_e2e_scenario(
++        DRY_RUN_SCENARIO,
++        None,
++        sdwan_user_testbed,
++        tmp_path_factory,
++        class_mocker,
++        extra_cli_args=["--dry-run"],
++    )
++
++
++@pytest.fixture(scope="class")
++def e2e_dry_run_pyats_only_results(
++    tmp_path_factory: pytest.TempPathFactory,
++    class_mocker: pytest.MonkeyPatch,
++) -> E2EResults:
++    """Execute dry-run with PyATS-only (no Robot tests)."""
++    from tests.e2e.config import DRY_RUN_PYATS_ONLY_SCENARIO
++
++    return _run_e2e_scenario(
++        DRY_RUN_PYATS_ONLY_SCENARIO,
++        None,
++        None,
++        tmp_path_factory,
++        class_mocker,
++        extra_cli_args=["--dry-run"],
++    )
++
++
++@pytest.fixture(scope="class")
++def e2e_dry_run_robot_fail_results(
++    tmp_path_factory: pytest.TempPathFactory,
++    class_mocker: pytest.MonkeyPatch,
++) -> E2EResults:
++    """Execute dry-run with Robot test that has non-existent keyword (fails dryrun)."""
++    from tests.e2e.config import DRY_RUN_ROBOT_FAIL_SCENARIO
++
++    return _run_e2e_scenario(
++        DRY_RUN_ROBOT_FAIL_SCENARIO,
++        None,
++        None,
++        tmp_path_factory,
++        class_mocker,
++        extra_cli_args=["--dry-run"],
++    )
+diff --git a/tests/e2e/fixtures/dry_run_robot_fail/data.yaml b/tests/e2e/fixtures/dry_run_robot_fail/data.yaml
+new file mode 100644
+index 0000000..8f51559
+--- /dev/null
++++ b/tests/e2e/fixtures/dry_run_robot_fail/data.yaml
+@@ -0,0 +1,14 @@
++# Minimal data for dry-run failing robot test scenario
++# This test uses a non-existent keyword which fails during Robot dry-run mode
++
++sdwan:
++  management_ip_variable: vpn0_ip
++  sites:
++    - name: SITE_100
++      site_id: "100"
++      routers:
++        - chassis_id: CHI24330K5V
++          device_variables:
++            system_hostname: sd-dc-c8kv-01
++            vpn0_ip: 10.100.1.1
++            system_ip: 10.0.0.1
+diff --git a/tests/e2e/fixtures/dry_run_robot_fail/templates/tests/config/test.robot b/tests/e2e/fixtures/dry_run_robot_fail/templates/tests/config/test.robot
+new file mode 100644
+index 0000000..bdccca7
+--- /dev/null
++++ b/tests/e2e/fixtures/dry_run_robot_fail/templates/tests/config/test.robot
+@@ -0,0 +1,6 @@
++*** Settings ***
++Documentation    Robot test that fails during dry-run due to non-existent keyword
++
++*** Test Cases ***
++Failing Dryrun Test
++    This keyword better not exist as native robot keyword
+diff --git a/tests/e2e/test_e2e_scenarios.py b/tests/e2e/test_e2e_scenarios.py
+index 9d04504..c1e30ae 100644
+--- a/tests/e2e/test_e2e_scenarios.py
++++ b/tests/e2e/test_e2e_scenarios.py
+@@ -141,39 +141,42 @@ class E2ECombinedTestBase:
+     # Robot Framework Output Tests
+     # -------------------------------------------------------------------------
+ 
+-    def test_robot_results_directory_exists(self, results: E2EResults) -> None:
+-        """Verify robot_results/ subdirectory was created."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++    def test_robot_results_directory_state(self, results: E2EResults) -> None:
++        """Verify robot_results/ exists when expected, doesn't exist otherwise."""
+         robot_dir = results.output_dir / ROBOT_RESULTS_DIRNAME
+-        assert robot_dir.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/ directory"
+-        assert robot_dir.is_dir()
++        if results.has_robot_results:
++            assert robot_dir.exists(), f"Expected {ROBOT_RESULTS_DIRNAME}/ to exist"
++            assert robot_dir.is_dir()
++        else:
++            assert not robot_dir.exists(), (
++                f"Expected {ROBOT_RESULTS_DIRNAME}/ to NOT exist"
++            )
+ 
+     def test_robot_output_xml_exists(self, results: E2EResults) -> None:
+         """Verify Robot output.xml exists."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         output_xml = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
+         assert output_xml.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/{OUTPUT_XML}"
+ 
+     def test_robot_log_html_exists(self, results: E2EResults) -> None:
+         """Verify Robot log.html exists."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         log_html = results.output_dir / ROBOT_RESULTS_DIRNAME / LOG_HTML
+         assert log_html.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/{LOG_HTML}"
+ 
+     def test_robot_report_html_exists(self, results: E2EResults) -> None:
+         """Verify Robot report.html exists."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         report_html = results.output_dir / ROBOT_RESULTS_DIRNAME / REPORT_HTML
+         assert report_html.exists(), f"Missing {ROBOT_RESULTS_DIRNAME}/{REPORT_HTML}"
+ 
+     def test_robot_summary_report_exists(self, results: E2EResults) -> None:
+         """Verify Robot summary_report.html exists."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         summary = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
+         assert summary.exists(), (
+             f"Missing {ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}"
+@@ -181,8 +184,8 @@ class E2ECombinedTestBase:
+ 
+     def test_robot_output_xml_parseable(self, results: E2EResults) -> None:
+         """Verify Robot output.xml is valid XML."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
+         tree = ET.parse(xml_path)
+         root = tree.getroot()
+@@ -190,8 +193,8 @@ class E2ECombinedTestBase:
+ 
+     def test_robot_statistics_correct(self, results: E2EResults) -> None:
+         """Verify Robot test statistics match scenario expectations."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
+         parser = RobotResultParser(xml_path)
+         data = parser.parse()
+@@ -213,16 +216,16 @@ class E2ECombinedTestBase:
+ 
+     def test_robot_output_xml_symlink_exists(self, results: E2EResults) -> None:
+         """Verify output.xml symlink exists at root."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         symlink = results.output_dir / OUTPUT_XML
+         assert symlink.exists(), "Missing output.xml symlink at root"
+         assert symlink.is_symlink(), "output.xml is not a symlink"
+ 
+     def test_robot_symlinks_point_correctly(self, results: E2EResults) -> None:
+         """Verify symlinks correctly point to robot_results/ subdirectory."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         symlink = results.output_dir / OUTPUT_XML
+         target = symlink.resolve()
+         expected = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
+@@ -238,32 +241,32 @@ class E2ECombinedTestBase:
+ 
+     def test_robot_summary_has_valid_html(self, results: E2EResults) -> None:
+         """Verify Robot summary report is valid HTML with UTF-8 charset."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
+         html_content = load_html_file(html_path)
+         verify_html_structure(html_content)
+ 
+     def test_robot_summary_has_table(self, results: E2EResults) -> None:
+         """Verify Robot summary has results table."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
+         html_content = load_html_file(html_path)
+         verify_table_structure(html_content)
+ 
+     def test_robot_summary_has_breadcrumb(self, results: E2EResults) -> None:
+         """Verify Robot summary has breadcrumb to combined dashboard."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
+         html_content = load_html_file(html_path)
+         verify_breadcrumb_link(html_content, COMBINED_SUMMARY_FILENAME)
+ 
+     def test_robot_summary_stats_correct(self, results: E2EResults) -> None:
+         """Verify Robot summary statistics are correct."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
+         scenario = results.scenario
+         assert_report_stats(
+@@ -278,8 +281,8 @@ class E2ECombinedTestBase:
+         self, results: E2EResults
+     ) -> None:
+         """Verify Robot summary View Details links point to existing files."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         html_path = results.output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME
+         verified_links = verify_view_details_links_resolve(html_path)
+         assert len(verified_links) > 0, "No View Details links found in Robot summary"
+@@ -288,29 +291,35 @@ class E2ECombinedTestBase:
+     # PyATS Results Directory Tests
+     # -------------------------------------------------------------------------
+ 
+-    def test_pyats_results_directory_exists(self, results: E2EResults) -> None:
+-        """Verify pyats_results/ subdirectory was created."""
+-        if not results.scenario.has_pyats_tests:
+-            pytest.skip("No PyATS tests in this scenario")
++    def test_pyats_results_directory_state(self, results: E2EResults) -> None:
++        """Verify pyats_results/ exists when expected, doesn't exist otherwise."""
+         pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
+-        assert pyats_dir.exists(), f"Missing {PYATS_RESULTS_DIRNAME}/ directory"
+-        assert pyats_dir.is_dir()
++        if results.has_pyats_results:
++            assert pyats_dir.exists(), f"Expected {PYATS_RESULTS_DIRNAME}/ to exist"
++            assert pyats_dir.is_dir()
++        else:
++            assert not pyats_dir.exists(), (
++                f"Expected {PYATS_RESULTS_DIRNAME}/ to NOT exist"
++            )
+ 
+     # -------------------------------------------------------------------------
+     # PyATS API Output Tests
+     # -------------------------------------------------------------------------
+ 
+-    def test_pyats_api_results_exist(self, results: E2EResults) -> None:
+-        """Verify PyATS API results directory exists."""
+-        if not results.scenario.has_pyats_api_tests:
+-            pytest.skip("No PyATS API tests in this scenario")
++    def test_pyats_api_results_directory_state(self, results: E2EResults) -> None:
++        """Verify pyats_results/api/ exists when expected, doesn't exist otherwise."""
+         api_dir = results.output_dir / PYATS_RESULTS_DIRNAME / "api"
+-        assert api_dir.exists(), f"Missing {PYATS_RESULTS_DIRNAME}/api directory"
++        if results.has_pyats_api_results:
++            assert api_dir.exists(), f"Expected {PYATS_RESULTS_DIRNAME}/api/ to exist"
++        else:
++            assert not api_dir.exists(), (
++                f"Expected {PYATS_RESULTS_DIRNAME}/api/ to NOT exist"
++            )
+ 
+     def test_pyats_api_summary_report_exists(self, results: E2EResults) -> None:
+         """Verify PyATS API summary report exists."""
+-        if not results.scenario.has_pyats_api_tests:
+-            pytest.skip("No PyATS API tests in this scenario")
++        if not results.has_pyats_api_results:
++            pytest.skip("No PyATS API results in this scenario")
+         summary = (
+             results.output_dir
+             / PYATS_RESULTS_DIRNAME
+@@ -322,8 +331,8 @@ class E2ECombinedTestBase:
+ 
+     def test_pyats_api_summary_has_valid_html(self, results: E2EResults) -> None:
+         """Verify PyATS API summary is valid HTML with UTF-8 charset."""
+-        if not results.scenario.has_pyats_api_tests:
+-            pytest.skip("No PyATS API tests in this scenario")
++        if not results.has_pyats_api_results:
++            pytest.skip("No PyATS API results in this scenario")
+         summary = (
+             results.output_dir
+             / PYATS_RESULTS_DIRNAME
+@@ -336,8 +345,8 @@ class E2ECombinedTestBase:
+ 
+     def test_pyats_api_summary_has_breadcrumb(self, results: E2EResults) -> None:
+         """Verify PyATS API summary has breadcrumb to combined dashboard."""
+-        if not results.scenario.has_pyats_api_tests:
+-            pytest.skip("No PyATS API tests in this scenario")
++        if not results.has_pyats_api_results:
++            pytest.skip("No PyATS API results in this scenario")
+         summary = (
+             results.output_dir
+             / PYATS_RESULTS_DIRNAME
+@@ -350,8 +359,8 @@ class E2ECombinedTestBase:
+ 
+     def test_pyats_api_summary_stats_correct(self, results: E2EResults) -> None:
+         """Verify PyATS API summary statistics are correct."""
+-        if not results.scenario.has_pyats_api_tests:
+-            pytest.skip("No PyATS API tests in this scenario")
++        if not results.has_pyats_api_results:
++            pytest.skip("No PyATS API results in this scenario")
+         summary = (
+             results.output_dir
+             / PYATS_RESULTS_DIRNAME
+@@ -372,8 +381,8 @@ class E2ECombinedTestBase:
+         self, results: E2EResults
+     ) -> None:
+         """Verify PyATS API summary View Details links point to existing files."""
+-        if not results.scenario.has_pyats_api_tests:
+-            pytest.skip("No PyATS API tests in this scenario")
++        if not results.has_pyats_api_results:
++            pytest.skip("No PyATS API results in this scenario")
+         summary = (
+             results.output_dir
+             / PYATS_RESULTS_DIRNAME
+@@ -390,17 +399,20 @@ class E2ECombinedTestBase:
+     # PyATS D2D Output Tests
+     # -------------------------------------------------------------------------
+ 
+-    def test_pyats_d2d_results_exist(self, results: E2EResults) -> None:
+-        """Verify PyATS D2D results directory exists."""
+-        if not results.scenario.has_pyats_d2d_tests:
+-            pytest.skip("No PyATS D2D tests in this scenario")
++    def test_pyats_d2d_results_directory_state(self, results: E2EResults) -> None:
++        """Verify pyats_results/d2d/ exists when expected, doesn't exist otherwise."""
+         d2d_dir = results.output_dir / PYATS_RESULTS_DIRNAME / "d2d"
+-        assert d2d_dir.exists(), f"Missing {PYATS_RESULTS_DIRNAME}/d2d directory"
++        if results.has_pyats_d2d_results:
++            assert d2d_dir.exists(), f"Expected {PYATS_RESULTS_DIRNAME}/d2d/ to exist"
++        else:
++            assert not d2d_dir.exists(), (
++                f"Expected {PYATS_RESULTS_DIRNAME}/d2d/ to NOT exist"
++            )
+ 
+     def test_pyats_d2d_summary_report_exists(self, results: E2EResults) -> None:
+         """Verify PyATS D2D summary report exists."""
+-        if not results.scenario.has_pyats_d2d_tests:
+-            pytest.skip("No PyATS D2D tests in this scenario")
++        if not results.has_pyats_d2d_results:
++            pytest.skip("No PyATS D2D results in this scenario")
+         summary = (
+             results.output_dir
+             / PYATS_RESULTS_DIRNAME
+@@ -412,8 +424,8 @@ class E2ECombinedTestBase:
+ 
+     def test_pyats_d2d_summary_has_valid_html(self, results: E2EResults) -> None:
+         """Verify PyATS D2D summary is valid HTML with UTF-8 charset."""
+-        if not results.scenario.has_pyats_d2d_tests:
+-            pytest.skip("No PyATS D2D tests in this scenario")
++        if not results.has_pyats_d2d_results:
++            pytest.skip("No PyATS D2D results in this scenario")
+         summary = (
+             results.output_dir
+             / PYATS_RESULTS_DIRNAME
+@@ -426,8 +438,8 @@ class E2ECombinedTestBase:
+ 
+     def test_pyats_d2d_summary_has_breadcrumb(self, results: E2EResults) -> None:
+         """Verify PyATS D2D summary has breadcrumb to combined dashboard."""
+-        if not results.scenario.has_pyats_d2d_tests:
+-            pytest.skip("No PyATS D2D tests in this scenario")
++        if not results.has_pyats_d2d_results:
++            pytest.skip("No PyATS D2D results in this scenario")
+         summary = (
+             results.output_dir
+             / PYATS_RESULTS_DIRNAME
+@@ -440,8 +452,8 @@ class E2ECombinedTestBase:
+ 
+     def test_pyats_d2d_summary_stats_correct(self, results: E2EResults) -> None:
+         """Verify PyATS D2D summary statistics are correct."""
+-        if not results.scenario.has_pyats_d2d_tests:
+-            pytest.skip("No PyATS D2D tests in this scenario")
++        if not results.has_pyats_d2d_results:
++            pytest.skip("No PyATS D2D results in this scenario")
+         summary = (
+             results.output_dir
+             / PYATS_RESULTS_DIRNAME
+@@ -462,8 +474,8 @@ class E2ECombinedTestBase:
+         self, results: E2EResults
+     ) -> None:
+         """Verify PyATS D2D summary View Details links point to existing files."""
+-        if not results.scenario.has_pyats_d2d_tests:
+-            pytest.skip("No PyATS D2D tests in this scenario")
++        if not results.has_pyats_d2d_results:
++            pytest.skip("No PyATS D2D results in this scenario")
+         summary = (
+             results.output_dir
+             / PYATS_RESULTS_DIRNAME
+@@ -488,8 +500,8 @@ class E2ECombinedTestBase:
+ 
+     def test_combined_dashboard_links_to_robot(self, results: E2EResults) -> None:
+         """Verify combined dashboard links to Robot summary."""
+-        if not results.scenario.has_robot_tests:
+-            pytest.skip("No Robot tests in this scenario")
++        if not results.has_robot_results:
++            pytest.skip("No Robot results in this scenario")
+         html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
+         html_content = load_html_file(html_path)
+         assert f"{ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}" in html_content, (
+@@ -498,8 +510,8 @@ class E2ECombinedTestBase:
+ 
+     def test_combined_dashboard_links_to_pyats(self, results: E2EResults) -> None:
+         """Verify combined dashboard links to PyATS results."""
+-        if not results.scenario.has_pyats_tests:
+-            pytest.skip("No PyATS tests in this scenario")
++        if not results.has_pyats_results:
++            pytest.skip("No PyATS results in this scenario")
+         html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
+         html_content = load_html_file(html_path)
+         assert PYATS_RESULTS_DIRNAME in html_content, "Missing link to PyATS results"
+@@ -684,6 +696,30 @@ class E2ECombinedTestBase:
+                 f"Filename contains unsafe characters: {filename} -> {unsafe_chars}"
+             )
+ 
++    # -------------------------------------------------------------------------
++    # Dry-Run Mode Indicator Tests
++    # -------------------------------------------------------------------------
++
++    def test_dry_run_indicator_in_pyats_message(self, results: E2EResults) -> None:
++        """Verify dry-run indicator appears in PyATS startup message."""
++        if not results.scenario.is_dry_run:
++            pytest.skip("Not a dry-run scenario")
++        if not results.scenario.has_pyats_tests:
++            pytest.skip("No PyATS tests in this scenario")
++        assert re.search(
++            r"(running|executing).*pyats.*dry-run", results.stdout, re.I
++        ), "Expected dry-run indicator in PyATS startup message"
++
++    def test_dry_run_indicator_in_robot_message(self, results: E2EResults) -> None:
++        """Verify dry-run indicator appears in Robot Framework startup message."""
++        if not results.scenario.is_dry_run:
++            pytest.skip("Not a dry-run scenario")
++        if not results.scenario.has_robot_tests:
++            pytest.skip("No Robot tests in this scenario")
++        assert re.search(
++            r"(running|executing).*robot.*dry-run", results.stdout, re.I
++        ), "Expected dry-run indicator in Robot Framework startup message"
++
+     # -------------------------------------------------------------------------
+     # Merged xunit.xml Tests
+     # -------------------------------------------------------------------------
+@@ -691,12 +727,21 @@ class E2ECombinedTestBase:
+     def test_merged_xunit_exists_at_root(self, results: E2EResults) -> None:
+         """Verify merged xunit.xml exists at root and is not a symlink."""
+         xunit_path = results.output_dir / XUNIT_XML
+-        assert xunit_path.exists(), "Missing merged xunit.xml at root"
+-        assert xunit_path.is_file(), "xunit.xml should be a file (not symlink)"
+-        assert not xunit_path.is_symlink(), "xunit.xml should not be a symlink"
++        if results.has_pyats_results or results.has_robot_results:
++            assert xunit_path.exists(), "Missing merged xunit.xml at root"
++            assert xunit_path.is_file(), "xunit.xml should be a file (not symlink)"
++            assert not xunit_path.is_symlink(), "xunit.xml should not be a symlink"
++        else:
++            assert not xunit_path.exists(), (
++                "Merged xunit.xml should not exist when no tests were run"
++            )
+ 
+-    def test_merged_xunit_is_valid_xml(self, parsed_xunit: ET.Element | None) -> None:
++    def test_merged_xunit_is_valid_xml(
++        self, results: E2EResults, parsed_xunit: ET.Element | None
++    ) -> None:
+         """Verify merged xunit.xml is valid XML with testsuites root."""
++        if not results.has_pyats_results and not results.has_robot_results:
++            pytest.skip("No test runs in this scenario")
+         assert parsed_xunit is not None, "xunit.xml missing or unparseable"
+         assert parsed_xunit.tag == "testsuites", (
+             f"Expected root 'testsuites', got '{parsed_xunit.tag}'"
+@@ -706,6 +751,8 @@ class E2ECombinedTestBase:
+         self, results: E2EResults, parsed_xunit: ET.Element | None
+     ) -> None:
+         """Verify merged xunit.xml has correct total test count."""
++        if not results.has_pyats_results and not results.has_robot_results:
++            pytest.skip("No test runs in this scenario")
+         assert parsed_xunit is not None, "xunit.xml missing or unparseable"
+         expected_total = results.scenario.expected_total_tests
+         actual_total = int(parsed_xunit.get("tests", 0))
+@@ -717,6 +764,8 @@ class E2ECombinedTestBase:
+         self, results: E2EResults, parsed_xunit: ET.Element | None
+     ) -> None:
+         """Verify merged xunit.xml has correct failure count."""
++        if not results.has_pyats_results and not results.has_robot_results:
++            pytest.skip("No test runs in this scenario")
+         assert parsed_xunit is not None, "xunit.xml missing or unparseable"
+         expected_failures = results.scenario.expected_total_failed
+         actual_failures = int(parsed_xunit.get("failures", 0))
+@@ -728,6 +777,8 @@ class E2ECombinedTestBase:
+         self, results: E2EResults, parsed_xunit: ET.Element | None
+     ) -> None:
+         """Verify merged xunit.xml contains testsuites from all test sources."""
++        if not results.has_pyats_results and not results.has_robot_results:
++            pytest.skip("No test runs in this scenario")
+         assert parsed_xunit is not None, "xunit.xml missing or unparseable"
+         testsuites = parsed_xunit.findall("testsuite")
+         testsuite_names = [ts.get("name", "") for ts in testsuites]
+@@ -1048,3 +1099,125 @@ class TestE2EPyatsCc(E2ECombinedTestBase):
+     def results(self, e2e_pyats_cc_results: E2EResults) -> E2EResults:
+         """Provide PyATS Catalyst Center scenario results."""
+         return e2e_pyats_cc_results
++
++
++# =============================================================================
++# DRY-RUN SCENARIO TESTS
++# =============================================================================
++
++
++class TestE2EDryRun(E2ECombinedTestBase):
++    """E2E tests for dry-run mode with mixed Robot + PyATS tests.
++
++    Dry-run mode validates test structure without executing tests:
++    - Robot: Uses Robot's --dryrun flag (validates syntax, reports as passed)
++    - PyATS: Discovers and categorizes tests, prints what would run, exits early
++
++    Expected: CLI exits with code 0, no tests actually executed
++    """
++
++    @pytest.fixture
++    def results(self, e2e_dry_run_results: E2EResults) -> E2EResults:
++        """Provide dry-run scenario results."""
++        return e2e_dry_run_results
++
++    # -------------------------------------------------------------------------
++    # Dry-run specific tests (stdout validation)
++    # -------------------------------------------------------------------------
++
++    def test_pyats_dry_run_header_in_output(self, results: E2EResults) -> None:
++        """Verify PyATS dry-run mode header is printed."""
++        assert "DRY-RUN MODE" in results.stdout, (
++            "Expected 'DRY-RUN MODE' header in stdout for PyATS dry-run"
++        )
++
++    def test_pyats_api_tests_listed(self, results: E2EResults) -> None:
++        """Verify PyATS API tests are listed in dry-run output."""
++        assert "API Tests" in results.stdout, (
++            "Expected 'API Tests' section in dry-run output"
++        )
++        assert "verify_sdwan_sync_fail.py" in results.stdout, (
++            "Expected API test file to be listed in dry-run output"
++        )
++
++    def test_pyats_d2d_tests_listed(self, results: E2EResults) -> None:
++        """Verify PyATS D2D tests are listed in dry-run output."""
++        assert "D2D/SSH Tests" in results.stdout, (
++            "Expected 'D2D/SSH Tests' section in dry-run output"
++        )
++        assert "verify_iosxe_control.py" in results.stdout, (
++            "Expected D2D test file to be listed in dry-run output"
++        )
++
++    def test_pyats_dry_run_complete_message(self, results: E2EResults) -> None:
++        """Verify PyATS dry-run completion message is printed."""
++        assert "PyATS dry-run complete" in results.stdout, (
++            "Expected 'PyATS dry-run complete' message in stdout"
++        )
++        assert "no tests executed" in results.stdout, (
++            "Expected 'no tests executed' message in stdout"
++        )
++
++
++class TestE2EDryRunPyatsOnly(E2ECombinedTestBase):
++    """E2E tests for dry-run mode with PyATS-only (no Robot tests).
++
++    This specifically tests the fix for the exit code bug where --dry-run
++    on a PyATS-only repo would return exit code 1 because stats.is_empty
++    becomes True (PyATS returns not_run with total=0, and no Robot tests
++    contribute passed tests).
++
++    Expected: CLI exits with code 0, no tests actually executed.
++    """
++
++    @pytest.fixture
++    def results(self, e2e_dry_run_pyats_only_results: E2EResults) -> E2EResults:
++        """Provide dry-run PyATS-only scenario results."""
++        return e2e_dry_run_pyats_only_results
++
++    # -------------------------------------------------------------------------
++    # PyATS-only dry-run specific tests
++    # -------------------------------------------------------------------------
++
++    def test_pyats_dry_run_header_in_output(self, results: E2EResults) -> None:
++        """Verify PyATS dry-run mode header is printed."""
++        assert "DRY-RUN MODE" in results.stdout, (
++            "Expected 'DRY-RUN MODE' header in stdout for PyATS dry-run"
++        )
++
++    def test_pyats_api_tests_listed(self, results: E2EResults) -> None:
++        """Verify PyATS API tests are listed in dry-run output."""
++        assert "API Tests" in results.stdout, (
++            "Expected 'API Tests' section in dry-run output"
++        )
++        assert "verify_aci_apic_appliance_operational_status.py" in results.stdout, (
++            "Expected ACI API test file to be listed in dry-run output"
++        )
++
++    def test_pyats_dry_run_complete_message(self, results: E2EResults) -> None:
++        """Verify PyATS dry-run completion message is printed."""
++        assert "PyATS dry-run complete" in results.stdout, (
++            "Expected 'PyATS dry-run complete' message in stdout"
++        )
++
++    def test_dry_run_indicator_in_pyats_message(self, results: E2EResults) -> None:
++        """Verify dry-run indicator appears in PyATS startup message.
++
++        Override: Base class skips this because has_pyats_tests=False (expected
++        counts are 0 in dry-run). But this scenario DOES include PyATS tests.
++        """
++        assert re.search(
++            r"(running|executing).*pyats.*dry-run", results.stdout, re.I
++        ), "Expected dry-run indicator in PyATS startup message"
++
++
++class TestE2EDryRunRobotFail(E2ECombinedTestBase):
++    """E2E tests for dry-run mode with Robot test that fails validation.
++
++    Tests that Robot dry-run correctly fails when a test uses a non-existent
++    keyword. The expected exit code is 1 (one failing test).
++    """
++
++    @pytest.fixture
++    def results(self, e2e_dry_run_robot_fail_results: E2EResults) -> E2EResults:
++        return e2e_dry_run_robot_fail_results
+diff --git a/tests/pyats_core/conftest.py b/tests/pyats_core/conftest.py
+new file mode 100644
+index 0000000..38dc79c
+--- /dev/null
++++ b/tests/pyats_core/conftest.py
+@@ -0,0 +1,79 @@
++# SPDX-License-Identifier: MPL-2.0
++# Copyright (c) 2025 Daniel Schmidt
++
++"""Shared fixtures for PyATS orchestrator tests.
++
++NOTE: This module intentionally duplicates some patterns from tests/unit/conftest.py.
++Issue #541 will merge tests/pyats_core/ into tests/unit/, at which point these
++fixtures should be consolidated into a single conftest.py.
++"""
++
++import os
++from pathlib import Path
++from typing import NamedTuple
++
++import pytest
++from _pytest.monkeypatch import MonkeyPatch
++
++CONTROLLER_ENV_PREFIXES = ("ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_")
++
++
++class PyATSTestDirs(NamedTuple):
++    """Directory structure for PyATS orchestrator tests."""
++
++    test_dir: Path
++    output_dir: Path
++    merged_file: Path
++
++
++@pytest.fixture()
++def clean_controller_env(monkeypatch: MonkeyPatch) -> None:
++    """Clear all controller-related environment variables.
++
++    Ensures tests run in isolation regardless of the caller's shell environment.
++    """
++    for key in list(os.environ.keys()):
++        if any(prefix in key for prefix in CONTROLLER_ENV_PREFIXES):
++            monkeypatch.delenv(key, raising=False)
++
++
++@pytest.fixture()
++def aci_controller_env(monkeypatch: MonkeyPatch) -> None:
++    """Set ACI controller environment variables."""
++    monkeypatch.setenv("ACI_URL", "https://apic.test.com")
++    monkeypatch.setenv("ACI_USERNAME", "admin")
++    monkeypatch.setenv("ACI_PASSWORD", "password")
++
++
++@pytest.fixture()
++def sdwan_controller_env(monkeypatch: MonkeyPatch) -> None:
++    """Set SD-WAN controller environment variables."""
++    monkeypatch.setenv("SDWAN_URL", "https://vmanage.test.com")
++    monkeypatch.setenv("SDWAN_USERNAME", "admin")
++    monkeypatch.setenv("SDWAN_PASSWORD", "password")
++
++
++@pytest.fixture()
++def cc_controller_env(monkeypatch: MonkeyPatch) -> None:
++    """Set Catalyst Center controller environment variables."""
++    monkeypatch.setenv("CC_URL", "https://cc.test.com")
++    monkeypatch.setenv("CC_USERNAME", "admin")
++    monkeypatch.setenv("CC_PASSWORD", "password")
++
++
++@pytest.fixture()
++def pyats_test_dirs(tmp_path: Path) -> PyATSTestDirs:
++    """Create standard directory structure for PyATS orchestrator tests.
++
++    Returns:
++        PyATSTestDirs with test_dir, output_dir, and merged_file paths.
++    """
++    test_dir = tmp_path / "tests"
++    test_dir.mkdir()
++    output_dir = tmp_path / "output"
++    output_dir.mkdir()
++    merged_file = output_dir / "merged.yaml"
++    merged_file.write_text("test: data")
++    return PyATSTestDirs(
++        test_dir=test_dir, output_dir=output_dir, merged_file=merged_file
++    )
+diff --git a/tests/pyats_core/test_orchestrator_controller_detection.py b/tests/pyats_core/test_orchestrator_controller_detection.py
+index 3d561f3..57b600a 100644
+--- a/tests/pyats_core/test_orchestrator_controller_detection.py
++++ b/tests/pyats_core/test_orchestrator_controller_detection.py
+@@ -3,7 +3,6 @@
+ 
+ """Test PyATS orchestrator controller detection integration."""
+ 
+-from pathlib import Path
+ from unittest.mock import patch
+ 
+ import pytest
+@@ -11,182 +10,91 @@ import pytest
+ from nac_test.core.constants import EXIT_ERROR
+ from nac_test.pyats_core.orchestrator import PyATSOrchestrator
+ 
++from .conftest import PyATSTestDirs
++
+ 
+ class TestOrchestratorControllerDetection:
+     """Test controller detection integration in PyATSOrchestrator."""
+ 
+     def test_orchestrator_detects_controller_on_init(
+-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++        self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
+     ) -> None:
+         """Test that PyATSOrchestrator detects controller type during initialization."""
+-        # Set up ACI environment variables
+-        monkeypatch.setenv("ACI_URL", "https://apic.example.com")
+-        monkeypatch.setenv("ACI_USERNAME", "admin")
+-        monkeypatch.setenv("ACI_PASSWORD", "password")
+-
+-        # Create required directories and files
+-        test_dir = tmp_path / "tests"
+-        test_dir.mkdir()
+-        output_dir = tmp_path / "output"
+-        output_dir.mkdir()
+-
+-        # Create a dummy merged data file
+-        merged_file = output_dir / "merged_data.yaml"
+-        merged_file.write_text("dummy: data")
+-
+-        # Initialize orchestrator
+         orchestrator = PyATSOrchestrator(
+-            data_paths=[tmp_path / "data.yaml"],
+-            test_dir=test_dir,
+-            output_dir=output_dir,
+-            merged_data_filename="merged_data.yaml",
++            data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
++            test_dir=pyats_test_dirs.test_dir,
++            output_dir=pyats_test_dirs.output_dir,
++            merged_data_filename="merged.yaml",
+         )
+ 
+-        # Verify controller type was detected
+         assert orchestrator.controller_type == "ACI"
+ 
+     def test_orchestrator_exits_on_detection_failure(
+-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++        self, clean_controller_env: None, pyats_test_dirs: PyATSTestDirs
+     ) -> None:
+         """Test that PyATSOrchestrator exits gracefully when controller detection fails."""
+-        # Clear all controller environment variables
+-        for env_var in [
+-            "ACI_URL",
+-            "ACI_USERNAME",
+-            "ACI_PASSWORD",
+-            "SDWAN_URL",
+-            "SDWAN_USERNAME",
+-            "SDWAN_PASSWORD",
+-            "CC_URL",
+-            "CC_USERNAME",
+-            "CC_PASSWORD",
+-        ]:
+-            monkeypatch.delenv(env_var, raising=False)
+-
+-        # Create required directories
+-        test_dir = tmp_path / "tests"
+-        test_dir.mkdir()
+-        output_dir = tmp_path / "output"
+-        output_dir.mkdir()
+-
+-        # Create a dummy merged data file
+-        merged_file = output_dir / "merged_data.yaml"
+-        merged_file.write_text("dummy: data")
+-
+-        # Attempt to initialize orchestrator should exit
+         with pytest.raises(SystemExit) as exc_info:
+             PyATSOrchestrator(
+-                data_paths=[tmp_path / "data.yaml"],
+-                test_dir=test_dir,
+-                output_dir=output_dir,
+-                merged_data_filename="merged_data.yaml",
++                data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
++                test_dir=pyats_test_dirs.test_dir,
++                output_dir=pyats_test_dirs.output_dir,
++                merged_data_filename="merged.yaml",
+             )
+ 
+         # Verify it exits with EXIT_ERROR (255) for infrastructure errors
+         assert exc_info.value.code == EXIT_ERROR
+ 
+     def test_orchestrator_handles_multiple_controllers_error(
+-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++        self,
++        aci_controller_env: None,
++        sdwan_controller_env: None,
++        pyats_test_dirs: PyATSTestDirs,
+     ) -> None:
+         """Test that PyATSOrchestrator handles multiple controller credentials error."""
+-        # Set up both ACI and SDWAN environment variables
+-        monkeypatch.setenv("ACI_URL", "https://apic.example.com")
+-        monkeypatch.setenv("ACI_USERNAME", "admin")
+-        monkeypatch.setenv("ACI_PASSWORD", "password")
+-        monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
+-        monkeypatch.setenv("SDWAN_USERNAME", "admin")
+-        monkeypatch.setenv("SDWAN_PASSWORD", "password")
+-
+-        # Create required directories
+-        test_dir = tmp_path / "tests"
+-        test_dir.mkdir()
+-        output_dir = tmp_path / "output"
+-        output_dir.mkdir()
+-
+-        # Create a dummy merged data file
+-        merged_file = output_dir / "merged_data.yaml"
+-        merged_file.write_text("dummy: data")
+-
+-        # Attempt to initialize orchestrator should exit
+         with pytest.raises(SystemExit) as exc_info:
+             PyATSOrchestrator(
+-                data_paths=[tmp_path / "data.yaml"],
+-                test_dir=test_dir,
+-                output_dir=output_dir,
+-                merged_data_filename="merged_data.yaml",
++                data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
++                test_dir=pyats_test_dirs.test_dir,
++                output_dir=pyats_test_dirs.output_dir,
++                merged_data_filename="merged.yaml",
+             )
+ 
+         # Verify it exits with EXIT_ERROR (255) for infrastructure errors
+         assert exc_info.value.code == EXIT_ERROR
+ 
+     def test_validate_environment_uses_detected_controller(
+-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++        self, sdwan_controller_env: None, pyats_test_dirs: PyATSTestDirs
+     ) -> None:
+         """Test that validate_environment uses the detected controller type."""
+-        # Set up SDWAN environment variables
+-        monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
+-        monkeypatch.setenv("SDWAN_USERNAME", "admin")
+-        monkeypatch.setenv("SDWAN_PASSWORD", "password")
+-
+-        # Create required directories and files
+-        test_dir = tmp_path / "tests"
+-        test_dir.mkdir()
+-        output_dir = tmp_path / "output"
+-        output_dir.mkdir()
+-
+-        # Create a dummy merged data file
+-        merged_file = output_dir / "merged_data.yaml"
+-        merged_file.write_text("dummy: data")
+-
+-        # Initialize orchestrator
+         orchestrator = PyATSOrchestrator(
+-            data_paths=[tmp_path / "data.yaml"],
+-            test_dir=test_dir,
+-            output_dir=output_dir,
+-            merged_data_filename="merged_data.yaml",
++            data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
++            test_dir=pyats_test_dirs.test_dir,
++            output_dir=pyats_test_dirs.output_dir,
++            merged_data_filename="merged.yaml",
+         )
+ 
+-        # Verify controller type was detected as SDWAN
+         assert orchestrator.controller_type == "SDWAN"
+ 
+-        # Mock EnvironmentValidator to verify it receives correct controller type
+         with patch(
+             "nac_test.pyats_core.orchestrator.EnvironmentValidator"
+         ) as mock_validator:
+             orchestrator.validate_environment()
+-
+-            # Verify validate_controller_env was called with SDWAN
+             mock_validator.validate_controller_env.assert_called_once_with("SDWAN")
+ 
+     def test_orchestrator_no_longer_uses_controller_type_env_var(
+-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++        self,
++        aci_controller_env: None,
++        pyats_test_dirs: PyATSTestDirs,
++        monkeypatch: pytest.MonkeyPatch,
+     ) -> None:
+         """Test that PyATSOrchestrator ignores CONTROLLER_TYPE environment variable."""
+-        # Set up ACI credentials
+-        monkeypatch.setenv("ACI_URL", "https://apic.example.com")
+-        monkeypatch.setenv("ACI_USERNAME", "admin")
+-        monkeypatch.setenv("ACI_PASSWORD", "password")
+-
+-        # Also set CONTROLLER_TYPE to a different value (should be ignored)
+         monkeypatch.setenv("CONTROLLER_TYPE", "SDWAN")
+ 
+-        # Create required directories and files
+-        test_dir = tmp_path / "tests"
+-        test_dir.mkdir()
+-        output_dir = tmp_path / "output"
+-        output_dir.mkdir()
+-
+-        # Create a dummy merged data file
+-        merged_file = output_dir / "merged_data.yaml"
+-        merged_file.write_text("dummy: data")
+-
+-        # Initialize orchestrator
+         orchestrator = PyATSOrchestrator(
+-            data_paths=[tmp_path / "data.yaml"],
+-            test_dir=test_dir,
+-            output_dir=output_dir,
+-            merged_data_filename="merged_data.yaml",
++            data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
++            test_dir=pyats_test_dirs.test_dir,
++            output_dir=pyats_test_dirs.output_dir,
++            merged_data_filename="merged.yaml",
+         )
+ 
+-        # Verify controller type was detected based on credentials (ACI), not CONTROLLER_TYPE env var
+         assert orchestrator.controller_type == "ACI"
+diff --git a/tests/pyats_core/test_orchestrator_controller_param.py b/tests/pyats_core/test_orchestrator_controller_param.py
+index c3e45ae..d8a63ce 100644
+--- a/tests/pyats_core/test_orchestrator_controller_param.py
++++ b/tests/pyats_core/test_orchestrator_controller_param.py
+@@ -3,149 +3,75 @@
+ 
+ """Unit tests for PyATSOrchestrator controller_type parameter."""
+ 
+-import os
+-from pathlib import Path
+ from unittest.mock import patch
+ 
+-from _pytest.monkeypatch import MonkeyPatch
+-
+ from nac_test.pyats_core.orchestrator import PyATSOrchestrator
+ 
++from .conftest import PyATSTestDirs
++
+ 
+ class TestOrchestratorControllerParam:
+     """Tests for PyATSOrchestrator controller_type parameter."""
+ 
+     def test_orchestrator_uses_provided_controller_type(
+-        self, tmp_path: Path, monkeypatch: MonkeyPatch
++        self, clean_controller_env: None, pyats_test_dirs: PyATSTestDirs
+     ) -> None:
+         """Test that PyATSOrchestrator uses provided controller_type instead of detecting."""
+-        # Clear all controller environment variables
+-        for key in list(os.environ.keys()):
+-            if any(
+-                prefix in key
+-                for prefix in ["ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_"]
+-            ):
+-                monkeypatch.delenv(key, raising=False)
+-
+-        # Create test directories
+-        test_dir = tmp_path / "tests"
+-        test_dir.mkdir()
+-        output_dir = tmp_path / "output"
+-        output_dir.mkdir()
+-        merged_file = output_dir / "merged.yaml"
+-        merged_file.write_text("test: data")
+-
+-        # Mock detect_controller_type to verify it's NOT called
+         with patch(
+             "nac_test.pyats_core.orchestrator.detect_controller_type"
+         ) as mock_detect:
+-            # Initialize with explicit controller_type
+             orchestrator = PyATSOrchestrator(
+-                data_paths=[tmp_path / "data"],
+-                test_dir=test_dir,
+-                output_dir=output_dir,
++                data_paths=[pyats_test_dirs.output_dir.parent / "data"],
++                test_dir=pyats_test_dirs.test_dir,
++                output_dir=pyats_test_dirs.output_dir,
+                 merged_data_filename="merged.yaml",
+-                controller_type="SDWAN",  # Explicitly provide controller type
++                controller_type="SDWAN",
+             )
+ 
+-            # Verify controller type was set correctly
+             assert orchestrator.controller_type == "SDWAN"
+-
+-            # Verify detect_controller_type was NOT called
+             mock_detect.assert_not_called()
+ 
+     def test_orchestrator_falls_back_to_detection_when_none(
+-        self, tmp_path: Path, monkeypatch: MonkeyPatch
++        self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
+     ) -> None:
+         """Test that PyATSOrchestrator detects controller when controller_type is None."""
+-        # Set up ACI credentials
+-        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
+-        monkeypatch.setenv("ACI_USERNAME", "admin")
+-        monkeypatch.setenv("ACI_PASSWORD", "password")
+-
+-        # Create test directories
+-        test_dir = tmp_path / "tests"
+-        test_dir.mkdir()
+-        output_dir = tmp_path / "output"
+-        output_dir.mkdir()
+-        merged_file = output_dir / "merged.yaml"
+-        merged_file.write_text("test: data")
+-
+-        # Initialize without controller_type (should detect)
+         orchestrator = PyATSOrchestrator(
+-            data_paths=[tmp_path / "data"],
+-            test_dir=test_dir,
+-            output_dir=output_dir,
++            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
++            test_dir=pyats_test_dirs.test_dir,
++            output_dir=pyats_test_dirs.output_dir,
+             merged_data_filename="merged.yaml",
+-            controller_type=None,  # Don't provide controller type
++            controller_type=None,
+         )
+ 
+-        # Verify controller type was detected
+         assert orchestrator.controller_type == "ACI"
+ 
+     def test_orchestrator_defaults_to_detection(
+-        self, tmp_path: Path, monkeypatch: MonkeyPatch
++        self, cc_controller_env: None, pyats_test_dirs: PyATSTestDirs
+     ) -> None:
+         """Test that PyATSOrchestrator detects controller when parameter not provided."""
+-        # Set up CC credentials
+-        monkeypatch.setenv("CC_URL", "https://cc.test.com")
+-        monkeypatch.setenv("CC_USERNAME", "admin")
+-        monkeypatch.setenv("CC_PASSWORD", "password")
+-
+-        # Create test directories
+-        test_dir = tmp_path / "tests"
+-        test_dir.mkdir()
+-        output_dir = tmp_path / "output"
+-        output_dir.mkdir()
+-        merged_file = output_dir / "merged.yaml"
+-        merged_file.write_text("test: data")
+-
+-        # Initialize without controller_type parameter at all
+         orchestrator = PyATSOrchestrator(
+-            data_paths=[tmp_path / "data"],
+-            test_dir=test_dir,
+-            output_dir=output_dir,
++            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
++            test_dir=pyats_test_dirs.test_dir,
++            output_dir=pyats_test_dirs.output_dir,
+             merged_data_filename="merged.yaml",
+-            # No controller_type parameter
+         )
+ 
+-        # Verify controller type was detected
+         assert orchestrator.controller_type == "CC"
+ 
+     def test_validate_environment_uses_provided_controller(
+-        self, tmp_path: Path, monkeypatch: MonkeyPatch
++        self, clean_controller_env: None, pyats_test_dirs: PyATSTestDirs
+     ) -> None:
+         """Test that validate_environment uses the provided controller type."""
+-        # Clear all controller environment variables
+-        for key in list(os.environ.keys()):
+-            if any(
+-                prefix in key
+-                for prefix in ["ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_"]
+-            ):
+-                monkeypatch.delenv(key, raising=False)
+-
+-        # Create test directories
+-        test_dir = tmp_path / "tests"
+-        test_dir.mkdir()
+-        output_dir = tmp_path / "output"
+-        output_dir.mkdir()
+-        merged_file = output_dir / "merged.yaml"
+-        merged_file.write_text("test: data")
+-
+-        # Initialize with explicit controller_type
+         orchestrator = PyATSOrchestrator(
+-            data_paths=[tmp_path / "data"],
+-            test_dir=test_dir,
+-            output_dir=output_dir,
++            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
++            test_dir=pyats_test_dirs.test_dir,
++            output_dir=pyats_test_dirs.output_dir,
+             merged_data_filename="merged.yaml",
+-            controller_type="ACI",  # Explicitly provide controller type
++            controller_type="ACI",
+         )
+ 
+-        # Mock EnvironmentValidator to verify it receives the correct controller type
+         with patch(
+             "nac_test.pyats_core.orchestrator.EnvironmentValidator.validate_controller_env"
+         ) as mock_validate:
+             orchestrator.validate_environment()
+-
+-            # Verify validate was called with the provided controller type
+             mock_validate.assert_called_once_with("ACI")
+diff --git a/tests/pyats_core/test_orchestrator_dry_run.py b/tests/pyats_core/test_orchestrator_dry_run.py
+new file mode 100644
+index 0000000..87efdc0
+--- /dev/null
++++ b/tests/pyats_core/test_orchestrator_dry_run.py
+@@ -0,0 +1,168 @@
++# SPDX-License-Identifier: MPL-2.0
++# Copyright (c) 2025 Daniel Schmidt
++
++"""Unit tests for PyATSOrchestrator dry-run functionality."""
++
++from pathlib import Path
++from unittest.mock import patch
++
++import pytest
++
++from nac_test.pyats_core.orchestrator import PyATSOrchestrator
++
++from .conftest import PyATSTestDirs
++
++
++class TestOrchestratorDryRun:
++    """Tests for PyATSOrchestrator dry_run parameter and behavior."""
++
++    def test_dry_run_prints_summary_and_skips_execution(
++        self,
++        aci_controller_env: None,
++        pyats_test_dirs: PyATSTestDirs,
++        capsys: pytest.CaptureFixture[str],
++    ) -> None:
++        """Test that dry_run mode prints test summary and skips execution."""
++        # Create mock test files
++        api_test = pyats_test_dirs.test_dir / "test_api.py"
++        api_test.write_text("# API test")
++
++        orchestrator = PyATSOrchestrator(
++            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
++            test_dir=pyats_test_dirs.test_dir,
++            output_dir=pyats_test_dirs.output_dir,
++            merged_data_filename="merged.yaml",
++            dry_run=True,
++        )
++
++        # Mock the discovery to return test files
++        mock_api_tests = [api_test]
++        mock_d2d_tests: list[Path] = []
++
++        with patch.object(
++            orchestrator.test_discovery, "discover_pyats_tests"
++        ) as mock_discover:
++            mock_discover.return_value = (mock_api_tests, [])
++
++            with patch.object(
++                orchestrator.test_discovery, "categorize_tests_by_type"
++            ) as mock_categorize:
++                mock_categorize.return_value = (mock_api_tests, mock_d2d_tests)
++
++                with patch.object(orchestrator, "validate_environment"):
++                    # Run tests - should NOT execute actual tests
++                    result = orchestrator.run_tests()
++
++        # Verify dry-run output
++        captured = capsys.readouterr()
++        assert "DRY-RUN MODE" in captured.out
++        assert "test_api.py" in captured.out
++        assert "dry-run complete" in captured.out
++
++        # Verify results indicate not_run
++        assert result.api is not None
++        assert result.api.reason == "dry-run mode"
++        assert result.d2d is None  # No D2D tests
++
++    def test_dry_run_returns_not_run_results_for_api_and_d2d(
++        self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
++    ) -> None:
++        """Test that dry_run returns not_run results for both API and D2D tests."""
++        d2d_dir = pyats_test_dirs.test_dir / "d2d"
++        d2d_dir.mkdir()
++
++        # Create mock test files
++        api_test = pyats_test_dirs.test_dir / "test_api.py"
++        api_test.write_text("# API test")
++        d2d_test = d2d_dir / "test_d2d.py"
++        d2d_test.write_text("# D2D test")
++
++        orchestrator = PyATSOrchestrator(
++            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
++            test_dir=pyats_test_dirs.test_dir,
++            output_dir=pyats_test_dirs.output_dir,
++            merged_data_filename="merged.yaml",
++            dry_run=True,
++        )
++
++        with patch.object(
++            orchestrator.test_discovery, "discover_pyats_tests"
++        ) as mock_discover:
++            mock_discover.return_value = ([api_test, d2d_test], [])
++
++            with patch.object(
++                orchestrator.test_discovery, "categorize_tests_by_type"
++            ) as mock_categorize:
++                mock_categorize.return_value = ([api_test], [d2d_test])
++
++                with patch.object(orchestrator, "validate_environment"):
++                    result = orchestrator.run_tests()
++
++        # Both API and D2D should have not_run results
++        assert result.api is not None
++        assert result.api.reason == "dry-run mode"
++        assert result.d2d is not None
++        assert result.d2d.reason == "dry-run mode"
++
++    def test_dry_run_does_not_execute_tests(
++        self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
++    ) -> None:
++        """Test that dry_run mode does not execute tests."""
++        api_test = pyats_test_dirs.test_dir / "test_api.py"
++        api_test.write_text("# API test")
++
++        orchestrator = PyATSOrchestrator(
++            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
++            test_dir=pyats_test_dirs.test_dir,
++            output_dir=pyats_test_dirs.output_dir,
++            merged_data_filename="merged.yaml",
++            dry_run=True,
++        )
++
++        with patch.object(
++            orchestrator.test_discovery, "discover_pyats_tests"
++        ) as mock_discover:
++            mock_discover.return_value = ([api_test], [])
++
++            with patch.object(
++                orchestrator.test_discovery, "categorize_tests_by_type"
++            ) as mock_categorize:
++                mock_categorize.return_value = ([api_test], [])
++
++                with patch.object(orchestrator, "validate_environment"):
++                    with patch.object(
++                        orchestrator, "_execute_api_tests_standard"
++                    ) as mock_execute:
++                        orchestrator.run_tests()
++
++        mock_execute.assert_not_called()
++
++    def test_dry_run_empty_test_lists(
++        self,
++        aci_controller_env: None,
++        pyats_test_dirs: PyATSTestDirs,
++        capsys: pytest.CaptureFixture[str],
++    ) -> None:
++        """Test dry_run with no tests discovered returns empty PyATSResults."""
++        orchestrator = PyATSOrchestrator(
++            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
++            test_dir=pyats_test_dirs.test_dir,
++            output_dir=pyats_test_dirs.output_dir,
++            merged_data_filename="merged.yaml",
++            dry_run=True,
++        )
++
++        with patch.object(
++            orchestrator.test_discovery, "discover_pyats_tests"
++        ) as mock_discover:
++            # No tests discovered
++            mock_discover.return_value = ([], [])
++
++            with patch.object(orchestrator, "validate_environment"):
++                result = orchestrator.run_tests()
++
++        # Should return empty results (no tests found message)
++        captured = capsys.readouterr()
++        assert "No PyATS test files" in captured.out
++        assert result.api is None
++        assert result.d2d is None
+diff --git a/tests/unit/test_combined_orchestrator_controller.py b/tests/unit/test_combined_orchestrator_controller.py
+index a7c80f8..4de7f0e 100644
+--- a/tests/unit/test_combined_orchestrator_controller.py
++++ b/tests/unit/test_combined_orchestrator_controller.py
+@@ -163,6 +163,7 @@ class TestCombinedOrchestratorController:
+                     minimal_reports=False,
+                     custom_testbed_path=None,
+                     controller_type="SDWAN",
++                    dry_run=False,
+                 )
+ 
+                 # Verify run_tests was called on the instance
+@@ -313,6 +314,7 @@ class TestCombinedOrchestratorController:
+                     minimal_reports=False,
+                     custom_testbed_path=None,
+                     controller_type="CC",
++                    dry_run=False,
+                 )
+ 
+                 # Verify run_tests was called on the instance
+diff --git a/tests/unit/utils/test_logging.py b/tests/unit/utils/test_logging.py
+new file mode 100644
+index 0000000..cca14df
+--- /dev/null
++++ b/tests/unit/utils/test_logging.py
+@@ -0,0 +1,100 @@
++# SPDX-License-Identifier: MPL-2.0
++# Copyright (c) 2025 Daniel Schmidt
++
++"""Unit tests for logging utilities."""
++
++import io
++import logging
++import sys
++from collections.abc import Generator
++from typing import Any
++
++import pytest
++
++from nac_test.utils.logging import CurrentStreamHandler, configure_logging
++
++
++class TestCurrentStreamHandler:
++    """Tests for CurrentStreamHandler dynamic stream behavior."""
++
++    def test_stream_follows_stdout_replacement(self) -> None:
++        """Verify handler tracks stdout when replaced (core fix for #487)."""
++        original_stdout = sys.stdout
++        handler = CurrentStreamHandler("stdout")
++        assert handler.stream is original_stdout
++
++        fake_stdout = io.StringIO()
++        sys.stdout = fake_stdout
++        try:
++            assert handler.stream is fake_stdout
++        finally:
++            sys.stdout = original_stdout
++
++    def test_stream_setter_is_noop(self) -> None:
++        """Verify stream setter ignores attempts to override."""
++        handler = CurrentStreamHandler("stdout")
++        handler.stream = io.StringIO()
++        assert handler.stream is sys.stdout
++
++    def test_no_io_error_on_closed_stdout(self) -> None:
++        """Verify no I/O error when previous stdout is closed (regression test for #487)."""
++        handler = CurrentStreamHandler("stdout")
++        handler.setFormatter(logging.Formatter("%(message)s"))
++
++        logger = logging.getLogger("test_closed_stdout")
++        logger.handlers = [handler]
++        logger.setLevel(logging.INFO)
++
++        original_stdout = sys.stdout
++        old_captured = io.StringIO()
++        sys.stdout = old_captured
++        old_captured.close()
++
++        new_captured = io.StringIO()
++        sys.stdout = new_captured
++
++        try:
++            logger.info("message after replacement")
++            handler.flush()
++            assert "message after replacement" in new_captured.getvalue()
++        finally:
++            sys.stdout = original_stdout
++
++
++class TestConfigureLogging:
++    """Tests for configure_logging() function."""
++
++    @pytest.fixture(autouse=True)
++    def cleanup_root_logger(self) -> Generator[None, Any, None]:
++        """Clean up root logger after each test."""
++        root_logger = logging.getLogger()
++        original_handlers = root_logger.handlers[:]
++        original_level = root_logger.level
++        yield
++        root_logger.handlers = original_handlers
++        root_logger.setLevel(original_level)
++
++    def test_uses_current_stream_handler(self) -> None:
++        """Verify configure_logging() installs CurrentStreamHandler."""
++        configure_logging("INFO")
++
++        root_logger = logging.getLogger()
++        current_stream_handlers = [
++            h for h in root_logger.handlers if isinstance(h, CurrentStreamHandler)
++        ]
++        assert len(current_stream_handlers) >= 1
++
++    def test_surgical_handler_removal_preserves_file_handlers(self) -> None:
++        """Verify only stdout/stderr handlers are removed, not file handlers."""
++        root_logger = logging.getLogger()
++
++        file_stream = io.StringIO()
++        file_handler = logging.StreamHandler(file_stream)
++        stdout_handler = logging.StreamHandler(sys.stdout)
++        root_logger.addHandler(file_handler)
++        root_logger.addHandler(stdout_handler)
++
++        configure_logging("INFO")
++
++        assert file_handler in root_logger.handlers
++        assert stdout_handler not in root_logger.handlers

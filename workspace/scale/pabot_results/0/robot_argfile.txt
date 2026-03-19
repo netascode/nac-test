@@ -1,0 +1,17 @@
+--suite Config.Test
+--variable CALLER_ID:eb9eed5265054c8086061f6f01a4b67c
+--variable PABOTLIBURI:127.0.0.1:8270
+--variable PABOTEXECUTIONPOOLID:0
+--variable PABOTISLASTEXECUTIONINPOOL:1
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:0
+--variable PABOTLASTLEVEL:
+--listener RobotStackTracer
+--output output.xml
+--log NONE
+--report NONE
+--xunit NONE
+--outputdir ./pabot_results/0
+--consolecolors off
+--consolemarkers off
+results/config/

@@ -1,0 +1,189 @@
+
+
+[13:22:41] 📄 Merging data model files...
+[13:22:41] ✅ Data model merging completed (0.0s)
+
+
+⚠️  WARNING: --pyats flag is for development use only. Production runs should use combined execution.
+
+🧪 Running PyATS tests...
+
+Discovered 1 PyATS test files
+Running with 5 parallel workers
+Found 1 D2D test(s) - using device-centric execution
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp61ld8kso.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpfkw5gf0o.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpd4hh0_ov_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results_comparison --archive-name pyats_archive_device_sd-dc-c8kv-01 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmplhgy5tou.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpa02mi1gz.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpykyheso2_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results_comparison --archive-name pyats_archive_device_sd-dc-c8kv-02 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpxrgrfcd7.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpiktim2xj.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmplex0pn14_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results_comparison --archive-name pyats_archive_device_sd-dc-c8kv-03 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpi5c6rd6s.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpz9fn324q.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpmfuw4hw9_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results_comparison --archive-name pyats_archive_device_sd-dc-c8kv-04 --no-archive-subdir --no-mail --no-xml-report --quiet
+2026-02-07 13:23:18.169 [PID:92338] [88939] [ID:1] EXECUTING consolidated_verifications
+2026-02-07 13:23:18.171 [PID:92337] [88940] [ID:2] EXECUTING consolidated_verifications
+2026-02-07 13:23:18.172 [PID:92339] [88961] [ID:3] EXECUTING consolidated_verifications
+2026-02-07 13:23:18.182 [PID:92340] [88962] [ID:4] EXECUTING consolidated_verifications
+ERROR - Failed to connect to sd-dc-c8kv-01: failed to connect to sd-dc-c8kv-01
+Failed while bringing device to "any" state
+Traceback (most recent call last):
+  File "src/unicon/statemachine/statemachine.py", line 738, in unicon.statemachine.statemachine.StateMachine.go_to
+  File "src/unicon/statemachine/statetransition.py", line 480, in unicon.statemachine.statetransition.AnyStateTransition.do_transitions
+  File "src/unicon/eal/dialogs.py", line 479, in unicon.eal.dialogs.Dialog.process
+  File "src/unicon/eal/dialog_processor.py", line 358, in unicon.eal.dialog_processor.SimpleDialogProcessor.process
+  File "src/unicon/eal/dialog_processor.py", line 304, in unicon.eal.dialog_processor.SimpleDialogProcessor.timeout_handler
+unicon.core.errors.TimeoutError: timeout occurred:
+              timeout value: 60
+              last_command: '\r'
+             pattern: ['^.*--\\s?[Mm]ore\\s?--.*$', '^.*?% (Bad passwords|Bad secrets|Access denied|Authentication failed|Login invalid).*?\\n', '^.*Login incorrect', '^.*% (No password set|Error in authentication.).*', '^.*([Uu]sername|(?<!Last )[Ll]ogin): ?$', '^.*User Access Verification', '^(Enter new password|Confirm password):\\s*$', '^.*[Pp]assword( for )?(\\S+)?: ?$', '^(.*)Kerberos:\\s*No default realm defined for Kerberos!\\s*$', 'Password OK\\s*$', '^.*Enter passphrase for key .*?:\\s*?', '^.*?(Enter|Confirm) enable secret( \\[<Use current secret>\\])?:\\s*$', '^.*(initial|basic) configuration dialog\\s?\\??\\s*((\\[yes.*\\])|(\\(yes/no\\))|(\\(yes/no\\)\\s*(\\[y\\]))):', 'Would you like to enter basic management setup\\? \\[yes/no\\]:\\s*$', '^.*?Enter your selection( \\[2])?:\\s*$', '^.*?Enter your encryption selection( \\[2])?:\\s*$', '^\\+\\>\\s?$', 'Escape character is .*\\n', '^.*RETURN to get started', 'Are you sure you want to continue connecting \\(yes/no(/\\[fingerprint\\])?\\)', '^.*(Connection refused|Connection reset by peer|Broken pipe|Network is down|closed by remote host|Connection closed by foreign host)', 'Received disconnect from .*:', 'Hit Enter to proceed:', '^(.*?)Press Ctrl\\+x to Exit the session', '^(.*?)Connected.', '^.*?(%\\w+(-\\S+)?-\\d+-\\w+|yang-infra:|PKI_SSL_IPC:|Guestshell destroyed successfully|%Error opening tftp:\\/\\/255\\.255\\.255\\.255|Autoinstall trying|audit: kauditd hold queue overflow|SECURITY WARNING|%RSA key|INSECURE DYNAMIC WARNING|(LC|RP)/\\d+/\\d+/CPU\\d+:\\w+\\s+\\d+\\s+\\d{2}:\\d{2}:\\d{2}|\\[OK\\]).*\\s*$', '^.*?Press any key to continue\\..*?$', '^.*[Pp]ermission denied', '^.*?enable[\\r\\n]*.*?[Pp]assword( for )?(\\S+)?: ?$', '^.*?(%\\w+(-\\S+)?-\\d+-\\w+|yang-infra:|PKI_SSL_IPC:|Guestshell destroyed successfully|%Error opening tftp:\\/\\/255\\.255\\.255\\.255|Autoinstall trying|audit: kauditd hold queue overflow|SECURITY WARNING|%RSA key|INSECURE DYNAMIC WARNING|(LC|RP)/\\d+/\\d+/CPU\\d+:\\w+\\s+\\d+\\s+\\d{2}:\\d{2}:\\d{2}|\\[OK\\]).*\\s*$', 'Uncommitted changes found, commit them\\? \\[yes\\/no\\/CANCEL\\]\\s*$', '^.*System config(uration)? has been modified\\.\\s*Save\\?.*$', '^.*Are you sure you want to reset the system\\s*\\(y\\/n\\)\\?', '^.*Reload node\\s*\\?\\s*\\[no,yes\\]\\s?$', '^.*Proceed( with( quick)? reload)?\\?\\s*\\[confirm\\]', '^.*Do you wish to proceed with reload anyway\\s*\\[confirm\\]\\s*', '^.*User Access Verification', '^(.*)Uncommitted changes found.*?', '^.*(initial|basic) configuration dialog\\s?\\??\\s*((\\[yes.*\\])|(\\(yes/no\\))|(\\(yes/no\\)\\s*(\\[y\\]))):', '^(.*)Would you like to terminate autoinstall\\?\\s*\\[yes\\]:\\s*$', '^.*Do you want to reload the internal AP\\s?\\?\\s((\\[yes/no\\]\\??)|(\\[y/n\\]\\??)):?\\s?$', '^.*Do you want to save the configuration of the AP\\s?\\?\\s*((\\[yes/no\\]\\??)|(\\[y/n\\]\\??)):?\\s?$', '^(.*)This command will reboot the system.\\s*\\(y\\/n\\)\\?\\s*\\[n\\]\\s?$', '^.*Do you want to enforce secure password standard(\\?)?\\s*\\(yes\\/no\\)(\\s*\\[[yn]\\])?\\:\\s*', '^.*(Enter|Confirm) the password for .*admin', 'Abort( Power On)? Auto Provisioning .*:', '^.*([Uu]sername|(?<!Last )[Ll]ogin): ?$', '^.*[Pp]assword( for )?(\\S+)?: ?$', '^.*Press RETURN to get started.*', 'Press RETURN to get started.*', '^(.*?)Connection.*? closed|disconnect: Broken pipe', '^(.*)Please reset', '^.*(Enter|Confirm) the password for .*admin', '^.*(initial|basic) configuration dialog.*\\s?', '^(.*)Would you like to terminate autoinstall\\? ?\\[yes\\]: $', '__timeout__', '.*The highlighted entry will be (booted|executed) automatically in .*?(\\x1b\\S+)?\\s+', '^.*Are you sure you want to continue\\? \\[y/n\\]\\s?.*$', '^(.*?)\\[((?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+))|[Ss]witch|[Rr]outer|eWLC).*?\\]\\$\\s?$', '^(.*?)(rommon[\\s\\d]*>|switch:|grub>)\\s*(\\x1b\\S+)?$', '^(.*)\\(config-pki-hexmode\\)#\\s?$', '^(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?\\(maint-mode\\)#[\\s\\x07]*$', '^(.*?)(\\{\\.\\.\\}|then.else.fi)\\s*>\\s*$', '^(.*?)\\(rules.*?\\)#[\\s\\x07]*$', '^(.*?)\\(syntax.*?\\)#[\\s\\x07]*$', '^(.*?)\\(acm.*?\\)#[\\s\\x07]*$', '^(.*?)\\(tcl.*?\\)#[\\s\\x07]*$', '^(.*)\\[\\S+@guestshell\\s+.*\\][#\\$]\\s?$', '^(.*)\\((?!.*pki-hexmode).*(con|cfg|ipsec-profile|ca-trustpoint|ca-certificate-map|cs-server|ca-profile|gkm-local-server|cloud|host-list|config-gkm-group|gkm-sa-ipsec|gdoi-coop-ks-config|wsma|enforce-rule|DDNS|ca-trustpool|cert-trustpool)\\S*\\)#\\s?$', '^(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(recovery-mode\\))?(\\(rp-rec-mode\\))?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?#[\\s\\x07]*$', '^(?!.*?grub)(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(recovery-mode\\))?(\\(rp-rec-mode\\))?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?(?<! -)>\\s?$', '^.*?([S|s]tandby console disabled|This \\(D\\)RP Node is not ready or active for login \\/configuration.*)', '^.*--\\s?[Mm]ore\\s?--.*$']
+             buffer:'\r\n'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "src/unicon/bases/connection.py", line 839, in unicon.bases.connection.Connection.connect
+  File "src/unicon/bases/routers/connection_provider.py", line 300, in unicon.bases.routers.connection_provider.BaseSingleRpConnectionProvider.connect
+  File "src/unicon/bases/routers/connection_provider.py", line 331, in unicon.bases.routers.connection_provider.BaseSingleRpConnectionProvider.establish_connection
+  File "src/unicon/statemachine/statemachine.py", line 742, in unicon.statemachine.statemachine.StateMachine.go_to
+unicon.core.errors.StateMachineError: Failed while bringing device to "any" state
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 331, in _create_connection
+    await loop.run_in_executor(
+  File "/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 333, in <lambda>
+    lambda: device.connect(log_stdout=False, logfile=str(logfile_path)),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/pyats/connections/manager.py", line 511, in pyats.connections.manager.ConnectionManager.connect
+  File "src/unicon/bases/connection.py", line 850, in unicon.bases.connection.Connection.connect
+unicon.core.errors.ConnectionError: failed to connect to sd-dc-c8kv-01
+Failed while bringing device to "any" state
+ERROR - Failed to connect to sd-dc-c8kv-03: failed to connect to sd-dc-c8kv-03
+Failed while bringing device to "any" state
+Traceback (most recent call last):
+  File "src/unicon/statemachine/statemachine.py", line 738, in unicon.statemachine.statemachine.StateMachine.go_to
+  File "src/unicon/statemachine/statetransition.py", line 480, in unicon.statemachine.statetransition.AnyStateTransition.do_transitions
+  File "src/unicon/eal/dialogs.py", line 479, in unicon.eal.dialogs.Dialog.process
+  File "src/unicon/eal/dialog_processor.py", line 358, in unicon.eal.dialog_processor.SimpleDialogProcessor.process
+  File "src/unicon/eal/dialog_processor.py", line 304, in unicon.eal.dialog_processor.SimpleDialogProcessor.timeout_handler
+unicon.core.errors.TimeoutError: timeout occurred:
+              timeout value: 60
+              last_command: '\r'
+             pattern: ['^.*--\\s?[Mm]ore\\s?--.*$', '^.*?% (Bad passwords|Bad secrets|Access denied|Authentication failed|Login invalid).*?\\n', '^.*Login incorrect', '^.*% (No password set|Error in authentication.).*', '^.*([Uu]sername|(?<!Last )[Ll]ogin): ?$', '^.*User Access Verification', '^(Enter new password|Confirm password):\\s*$', '^.*[Pp]assword( for )?(\\S+)?: ?$', '^(.*)Kerberos:\\s*No default realm defined for Kerberos!\\s*$', 'Password OK\\s*$', '^.*Enter passphrase for key .*?:\\s*?', '^.*?(Enter|Confirm) enable secret( \\[<Use current secret>\\])?:\\s*$', '^.*(initial|basic) configuration dialog\\s?\\??\\s*((\\[yes.*\\])|(\\(yes/no\\))|(\\(yes/no\\)\\s*(\\[y\\]))):', 'Would you like to enter basic management setup\\? \\[yes/no\\]:\\s*$', '^.*?Enter your selection( \\[2])?:\\s*$', '^.*?Enter your encryption selection( \\[2])?:\\s*$', '^\\+\\>\\s?$', 'Escape character is .*\\n', '^.*RETURN to get started', 'Are you sure you want to continue connecting \\(yes/no(/\\[fingerprint\\])?\\)', '^.*(Connection refused|Connection reset by peer|Broken pipe|Network is down|closed by remote host|Connection closed by foreign host)', 'Received disconnect from .*:', 'Hit Enter to proceed:', '^(.*?)Press Ctrl\\+x to Exit the session', '^(.*?)Connected.', '^.*?(%\\w+(-\\S+)?-\\d+-\\w+|yang-infra:|PKI_SSL_IPC:|Guestshell destroyed successfully|%Error opening tftp:\\/\\/255\\.255\\.255\\.255|Autoinstall trying|audit: kauditd hold queue overflow|SECURITY WARNING|%RSA key|INSECURE DYNAMIC WARNING|(LC|RP)/\\d+/\\d+/CPU\\d+:\\w+\\s+\\d+\\s+\\d{2}:\\d{2}:\\d{2}|\\[OK\\]).*\\s*$', '^.*?Press any key to continue\\..*?$', '^.*[Pp]ermission denied', '^.*?enable[\\r\\n]*.*?[Pp]assword( for )?(\\S+)?: ?$', '^.*?(%\\w+(-\\S+)?-\\d+-\\w+|yang-infra:|PKI_SSL_IPC:|Guestshell destroyed successfully|%Error opening tftp:\\/\\/255\\.255\\.255\\.255|Autoinstall trying|audit: kauditd hold queue overflow|SECURITY WARNING|%RSA key|INSECURE DYNAMIC WARNING|(LC|RP)/\\d+/\\d+/CPU\\d+:\\w+\\s+\\d+\\s+\\d{2}:\\d{2}:\\d{2}|\\[OK\\]).*\\s*$', 'Uncommitted changes found, commit them\\? \\[yes\\/no\\/CANCEL\\]\\s*$', '^.*System config(uration)? has been modified\\.\\s*Save\\?.*$', '^.*Are you sure you want to reset the system\\s*\\(y\\/n\\)\\?', '^.*Reload node\\s*\\?\\s*\\[no,yes\\]\\s?$', '^.*Proceed( with( quick)? reload)?\\?\\s*\\[confirm\\]', '^.*Do you wish to proceed with reload anyway\\s*\\[confirm\\]\\s*', '^.*User Access Verification', '^(.*)Uncommitted changes found.*?', '^.*(initial|basic) configuration dialog\\s?\\??\\s*((\\[yes.*\\])|(\\(yes/no\\))|(\\(yes/no\\)\\s*(\\[y\\]))):', '^(.*)Would you like to terminate autoinstall\\?\\s*\\[yes\\]:\\s*$', '^.*Do you want to reload the internal AP\\s?\\?\\s((\\[yes/no\\]\\??)|(\\[y/n\\]\\??)):?\\s?$', '^.*Do you want to save the configuration of the AP\\s?\\?\\s*((\\[yes/no\\]\\??)|(\\[y/n\\]\\??)):?\\s?$', '^(.*)This command will reboot the system.\\s*\\(y\\/n\\)\\?\\s*\\[n\\]\\s?$', '^.*Do you want to enforce secure password standard(\\?)?\\s*\\(yes\\/no\\)(\\s*\\[[yn]\\])?\\:\\s*', '^.*(Enter|Confirm) the password for .*admin', 'Abort( Power On)? Auto Provisioning .*:', '^.*([Uu]sername|(?<!Last )[Ll]ogin): ?$', '^.*[Pp]assword( for )?(\\S+)?: ?$', '^.*Press RETURN to get started.*', 'Press RETURN to get started.*', '^(.*?)Connection.*? closed|disconnect: Broken pipe', '^(.*)Please reset', '^.*(Enter|Confirm) the password for .*admin', '^.*(initial|basic) configuration dialog.*\\s?', '^(.*)Would you like to terminate autoinstall\\? ?\\[yes\\]: $', '__timeout__', '.*The highlighted entry will be (booted|executed) automatically in .*?(\\x1b\\S+)?\\s+', '^.*Are you sure you want to continue\\? \\[y/n\\]\\s?.*$', '^(.*?)\\[((?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+))|[Ss]witch|[Rr]outer|eWLC).*?\\]\\$\\s?$', '^(.*?)(rommon[\\s\\d]*>|switch:|grub>)\\s*(\\x1b\\S+)?$', '^(.*)\\(config-pki-hexmode\\)#\\s?$', '^(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?\\(maint-mode\\)#[\\s\\x07]*$', '^(.*?)(\\{\\.\\.\\}|then.else.fi)\\s*>\\s*$', '^(.*?)\\(rules.*?\\)#[\\s\\x07]*$', '^(.*?)\\(syntax.*?\\)#[\\s\\x07]*$', '^(.*?)\\(acm.*?\\)#[\\s\\x07]*$', '^(.*?)\\(tcl.*?\\)#[\\s\\x07]*$', '^(.*)\\[\\S+@guestshell\\s+.*\\][#\\$]\\s?$', '^(.*)\\((?!.*pki-hexmode).*(con|cfg|ipsec-profile|ca-trustpoint|ca-certificate-map|cs-server|ca-profile|gkm-local-server|cloud|host-list|config-gkm-group|gkm-sa-ipsec|gdoi-coop-ks-config|wsma|enforce-rule|DDNS|ca-trustpool|cert-trustpool)\\S*\\)#\\s?$', '^(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(recovery-mode\\))?(\\(rp-rec-mode\\))?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?#[\\s\\x07]*$', '^(?!.*?grub)(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(recovery-mode\\))?(\\(rp-rec-mode\\))?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?(?<! -)>\\s?$', '^.*?([S|s]tandby console disabled|This \\(D\\)RP Node is not ready or active for login \\/configuration.*)', '^.*--\\s?[Mm]ore\\s?--.*$']
+             buffer:'\r\n'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "src/unicon/bases/connection.py", line 839, in unicon.bases.connection.Connection.connect
+  File "src/unicon/bases/routers/connection_provider.py", line 300, in unicon.bases.routers.connection_provider.BaseSingleRpConnectionProvider.connect
+  File "src/unicon/bases/routers/connection_provider.py", line 331, in unicon.bases.routers.connection_provider.BaseSingleRpConnectionProvider.establish_connection
+  File "src/unicon/statemachine/statemachine.py", line 742, in unicon.statemachine.statemachine.StateMachine.go_to
+unicon.core.errors.StateMachineError: Failed while bringing device to "any" state
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 331, in _create_connection
+    await loop.run_in_executor(
+  File "/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 333, in <lambda>
+    lambda: device.connect(log_stdout=False, logfile=str(logfile_path)),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/pyats/connections/manager.py", line 511, in pyats.connections.manager.ConnectionManager.connect
+  File "src/unicon/bases/connection.py", line 850, in unicon.bases.connection.Connection.connect
+unicon.core.errors.ConnectionError: failed to connect to sd-dc-c8kv-03
+Failed while bringing device to "any" state
+ERROR - Failed to connect to sd-dc-c8kv-04: failed to connect to sd-dc-c8kv-04
+Failed while bringing device to "any" state
+Traceback (most recent call last):
+  File "src/unicon/statemachine/statemachine.py", line 738, in unicon.statemachine.statemachine.StateMachine.go_to
+  File "src/unicon/statemachine/statetransition.py", line 480, in unicon.statemachine.statetransition.AnyStateTransition.do_transitions
+  File "src/unicon/eal/dialogs.py", line 479, in unicon.eal.dialogs.Dialog.process
+  File "src/unicon/eal/dialog_processor.py", line 358, in unicon.eal.dialog_processor.SimpleDialogProcessor.process
+  File "src/unicon/eal/dialog_processor.py", line 304, in unicon.eal.dialog_processor.SimpleDialogProcessor.timeout_handler
+unicon.core.errors.TimeoutError: timeout occurred:
+              timeout value: 60
+              last_command: '\r'
+             pattern: ['^.*--\\s?[Mm]ore\\s?--.*$', '^.*?% (Bad passwords|Bad secrets|Access denied|Authentication failed|Login invalid).*?\\n', '^.*Login incorrect', '^.*% (No password set|Error in authentication.).*', '^.*([Uu]sername|(?<!Last )[Ll]ogin): ?$', '^.*User Access Verification', '^(Enter new password|Confirm password):\\s*$', '^.*[Pp]assword( for )?(\\S+)?: ?$', '^(.*)Kerberos:\\s*No default realm defined for Kerberos!\\s*$', 'Password OK\\s*$', '^.*Enter passphrase for key .*?:\\s*?', '^.*?(Enter|Confirm) enable secret( \\[<Use current secret>\\])?:\\s*$', '^.*(initial|basic) configuration dialog\\s?\\??\\s*((\\[yes.*\\])|(\\(yes/no\\))|(\\(yes/no\\)\\s*(\\[y\\]))):', 'Would you like to enter basic management setup\\? \\[yes/no\\]:\\s*$', '^.*?Enter your selection( \\[2])?:\\s*$', '^.*?Enter your encryption selection( \\[2])?:\\s*$', '^\\+\\>\\s?$', 'Escape character is .*\\n', '^.*RETURN to get started', 'Are you sure you want to continue connecting \\(yes/no(/\\[fingerprint\\])?\\)', '^.*(Connection refused|Connection reset by peer|Broken pipe|Network is down|closed by remote host|Connection closed by foreign host)', 'Received disconnect from .*:', 'Hit Enter to proceed:', '^(.*?)Press Ctrl\\+x to Exit the session', '^(.*?)Connected.', '^.*?(%\\w+(-\\S+)?-\\d+-\\w+|yang-infra:|PKI_SSL_IPC:|Guestshell destroyed successfully|%Error opening tftp:\\/\\/255\\.255\\.255\\.255|Autoinstall trying|audit: kauditd hold queue overflow|SECURITY WARNING|%RSA key|INSECURE DYNAMIC WARNING|(LC|RP)/\\d+/\\d+/CPU\\d+:\\w+\\s+\\d+\\s+\\d{2}:\\d{2}:\\d{2}|\\[OK\\]).*\\s*$', '^.*?Press any key to continue\\..*?$', '^.*[Pp]ermission denied', '^.*?enable[\\r\\n]*.*?[Pp]assword( for )?(\\S+)?: ?$', '^.*?(%\\w+(-\\S+)?-\\d+-\\w+|yang-infra:|PKI_SSL_IPC:|Guestshell destroyed successfully|%Error opening tftp:\\/\\/255\\.255\\.255\\.255|Autoinstall trying|audit: kauditd hold queue overflow|SECURITY WARNING|%RSA key|INSECURE DYNAMIC WARNING|(LC|RP)/\\d+/\\d+/CPU\\d+:\\w+\\s+\\d+\\s+\\d{2}:\\d{2}:\\d{2}|\\[OK\\]).*\\s*$', 'Uncommitted changes found, commit them\\? \\[yes\\/no\\/CANCEL\\]\\s*$', '^.*System config(uration)? has been modified\\.\\s*Save\\?.*$', '^.*Are you sure you want to reset the system\\s*\\(y\\/n\\)\\?', '^.*Reload node\\s*\\?\\s*\\[no,yes\\]\\s?$', '^.*Proceed( with( quick)? reload)?\\?\\s*\\[confirm\\]', '^.*Do you wish to proceed with reload anyway\\s*\\[confirm\\]\\s*', '^.*User Access Verification', '^(.*)Uncommitted changes found.*?', '^.*(initial|basic) configuration dialog\\s?\\??\\s*((\\[yes.*\\])|(\\(yes/no\\))|(\\(yes/no\\)\\s*(\\[y\\]))):', '^(.*)Would you like to terminate autoinstall\\?\\s*\\[yes\\]:\\s*$', '^.*Do you want to reload the internal AP\\s?\\?\\s((\\[yes/no\\]\\??)|(\\[y/n\\]\\??)):?\\s?$', '^.*Do you want to save the configuration of the AP\\s?\\?\\s*((\\[yes/no\\]\\??)|(\\[y/n\\]\\??)):?\\s?$', '^(.*)This command will reboot the system.\\s*\\(y\\/n\\)\\?\\s*\\[n\\]\\s?$', '^.*Do you want to enforce secure password standard(\\?)?\\s*\\(yes\\/no\\)(\\s*\\[[yn]\\])?\\:\\s*', '^.*(Enter|Confirm) the password for .*admin', 'Abort( Power On)? Auto Provisioning .*:', '^.*([Uu]sername|(?<!Last )[Ll]ogin): ?$', '^.*[Pp]assword( for )?(\\S+)?: ?$', '^.*Press RETURN to get started.*', 'Press RETURN to get started.*', '^(.*?)Connection.*? closed|disconnect: Broken pipe', '^(.*)Please reset', '^.*(Enter|Confirm) the password for .*admin', '^.*(initial|basic) configuration dialog.*\\s?', '^(.*)Would you like to terminate autoinstall\\? ?\\[yes\\]: $', '__timeout__', '.*The highlighted entry will be (booted|executed) automatically in .*?(\\x1b\\S+)?\\s+', '^.*Are you sure you want to continue\\? \\[y/n\\]\\s?.*$', '^(.*?)\\[((?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+))|[Ss]witch|[Rr]outer|eWLC).*?\\]\\$\\s?$', '^(.*?)(rommon[\\s\\d]*>|switch:|grub>)\\s*(\\x1b\\S+)?$', '^(.*)\\(config-pki-hexmode\\)#\\s?$', '^(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?\\(maint-mode\\)#[\\s\\x07]*$', '^(.*?)(\\{\\.\\.\\}|then.else.fi)\\s*>\\s*$', '^(.*?)\\(rules.*?\\)#[\\s\\x07]*$', '^(.*?)\\(syntax.*?\\)#[\\s\\x07]*$', '^(.*?)\\(acm.*?\\)#[\\s\\x07]*$', '^(.*?)\\(tcl.*?\\)#[\\s\\x07]*$', '^(.*)\\[\\S+@guestshell\\s+.*\\][#\\$]\\s?$', '^(.*)\\((?!.*pki-hexmode).*(con|cfg|ipsec-profile|ca-trustpoint|ca-certificate-map|cs-server|ca-profile|gkm-local-server|cloud|host-list|config-gkm-group|gkm-sa-ipsec|gdoi-coop-ks-config|wsma|enforce-rule|DDNS|ca-trustpool|cert-trustpool)\\S*\\)#\\s?$', '^(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(recovery-mode\\))?(\\(rp-rec-mode\\))?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?#[\\s\\x07]*$', '^(?!.*?grub)(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(recovery-mode\\))?(\\(rp-rec-mode\\))?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?(?<! -)>\\s?$', '^.*?([S|s]tandby console disabled|This \\(D\\)RP Node is not ready or active for login \\/configuration.*)', '^.*--\\s?[Mm]ore\\s?--.*$']
+             buffer:'\r\n'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "src/unicon/bases/connection.py", line 839, in unicon.bases.connection.Connection.connect
+  File "src/unicon/bases/routers/connection_provider.py", line 300, in unicon.bases.routers.connection_provider.BaseSingleRpConnectionProvider.connect
+  File "src/unicon/bases/routers/connection_provider.py", line 331, in unicon.bases.routers.connection_provider.BaseSingleRpConnectionProvider.establish_connection
+  File "src/unicon/statemachine/statemachine.py", line 742, in unicon.statemachine.statemachine.StateMachine.go_to
+unicon.core.errors.StateMachineError: Failed while bringing device to "any" state
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 331, in _create_connection
+    await loop.run_in_executor(
+  File "/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 333, in <lambda>
+    lambda: device.connect(log_stdout=False, logfile=str(logfile_path)),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/pyats/connections/manager.py", line 511, in pyats.connections.manager.ConnectionManager.connect
+  File "src/unicon/bases/connection.py", line 850, in unicon.bases.connection.Connection.connect
+unicon.core.errors.ConnectionError: failed to connect to sd-dc-c8kv-04
+Failed while bringing device to "any" state
+2026-02-07T13:24:45: %NAC_TEST-ERROR: Error communicating with broker: Broker error: Unknown broker error
+ERROR - Failed to connect to sd-dc-c8kv-02: failed to connect to sd-dc-c8kv-02
+Failed while bringing device to "any" state
+Traceback (most recent call last):
+  File "src/unicon/statemachine/statemachine.py", line 738, in unicon.statemachine.statemachine.StateMachine.go_to
+  File "src/unicon/statemachine/statetransition.py", line 480, in unicon.statemachine.statetransition.AnyStateTransition.do_transitions
+  File "src/unicon/eal/dialogs.py", line 479, in unicon.eal.dialogs.Dialog.process
+  File "src/unicon/eal/dialog_processor.py", line 358, in unicon.eal.dialog_processor.SimpleDialogProcessor.process
+  File "src/unicon/eal/dialog_processor.py", line 304, in unicon.eal.dialog_processor.SimpleDialogProcessor.timeout_handler
+unicon.core.errors.TimeoutError: timeout occurred:
+              timeout value: 60
+              last_command: '\r'
+             pattern: ['^.*--\\s?[Mm]ore\\s?--.*$', '^.*?% (Bad passwords|Bad secrets|Access denied|Authentication failed|Login invalid).*?\\n', '^.*Login incorrect', '^.*% (No password set|Error in authentication.).*', '^.*([Uu]sername|(?<!Last )[Ll]ogin): ?$', '^.*User Access Verification', '^(Enter new password|Confirm password):\\s*$', '^.*[Pp]assword( for )?(\\S+)?: ?$', '^(.*)Kerberos:\\s*No default realm defined for Kerberos!\\s*$', 'Password OK\\s*$', '^.*Enter passphrase for key .*?:\\s*?', '^.*?(Enter|Confirm) enable secret( \\[<Use current secret>\\])?:\\s*$', '^.*(initial|basic) configuration dialog\\s?\\??\\s*((\\[yes.*\\])|(\\(yes/no\\))|(\\(yes/no\\)\\s*(\\[y\\]))):', 'Would you like to enter basic management setup\\? \\[yes/no\\]:\\s*$', '^.*?Enter your selection( \\[2])?:\\s*$', '^.*?Enter your encryption selection( \\[2])?:\\s*$', '^\\+\\>\\s?$', 'Escape character is .*\\n', '^.*RETURN to get started', 'Are you sure you want to continue connecting \\(yes/no(/\\[fingerprint\\])?\\)', '^.*(Connection refused|Connection reset by peer|Broken pipe|Network is down|closed by remote host|Connection closed by foreign host)', 'Received disconnect from .*:', 'Hit Enter to proceed:', '^(.*?)Press Ctrl\\+x to Exit the session', '^(.*?)Connected.', '^.*?(%\\w+(-\\S+)?-\\d+-\\w+|yang-infra:|PKI_SSL_IPC:|Guestshell destroyed successfully|%Error opening tftp:\\/\\/255\\.255\\.255\\.255|Autoinstall trying|audit: kauditd hold queue overflow|SECURITY WARNING|%RSA key|INSECURE DYNAMIC WARNING|(LC|RP)/\\d+/\\d+/CPU\\d+:\\w+\\s+\\d+\\s+\\d{2}:\\d{2}:\\d{2}|\\[OK\\]).*\\s*$', '^.*?Press any key to continue\\..*?$', '^.*[Pp]ermission denied', '^.*?enable[\\r\\n]*.*?[Pp]assword( for )?(\\S+)?: ?$', '^.*?(%\\w+(-\\S+)?-\\d+-\\w+|yang-infra:|PKI_SSL_IPC:|Guestshell destroyed successfully|%Error opening tftp:\\/\\/255\\.255\\.255\\.255|Autoinstall trying|audit: kauditd hold queue overflow|SECURITY WARNING|%RSA key|INSECURE DYNAMIC WARNING|(LC|RP)/\\d+/\\d+/CPU\\d+:\\w+\\s+\\d+\\s+\\d{2}:\\d{2}:\\d{2}|\\[OK\\]).*\\s*$', 'Uncommitted changes found, commit them\\? \\[yes\\/no\\/CANCEL\\]\\s*$', '^.*System config(uration)? has been modified\\.\\s*Save\\?.*$', '^.*Are you sure you want to reset the system\\s*\\(y\\/n\\)\\?', '^.*Reload node\\s*\\?\\s*\\[no,yes\\]\\s?$', '^.*Proceed( with( quick)? reload)?\\?\\s*\\[confirm\\]', '^.*Do you wish to proceed with reload anyway\\s*\\[confirm\\]\\s*', '^.*User Access Verification', '^(.*)Uncommitted changes found.*?', '^.*(initial|basic) configuration dialog\\s?\\??\\s*((\\[yes.*\\])|(\\(yes/no\\))|(\\(yes/no\\)\\s*(\\[y\\]))):', '^(.*)Would you like to terminate autoinstall\\?\\s*\\[yes\\]:\\s*$', '^.*Do you want to reload the internal AP\\s?\\?\\s((\\[yes/no\\]\\??)|(\\[y/n\\]\\??)):?\\s?$', '^.*Do you want to save the configuration of the AP\\s?\\?\\s*((\\[yes/no\\]\\??)|(\\[y/n\\]\\??)):?\\s?$', '^(.*)This command will reboot the system.\\s*\\(y\\/n\\)\\?\\s*\\[n\\]\\s?$', '^.*Do you want to enforce secure password standard(\\?)?\\s*\\(yes\\/no\\)(\\s*\\[[yn]\\])?\\:\\s*', '^.*(Enter|Confirm) the password for .*admin', 'Abort( Power On)? Auto Provisioning .*:', '^.*([Uu]sername|(?<!Last )[Ll]ogin): ?$', '^.*[Pp]assword( for )?(\\S+)?: ?$', '^.*Press RETURN to get started.*', 'Press RETURN to get started.*', '^(.*?)Connection.*? closed|disconnect: Broken pipe', '^(.*)Please reset', '^.*(Enter|Confirm) the password for .*admin', '^.*(initial|basic) configuration dialog.*\\s?', '^(.*)Would you like to terminate autoinstall\\? ?\\[yes\\]: $', '__timeout__', '.*The highlighted entry will be (booted|executed) automatically in .*?(\\x1b\\S+)?\\s+', '^.*Are you sure you want to continue\\? \\[y/n\\]\\s?.*$', '^(.*?)\\[((?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+))|[Ss]witch|[Rr]outer|eWLC).*?\\]\\$\\s?$', '^(.*?)(rommon[\\s\\d]*>|switch:|grub>)\\s*(\\x1b\\S+)?$', '^(.*)\\(config-pki-hexmode\\)#\\s?$', '^(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?\\(maint-mode\\)#[\\s\\x07]*$', '^(.*?)(\\{\\.\\.\\}|then.else.fi)\\s*>\\s*$', '^(.*?)\\(rules.*?\\)#[\\s\\x07]*$', '^(.*?)\\(syntax.*?\\)#[\\s\\x07]*$', '^(.*?)\\(acm.*?\\)#[\\s\\x07]*$', '^(.*?)\\(tcl.*?\\)#[\\s\\x07]*$', '^(.*)\\[\\S+@guestshell\\s+.*\\][#\\$]\\s?$', '^(.*)\\((?!.*pki-hexmode).*(con|cfg|ipsec-profile|ca-trustpoint|ca-certificate-map|cs-server|ca-profile|gkm-local-server|cloud|host-list|config-gkm-group|gkm-sa-ipsec|gdoi-coop-ks-config|wsma|enforce-rule|DDNS|ca-trustpool|cert-trustpool)\\S*\\)#\\s?$', '^(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(recovery-mode\\))?(\\(rp-rec-mode\\))?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?#[\\s\\x07]*$', '^(?!.*?grub)(.*?)(\\(unlicensed\\))?(wlc|WLC|Router|RouterRP|Switch|ios|switch|(?P<hostname00>([^# \\t\\n\\r\\f\\v\\(\\)]+)))([0-9])?(\\(recovery-mode\\))?(\\(rp-rec-mode\\))?(\\(standby\\))?(-stby)?(-standby)?(\\(boot\\))?(?<! -)>\\s?$', '^.*?([S|s]tandby console disabled|This \\(D\\)RP Node is not ready or active for login \\/configuration.*)', '^.*--\\s?[Mm]ore\\s?--.*$']
+             buffer:'\r\n'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "src/unicon/bases/connection.py", line 839, in unicon.bases.connection.Connection.connect
+  File "src/unicon/bases/routers/connection_provider.py", line 300, in unicon.bases.routers.connection_provider.BaseSingleRpConnectionProvider.connect
+  File "src/unicon/bases/routers/connection_provider.py", line 331, in unicon.bases.routers.connection_provider.BaseSingleRpConnectionProvider.establish_connection
+  File "src/unicon/statemachine/statemachine.py", line 742, in unicon.statemachine.statemachine.StateMachine.go_to
+unicon.core.errors.StateMachineError: Failed while bringing device to "any" state
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 331, in _create_connection
+    await loop.run_in_executor(
+  File "/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 333, in <lambda>
+    lambda: device.connect(log_stdout=False, logfile=str(logfile_path)),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/pyats/connections/manager.py", line 511, in pyats.connections.manager.ConnectionManager.connect
+  File "src/unicon/bases/connection.py", line 850, in unicon.bases.connection.Connection.connect
+unicon.core.errors.ConnectionError: failed to connect to sd-dc-c8kv-02
+Failed while bringing device to "any" state
+2026-02-07T13:24:45: %NAC_TEST-ERROR: Error communicating with broker: Broker error: Unknown broker error
+2026-02-07T13:24:45: %NAC_TEST-ERROR: Error communicating with broker: Broker error: Unknown broker error
+2026-02-07T13:24:45: %NAC_TEST-ERROR: Failed to ensure connection to sd-dc-c8kv-01: Broker error: Unknown broker error
+2026-02-07T13:24:45: %NAC_TEST-ERROR: Failed to ensure connection to sd-dc-c8kv-04: Broker error: Unknown broker error
+2026-02-07T13:24:45: %SCRIPT-ERROR: Failed to connect to device sd-dc-c8kv-01: Failed to connect to device: sd-dc-c8kv-01
+2026-02-07T13:24:45: %SCRIPT-ERROR: Failed to connect to device sd-dc-c8kv-04: Failed to connect to device: sd-dc-c8kv-04
+2026-02-07T13:24:45: %NAC_TEST-ERROR: Failed to ensure connection to sd-dc-c8kv-03: Broker error: Unknown broker error
+2026-02-07T13:24:45: %NAC_TEST-ERROR: Error communicating with broker: Broker error: Unknown broker error
+2026-02-07T13:24:45: %SCRIPT-ERROR: Failed to connect to device sd-dc-c8kv-03: Failed to connect to device: sd-dc-c8kv-03
+2026-02-07T13:24:45: %NAC_TEST-ERROR: Failed to ensure connection to sd-dc-c8kv-02: Broker error: Unknown broker error
+2026-02-07T13:24:45: %SCRIPT-ERROR: Failed to connect to device sd-dc-c8kv-02: Failed to connect to device: sd-dc-c8kv-02

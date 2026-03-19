@@ -1,0 +1,7 @@
+default_revision: latest
+features:
+  parser:
+    commands:
+      show sdwan control connections:
+      - '|iosxe||||||||'
+version: 1

@@ -1,0 +1,9 @@
+# rerun.results file that contains the information of each task and their
+# testcases.
+# Please Check the following link for more information:
+# https://pubhub.devnetcloud.com/media/pyats/docs/easypy/rerun.html
+verify_sdwan_sync:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync
+    result: FAILED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/api-tests/tests/verify_sdwan_sync.py

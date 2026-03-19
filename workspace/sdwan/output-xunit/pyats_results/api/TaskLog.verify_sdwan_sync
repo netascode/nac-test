@@ -1,0 +1,74 @@
+3: OBOEHMER-M-5D76: 2026-02-20T07:57:38: %AETEST-6-INFO: %[part=3.1/3][pid=73297][pname=verify_sdwan_sync]: +------------------------------------------------------------------------------+
+4: OBOEHMER-M-5D76: 2026-02-20T07:57:38: %AETEST-6-INFO: %[part=3.2/3][pid=73297][pname=verify_sdwan_sync]: |              Starting testcase VerifySDWANManagerEdgeConfigSync              |
+5: OBOEHMER-M-5D76: 2026-02-20T07:57:38: %AETEST-6-INFO: %[part=3.3/3][pid=73297][pname=verify_sdwan_sync]: +------------------------------------------------------------------------------+
+6: OBOEHMER-M-5D76: 2026-02-20T07:57:38: %AETEST-6-INFO: %[part=6.1/3][pid=73297][pname=verify_sdwan_sync]: +------------------------------------------------------------------------------+
+7: OBOEHMER-M-5D76: 2026-02-20T07:57:38: %AETEST-6-INFO: %[part=6.2/3][pid=73297][pname=verify_sdwan_sync]: |                            Starting section setup                            |
+8: OBOEHMER-M-5D76: 2026-02-20T07:57:38: %AETEST-6-INFO: %[part=6.3/3][pid=73297][pname=verify_sdwan_sync]: +------------------------------------------------------------------------------+
+9: OBOEHMER-M-5D76: 2026-02-20T07:57:38: %NAC_TEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: Detected controller type: SDWAN
+10: OBOEHMER-M-5D76: 2026-02-20T07:57:38: %NAC_TEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: BatchingReporter initialized: batch_size=200, timeout=0.50s, debug=False
+11: OBOEHMER-M-5D76: 2026-02-20T07:57:38: %NAC_TEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: Step interceptors installed successfully
+12: OBOEHMER-M-5D76: 2026-02-20T07:57:38: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: Batching reporter initialized successfully (batch size: 200, flush timeout: 0.5s)
+13: OBOEHMER-M-5D76: 2026-02-20T07:57:39: %AETEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: The result of section setup is => PASSED
+14: OBOEHMER-M-5D76: 2026-02-20T07:57:39: %AETEST-6-INFO: %[part=14.1/3][pid=73297][pname=verify_sdwan_sync]: +------------------------------------------------------------------------------+
+15: OBOEHMER-M-5D76: 2026-02-20T07:57:39: %AETEST-6-INFO: %[part=14.2/3][pid=73297][pname=verify_sdwan_sync]: |                    Starting section test_edge_config_sync                    |
+16: OBOEHMER-M-5D76: 2026-02-20T07:57:39: %AETEST-6-INFO: %[part=14.3/3][pid=73297][pname=verify_sdwan_sync]: +------------------------------------------------------------------------------+
+17: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: SDWAN Edge Configuration Sync Status Verification Verification Summary:
+18: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]:   - Total configurations processed: 1
+19: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]:   - Passed: 0
+20: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]:   - Failed: 1
+21: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]:   - Skipped: 0
+22: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[part=22.1/3][pid=73297][pname=verify_sdwan_sync]: +..............................................................................+
+23: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[part=22.2/3][pid=73297][pname=verify_sdwan_sync]: :      Starting STEP 1: SDWAN Edge Configuration Sync Status Verification      :
+24: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[part=22.3/3][pid=73297][pname=verify_sdwan_sync]: +..............................................................................+
+25: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]:   - Check Type: edge_config_sync_status
+26: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]:   - Verification Scope: all_configured_and_managed_edges
+27: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]:   - Total Edge Devices: 6
+28: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]:   - Healthy Edge Devices: 1
+29: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]:   - Unhealthy Edge Devices: 5
+30: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.1/31][pid=73297][pname=verify_sdwan_sync]: Failed reason: **SDWAN Edge Configuration Sync Status Check FAILED**
+31: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.2/31][pid=73297][pname=verify_sdwan_sync]: 
+32: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.3/31][pid=73297][pname=verify_sdwan_sync]: One or more managed SDWAN edge devices with a configured system IP do not have configuration status 'In Sync'.
+33: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.4/31][pid=73297][pname=verify_sdwan_sync]: 
+34: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.5/31][pid=73297][pname=verify_sdwan_sync]: **Validation Results:**
+35: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.6/31][pid=73297][pname=verify_sdwan_sync]: [FAIL] Device 'sd-dc-c8kv-01' (System IP: 10.0.0.1) configStatusMessage: Sync Pending
+36: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.7/31][pid=73297][pname=verify_sdwan_sync]: [FAIL] Device 'sd-dc-c8kv-02' (System IP: 10.0.0.2) configStatusMessage: Sync Pending
+37: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.8/31][pid=73297][pname=verify_sdwan_sync]: [FAIL] Device 'sd-br01-c8kv-r1' (System IP: 10.0.0.3) configStatusMessage: Sync Pending
+38: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.9/31][pid=73297][pname=verify_sdwan_sync]: [PASS] Device 'sd-br01-c8kv-r2' (System IP: 10.0.0.4) configStatusMessage: In Sync
+39: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.10/31][pid=73297][pname=verify_sdwan_sync]: [FAIL] Device 'sd-br02-c8kv-r1' (System IP: 10.0.0.5) configStatusMessage: Sync Pending
+40: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.11/31][pid=73297][pname=verify_sdwan_sync]: [FAIL] Device 'sd-br02-c8kv-r2' (System IP: 10.0.0.6) configStatusMessage: Sync Pending
+41: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.12/31][pid=73297][pname=verify_sdwan_sync]: 
+42: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.13/31][pid=73297][pname=verify_sdwan_sync]: **Detailed Failures:**
+43: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.14/31][pid=73297][pname=verify_sdwan_sync]: Device 'sd-dc-c8kv-01' (System IP: 10.0.0.1, Managed-By: Config-Group dc_hub): Attribute 'configStatusMessage' expected 'In Sync', found 'Sync Pending'
+44: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.15/31][pid=73297][pname=verify_sdwan_sync]: Device 'sd-dc-c8kv-02' (System IP: 10.0.0.2, Managed-By: Config-Group dc_hub): Attribute 'configStatusMessage' expected 'In Sync', found 'Sync Pending'
+45: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.16/31][pid=73297][pname=verify_sdwan_sync]: Device 'sd-br01-c8kv-r1' (System IP: 10.0.0.3, Managed-By: Config-Group branch_type1_primary): Attribute 'configStatusMessage' expected 'In Sync', found 'Sync Pending'
+46: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.17/31][pid=73297][pname=verify_sdwan_sync]: Device 'sd-br02-c8kv-r1' (System IP: 10.0.0.5, Managed-By: Config-Group branch_type2): Attribute 'configStatusMessage' expected 'In Sync', found 'Sync Pending'
+47: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.18/31][pid=73297][pname=verify_sdwan_sync]: Device 'sd-br02-c8kv-r2' (System IP: 10.0.0.6, Managed-By: Config-Group branch_type2): Attribute 'configStatusMessage' expected 'In Sync', found 'Sync Pending'
+48: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.19/31][pid=73297][pname=verify_sdwan_sync]: 
+49: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.20/31][pid=73297][pname=verify_sdwan_sync]: **Edge Configuration Sync Status:**
+50: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.21/31][pid=73297][pname=verify_sdwan_sync]: • Total checked devices: 6
+51: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.22/31][pid=73297][pname=verify_sdwan_sync]: • Devices 'In Sync': 1
+52: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.23/31][pid=73297][pname=verify_sdwan_sync]: • Devices out-of-sync: 5
+53: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.24/31][pid=73297][pname=verify_sdwan_sync]: 
+54: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.25/31][pid=73297][pname=verify_sdwan_sync]: **Please verify:**
+55: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.26/31][pid=73297][pname=verify_sdwan_sync]: • Devices have completed configuration push
+56: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.27/31][pid=73297][pname=verify_sdwan_sync]: • Devices are online and reachable
+57: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.28/31][pid=73297][pname=verify_sdwan_sync]: • No configuration push failures or errors
+58: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.29/31][pid=73297][pname=verify_sdwan_sync]: • Configuration groups/templates are correctly applied
+59: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.30/31][pid=73297][pname=verify_sdwan_sync]: • Device 'configStatusMessage' is not empty or in 'Out-of-Sync' state
+60: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-3-ERROR: %[part=30.31/31][pid=73297][pname=verify_sdwan_sync]: • API query duration: 0.77s
+61: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: The result of STEP 1: SDWAN Edge Configuration Sync Status Verification is => FAILED
+62: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[part=62.1/3][pid=73297][pname=verify_sdwan_sync]: +..........................................................+
+63: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[part=62.2/3][pid=73297][pname=verify_sdwan_sync]: :                       STEPS Report                       :
+64: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[part=62.3/3][pid=73297][pname=verify_sdwan_sync]: +..........................................................+
+65: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: STEP 1 - SDWAN Edge Configuration Sync Status VerificationFailed    
+66: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: ............................................................
+67: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: The result of section test_edge_config_sync is => FAILED
+68: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[part=68.1/3][pid=73297][pname=verify_sdwan_sync]: +------------------------------------------------------------------------------+
+69: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[part=68.2/3][pid=73297][pname=verify_sdwan_sync]: |                           Starting section cleanup                           |
+70: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[part=68.3/3][pid=73297][pname=verify_sdwan_sync]: +------------------------------------------------------------------------------+
+71: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %NAC_TEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: Graceful shutdown initiated
+72: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %NAC_TEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: Graceful shutdown complete
+73: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %SCRIPT-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: Batching reporter shutdown complete - processed 0 messages in 0 batches
+74: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %NAC_TEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: Step interceptors uninstalled successfully
+75: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: The result of section cleanup is => PASSED
+76: OBOEHMER-M-5D76: 2026-02-20T07:57:40: %AETEST-6-INFO: %[pid=73297][pname=verify_sdwan_sync]: The result of testcase VerifySDWANManagerEdgeConfigSync is => FAILED

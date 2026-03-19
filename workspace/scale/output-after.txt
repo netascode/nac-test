@@ -1,0 +1,63 @@
+$ nac-test -d data -t templates-single/tests --testbed testbed.yaml -o ./results
+
+
+[13:57:22] 📄 Merging data model files...
+[13:57:22] ✅ Data model merging completed (0.0s)
+
+🧪 Running PyATS tests...
+
+Discovered 2 PyATS test files (1 api, 1 d2d)
+Running with 5 parallel workers
+2026-02-22 13:57:30.436 [PID:74277] [74188] [ID:1] EXECUTING verify_sdwan_sync
+2026-02-22 13:57:30.655 [PID:74283] [74194] [ID:2] EXECUTING verify_iosxe_control
+2026-02-22 13:57:30.731 [PID:74277] [74188] [ID:1] PASSED verify_sdwan_sync in 0.3 seconds
+------------------------------------------------------------------------------
+Verify All SD-WAN Edge Configurations Are In-Sync                      | PASSED |
+------------------------------------------------------------------------------
+2026-02-22 13:57:35.568 [PID:74283] [74194] [ID:2] PASSED verify_iosxe_control in 4.9 seconds
+------------------------------------------------------------------------------
+Verify All SD-WAN Control Connections Are Up (sd-dc-c8kv-01)           | PASSED |
+------------------------------------------------------------------------------
+
+🤖 Running Robot Framework tests...
+
+[13:57:38] 📝 Rendering Robot Framework templates...
+[13:57:38] ✅ Template rendering completed (0.0s)
+📄 Creating merged data model for Robot tests...
+🤖 Executing Robot Framework tests...
+
+
+Initialized logging in results/pabot_results
+Robot Framework remote server at 127.0.0.1:55959 started.
+Storing .pabotsuitenames file
+2026-02-22 13:57:39.108696 [PID:74370] [0] [ID:0] EXECUTING Results.Config.Test
+2026-02-22 13:57:39.424350 [PID:74370] [0] [ID:0] PASSED Results.Config.Test in 0.3 seconds
+1 tests, 1 passed, 0 failed, 0 skipped.
+===================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/output.xml
+XUnit:   /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/xunit.xml
+Log:     /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/log.html
+Report:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/report.html
+Finalizing Pabot execution...
+Stopping PabotLib process
+Robot Framework remote server at 127.0.0.1:55959 stopped.
+PabotLib process stopped
+Total testing: 0.30 seconds
+Elapsed time:  0.95 seconds
+Logs flushed successfully.
+
+======================================================================
+Combined Test Execution Summary
+----------------------------------------------------------------------
+3 tests, 3 passed, 0 failed, 0 skipped.
+----------------------------------------------------------------------
+Dashboard:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/combined_summary.html
+Robot:      /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/robot_results/log.html
+PyATS API:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/api/html_reports/summary_report.html
+PyATS D2D:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports/summary_report.html
+xUnit:      /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/robot_results/xunit.xml
+======================================================================
+
+Total runtime: 17.81 seconds
+
+✅ All tests passed: 3 out of 3 tests

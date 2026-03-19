@@ -1,0 +1,61 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/workspace/scale/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/workspace/scale/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpof1b_m9l_api_job.py --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmptvjrjsgd_plugin_config.yaml --pyats-configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpn49o4xbw_pyats_config.conf --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name nac_test_job_20260224_150226_311.zip --no-archive-subdir --no-mail --no-xml-report
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.3 (arm64)
+
+Job Information
+    Name         : tmpof1b_m9l_api_job
+    Result       : PASSED
+    Start time   : 2026-02-24 15:02:34.770376+01:00
+    Stop time    : 2026-02-24 15:02:35.072048+01:00
+    Elapsed time : 0:00:01
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_20260224_150226_311.zip
+
+Total Tasks    : 1 
+
+Overall Stats
+    Passed     : 1
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 1
+
+Success Rate   : 100.00 %
+
+Section Stats
+    Passed     : 3
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 3
+
+Section Success Rate   : 100.00 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+verify_sdwan_sync: verify_sdwan_sync                                      PASSED
+verify_sdwan_sync: verify_sdwan_sync.VerifySDWANManagerEdgeConfigSync     PASSED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+verify_sdwan_sync: verify_sdwan_sync                                      PASSED
+`-- VerifySDWANManagerEdgeConfigSync                                      PASSED
+    |-- setup                                                             PASSED
+    |-- test_edge_config_sync                                             PASSED
+    |   `-- STEP 1: SDWAN Edge Configuration Sync Status Verification     PASSED
+    `-- cleanup                                                           PASSED

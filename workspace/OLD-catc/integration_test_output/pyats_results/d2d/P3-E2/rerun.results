@@ -1,0 +1,9 @@
+# rerun.results file that contains the information of each task and their
+# testcases.
+# Please Check the following link for more information:
+# https://pubhub.devnetcloud.com/media/pyats/docs/easypy/rerun.html
+P3-E2_verify_iosxe_no_critical_errors_in_system_logs:
+  testcases:
+  - name: VerifyNoCriticalErrorsInSystemLogs
+    result: PASSED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/tests/integration/fixtures/templates_pyats_qs/catc/tests/verify_iosxe_no_critical_errors_in_system_logs.py

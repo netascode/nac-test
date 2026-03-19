@@ -1,0 +1,61 @@
+0: OBOEHMER-M-5D76: 2026-01-30T16:56:21: %AETEST-6-INFO: %[part=0.1/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +------------------------------------------------------------------------------+
+1: OBOEHMER-M-5D76: 2026-01-30T16:56:21: %AETEST-6-INFO: %[part=0.2/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: |                  Starting testcase VerifyLISPSessionsStatus                  |
+2: OBOEHMER-M-5D76: 2026-01-30T16:56:21: %AETEST-6-INFO: %[part=0.3/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +------------------------------------------------------------------------------+
+3: OBOEHMER-M-5D76: 2026-01-30T16:56:21: %AETEST-6-INFO: %[part=3.1/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +------------------------------------------------------------------------------+
+4: OBOEHMER-M-5D76: 2026-01-30T16:56:21: %AETEST-6-INFO: %[part=3.2/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: |                            Starting section setup                            |
+5: OBOEHMER-M-5D76: 2026-01-30T16:56:21: %AETEST-6-INFO: %[part=3.3/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +------------------------------------------------------------------------------+
+6: OBOEHMER-M-5D76: 2026-01-30T16:56:21: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: Batching reporter initialized successfully (batch size: 200, flush timeout: 0.5s)
+7: OBOEHMER-M-5D76: 2026-01-30T16:56:21: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: Connecting to device EDGE01 via connection broker
+8: OBOEHMER-M-5D76: 2026-01-30T16:56:22: %AETEST-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: The result of section setup is => PASSED
+9: OBOEHMER-M-5D76: 2026-01-30T16:56:22: %AETEST-6-INFO: %[part=9.1/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +------------------------------------------------------------------------------+
+10: OBOEHMER-M-5D76: 2026-01-30T16:56:22: %AETEST-6-INFO: %[part=9.2/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: |                  Starting section test_lisp_sessions_status                  |
+11: OBOEHMER-M-5D76: 2026-01-30T16:56:22: %AETEST-6-INFO: %[part=9.3/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +------------------------------------------------------------------------------+
+12: OBOEHMER-M-5D76: 2026-01-30T16:56:24: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: LISP Session Verification Verification Summary:
+13: OBOEHMER-M-5D76: 2026-01-30T16:56:24: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   - Total configurations processed: 1
+14: OBOEHMER-M-5D76: 2026-01-30T16:56:24: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   - Passed: 0
+15: OBOEHMER-M-5D76: 2026-01-30T16:56:24: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   - Failed: 1
+16: OBOEHMER-M-5D76: 2026-01-30T16:56:24: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   - Skipped: 0
+17: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=17.1/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +..............................................................................+
+18: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=17.2/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: :                  Starting STEP 1: LISP Session Verification                  :
+19: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=17.3/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +..............................................................................+
+20: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   - Check Type: lisp_sessions_status
+21: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   - Verification Scope: all_lisp_sessions
+22: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   - Total Peers: 1
+23: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   - Unexpected Peers: 1
+24: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.1/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: Failed reason: **LISP Session Check FAILED**
+25: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.2/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: 
+26: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.3/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: One or more LISP session peers in VRF 'default' are not in 'Up' state, or peer addresses are unexpected.
+27: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.4/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: 
+28: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.5/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: **Validation Results:**
+29: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.6/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: ❌ 10.1.1.10 - state=Up
+30: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.7/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: 
+31: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.8/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: **Detailed Failures:**
+32: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.9/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: **LISP Peer '10.1.1.10'**
+33: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.10/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   Status: FAILED
+34: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.11/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   Failures:
+35: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.12/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]:   • peer: Peer address '10.1.1.10' is not in expected_peer_addresses: []
+36: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.13/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: 
+37: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.14/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: **LISP Session Status:**
+38: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.15/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: • Total discovered peers: 1
+39: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.16/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: • Sessions in 'Up' state: 0
+40: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.17/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: • Unexpected peer addresses: 1
+41: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.18/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: 
+42: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.19/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: **Please verify:**
+43: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.20/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: • LISP is configured and enabled
+44: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.21/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: • Network connectivity to CP node RLOCs or Edge RLOCs exists
+45: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.22/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: • Peer addresses are correct and included in jobfile parameters
+46: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.23/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: • LISP authentication and configuration matches across devices
+47: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-3-ERROR: %[part=24.24/24][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: • Command execution duration: 2.44s
+48: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: The result of STEP 1: LISP Session Verification is => FAILED
+49: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=49.1/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +..........................................................+
+50: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=49.2/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: :                       STEPS Report                       :
+51: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=49.3/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +..........................................................+
+52: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: STEP 1 - LISP Session Verification                Failed    
+53: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: ............................................................
+54: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: The result of section test_lisp_sessions_status is => FAILED
+55: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=55.1/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +------------------------------------------------------------------------------+
+56: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=55.2/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: |                           Starting section cleanup                           |
+57: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[part=55.3/3][pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: +------------------------------------------------------------------------------+
+58: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %SCRIPT-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: Batching reporter shutdown complete - processed 0 messages in 0 batches
+59: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: The result of section cleanup is => PASSED
+60: OBOEHMER-M-5D76: 2026-01-30T16:56:25: %AETEST-6-INFO: %[pid=69835][pname=EDGE01_verify_iosxe_lisp_sessions_status]: The result of testcase VerifyLISPSessionsStatus is => FAILED

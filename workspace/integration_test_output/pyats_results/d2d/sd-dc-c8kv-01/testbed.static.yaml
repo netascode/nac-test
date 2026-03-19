@@ -1,0 +1,21 @@
+testbed:
+  name: testbed_sd-dc-c8kv-01
+  credentials:
+    default:
+      username: admin
+      password: admin
+devices:
+  sd-dc-c8kv-01:
+    alias: sd-dc-c8kv-01
+    os: iosxe
+    type: router
+    platform: iosxe
+    credentials:
+      default:
+        username: admin
+        password: admin
+    connections:
+      cli:
+        protocol: ssh
+        command: python /Users/oboehmer/Documents/DD/nac-test/tests/integration/mocks/mock_unicon.py
+          iosxe --hostname sd-dc-c8kv-01

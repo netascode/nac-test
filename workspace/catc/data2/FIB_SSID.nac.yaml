@@ -1,0 +1,39 @@
+---
+catalyst_center:
+  wireless:
+    ssids:
+      - name: 802_1X_SSID
+        wlan_type: Enterprise
+        ssid_radio_type: "2.4GHz and 5GHz"
+        ghz24_policy: dot11-bg-only
+        fast_lane: false
+        egress_qos: PLATINUM
+        ingress_qos: PLATINUM-UP
+        enabled: true
+        broadcast_ssid: true
+        auth_type: WPA2_WPA3_ENTERPRISE
+        ap_beacon_protection: true
+        fast_transition: ADAPTIVE
+        rsn_cipher_suite_ccmp128: true
+        auth_key8021x: true
+        auth_key8021x_sha256: true
+        auth_servers: ["198.18.133.27"]
+        acct_servers: ["198.18.133.27"]
+        aaa_override: true
+        mac_filtering: true
+        random_mac_filter: false
+        posturing: false
+        mft_client_protection: OPTIONAL
+        protected_management_frame: REQUIRED
+        neighbor_list: true
+        coverage_hole_detection: true
+        session_timeout_enable: true
+        session_timeout: 28800
+        client_exclusion: true
+        client_exclusion_timeout: 1800
+        basic_service_set_max_idle: true
+        basic_service_set_client_idle_timeout: 300
+        sleeping_client_timeout: 500
+        directed_multicast_service: true
+        nas_options: ["System IP Address"]
+        client_rate_limit: 1000000

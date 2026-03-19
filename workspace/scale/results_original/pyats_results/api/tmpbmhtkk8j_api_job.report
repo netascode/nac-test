@@ -1,0 +1,130 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpbmhtkk8j_api_job.py --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6r11zzpm_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results_original --archive-name nac_test_job_20260207_131851_106.zip --no-archive-subdir --no-mail --no-xml-report
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmpbmhtkk8j_api_job
+    Result       : ERRORED
+    Start time   : 2026-02-07 13:19:15.082220+01:00
+    Stop time    : 2026-02-07 13:19:26.098235+01:00
+    Elapsed time : 0:00:12
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results_original/nac_test_job_20260207_131851_106.zip
+
+Total Tasks    : 11 
+
+Overall Stats
+    Passed     : 0
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 11
+
+    TOTAL      : 11
+
+Success Rate   : 0.00 %
+
+Section Stats
+    Passed     : 11
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 11
+    Skipped    : 0
+    Errored    : 11
+
+    TOTAL      : 33
+
+Section Success Rate   : 33.33 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+verify_sdwan_sync: verify_sdwan_sync                                     ERRORED
+verify_sdwan_sync: verify_sdwan_sync.VerifySDWANManagerEdgeConfigSync    ERRORED
+verify_sdwan_sync_01: verify_sdwan_sync_01                               ERRORED
+verify_sdwan_sync_01: verify_sdwan_sync_01.VerifySDWANManagerEdgeCo...   ERRORED
+verify_sdwan_sync_02: verify_sdwan_sync_02                               ERRORED
+verify_sdwan_sync_02: verify_sdwan_sync_02.VerifySDWANManagerEdgeCo...   ERRORED
+verify_sdwan_sync_03: verify_sdwan_sync_03                               ERRORED
+verify_sdwan_sync_03: verify_sdwan_sync_03.VerifySDWANManagerEdgeCo...   ERRORED
+verify_sdwan_sync_04: verify_sdwan_sync_04                               ERRORED
+verify_sdwan_sync_04: verify_sdwan_sync_04.VerifySDWANManagerEdgeCo...   ERRORED
+verify_sdwan_sync_05: verify_sdwan_sync_05                               ERRORED
+verify_sdwan_sync_05: verify_sdwan_sync_05.VerifySDWANManagerEdgeCo...   ERRORED
+verify_sdwan_sync_06: verify_sdwan_sync_06                               ERRORED
+verify_sdwan_sync_06: verify_sdwan_sync_06.VerifySDWANManagerEdgeCo...   ERRORED
+verify_sdwan_sync_07: verify_sdwan_sync_07                               ERRORED
+verify_sdwan_sync_07: verify_sdwan_sync_07.VerifySDWANManagerEdgeCo...   ERRORED
+verify_sdwan_sync_08: verify_sdwan_sync_08                               ERRORED
+verify_sdwan_sync_08: verify_sdwan_sync_08.VerifySDWANManagerEdgeCo...   ERRORED
+verify_sdwan_sync_09: verify_sdwan_sync_09                               ERRORED
+verify_sdwan_sync_09: verify_sdwan_sync_09.VerifySDWANManagerEdgeCo...   ERRORED
+verify_sdwan_sync_10: verify_sdwan_sync_10                               ERRORED
+verify_sdwan_sync_10: verify_sdwan_sync_10.VerifySDWANManagerEdgeCo...   ERRORED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+verify_sdwan_sync: verify_sdwan_sync                                     ERRORED
+`-- VerifySDWANManagerEdgeConfigSync                                     ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED
+verify_sdwan_sync_01: verify_sdwan_sync_01                               ERRORED
+`-- VerifySDWANManagerEdgeConfigSync01                                   ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED
+verify_sdwan_sync_02: verify_sdwan_sync_02                               ERRORED
+`-- VerifySDWANManagerEdgeConfigSync02                                   ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED
+verify_sdwan_sync_03: verify_sdwan_sync_03                               ERRORED
+`-- VerifySDWANManagerEdgeConfigSync03                                   ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED
+verify_sdwan_sync_04: verify_sdwan_sync_04                               ERRORED
+`-- VerifySDWANManagerEdgeConfigSync04                                   ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED
+verify_sdwan_sync_05: verify_sdwan_sync_05                               ERRORED
+`-- VerifySDWANManagerEdgeConfigSync05                                   ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED
+verify_sdwan_sync_06: verify_sdwan_sync_06                               ERRORED
+`-- VerifySDWANManagerEdgeConfigSync06                                   ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED
+verify_sdwan_sync_07: verify_sdwan_sync_07                               ERRORED
+`-- VerifySDWANManagerEdgeConfigSync07                                   ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED
+verify_sdwan_sync_08: verify_sdwan_sync_08                               ERRORED
+`-- VerifySDWANManagerEdgeConfigSync08                                   ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED
+verify_sdwan_sync_09: verify_sdwan_sync_09                               ERRORED
+`-- VerifySDWANManagerEdgeConfigSync09                                   ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED
+verify_sdwan_sync_10: verify_sdwan_sync_10                               ERRORED
+`-- VerifySDWANManagerEdgeConfigSync10                                   ERRORED
+    |-- setup                                                            ERRORED
+    |-- test_edge_config_sync                                            BLOCKED
+    `-- cleanup                                                           PASSED

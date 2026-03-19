@@ -1,0 +1,213 @@
+Starting mock server on port 5678...
+Logs: /tmp/nac-test-mock-server.log
+PID file: /tmp/nac-test-mock-server.pid
+Stop with: python /Users/oboehmer/Documents/DD/nac-test/tests/e2e/mocks/stop_server.py
+======================================
+Running nac-test with Phase Timing
+======================================
+
+Watch for timing logs showing:
+  - Starting phase: [phase_name]
+  - Completed phase: [phase_name] (duration)
+
+
+
+[13:30:05] 📄 Merging data model files...
+INFO - Loading yaml files from data
+INFO - Writing merged data model to results/merged_data_model_test_variables.yaml
+[13:30:06] ✅ Data model merging completed (0.0s)
+INFO - Detected controller type: SDWAN
+INFO - Controller type detected: SDWAN
+
+
+⚠️  WARNING: --pyats flag is for development use only. Production runs should use combined execution.
+
+🧪 Running PyATS tests...
+
+INFO - Using provided controller type: SDWAN
+INFO - Using PYATS_MAX_WORKERS environment override: 5
+Discovered 1 PyATS test files
+Running with 5 parallel workers
+INFO - Detected test type 'd2d' from base class 'IOSXETestBase' in /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates_consolidated/tests/consolidated_verifications.py
+INFO - Categorized 0 API tests and 1 D2D tests
+INFO - sys.path before add_tests_parent_to_syspath: ['/Users/oboehmer/Documents/DD/nac-test/.venv/bin', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python312.zip', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/lib-dynload', '/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages', '/Users/oboehmer/Documents/DD/nac-test', '/Users/oboehmer/Documents/DD/nac-test-pyats-common/src']
+INFO - Adding to sys.path: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates_consolidated
+INFO - sys.path after add_tests_parent_to_syspath: ['/Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates_consolidated', '/Users/oboehmer/Documents/DD/nac-test/.venv/bin', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python312.zip', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/lib-dynload', '/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages', '/Users/oboehmer/Documents/DD/nac-test', '/Users/oboehmer/Documents/DD/nac-test-pyats-common/src']
+INFO - Attempting to import test file: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates_consolidated/tests/consolidated_verifications.py
+INFO - Found device inventory method in IOSXETestBase
+INFO - Detected controller type: SDWAN
+INFO - Resolving device inventory for sdwan
+INFO - Resolved 4 devices for sdwan D2D testing
+Found 1 D2D test(s) - using device-centric execution
+INFO - Executing 1 SSH tests using device-centric execution with connection broker
+INFO - Creating consolidated testbed for 4 devices
+INFO - Loading user-provided testbed from: testbed.yaml
+INFO - User testbed contains 4 device(s): sd-dc-c8kv-01, sd-dc-c8kv-02, sd-dc-c8kv-03, sd-dc-c8kv-04
+INFO - Device 'sd-dc-c8kv-01' connection overridden by user-provided testbed
+INFO - Device 'sd-dc-c8kv-02' connection overridden by user-provided testbed
+INFO - Device 'sd-dc-c8kv-03' connection overridden by user-provided testbed
+INFO - Device 'sd-dc-c8kv-04' connection overridden by user-provided testbed
+INFO - Consolidated testbed written to: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/broker_testbed.yaml
+INFO - Starting connection broker with socket: /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/nac_test_broker_34074.sock
+INFO - Loading testbed from: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/broker_testbed.yaml
+INFO - Loaded testbed with 4 devices
+INFO - Socket server listening on: /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/nac_test_broker_34074.sock
+INFO - Connection broker started successfully
+INFO - Connection broker started at: /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/nac_test_broker_34074.sock
+INFO - Using system-calculated device parallelism: 5
+INFO - Processing 4 devices in 1 batches (batch size: 5)
+INFO - Processing batch 1/1 with 4 devices
+INFO - Starting tests for device sd-dc-c8kv-01
+INFO - Device 'sd-dc-c8kv-01' connection overridden by user-provided testbed
+INFO - Executing command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp8omhrtg6.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpuvggppab.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpwuorcuxd_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-01 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp8omhrtg6.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpuvggppab.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpwuorcuxd_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-01 --no-archive-subdir --no-mail --no-xml-report --quiet
+INFO - Starting tests for device sd-dc-c8kv-02
+INFO - Device 'sd-dc-c8kv-02' connection overridden by user-provided testbed
+INFO - Executing command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp5w93wy6b.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpk2bjk6im.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpo8o9w0px_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-02 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp5w93wy6b.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpk2bjk6im.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpo8o9w0px_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-02 --no-archive-subdir --no-mail --no-xml-report --quiet
+INFO - Starting tests for device sd-dc-c8kv-03
+INFO - Device 'sd-dc-c8kv-03' connection overridden by user-provided testbed
+INFO - Executing command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp0rx1j89o.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpnzbt5yze.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpjky6l7_v_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-03 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp0rx1j89o.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpnzbt5yze.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpjky6l7_v_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-03 --no-archive-subdir --no-mail --no-xml-report --quiet
+INFO - Starting tests for device sd-dc-c8kv-04
+INFO - Device 'sd-dc-c8kv-04' connection overridden by user-provided testbed
+INFO - Executing command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpqwde15cj.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpfgz2uqkx.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp_6vrp60w_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-04 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpqwde15cj.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpfgz2uqkx.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp_6vrp60w_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-04 --no-archive-subdir --no-mail --no-xml-report --quiet
+2026-02-07 13:30:45.321 [PID:37954] [34555] [ID:1] EXECUTING consolidated_verifications
+2026-02-07 13:30:45.372 [PID:37953] [34554] [ID:2] EXECUTING consolidated_verifications
+2026-02-07 13:30:45.426 [PID:37955] [34553] [ID:3] EXECUTING consolidated_verifications
+2026-02-07 13:30:45.428 [PID:37956] [34556] [ID:4] EXECUTING consolidated_verifications
+INFO - [BROKER] Creating NEW connection for sd-dc-c8kv-02 (current connections: 0)
+INFO - Connecting to device: sd-dc-c8kv-02
+INFO - Unicon CLI log will be written to: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/sd-dc-c8kv-02-cli-7447216040.log
+INFO - [BROKER] Creating NEW connection for sd-dc-c8kv-01 (current connections: 0)
+INFO - Connecting to device: sd-dc-c8kv-01
+INFO - Unicon CLI log will be written to: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/sd-dc-c8kv-01-cli-7447220898.log
+INFO - [BROKER] Creating NEW connection for sd-dc-c8kv-04 (current connections: 0)
+INFO - Connecting to device: sd-dc-c8kv-04
+INFO - Unicon CLI log will be written to: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/sd-dc-c8kv-04-cli-7447221486.log
+INFO - [BROKER] Creating NEW connection for sd-dc-c8kv-03 (current connections: 0)
+INFO - Connecting to device: sd-dc-c8kv-03
+INFO - Unicon CLI log will be written to: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/sd-dc-c8kv-03-cli-7447224332.log
+INFO - Successfully connected to device: sd-dc-c8kv-04
+INFO - Successfully connected to device: sd-dc-c8kv-01
+INFO - Created command cache for device: sd-dc-c8kv-04
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-04 (total connections: 2)
+INFO - Successfully connected to device: sd-dc-c8kv-02
+INFO - Successfully connected to device: sd-dc-c8kv-03
+INFO - Created command cache for device: sd-dc-c8kv-01
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-01 (total connections: 4)
+INFO - Cached command output for 'show sdwan control connections' on sd-dc-c8kv-04 (1649 chars)
+INFO - Created command cache for device: sd-dc-c8kv-03
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-03 (total connections: 4)
+INFO - Created command cache for device: sd-dc-c8kv-02
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-02 (total connections: 4)
+INFO - Cached command output for 'show sdwan control connections' on sd-dc-c8kv-01 (1649 chars)
+INFO - Cached command output for 'show sdwan control connections' on sd-dc-c8kv-03 (1649 chars)
+2026-02-07 13:30:58.318 [PID:37956] [34556] [ID:4] PASSED consolidated_verifications in 12.1 seconds
+------------------------------------------------------------------------------
+consolidated_verifications (sd-dc-c8kv-04)                             | PASSED |
+------------------------------------------------------------------------------
+INFO - Cached command output for 'show sdwan control connections' on sd-dc-c8kv-02 (1649 chars)
+2026-02-07 13:30:59.973 [PID:37955] [34553] [ID:3] PASSED consolidated_verifications in 14.5 seconds
+------------------------------------------------------------------------------
+consolidated_verifications (sd-dc-c8kv-01)                             | PASSED |
+------------------------------------------------------------------------------
+2026-02-07 13:30:59.979 [PID:37954] [34555] [ID:1] PASSED consolidated_verifications in 14.7 seconds
+------------------------------------------------------------------------------
+consolidated_verifications (sd-dc-c8kv-03)                             | PASSED |
+------------------------------------------------------------------------------
+2026-02-07 13:31:00.183 [PID:37953] [34554] [ID:2] PASSED consolidated_verifications in 14.8 seconds
+------------------------------------------------------------------------------
+consolidated_verifications (sd-dc-c8kv-02)                             | PASSED |
+------------------------------------------------------------------------------
+INFO - Completed tests for device sd-dc-c8kv-04: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_archive_device_sd-dc-c8kv-04.zip
+INFO - Completed tests for device sd-dc-c8kv-01: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_archive_device_sd-dc-c8kv-01.zip
+INFO - Completed tests for device sd-dc-c8kv-03: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_archive_device_sd-dc-c8kv-03.zip
+INFO - Completed tests for device sd-dc-c8kv-02: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_archive_device_sd-dc-c8kv-02.zip
+INFO - Completed batch 1/1
+INFO - Aggregating 4 device archives
+INFO - Created aggregated D2D archive: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_d2d_20260207_133103_100.zip
+INFO - Shutting down connection broker...
+INFO - Disconnected from device: sd-dc-c8kv-04
+INFO - Clearing command cache for sd-dc-c8kv-04: {'total_entries': 1, 'expired_entries': 0, 'valid_entries': 1}
+INFO - Disconnected from device: sd-dc-c8kv-01
+INFO - Clearing command cache for sd-dc-c8kv-01: {'total_entries': 1, 'expired_entries': 0, 'valid_entries': 1}
+INFO - Disconnected from device: sd-dc-c8kv-02
+INFO - Clearing command cache for sd-dc-c8kv-02: {'total_entries': 1, 'expired_entries': 0, 'valid_entries': 1}
+INFO - Disconnected from device: sd-dc-c8kv-03
+INFO - Clearing command cache for sd-dc-c8kv-03: {'total_entries': 1, 'expired_entries': 0, 'valid_entries': 1}
+INFO - BROKER_STATISTICS: connection_hits=4, connection_misses=4, command_hits=0, command_misses=4
+INFO - Connection broker shutdown complete
+
+================================================================================
+1 tests, 1 passed, 0 failed, 0 skipped.
+================================================================================
+
+PyATS Output Files:
+================================================================================
+Archive:         /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_d2d_20260207_133103_100.zip
+
+Total testing: 14.82 seconds
+Elapsed time:  1 minutes 41.81 seconds
+
+Generating reports from 1 archive(s)...
+INFO - Processing d2d archive: nac_test_job_d2d_20260207_133103_100.zip
+INFO - Extracted /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_d2d_20260207_133103_100.zip to /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d
+INFO - Found 4 test results to process
+INFO - Successfully generated 4 reports
+INFO - Generated summary report: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports/summary_report.html
+INFO - Collected PyATS stats for 1 archive type(s)
+INFO - Cleaning up JSONL files after stats collection
+INFO - Cleaned up 4 JSONL file(s) total
+Total report generation time: 0.19 seconds
+Found D2D archive: nac_test_job_d2d_20260207_133103_100.zip
+
+HTML Reports Generated:
+================================================================================
+D2D Summary: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports/summary_report.html
+D2D Reports:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports
+
+📊 Generating combined dashboard...
+INFO - Generated combined dashboard: results/combined_summary.html
+INFO -   Total tests across all frameworks: 4
+INFO -   Frameworks included: D2D
+   ✅ Combined dashboard: results/combined_summary.html
+
+======================================================================
+📋 Combined Test Execution Summary
+======================================================================
+
+📊 Overall Results:
+   Total: 4 tests
+   ✅ Passed: 4
+   ❌ Failed: 0
+   ⊘ Skipped: 0
+
+🎯 Combined Dashboard:
+   📊 results/combined_summary.html
+   (Aggregated results from all test frameworks)
+
+✅ PyATS tests: Completed
+   📁 Results: results/pyats_results/
+   📊 D2D Summary: results/pyats_results/d2d/html_reports/summary_report.html
+
+📄 Merged data model: results/merged_data_model_test_variables.yaml
+======================================================================
+
+Total runtime: 1 minutes 42.10 seconds
+
+✅ All tests passed: 4 out of 4 tests
+
+✅ Execution complete!
+
+Timing log saved to: timing_output.log
+You can analyze phase durations with:
+  grep 'Completed phase' timing_output.log
+
+Stopping server (PID: 34073)...
+Server stopped

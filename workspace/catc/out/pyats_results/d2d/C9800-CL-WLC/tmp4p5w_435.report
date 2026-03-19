@@ -1,0 +1,85 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp4p5w_435.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpt2m6a8ic.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpx7dqanru_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out --archive-name pyats_archive_device_C9800-CL-WLC --no-archive-subdir --no-mail --no-xml-report --quiet
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmp4p5w_435
+    Result       : FAILED
+    Start time   : 2026-01-30 16:57:20.845372+01:00
+    Stop time    : 2026-01-30 16:57:41.605589+01:00
+    Elapsed time : 0:00:21
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out/pyats_archive_device_C9800-CL-WLC
+
+Total Tasks    : 4 
+
+Overall Stats
+    Passed     : 0
+    Passx      : 0
+    Failed     : 4
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 4
+
+Success Rate   : 0.00 %
+
+Section Stats
+    Passed     : 8
+    Passx      : 0
+    Failed     : 4
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 12
+
+Section Success Rate   : 66.67 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+C9800-CL-WLC_verify_iosxe_fabric_node_licensing_status: verify_iosx...    FAILED
+C9800-CL-WLC_verify_iosxe_fabric_node_licensing_status: verify_iosx...    FAILED
+C9800-CL-WLC_verify_iosxe_lisp_sessions_status: verify_iosxe_lisp_s...    FAILED
+C9800-CL-WLC_verify_iosxe_lisp_sessions_status: verify_iosxe_lisp_s...    FAILED
+C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs: verify...    FAILED
+C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs: verify...    FAILED
+C9800-CL-WLC_verify_iosxe_vtp_mode_status: verify_iosxe_vtp_mode_st...    FAILED
+C9800-CL-WLC_verify_iosxe_vtp_mode_status: verify_iosxe_vtp_mode_st...    FAILED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+C9800-CL-WLC_verify_iosxe_fabric_node_licensing_status: verify_iosx...    FAILED
+`-- VerifyFabricNodeLicensingStatus                                       FAILED
+    |-- setup                                                             PASSED
+    |-- test_fabric_node_licensing_status                                 FAILED
+    |   `-- STEP 1: SDA Fabric Node Licensing Verification                FAILED
+    `-- cleanup                                                           PASSED
+C9800-CL-WLC_verify_iosxe_lisp_sessions_status: verify_iosxe_lisp_s...    FAILED
+`-- VerifyLISPSessionsStatus                                              FAILED
+    |-- setup                                                             PASSED
+    |-- test_lisp_sessions_status                                         FAILED
+    |   `-- STEP 1: LISP Session Verification                             FAILED
+    `-- cleanup                                                           PASSED
+C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs: verify...    FAILED
+`-- VerifyNoCriticalErrorsInSystemLogs                                    FAILED
+    |-- setup                                                             PASSED
+    |-- test_system_log_health                                            FAILED
+    |   `-- STEP 1: System Log Verification                               FAILED
+    `-- cleanup                                                           PASSED
+C9800-CL-WLC_verify_iosxe_vtp_mode_status: verify_iosxe_vtp_mode_st...    FAILED
+`-- VerifyVTPOperatingMode                                                FAILED
+    |-- setup                                                             PASSED
+    |-- test_vtp_operating_mode                                           FAILED
+    |   `-- STEP 1: VTP Operating Mode Verification                       FAILED
+    `-- cleanup                                                           PASSED

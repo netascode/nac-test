@@ -1,0 +1,21 @@
+3: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[part=3.1/3][pid=57808][pname=MainProcess]: +------------------------------------------------------------------------------+
+4: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[part=3.2/3][pid=57808][pname=MainProcess]: |                          Bringup/Clean Information                           |
+5: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[part=3.3/3][pid=57808][pname=MainProcess]: +------------------------------------------------------------------------------+
+6: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[pid=57808][pname=MainProcess]: {'bringup': {}, 'cleaners': {}, 'devices': {}}
+
+7: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[part=7.1/3][pid=57808][pname=MainProcess]: +------------------------------------------------------------------------------+
+8: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[part=7.2/3][pid=57808][pname=MainProcess]: |           Bringup/Clean Information after applying clean templates           |
+9: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[part=7.3/3][pid=57808][pname=MainProcess]: +------------------------------------------------------------------------------+
+10: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[pid=57808][pname=MainProcess]: {'bringup': {}, 'cleaners': {}, 'devices': {}}
+
+0: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[pid=63156][pname=verify_dnac_catalyst_center_system_health_no_critical_events]: Starting task execution: verify_dnac_catalyst_center_system_health_no_critical_events
+1: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[pid=63156][pname=verify_dnac_catalyst_center_system_health_no_critical_events]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-01-30T16:56:07: %EASYPY-6-INFO: %[pid=63156][pname=verify_dnac_catalyst_center_system_health_no_critical_events]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates/tests/pyats/verify_dnac_catalyst_center_system_health_no_critical_events.py
+0: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %EASYPY-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: Starting task execution: verify_dnac_network_device_management_state
+1: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %EASYPY-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %EASYPY-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates/tests/pyats/verify_dnac_network_device_management_state.py
+0: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %EASYPY-6-INFO: %[pid=64904][pname=verify_dnac_physical_topology_link_status]: Starting task execution: verify_dnac_physical_topology_link_status
+1: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %EASYPY-6-INFO: %[pid=64904][pname=verify_dnac_physical_topology_link_status]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %EASYPY-6-INFO: %[pid=64904][pname=verify_dnac_physical_topology_link_status]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates/tests/pyats/verify_dnac_physical_topology_link_status.py
+11: OBOEHMER-M-5D76: 2026-01-30T16:56:11: %GENIE-6-INFO: %[pid=57808][pname=MainProcess]: Saving Abstract Tree...
+12: OBOEHMER-M-5D76: 2026-01-30T16:56:11: %GENIE-6-INFO: %[pid=57808][pname=MainProcess]: Abstract Tree saved

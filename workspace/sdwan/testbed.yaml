@@ -1,0 +1,144 @@
+testbed:
+  credentials:
+    default:
+      username: admin
+      password: cisco123
+devices:
+  # ==============================================================================
+  # SD-WAN Manager - REST API Access
+  # ==============================================================================
+  REAL-MANAGER:
+    alias: vmanage
+    credentials:
+       default:
+         username: admin
+         password: cisco123
+    connections:
+       defaults:
+         class: unicon.Unicon
+       rest:
+         ip: 10.62.190.146
+         port: 443
+         protocol: https
+         verify: False
+         username: admin
+         password: cisco123
+    type: server
+    os: linux
+    custom:
+       platform:
+         - vManage
+         - vmanage
+         - sdwan
+         - sdwan-manager
+  # ==============================================================================
+  # SD-WAN Lab Devices - Internal Lab (SSH Access)
+  # ==============================================================================
+  sd-dc-c8kv-01:
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: admin
+        password: cisco123
+    connections:
+      defaults:
+        class: unicon.Unicon
+      ssh:
+        protocol: ssh
+        ip: 10.62.190.148
+        port: 4222
+    custom:
+      platform:
+        - iosxe
+        - sdwan
+  sd-dc-c8kv-02:
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: admin
+        password: cisco123
+    connections:
+      defaults:
+        class: unicon.Unicon
+      ssh:
+        protocol: ssh
+        ip: 10.62.190.148
+        port: 4322
+    custom:
+      platform:
+        - iosxe
+        - sdwan
+  sd-br02-c8kv-r1:
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: admin
+        password: cisco123
+    connections:
+      defaults:
+        class: unicon.Unicon
+      ssh:
+        protocol: ssh
+        ip: 10.62.190.148
+        port: 6222
+    custom:
+      platform:
+        - iosxe
+        - sdwan
+  sd-br02-c8kv-r2:
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: admin
+        password: cisco123
+    connections:
+      defaults:
+        class: unicon.Unicon
+      ssh:
+        protocol: ssh
+        ip: 10.62.190.148
+        port: 6322
+    custom:
+      platform:
+        - iosxe
+        - sdwan
+  sd-br01-c8kv-r1:
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: admin
+        password: cisco123
+    connections:
+      defaults:
+        class: unicon.Unicon
+      ssh:
+        protocol: ssh
+        ip: 10.62.190.148
+        port: 5222
+    custom:
+      platform:
+        - iosxe
+        - sdwan
+  sd-br01-c8kv-r2:
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: admin
+        password: cisco123
+    connections:
+      defaults:
+        class: unicon.Unicon
+      ssh:
+        protocol: ssh
+        ip: 10.62.190.148
+        port: 5322
+    custom:
+      platform:
+        - iosxe
+        - sdwan

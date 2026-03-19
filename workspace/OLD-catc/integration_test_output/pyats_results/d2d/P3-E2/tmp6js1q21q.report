@@ -1,0 +1,61 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp6js1q21q.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpoyryw148.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpx_vx7wge_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/catc/integration_test_output --archive-name pyats_archive_device_P3-E2 --no-archive-subdir --no-mail --no-xml-report --verbose
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmp6js1q21q
+    Result       : PASSED
+    Start time   : 2026-01-28 16:45:10.256943+01:00
+    Stop time    : 2026-01-28 16:45:28.070728+01:00
+    Elapsed time : 0:00:18
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/catc/integration_test_output/pyats_archive_device_P3-E2
+
+Total Tasks    : 1 
+
+Overall Stats
+    Passed     : 1
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 1
+
+Success Rate   : 100.00 %
+
+Section Stats
+    Passed     : 3
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 3
+
+Section Success Rate   : 100.00 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+P3-E2_verify_iosxe_no_critical_errors_in_system_logs: verify_iosxe_...    PASSED
+P3-E2_verify_iosxe_no_critical_errors_in_system_logs: verify_iosxe_...    PASSED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+P3-E2_verify_iosxe_no_critical_errors_in_system_logs: verify_iosxe_...    PASSED
+`-- VerifyNoCriticalErrorsInSystemLogs                                    PASSED
+    |-- setup                                                             PASSED
+    |-- test_system_log_health                                            PASSED
+    |   `-- STEP 1: System Log Verification                               PASSED
+    `-- cleanup                                                           PASSED

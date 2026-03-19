@@ -1,0 +1,39 @@
+3: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %AETEST-6-INFO: %[part=3.1/3][pid=64223][pname=verify_dnac_network_device_management_state]: +------------------------------------------------------------------------------+
+4: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %AETEST-6-INFO: %[part=3.2/3][pid=64223][pname=verify_dnac_network_device_management_state]: |           Starting testcase VerifyDnacNetworkDeviceManagementState           |
+5: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %AETEST-6-INFO: %[part=3.3/3][pid=64223][pname=verify_dnac_network_device_management_state]: +------------------------------------------------------------------------------+
+6: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %AETEST-6-INFO: %[part=6.1/3][pid=64223][pname=verify_dnac_network_device_management_state]: +------------------------------------------------------------------------------+
+7: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %AETEST-6-INFO: %[part=6.2/3][pid=64223][pname=verify_dnac_network_device_management_state]: |                            Starting section setup                            |
+8: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %AETEST-6-INFO: %[part=6.3/3][pid=64223][pname=verify_dnac_network_device_management_state]: +------------------------------------------------------------------------------+
+9: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %NAC_TEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: Detected controller type: CC
+10: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %NAC_TEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: BatchingReporter initialized: batch_size=200, timeout=0.50s, debug=False
+11: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %NAC_TEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: Step interceptors installed successfully
+12: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %SCRIPT-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: Batching reporter initialized successfully (batch size: 200, flush timeout: 0.5s)
+13: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %AETEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: The result of section setup is => PASSED
+14: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %AETEST-6-INFO: %[part=14.1/3][pid=64223][pname=verify_dnac_network_device_management_state]: +------------------------------------------------------------------------------+
+15: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %AETEST-6-INFO: %[part=14.2/3][pid=64223][pname=verify_dnac_network_device_management_state]: |            Starting section test_network_device_management_state             |
+16: OBOEHMER-M-5D76: 2026-01-30T16:56:09: %AETEST-6-INFO: %[part=14.3/3][pid=64223][pname=verify_dnac_network_device_management_state]: +------------------------------------------------------------------------------+
+17: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %HTTPX-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: HTTP Request: GET https://198.18.129.100/dna/intent/api/v1/network-device "HTTP/1.1 200 "
+18: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %SCRIPT-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: Network Device Management State Verification Verification Summary:
+19: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %SCRIPT-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]:   - Total configurations processed: 1
+20: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %SCRIPT-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]:   - Passed: 1
+21: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %SCRIPT-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]:   - Failed: 0
+22: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %SCRIPT-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]:   - Skipped: 0
+23: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[part=23.1/3][pid=64223][pname=verify_dnac_network_device_management_state]: +..............................................................................+
+24: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[part=23.2/3][pid=64223][pname=verify_dnac_network_device_management_state]: :        Starting STEP 1: Network Device Management State Verification         :
+25: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[part=23.3/3][pid=64223][pname=verify_dnac_network_device_management_state]: +..............................................................................+
+26: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: The result of STEP 1: Network Device Management State Verification is => PASSED
+27: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[part=27.1/3][pid=64223][pname=verify_dnac_network_device_management_state]: +..........................................................+
+28: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[part=27.2/3][pid=64223][pname=verify_dnac_network_device_management_state]: :                       STEPS Report                       :
+29: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[part=27.3/3][pid=64223][pname=verify_dnac_network_device_management_state]: +..........................................................+
+30: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: STEP 1 - Network Device Management State VerificationPassed    
+31: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: ............................................................
+32: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: The result of section test_network_device_management_state is => PASSED
+33: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[part=33.1/3][pid=64223][pname=verify_dnac_network_device_management_state]: +------------------------------------------------------------------------------+
+34: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[part=33.2/3][pid=64223][pname=verify_dnac_network_device_management_state]: |                           Starting section cleanup                           |
+35: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[part=33.3/3][pid=64223][pname=verify_dnac_network_device_management_state]: +------------------------------------------------------------------------------+
+36: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %NAC_TEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: Graceful shutdown initiated
+37: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %NAC_TEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: Graceful shutdown complete
+38: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %SCRIPT-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: Batching reporter shutdown complete - processed 0 messages in 0 batches
+39: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %NAC_TEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: Step interceptors uninstalled successfully
+40: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: The result of section cleanup is => PASSED
+41: OBOEHMER-M-5D76: 2026-01-30T16:56:10: %AETEST-6-INFO: %[pid=64223][pname=verify_dnac_network_device_management_state]: The result of testcase VerifyDnacNetworkDeviceManagementState is => PASSED

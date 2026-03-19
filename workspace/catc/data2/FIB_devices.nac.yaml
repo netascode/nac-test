@@ -1,0 +1,46 @@
+# ---
+# catalyst_center:
+#   inventory:
+#     devices:
+#       - name: FIAB
+#         fqdn_name: FIAB.cisco.eu
+#         device_ip: 198.18.130.33
+#         pid: C9KV-UADP-8P
+#         state: PROVISION
+#         device_role: BORDER ROUTER
+#         site: Global/Poland/Warsaw/Bld_B
+#         fabric_site: Global/Poland/Warsaw
+#         fabric_roles:
+#           - BORDER_NODE
+#           - CONTROL_PLANE_NODE
+#           - EDGE_NODE
+#         port_assignments:
+#           - interface_name: GigabitEthernet1/0/3
+#             connected_device_type: "USER_DEVICE"
+#             data_vlan_name: "192_168_200_0-Campus"
+#             authenticate_template_name: "No Authentication"
+#       # - name: Transit-CP-1
+#       #   fqdn_name: Transit-CP-1.cisco.eu
+#       #   device_ip: 198.18.130.34
+#       #   pid: C8000V
+#       #   state: PROVISION
+#       #   device_role: BORDER ROUTER
+#       #   site: Global/Poland/Warsaw/Bld_B
+#       - name: C9800-CL-WLC
+#         fqdn_name: C9800-CL-WLC.cisco.eu
+#         device_ip: 198.18.130.35
+#         serial_number: 9TQU20TYGKH
+#         pid: C9800-CL-K9
+#         state: PROVISION
+#         device_role: ACCESS
+#         site: Global/Poland/Warsaw/Bld_B
+#         primary_managed_ap_locations:
+#           - Global/Poland/Warsaw/Bld_B
+#         dayn_templates:
+#           regular:
+#             - name: WLC_wlan_policy
+#               redeploy_template: NEVER
+#               variables:
+#                 - name: wlan_policy_name
+#                   value: dot1x-policy
+#               copying_config: true

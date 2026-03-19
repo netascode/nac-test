@@ -1,0 +1,33 @@
+0: OBOEHMER-M-5D76: 2026-01-30T16:56:44: %AETEST-6-INFO: %[part=0.1/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +------------------------------------------------------------------------------+
+1: OBOEHMER-M-5D76: 2026-01-30T16:56:44: %AETEST-6-INFO: %[part=0.2/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: |              Starting testcase VerifyFabricNodeLicensingStatus               |
+2: OBOEHMER-M-5D76: 2026-01-30T16:56:44: %AETEST-6-INFO: %[part=0.3/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +------------------------------------------------------------------------------+
+3: OBOEHMER-M-5D76: 2026-01-30T16:56:44: %AETEST-6-INFO: %[part=3.1/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +------------------------------------------------------------------------------+
+4: OBOEHMER-M-5D76: 2026-01-30T16:56:44: %AETEST-6-INFO: %[part=3.2/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: |                            Starting section setup                            |
+5: OBOEHMER-M-5D76: 2026-01-30T16:56:44: %AETEST-6-INFO: %[part=3.3/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +------------------------------------------------------------------------------+
+6: OBOEHMER-M-5D76: 2026-01-30T16:56:44: %SCRIPT-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: Batching reporter initialized successfully (batch size: 200, flush timeout: 0.5s)
+7: OBOEHMER-M-5D76: 2026-01-30T16:56:44: %SCRIPT-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: Connecting to device EDGE02 via connection broker
+8: OBOEHMER-M-5D76: 2026-01-30T16:56:56: %AETEST-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: The result of section setup is => PASSED
+9: OBOEHMER-M-5D76: 2026-01-30T16:56:56: %AETEST-6-INFO: %[part=9.1/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +------------------------------------------------------------------------------+
+10: OBOEHMER-M-5D76: 2026-01-30T16:56:56: %AETEST-6-INFO: %[part=9.2/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: |              Starting section test_fabric_node_licensing_status              |
+11: OBOEHMER-M-5D76: 2026-01-30T16:56:56: %AETEST-6-INFO: %[part=9.3/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +------------------------------------------------------------------------------+
+12: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %SCRIPT-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: SDA Fabric Node Licensing Verification Verification Summary:
+13: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %SCRIPT-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]:   - Total configurations processed: 1
+14: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %SCRIPT-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]:   - Passed: 1
+15: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %SCRIPT-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]:   - Failed: 0
+16: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %SCRIPT-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]:   - Skipped: 0
+17: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[part=17.1/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +..............................................................................+
+18: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[part=17.2/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: :           Starting STEP 1: SDA Fabric Node Licensing Verification            :
+19: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[part=17.3/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +..............................................................................+
+20: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: The result of STEP 1: SDA Fabric Node Licensing Verification is => PASSED
+21: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[part=21.1/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +..........................................................+
+22: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[part=21.2/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: :                       STEPS Report                       :
+23: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[part=21.3/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +..........................................................+
+24: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: STEP 1 - SDA Fabric Node Licensing Verification   Passed    
+25: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: ............................................................
+26: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: The result of section test_fabric_node_licensing_status is => PASSED
+27: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[part=27.1/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +------------------------------------------------------------------------------+
+28: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[part=27.2/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: |                           Starting section cleanup                           |
+29: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[part=27.3/3][pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: +------------------------------------------------------------------------------+
+30: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %SCRIPT-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: Batching reporter shutdown complete - processed 0 messages in 0 batches
+31: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: The result of section cleanup is => PASSED
+32: OBOEHMER-M-5D76: 2026-01-30T16:56:58: %AETEST-6-INFO: %[pid=80866][pname=EDGE02_verify_iosxe_fabric_node_licensing_status]: The result of testcase VerifyFabricNodeLicensingStatus is => PASSED

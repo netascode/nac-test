@@ -1,0 +1,19 @@
+# rerun.results file that contains the information of each task and their
+# testcases.
+# Please Check the following link for more information:
+# https://pubhub.devnetcloud.com/media/pyats/docs/easypy/rerun.html
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up:
+  testcases:
+  - name: VerifySdwanControlConnectionsState
+    result: FAILED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/tests/verify_iosxe_all_sd_wan_control_connections_are_up.py
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up2:
+  testcases:
+  - name: VerifySdwanControlConnectionsState2
+    result: FAILED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/tests/verify_iosxe_all_sd_wan_control_connections_are_up2.py
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up3:
+  testcases:
+  - name: VerifySdwanControlConnectionsState3
+    result: FAILED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/tests/verify_iosxe_all_sd_wan_control_connections_are_up3.py

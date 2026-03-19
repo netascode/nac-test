@@ -1,0 +1,491 @@
+---
+defaults:
+  catalyst_center:
+    authentication_templates:
+      name: No Authentication
+      dot1x_to_mab_fallback_timeout: 21
+      wake_on_lan: false
+      number_of_hosts: Unlimited
+      authentication_order: dot1x
+      bpdu_guard: true
+    network_profiles:
+      wireless:
+        ssid_details:
+          interface_name: management
+    templates:
+      force_push_template: true
+      description: ""
+      language: JINJA
+      composite: false
+      copying_config: true
+      redeploy_template: NEVER
+    pnp:
+      devices:
+        type: Default
+        protocol: SSH2
+        image_skip: true
+    inventory:
+      devices:
+        role_source: MANUAL
+    sites:
+      areas:
+        parent_name: Global
+      floors:
+        height: 3
+        length: 30
+        rf_model: Cubes And Walled Offices
+        width: 30
+        units_of_measure: feet
+    network_settings:
+      ip_pools:
+        type: Generic
+        ip_address_space: IPv4
+        ip_pools_reservations:
+          type: Generic
+          ipv4:
+            prefix: true
+          ipv6:
+            address_space: false
+      device_credentials:
+        https_write_credentials:
+          port: 443
+        https_read_credentials:
+          port: 443
+        snmpv3_credentials:
+          auth_type: SHA
+          privacy_type: AES128
+      telemetry:
+        wired_data_collection: true
+        enable_netflow_collector_on_devices: false
+        wireless_telemetry: false
+        catalyst_center_as_snmp_server: true
+        catalyst_center_as_syslog_server: true
+        catalyst_center_as_network_collector: true
+    fabric:
+      transits:
+        type: IP_BASED_TRANSIT
+        routing_protocol_name: BGP
+        multicast_over_sda_transit: false
+      fabric_sites:
+        authentication_template:
+          name: No Authentication
+        pub_sub_enabled: false
+        anycast_gateways:
+          layer2_flooding: false
+          auto_generate_vlan_name: false
+          multiple_ip_to_mac_addresses: false
+          wireless_pool: false
+          traffic_type: DATA
+          ip_directed_broadcast: false
+          intra_subnet_routing_enabled: false
+          critical_pool: false
+    wireless:
+      rf_profiles:
+        default_rf_profile: false
+      enterprise_ssids:
+        basic_service_set_client_idle_timeout: 300
+        client_exclusion_timeout: 180
+        enable_basic_service_set_max_idle: true
+        enable_broadcast_ssid: true
+        enable_client_exclusion: true
+        enable_directed_multicast_service: true
+        enable_fast_lane: false
+        enable_mac_filtering: false
+        enable_neighbor_list: true
+        enable_session_time_out: true
+        fast_transition: Adaptive
+        mfp_client_protection: Optional
+        nas_options: []
+        radio_policy: Triple band operation(2.4GHz, 5GHz and 6GHz)
+        traffic_type: data
+        session_time_out: 1800
+catalyst_center:
+  network_settings:
+    aaa_servers:
+      - name: AAA_Settings
+        client_and_endpoint_aaa:
+          server_type: ISE
+          protocol: RADIUS
+          primary_ip: 198.18.133.27
+    ip_pools:
+      - name: Overlay
+        ip_address_space: IPv4
+        ip_pool_cidr: 192.168.0.0/16
+        ip_pools_reservations:
+          - name: CampusVN-IPPool
+            prefix_length: 24
+            subnet: 192.168.100.0
+            gateway: 192.168.100.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: GuestVN-IPPool
+            prefix_length: 24
+            subnet: 192.168.101.0
+            gateway: 192.168.101.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: PrintersVN-IPPool
+            prefix_length: 24
+            subnet: 192.168.102.0
+            gateway: 192.168.102.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: BYOD-IPPool
+            prefix_length: 24
+            subnet: 192.168.103.0
+            gateway: 192.168.103.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: CampusVN2-IPPool
+            prefix_length: 24
+            subnet: 192.168.200.0
+            gateway: 192.168.200.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: GuestVN2-IPPool
+            prefix_length: 24
+            subnet: 192.168.201.0
+            gateway: 192.168.201.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: PrintersVN2-IPPool
+            prefix_length: 24
+            subnet: 192.168.202.0
+            gateway: 192.168.202.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: BYOD2-IPPool
+            prefix_length: 24
+            subnet: 192.168.203.0
+            gateway: 192.168.203.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+  fabric:
+    l3_virtual_networks:
+      - name: BYOD
+      - name: Guest
+      - name: Printers
+      - name: Campus
+    transits:
+      - name: BGP65002
+        type: IP_BASED_TRANSIT
+        routing_protocol_name: BGP
+        autonomous_system_number: 65002
+      - name: SDA-TRANSIT
+        type: SDA_LISP_PUB_SUB_TRANSIT
+        control_plane_devices:
+          - Transit-CP-1
+    fabric_sites:
+      - name: Global/Poland/Krakow
+        authentication_template:
+          name: No Authentication
+        pub_sub_enabled: true
+        l3_virtual_networks:
+          - BYOD
+          - Guest
+          - Printers
+          - Campus
+        anycast_gateways:
+          - ip_pool_name: CampusVN-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: Campus
+          - ip_pool_name: GuestVN-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: Guest
+          - ip_pool_name: BYOD-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: BYOD
+          - ip_pool_name: PrintersVN-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: Printers
+      - name: Global/Poland/Warsaw
+        authentication_template:
+          name: Closed Authentication
+          dot1x_to_mab_fallback_timeout: 30
+          wake_on_lan: false
+          number_of_hosts: Unlimited
+          authentication_order: dot1x
+        pub_sub_enabled: true
+        l3_virtual_networks:
+          - BYOD
+          - Guest
+          - Printers
+          - Campus
+        anycast_gateways:
+          - ip_pool_name: CampusVN2-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: Campus
+          - ip_pool_name: GuestVN2-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: Guest
+          - ip_pool_name: BYOD2-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: BYOD
+          - ip_pool_name: PrintersVN2-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: Printers
+    border_devices:
+      - name: BR10
+        border_types:
+          - LAYER_3
+        default_exit: true
+        import_external_routes: false
+        local_autonomous_system_number: 65001
+        sda_transit: SDA-TRANSIT
+        l3_handoffs:
+          - name: BGP65002
+            interfaces:
+              - name: GigabitEthernet1/0/3
+                virtual_networks:
+                  - name: Campus
+                    local_ip_address: 172.16.100.1/24
+                    peer_ip_address: 172.16.100.2/24
+                    vlan: 100
+      - name: FIAB
+        border_types:
+          - LAYER_3
+        default_exit: true
+        import_external_routes: false
+        local_autonomous_system_number: 65001
+        sda_transit: SDA-TRANSIT
+  templates:
+    projects:
+      - name: VirtualCat9k
+        dayn_templates:
+          - name: ACL_Block
+            description: ACL to block malicious IPs
+            device_types:
+              - product_family: "Switches and Hubs"
+                product_series: "Cisco Catalyst 9000 Series Virtual Switches"
+            software_type: IOS-XE
+      - name: FIB_SITE_TEMP
+        onboarding_templates:
+          - name: PNP_Template
+            description: border_dayzero to show PNP
+            language: JINJA
+            device_types:
+              - product_family: "Switches and Hubs"
+                product_series: "Cisco Catalyst 9000 Series Virtual Switches"
+            software_type: IOS-XE
+        dayn_templates:
+          - name: WLC_wlan_policy
+            description: WLC_Templates
+            language: JINJA
+            device_types:
+              - product_family: "Wireless Controller"
+                product_series: "Cisco Catalyst 9800 Wireless Controllers for Cloud"
+            software_type: IOS-XE
+  sites:
+    areas:
+      - name: Global
+      - name: Poland
+        parent_name: Global
+      - name: Krakow
+        parent_name: Global/Poland
+        network_settings:
+          aaa_servers: AAA_Settings
+        ip_pools_reservations:
+          - CampusVN-IPPool
+          - GuestVN-IPPool
+          - PrintersVN-IPPool
+          - BYOD-IPPool
+      - name: Warsaw
+        parent_name: Global/Poland
+        network_settings:
+          aaa_servers: AAA_Settings
+        ip_pools_reservations:
+          - CampusVN2-IPPool
+          - GuestVN2-IPPool
+          - PrintersVN2-IPPool
+          - BYOD2-IPPool
+    buildings:
+      - name: Bld A
+        latitude: 50.0623225
+        longitude: 19.937975
+        country: Poland
+        parent_name: Global/Poland/Krakow
+      - name: Bld_B
+        latitude: 52.182150235
+        longitude: 21.005557857
+        country: Poland
+        parent_name: Global/Poland/Warsaw
+    floors:
+      - name: FLOOR_1
+        floor_number: 1
+        parent_name: Global/Poland/Krakow/Bld A
+      - name: FLOOR_2
+        floor_number: 2
+        parent_name: Global/Poland/Krakow/Bld A
+      - name: FLOOR_1
+        floor_number: 1
+        parent_name: Global/Poland/Warsaw/Bld_B
+  inventory:
+    devices:
+      - name: BR10
+        fqdn_name: BR10.cisco.eu
+        device_ip: 198.18.130.10
+        pid: C9KV-UADP-8P
+        state: PROVISION
+        device_role: BORDER ROUTER
+        site: Global/Poland/Krakow/Bld A
+        fabric_site: Global/Poland/Krakow
+        fabric_roles:
+          - BORDER_NODE
+          - CONTROL_PLANE_NODE
+      - name: EDGE01
+        fqdn_name: EDGE01.cisco.eu
+        device_ip: 198.18.130.1
+        pid: C9KV-UADP-8P
+        state: PROVISION
+        device_role: ACCESS
+        site: Global/Poland/Krakow/Bld A
+        fabric_site: Global/Poland/Krakow
+        fabric_roles:
+          - EDGE_NODE
+        port_assignments:
+          - interface_name: GigabitEthernet1/0/2
+            connected_device_type: "USER_DEVICE"
+            data_vlan_name: "192_168_100_0-Campus"
+            authenticate_template_name: "No Authentication"
+      - name: EDGE02
+        fqdn_name: EDGE02.cisco.eu
+        device_ip: 198.18.130.2
+        pid: C9KV-UADP-8P
+        state: PROVISION
+        device_role: ACCESS
+        site: Global/Poland/Krakow/Bld A
+        fabric_site: Global/Poland/Krakow
+        fabric_roles:
+          - EDGE_NODE
+        port_assignments:
+          - interface_name: GigabitEthernet1/0/3
+            connected_device_type: "USER_DEVICE"
+            data_vlan_name: "192_168_100_0-Campus"
+            authenticate_template_name: "No Authentication"
+      - name: FIAB
+        fqdn_name: FIAB.cisco.eu
+        device_ip: 198.18.130.33
+        pid: C9KV-UADP-8P
+        state: PROVISION
+        device_role: BORDER ROUTER
+        site: Global/Poland/Warsaw/Bld_B
+        fabric_site: Global/Poland/Warsaw
+        fabric_roles:
+          - BORDER_NODE
+          - CONTROL_PLANE_NODE
+          - EDGE_NODE
+        port_assignments:
+          - interface_name: GigabitEthernet1/0/3
+            connected_device_type: "USER_DEVICE"
+            data_vlan_name: "192_168_200_0-Campus"
+            authenticate_template_name: "No Authentication"
+      - name: Transit-CP-1
+        fqdn_name: Transit-CP-1.cisco.eu
+        device_ip: 198.18.130.34
+        pid: C8000V
+        state: PROVISION
+        device_role: BORDER ROUTER
+        site: Global/Poland/Warsaw/Bld_B
+      - name: C9800-CL-WLC
+        fqdn_name: C9800-CL-WLC.cisco.eu
+        device_ip: 198.18.130.35
+        serial_number: 9TQU20TYGKH
+        pid: C9800-CL-K9
+        state: PROVISION
+        device_role: ACCESS
+        site: Global/Poland/Warsaw/Bld_B
+        primary_managed_ap_locations:
+          - Global/Poland/Warsaw/Bld_B
+        dayn_templates:
+          regular:
+            - name: WLC_wlan_policy
+              redeploy_template: NEVER
+              variables:
+                - name: wlan_policy_name
+                  value: dot1x-policy
+              copying_config: true
+  network_profiles:
+    switching:
+      - name: VirtualCat9k
+        dayn_templates:
+          - ACL_Block
+        sites:
+          - Global/Poland/Krakow
+      - name: VirtualCat9k_PNP
+        onboarding_templates:
+          - PNP_Template
+        sites:
+          - Global/Poland/Warsaw/Bld_B
+    wireless:
+      - name: W_Cat9800-CL
+        sites:
+          - Global/Poland/Warsaw/Bld_B
+        ssid_details:
+          - name: 802_1X_SSID
+            enable_fabric: false
+            enable_flex_connect: false
+            interface_name: management
+  wireless:
+    ssids:
+      - name: 802_1X_SSID
+        wlan_type: Enterprise
+        ssid_radio_type: "2.4GHz and 5GHz"
+        ghz24_policy: dot11-bg-only
+        fast_lane: false
+        egress_qos: PLATINUM
+        ingress_qos: PLATINUM-UP
+        enabled: true
+        broadcast_ssid: true
+        auth_type: WPA2_WPA3_ENTERPRISE
+        ap_beacon_protection: true
+        fast_transition: ADAPTIVE
+        rsn_cipher_suite_ccmp128: true
+        auth_key8021x: true
+        auth_key8021x_sha256: true
+        auth_servers:
+          - "198.18.133.27"
+        acct_servers:
+          - "198.18.133.27"
+        aaa_override: true
+        mac_filtering: true
+        random_mac_filter: false
+        posturing: false
+        mft_client_protection: OPTIONAL
+        protected_management_frame: REQUIRED
+        neighbor_list: true
+        coverage_hole_detection: true
+        session_timeout_enable: true
+        session_timeout: 28800
+        client_exclusion: true
+        client_exclusion_timeout: 1800
+        basic_service_set_max_idle: true
+        basic_service_set_client_idle_timeout: 300
+        sleeping_client_timeout: 500
+        directed_multicast_service: true
+        nas_options:
+          - "System IP Address"
+        client_rate_limit: 1000000

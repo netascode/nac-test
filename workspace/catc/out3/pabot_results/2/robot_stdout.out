@@ -1,0 +1,36 @@
+==============================================================================
+Out3                                                                          
+==============================================================================
+Out3.Config                                                                   
+==============================================================================
+Out3.Config.Fabric                                                            
+==============================================================================
+Out3.Config.Fabric.Authentication Templates :: Verify Authentication Templa...
+==============================================================================
+Get Fabric Zones                                                      | PASS |
+------------------------------------------------------------------------------
+Get Authentication Profiles                                           | PASS |
+------------------------------------------------------------------------------
+Verify Authentication Template for Fabric Site Global/Poland/Krakow   Validating authentication template data model values for fabric site Global/Poland/Krakow
+No authentication template configured for fabric site Global/Poland/Krakow - test passed
+Authentication template validation completed for fabric site Global/Poland/Krakow
+| PASS |
+------------------------------------------------------------------------------
+Verify Authentication Template for Fabric Site Global/Poland/Warsaw   Validating authentication template data model values for fabric site Global/Poland/Warsaw
+Found authentication profile: Closed Authentication
+Authentication template data model validation completed for fabric site Global/Poland/Warsaw
+| PASS |
+------------------------------------------------------------------------------
+Out3.Config.Fabric.Authentication Templates :: Verify Authenticati... | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Out3.Config.Fabric                                                    | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Out3.Config                                                           | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Out3                                                                  | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out3/pabot_results/2/output.xml

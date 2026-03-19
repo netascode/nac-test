@@ -1,0 +1,18 @@
+---
+catalyst_center:
+  network_profiles:
+    wireless:
+      - name: W_Cat9800-CL
+        sites:
+          - Global/Poland/Warsaw/Bld_B
+        ssid_details:
+          - name: 802_1X_SSID
+            enable_fabric: false
+            enable_flex_connect: false
+            interface_name: management
+    switching:
+      - name: VirtualCat9k_PNP
+        onboarding_templates:
+          - PNP_Template
+        sites:
+          - Global/Poland/Warsaw/Bld_B

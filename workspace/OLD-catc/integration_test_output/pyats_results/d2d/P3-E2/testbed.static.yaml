@@ -1,0 +1,21 @@
+testbed:
+  name: testbed_P3-E2
+  credentials:
+    default:
+      username: admin
+      password: admin
+devices:
+  P3-E2:
+    alias: P3-E2
+    os: iosxe
+    type: router
+    platform: iosxe
+    credentials:
+      default:
+        username: admin
+        password: admin
+    connections:
+      cli:
+        protocol: ssh
+        command: python /Users/oboehmer/Documents/DD/nac-test/tests/integration/mocks/mock_unicon.py
+          iosxe --hostname P3-E2

@@ -1,0 +1,29 @@
+---
+catalyst_center:
+  sites:
+    areas:
+      - name: Global
+      - name: Poland
+        parent_name: Global
+      - name: Krakow
+        parent_name: Global/Poland
+        network_settings:
+          aaa_servers: AAA_Settings
+        ip_pools_reservations:
+          - CampusVN-IPPool
+          - GuestVN-IPPool
+          - PrintersVN-IPPool
+          - BYOD-IPPool
+    buildings:
+      - name: Bld A
+        latitude: 50.0623225
+        longitude: 19.937975
+        country: Poland
+        parent_name: Global/Poland/Krakow
+    floors:
+      - name: FLOOR_1
+        floor_number: 1
+        parent_name: Global/Poland/Krakow/Bld A
+      - name: FLOOR_2
+        floor_number: 2
+        parent_name: Global/Poland/Krakow/Bld A

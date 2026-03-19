@@ -1,0 +1,17 @@
+--suite Out.Tests.Robot.Config.Fabric.Anycast Gateways
+--skiponfailure non-critical
+--variable CALLER_ID:73337a5d17d447bf9249c17194f45980
+--variable PABOTLIBURI:127.0.0.1:60955
+--variable PABOTEXECUTIONPOOLID:12
+--variable PABOTISLASTEXECUTIONINPOOL:0
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:12
+--variable PABOTLASTLEVEL:Out.Tests.Robot.Config.Fabric.Anycast Gateways
+--outputdir out/pabot_results/12
+--xunit NONE
+--listener RobotStackTracer
+--log NONE
+--report NONE
+--consolecolors off
+--consolemarkers off
+out

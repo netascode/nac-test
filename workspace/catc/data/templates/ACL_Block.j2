@@ -1,0 +1,7 @@
+ip access-list extended BLOCK_MALICIOUS_IPS
+ deny ip any host 123.123.123.123
+ deny ip any host 134.134.134.134
+ permit ip any any
+!
+interface {{ interface }}
+ ip access-group BLOCK_MALICIOUS_IPS in

@@ -1,0 +1,46 @@
+---
+catalyst_center:
+  network_settings:
+    aaa_servers:
+      - name: AAA_Settings
+        client_and_endpoint_aaa:
+          server_type: ISE
+          protocol: RADIUS
+          primary_ip: 198.18.133.27
+    ip_pools:
+      - name: Overlay
+        ip_address_space: IPv4
+        ip_pool_cidr: 192.168.0.0/16
+        ip_pools_reservations:
+          - name: CampusVN-IPPool
+            prefix_length: 24
+            subnet: 192.168.100.0
+            gateway: 192.168.100.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: GuestVN-IPPool
+            prefix_length: 24
+            subnet: 192.168.101.0
+            gateway: 192.168.101.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: PrintersVN-IPPool
+            prefix_length: 24
+            subnet: 192.168.102.0
+            gateway: 192.168.102.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11
+          - name: BYOD-IPPool
+            prefix_length: 24
+            subnet: 192.168.103.0
+            gateway: 192.168.103.1
+            dns_servers:
+              - 198.18.130.11
+            dhcp_servers:
+              - 198.18.130.11

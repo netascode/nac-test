@@ -1,0 +1,77 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpaqu9l2f0.py --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmphg5k9yl7_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/out --archive-name pyats_archive_device_sd-dc-c8kv-01 --no-archive-subdir --no-mail --no-xml-report --verbose
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmpaqu9l2f0
+    Result       : FAILED
+    Start time   : 2026-01-28 11:48:57.928207+01:00
+    Stop time    : 2026-01-28 11:49:07.288188+01:00
+    Elapsed time : 0:00:10
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/out/pyats_archive_device_sd-dc-c8kv-01
+
+Total Tasks    : 3 
+
+Overall Stats
+    Passed     : 0
+    Passx      : 0
+    Failed     : 3
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 3
+
+Success Rate   : 0.00 %
+
+Section Stats
+    Passed     : 6
+    Passx      : 0
+    Failed     : 3
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 9
+
+Section Success Rate   : 66.67 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up: v...    FAILED
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up: v...    FAILED
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up2: ...    FAILED
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up2: ...    FAILED
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up3: ...    FAILED
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up3: ...    FAILED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up: v...    FAILED
+`-- VerifySdwanControlConnectionsState                                    FAILED
+    |-- setup                                                             PASSED
+    |-- test_sdwan_control_connections_state                              FAILED
+    |   `-- STEP 1: SD-WAN Control Connection Verification                FAILED
+    `-- cleanup                                                           PASSED
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up2: ...    FAILED
+`-- VerifySdwanControlConnectionsState2                                   FAILED
+    |-- setup                                                             PASSED
+    |-- test_sdwan_control_connections_state                              FAILED
+    |   `-- STEP 1: SD-WAN Control Connection Verification                FAILED
+    `-- cleanup                                                           PASSED
+sd-dc-c8kv-01_verify_iosxe_all_sd_wan_control_connections_are_up3: ...    FAILED
+`-- VerifySdwanControlConnectionsState3                                   FAILED
+    |-- setup                                                             PASSED
+    |-- test_sdwan_control_connections_state                              FAILED
+    |   `-- STEP 1: SD-WAN Control Connection Verification                FAILED
+    `-- cleanup                                                           PASSED

@@ -1,0 +1,9 @@
+# rerun.results file that contains the information of each task and their
+# testcases.
+# Please Check the following link for more information:
+# https://pubhub.devnetcloud.com/media/pyats/docs/easypy/rerun.html
+sd_dc_c8kv_01_verify_iosxe_control:
+  testcases:
+  - name: VerifySdwanControlConnectionsState
+    result: PASSED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates-single/tests/verify_iosxe_control.py

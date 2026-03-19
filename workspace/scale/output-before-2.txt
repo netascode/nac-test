@@ -1,0 +1,115 @@
+$ nac-test -d data -t templates-single/tests --testbed testbed.yaml -o ./results
+
+
+[13:58:24] 📄 Merging data model files...
+[13:58:24] ✅ Data model merging completed (0.0s)
+
+🧪 Running PyATS tests...
+
+Discovered 2 PyATS test files
+Running with 5 parallel workers
+Found 1 API test(s) - using standard execution
+Found 1 D2D test(s) - using device-centric execution
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp7d9veiy2_api_job.py --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmprzdsncu3_plugin_config.yaml --pyats-configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp9ca_gvmf_pyats_config.conf --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name nac_test_job_20260222_135825_742.zip --no-archive-subdir --no-mail --no-xml-report
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpjv1xqqsc.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpmi344zf1.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpayjln5m8_plugin_config.yaml --pyats-configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp8xlymmof_pyats_config.conf --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-01 --no-archive-subdir --no-mail --no-xml-report --quiet
+2026-02-22 13:58:33.143 [PID:74806] [74758] [ID:1] EXECUTING verify_sdwan_sync
+2026-02-22 13:58:33.375 [PID:74806] [74758] [ID:1] PASSED verify_sdwan_sync in 0.2 seconds
+------------------------------------------------------------------------------
+Verify All SD-WAN Edge Configurations Are In-Sync                      | PASSED |
+------------------------------------------------------------------------------
+2026-02-22 13:58:33.483 [PID:74810] [74765] [ID:2] EXECUTING verify_iosxe_control
+2026-02-22 13:58:38.453 [PID:74810] [74765] [ID:2] PASSED verify_iosxe_control in 5.0 seconds
+------------------------------------------------------------------------------
+Verify All SD-WAN Control Connections Are Up (sd-dc-c8kv-01)           | PASSED |
+------------------------------------------------------------------------------
+
+================================================================================
+2 tests, 2 passed, 0 failed, 0 skipped.
+================================================================================
+
+PyATS Output Files:
+================================================================================
+Archive:         /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_api_20260222_135825_742.zip
+
+Archive:         /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_d2d_20260222_135840_658.zip
+
+Total testing: 5.20 seconds
+Elapsed time:  16.72 seconds
+
+Generating reports from 2 archive(s)...
+Total report generation time: 0.05 seconds
+Found API archive: nac_test_job_api_20260222_135825_742.zip
+Found D2D archive: nac_test_job_d2d_20260222_135840_658.zip
+
+HTML Reports Generated:
+================================================================================
+API Summary: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/api/html_reports/summary_report.html
+API Reports:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/api/html_reports
+D2D Summary: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports/summary_report.html
+D2D Reports:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports
+
+🤖 Running Robot Framework tests...
+
+[13:58:41] 📝 Rendering Robot Framework templates...
+[13:58:41] ✅ Template rendering completed (0.0s)
+📄 Creating merged data model for Robot tests...
+🤖 Executing Robot Framework tests...
+
+
+Initialized logging in results/pabot_results
+Robot Framework remote server at 127.0.0.1:56078 started.
+Storing .pabotsuitenames file
+2026-02-22 13:58:41.992855 [PID:74842] [0] [ID:0] EXECUTING Results.Config.Test
+2026-02-22 13:58:42.303872 [PID:74842] [0] [ID:0] PASSED Results.Config.Test in 0.3 seconds
+1 tests, 1 passed, 0 failed, 0 skipped.
+===================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/output.xml
+XUnit:   /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/xunit.xml
+Log:     /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/log.html
+Report:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/report.html
+Finalizing Pabot execution...
+Stopping PabotLib process
+Robot Framework remote server at 127.0.0.1:56078 stopped.
+PabotLib process stopped
+Total testing: 0.30 seconds
+Elapsed time:  0.95 seconds
+Logs flushed successfully.
+✅ Robot Framework tests completed
+📊 Generating Robot summary report...
+
+📊 Generating combined dashboard...
+   ✅ Combined dashboard: results/combined_summary.html
+
+======================================================================
+📋 Combined Test Execution Summary
+======================================================================
+
+📊 Overall Results:
+   Total: 3 tests
+   ✅ Passed: 3
+   ❌ Failed: 0
+   ⊘ Skipped: 0
+
+🎯 Combined Dashboard:
+   📊 results/combined_summary.html
+   (Aggregated results from all test frameworks)
+
+✅ Robot Framework tests: Completed
+   📁 Results: results/robot_results/
+   📊 1 tests: 1 passed, 0 failed
+   📊 Summary: results/robot_results/summary_report.html
+   📊 Detailed: results/robot_results/log.html
+
+✅ PyATS tests: Completed
+   📁 Results: results/pyats_results/
+   📊 API Summary: results/pyats_results/api/html_reports/summary_report.html
+   📊 D2D Summary: results/pyats_results/d2d/html_reports/summary_report.html
+
+📄 Merged data model: results/merged_data_model_test_variables.yaml
+======================================================================
+
+Total runtime: 17.83 seconds
+
+✅ All tests passed: 3 out of 3 tests

@@ -1,0 +1,69 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpyrmjj3gj_api_job.py --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpqudj20pb_plugin_config.yaml --archive-dir /private/tmp/pyats-sdwan --archive-name nac_test_job_20260126_123129_699.zip --no-archive-subdir --no-mail --no-xml-report --verbose
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmpyrmjj3gj_api_job
+    Result       : FAILED
+    Start time   : 2026-01-26 12:31:37.586710+01:00
+    Stop time    : 2026-01-26 12:31:39.463937+01:00
+    Elapsed time : 0:00:02
+    Archive      : /private/tmp/pyats-sdwan/nac_test_job_20260126_123129_699.zip
+
+Total Tasks    : 2 
+
+Overall Stats
+    Passed     : 0
+    Passx      : 0
+    Failed     : 2
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 2
+
+Success Rate   : 0.00 %
+
+Section Stats
+    Passed     : 4
+    Passx      : 0
+    Failed     : 2
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 6
+
+Section Success Rate   : 66.67 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+verify_sdwanmanager_all_sd_wan_edge_configurations_are_in_sync: ver...    FAILED
+verify_sdwanmanager_all_sd_wan_edge_configurations_are_in_sync: ver...    FAILED
+verify_sdwanmanager_all_sd_wan_edge_configurations_are_in_sync_2: v...    FAILED
+verify_sdwanmanager_all_sd_wan_edge_configurations_are_in_sync_2: v...    FAILED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+verify_sdwanmanager_all_sd_wan_edge_configurations_are_in_sync: ver...    FAILED
+`-- VerifySDWANManagerEdgeConfigSync                                      FAILED
+    |-- setup                                                             PASSED
+    |-- test_edge_config_sync                                             FAILED
+    |   `-- STEP 1: SDWAN Edge Configuration Sync Status Verification     FAILED
+    `-- cleanup                                                           PASSED
+verify_sdwanmanager_all_sd_wan_edge_configurations_are_in_sync_2: v...    FAILED
+`-- VerifySDWANManagerEdgeConfigSync_2                                    FAILED
+    |-- setup                                                             PASSED
+    |-- test_edge_config_sync                                             FAILED
+    |   `-- STEP 1: SDWAN Edge Configuration Sync Status Verification     FAILED
+    `-- cleanup                                                           PASSED

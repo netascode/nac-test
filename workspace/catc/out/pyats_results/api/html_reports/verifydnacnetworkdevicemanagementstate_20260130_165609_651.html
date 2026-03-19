@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify Network Device Management State in Catalyst Center - Test Results</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --skip: #95a5a6;
+            --info: #3498db;
+            --neutral: #95a5a6;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+            background-color: #f9f9f9;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 6px var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        h1, h2, h3, h4 {
+            margin-top: 0;
+            line-height: 1.2;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        header h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .header-content {
+            position: relative;
+        }
+
+        .nav-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        @media (max-width: 768px) {
+            .nav-button {
+                position: static;
+                margin-bottom: 20px;
+                display: inline-flex;
+            }
+        }
+
+        .status-banner {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .pass-status {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .fail-status {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .skip-status {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: #7f8c8d;
+            border-left: 4px solid #95a5a6;
+        }
+
+        .abort-status {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e67e22;
+            border-left: 4px solid #e67e22;
+        }
+
+        .error-status {
+            background-color: rgba(142, 68, 173, 0.15);
+            color: #8e44ad;
+            border-left: 4px solid #8e44ad;
+        }
+
+        .block-status {
+            background-color: rgba(52, 73, 94, 0.15);
+            color: var(--secondary);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .neutral-status {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: var(--neutral);
+            border-left: 4px solid var(--neutral);
+        }
+
+        .result-pass {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .result-fail {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .result-info {
+            background-color: rgba(52, 152, 219, 0.15);
+            color: var(--info);
+            border-left: 4px solid var(--info);
+        }
+
+        .result-skip {
+            background-color: rgba(243, 156, 18, 0.15);
+            color: var(--warning);
+            border-left: 4px solid var(--warning);
+        }
+
+        .result-abort {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e67e22;
+            border-left: 4px solid #e67e22;
+        }
+
+        .result-error {
+            background-color: rgba(142, 68, 173, 0.15);
+            color: #8e44ad;
+            border-left: 4px solid #8e44ad;
+        }
+
+        .result-block {
+            background-color: rgba(52, 73, 94, 0.15);
+            color: var(--secondary);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .result-neutral {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: var(--neutral);
+            border-left: 4px solid var(--neutral);
+        }
+
+        section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            margin-bottom: 30px;
+            padding: 25px;
+        }
+
+        section h2 {
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 10px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--primary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow: auto;
+            border: 1px solid #e9ecef;
+            margin: 15px 0;
+        }
+
+        code {
+            font-family: 'Source Code Pro', Consolas, Monaco, 'Andale Mono', monospace;
+            font-size: 0.9em;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid #e9ecef;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        /* List styling */
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+
+        li {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+
+        /* Nested list styling */
+        ul ul, ol ol, ul ol, ol ul {
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        /* Bold text styling */
+        strong, b {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Jobfile path styling */
+        .jobfile-path {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85em;
+            font-weight: normal;
+            margin-top: 5px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+        }
+
+        /* Highlighted box styling for important criteria */
+        p:has(> strong:first-child) {
+            background-color: rgba(147, 112, 219, 0.15);
+            border-left: 4px solid #9370DB;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        /* Alternative for browsers that don't support :has() */
+        p > strong:first-child {
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        .result-item {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        /* ===== Universal Result Message Formatting (All Result Types) ===== */
+
+        .result-message {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* Apply consistent formatting to all result messages */
+        .result-message p {
+            margin: 0.5em 0;
+            line-height: 1.6;
+        }
+
+        .result-message p:first-child {
+            margin-top: 0;
+        }
+
+        .result-message p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Spacer paragraphs for visual separation */
+        .result-message p.spacer {
+            height: 0.75em;
+            margin: 0;
+        }
+
+        /* Strong emphasis in all result messages */
+        .result-message strong {
+            font-weight: 600;
+            color: inherit;  /* Inherit from parent result type */
+        }
+
+        /* Inline code formatting in all result messages */
+        .result-message code {
+            background-color: rgba(52, 73, 94, 0.08);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+
+        /* Universal bullet list styling for all result types */
+        .result-detail-list {
+            margin: 0.75em 0;
+            padding-left: 1.5em;
+            list-style: disc outside;
+        }
+
+        .result-detail-list li {
+            margin: 0.4em 0;
+            line-height: 1.5;
+            color: inherit;  /* Inherit from parent result type */
+        }
+
+        .result-detail-list li code {
+            /* Inline code within list items */
+            font-size: 0.85em;
+        }
+
+        /* Emoji styling in result messages */
+        .result-message span[style*="font-size: 1.2em"] {
+            margin-right: 0.3em;
+        }
+
+        /* ===== Result Type Specific Styling ===== */
+
+        /* Skip results - softer appearance */
+        .result-skip {
+            background-color: rgba(149, 165, 166, 0.08);
+            border-left: 4px solid var(--skip);
+            color: #5d6d7e;
+        }
+
+        .result-skip .result-message strong {
+            color: #5a6c7d;
+        }
+
+        .result-skip .result-message code {
+            background-color: rgba(149, 165, 166, 0.1);
+        }
+
+        /* Failed results - clear error presentation */
+        .result-fail {
+            background-color: rgba(231, 76, 60, 0.05);
+            border-left: 4px solid var(--danger);
+            color: #5a2321;
+        }
+
+        .result-fail .result-message strong {
+            color: #c0392b;
+            font-weight: 600;
+        }
+
+        .result-fail .result-message code {
+            background-color: rgba(231, 76, 60, 0.08);
+            color: #922b21;
+        }
+
+        /* Passed results - subtle success indication */
+        .result-pass {
+            background-color: rgba(46, 204, 113, 0.05);
+            border-left: 4px solid var(--success);
+            color: #1e4620;
+        }
+
+        .result-pass .result-message strong {
+            color: #27ae60;
+        }
+
+        .result-pass .result-message code {
+            background-color: rgba(46, 204, 113, 0.08);
+            color: #186a3b;
+        }
+
+        /* ===== Nested Result-Command Structure ===== */
+
+        .result-header.expandable {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-commands {
+            margin-top: 15px;
+            padding-left: 20px;
+            border-left: 2px solid #e9ecef;
+        }
+
+        .cmd-count {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            border-top: 1px solid var(--light);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* CLI Terminal Styling */
+        .cli-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .cli-header {
+            background-color: #f5f5f5;
+            padding: 8px 15px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cli-content {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        .cli-prompt {
+            color: #98c379;
+        }
+
+        .cli-command {
+            color: #61afef;
+            font-weight: bold;
+        }
+
+        .cli-output {
+            color: #abb2bf;
+            display: block;
+            margin-top: 10px;
+        }
+
+        /* Parsed Output Styling */
+        .parsed-data-header {
+            background-color: #2d333b;
+            color: #ddd;
+            padding: 8px 15px;
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .parsed-data-content {
+            background-color: #1a1f26;
+            color: #56b6c2;
+            padding: 15px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        /* JSON output styling */
+        .json-output {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+        }
+
+        /* Test context banner styling */
+        .test-context-banner {
+            background-color: #f0f4f8;
+            border-left: 4px solid var(--accent);
+            padding: 10px 15px;
+            margin: 15px 0 10px 0;
+            font-weight: 500;
+            color: var(--secondary);
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+
+        .test-context-banner::before {
+            content: "Test Context: ";
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Collapsible sections */
+        .chevron::before {
+            content: '\25BC'; /* Down-pointing triangle HTML entity */
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+
+        .collapsed .chevron::before {
+            content: '\25B6'; /* Right-pointing triangle HTML entity */
+        }
+
+        .content-collapsed {
+            display: none;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            header {
+                padding: 20px 15px;
+            }
+
+            section {
+                padding: 15px;
+            }
+        }
+
+        /* Client-side JSON formatting styles */
+        .command-output {
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .raw-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;  /* CRITICAL: Prevent layout breaks from extremely long unbreakable strings */
+            margin: 0;
+        }
+
+        .format-json-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 0.8em;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            min-width: 100px;  /* Consistent button width for toggle states */
+            text-align: center;
+        }
+
+        .format-json-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .format-json-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Toggle button states for better UX */
+        .format-json-btn.toggle-state {
+            background-color: #28a745;  /* Green when showing formatted JSON */
+        }
+
+        .format-json-btn.toggle-state:hover {
+            background-color: #1e7e34;
+        }
+
+        .formatted-json {
+            color: #333;
+        }
+
+        /* JSON syntax highlighting colors */
+        .json-key {
+            color: #0451a5;
+            font-weight: bold;
+        }
+
+        .json-string {
+            color: #0f7b0f;
+        }
+
+        .json-number {
+            color: #098658;
+        }
+
+        .json-boolean {
+            color: #0000ff;
+        }
+
+        .json-null {
+            color: #795e26;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="summary_report.html" class="nav-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                    Back to Summary
+                </a>
+                <h1>Verify Network Device Management State in Catalyst Center</h1>
+                <div class="status-banner pass-status">
+                    Test Status: PASSED
+                </div>
+                <div class="jobfile-path">
+                    Jobfile: tests/pyats/verify_dnac_network_device_management_state.py
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <section id="section-description">
+            <h2 onclick="toggleCollapse('section-description-content')">
+                Description <span class="chevron"></span>
+            </h2>
+            <div id="section-description-content">
+                <p>This test validates that all network devices discovered by Cisco Catalyst Center<br />
+are fully managed. The attributes <code>managementState</code> and <code>collectionStatus</code> reflect the<br />
+device's onboarding and inventory collection status.</p>
+<p>Ensuring both are set to 'Managed' confirms that:<br />
+- Catalyst Center has successfully discovered, onboarded, and established management connectivity<br />
+- Inventory collection and monitoring are operational for each device</p>
+<p>This validation is critical for network stability, allowing consistent configuration,<br />
+monitoring, and assurance across the managed device inventory.</p>
+            </div>
+        </section>
+
+        <section id="section-setup">
+            <h2 onclick="toggleCollapse('section-setup-content')">
+                Setup <span class="chevron"></span>
+            </h2>
+            <div id="section-setup-content">
+                <ul>
+<li>Access to an active Cisco Catalyst Center (DNA Center) controller via HTTPS API</li>
+<li>Valid authentication credentials for Catalyst Center</li>
+<li>One or more network devices have been discovered and added to the Catalyst Center inventory</li>
+<li>Device discovery and inventory collection have completed successfully</li>
+</ul>
+            </div>
+        </section>
+
+        <section id="section-procedure">
+            <h2 onclick="toggleCollapse('section-procedure-content')">
+                Procedure <span class="chevron"></span>
+            </h2>
+            <div id="section-procedure-content">
+                <ul>
+<li>Establish HTTPS connection to the Catalyst Center controller</li>
+<li>Query the API endpoint: <em>/dna/intent/api/v1/network-device</em></li>
+<li>Retrieve the list of all discovered network devices</li>
+<li>For EACH device in the response:<ul>
+<li>Extract the device's hostname and management IP address</li>
+<li>Extract the <code>managementState</code> and <code>collectionStatus</code> attributes</li>
+<li>Verify that both attributes are equal to 'Managed'</li>
+</ul>
+</li>
+</ul>
+            </div>
+        </section>
+
+        <section id="section-criteria">
+            <h2 onclick="toggleCollapse('section-criteria-content')">
+                Pass/Fail Criteria <span class="chevron"></span>
+            </h2>
+            <div id="section-criteria-content">
+                <p><strong>This test passes when all of the following conditions are met:</strong></p>
+<ul>
+<li>At least one network device is discovered in Catalyst Center inventory</li>
+<li>ALL discovered devices have <code>managementState</code> equal to 'Managed'</li>
+<li>ALL discovered devices have <code>collectionStatus</code> equal to 'Managed'</li>
+</ul>
+<p><strong>This test fails if any of the following criteria are met:</strong></p>
+<ul>
+<li>No network devices are discovered in the API response</li>
+<li>ANY discovered device has <code>managementState</code> other than 'Managed'</li>
+<li>ANY discovered device has <code>collectionStatus</code> other than 'Managed'</li>
+<li>The API query fails or returns an error response</li>
+</ul>
+            </div>
+        </section>
+
+        <section id="section-results">
+            <h2 onclick="toggleCollapse('section-results-content')">
+                Results <span class="chevron"></span>
+            </h2>
+            <div id="section-results-content">
+                    <!-- Leverage existing Jinja2 groupby filter (handle None values for sorting) -->
+                    
+                    <!-- Sort results: FAILED first, then PASSED, then SKIPPED (for better debugging UX) -->
+  
+                    
+                        <div class="result-item result-pass">
+                            
+                            <!-- Result header (clickable if has commands) -->
+                            <div class="result-header expandable"
+                                 onclick="toggleCollapse('result-commands-1')">
+                                <div class="result-message">
+                                    <!-- Universal formatting applied to ALL result types for consistent, readable output -->
+                                    <p><strong>Network Device Management State Check PASSED</strong></p>
+<p class="spacer"></p>
+<p>All 6 discovered network devices have managementState='Managed' and collectionStatus='Managed'.</p>
+<p class="spacer"></p>
+<p><strong>Validation Results:</strong></p>
+<p>✅ BR10.cisco.eu (198.18.130.10) - managementState=Managed, collectionStatus=Managed</p>
+<p>✅ C9800-CL-WLC.cisco.eu (198.18.130.35) - managementState=Managed, collectionStatus=Managed</p>
+<p>✅ EDGE01.cisco.eu (198.18.130.1) - managementState=Managed, collectionStatus=Managed</p>
+<p>✅ EDGE02.cisco.eu (198.18.130.2) - managementState=Managed, collectionStatus=Managed</p>
+<p>✅ FIAB.cisco.eu (198.18.130.33) - managementState=Managed, collectionStatus=Managed</p>
+<p>✅ Transit-CP-1.cisco.eu (198.18.130.34) - managementState=Managed, collectionStatus=Managed</p>
+<p class="spacer"></p>
+<p><strong>Device Inventory Summary:</strong></p>
+<ul class="result-detail-list">
+<li>Total discovered devices: 6</li>
+<li>Devices fully managed: 6</li>
+<li>All devices fully managed: Yes</li>
+<li>API query duration: 0.73s</li>
+</ul>
+                                </div>
+                                    <span class="cmd-count">(1 commands)</span>
+                                    <span class="chevron"></span>
+                            </div>
+                            
+                            <!-- Nested commands (reuse existing command rendering logic exactly) -->
+                            <div class="result-commands content-collapsed" id="result-commands-1">
+                                    <!-- REUSE existing command template code (no duplication) -->
+                                    <div class="cli-container" id="cmd-result0-exec0">
+                                        <div class="cli-header" onclick="toggleCollapse('cmd-content-result0-exec0')">
+                                            <span>Device: CatalystCenter</span>
+                                            <span class="chevron"></span>
+                                        </div>
+                                        <div class="device-content" id="cmd-content-result0-exec0">
+                                            <div class="cli-content">
+<span class="cli-prompt">CatalystCenter#</span> <span class="cli-command">GET /dna/intent/api/v1/network-device</span>
+<div class="command-output">
+    <pre class="raw-output" id="raw-result0-exec0" data-raw-output="{&#34;response&#34;:[{&#34;type&#34;:&#34;Cisco Catalyst 9000 UADP 8 Port Virtual Switch&#34;,&#34;lastUpdateTime&#34;:1769788118114,&#34;upTime&#34;:&#34;1 day, 22:08:13.00&#34;,&#34;macAddress&#34;:&#34;52:54:00:c4:b5:73&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.10&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.1&#34;,&#34;serialNumber&#34;:&#34;CML12311UAD&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:03&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:166488,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-28 17:40:38&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.10&#34;,&#34;platformId&#34;:&#34;C9KV-UADP-8P&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cisco Catalyst 9000 Series Virtual Switches&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Switches and Hubs&#34;,&#34;hostname&#34;:&#34;BR10.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:38&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.15.1, RELEASE SOFTWARE (fc4) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2024 by Cisco Systems, Inc. Compiled Sun 11-Aug-24 22:16 by mcpre netconf enabled&#34;,&#34;role&#34;:&#34;BORDER ROUTER&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;e7869917-cf34-44ed-998a-e72ef9866eeb&#34;,&#34;id&#34;:&#34;e7869917-cf34-44ed-998a-e72ef9866eeb&#34;},{&#34;type&#34;:&#34;Cisco Catalyst 9800-CL Wireless Controller for Cloud&#34;,&#34;lastUpdateTime&#34;:1769788114601,&#34;upTime&#34;:&#34;1 day, 22:11:07.90&#34;,&#34;macAddress&#34;:&#34;52:54:00:61:32:8e&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.35&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.3&#34;,&#34;serialNumber&#34;:&#34;9CCO6RG98IJ&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:04&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:166672,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-28 17:37:34&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.35&#34;,&#34;platformId&#34;:&#34;C9800-CL-K9&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cisco Catalyst 9800 Wireless Controllers for Cloud&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Wireless Controller&#34;,&#34;hostname&#34;:&#34;C9800-CL-WLC.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:34&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], C9800-CL Software (C9800-CL-K9_IOSXE), Version 17.15.3, RELEASE SOFTWARE (fc1) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2025 by Cisco Systems, Inc. Compiled Tue 25-Mar-25 23:38 by mcpre netconf enabled&#34;,&#34;role&#34;:&#34;ACCESS&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;29998034-a675-43db-9bcb-17a9d5d580f8&#34;,&#34;id&#34;:&#34;29998034-a675-43db-9bcb-17a9d5d580f8&#34;},{&#34;type&#34;:&#34;Cisco Catalyst 9000 UADP 8 Port Virtual Switch&#34;,&#34;lastUpdateTime&#34;:1769788118728,&#34;upTime&#34;:&#34;1 day, 22:07:58.00&#34;,&#34;macAddress&#34;:&#34;52:54:00:4a:73:11&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.1&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.1&#34;,&#34;serialNumber&#34;:&#34;CML12345UAD&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:04&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:166428,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-28 17:41:38&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.1&#34;,&#34;platformId&#34;:&#34;C9KV-UADP-8P&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cisco Catalyst 9000 Series Virtual Switches&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Switches and Hubs&#34;,&#34;hostname&#34;:&#34;EDGE01.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:38&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.15.1, RELEASE SOFTWARE (fc4) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2024 by Cisco Systems, Inc. Compiled Sun 11-Aug-24 22:16 by mcpre netconf enabled&#34;,&#34;role&#34;:&#34;ACCESS&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;7ef492ca-b008-479a-9de4-7e40438c7d10&#34;,&#34;id&#34;:&#34;7ef492ca-b008-479a-9de4-7e40438c7d10&#34;},{&#34;type&#34;:&#34;Cisco Catalyst 9000 UADP 8 Port Virtual Switch&#34;,&#34;lastUpdateTime&#34;:1769788118348,&#34;upTime&#34;:&#34;1 day, 22:07:51.00&#34;,&#34;macAddress&#34;:&#34;52:54:00:c8:dc:a0&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.2&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.1&#34;,&#34;serialNumber&#34;:&#34;CML12322UAD&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:03&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:166428,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-28 17:41:38&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.2&#34;,&#34;platformId&#34;:&#34;C9KV-UADP-8P&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cisco Catalyst 9000 Series Virtual Switches&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Switches and Hubs&#34;,&#34;hostname&#34;:&#34;EDGE02.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:38&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.15.1, RELEASE SOFTWARE (fc4) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2024 by Cisco Systems, Inc. Compiled Sun 11-Aug-24 22:16 by mcpre netconf enabled&#34;,&#34;role&#34;:&#34;ACCESS&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;024f383c-14a5-421c-b21d-b80910cde422&#34;,&#34;id&#34;:&#34;024f383c-14a5-421c-b21d-b80910cde422&#34;},{&#34;type&#34;:&#34;Cisco Catalyst 9000 UADP 8 Port Virtual Switch&#34;,&#34;lastUpdateTime&#34;:1769788118906,&#34;upTime&#34;:&#34;1 day, 22:08:31.00&#34;,&#34;macAddress&#34;:&#34;52:54:00:ae:e6:f2&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.33&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.1&#34;,&#34;serialNumber&#34;:&#34;FAB12345601&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:04&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:166487,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-28 17:40:38&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.33&#34;,&#34;platformId&#34;:&#34;C9KV-UADP-8P&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cisco Catalyst 9000 Series Virtual Switches&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Switches and Hubs&#34;,&#34;hostname&#34;:&#34;FIAB.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:38&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.15.1, RELEASE SOFTWARE (fc4) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2024 by Cisco Systems, Inc. Compiled Sun 11-Aug-24 22:16 by mcpre netconf enabled&#34;,&#34;role&#34;:&#34;BORDER ROUTER&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;28a9f0f0-2834-4f12-8409-26d34a7f5bbb&#34;,&#34;id&#34;:&#34;28a9f0f0-2834-4f12-8409-26d34a7f5bbb&#34;},{&#34;type&#34;:&#34;Cisco Catalyst 8000V Edge Software&#34;,&#34;lastUpdateTime&#34;:1769788113328,&#34;upTime&#34;:&#34;4:45:21.31&#34;,&#34;macAddress&#34;:&#34;00:1e:bd:6b:d8:00&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.34&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.1a&#34;,&#34;serialNumber&#34;:&#34;9VPGKWUU2LL&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:04&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:17513,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-30 11:03:33&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.34&#34;,&#34;platformId&#34;:&#34;C8000V&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cloud Edge&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Routers&#34;,&#34;hostname&#34;:&#34;Transit-CP-1.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:33&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], Virtual XE Software (X86_64_LINUX_IOSD-UNIVERSALK9-M), Version 17.15.1a, RELEASE SOFTWARE (fc1) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2024 by Cisco Systems, Inc. Compiled Wed 21-Aug-24 17:29 netconf enabled&#34;,&#34;role&#34;:&#34;BORDER ROUTER&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;e9272b6f-6ef0-487c-92dd-bce5c21747d7&#34;,&#34;id&#34;:&#34;e9272b6f-6ef0-487c-92dd-bce5c21747d7&#34;}],&#34;version&#34;:&#34;1.0&#34;}">{&#34;response&#34;:[{&#34;type&#34;:&#34;Cisco Catalyst 9000 UADP 8 Port Virtual Switch&#34;,&#34;lastUpdateTime&#34;:1769788118114,&#34;upTime&#34;:&#34;1 day, 22:08:13.00&#34;,&#34;macAddress&#34;:&#34;52:54:00:c4:b5:73&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.10&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.1&#34;,&#34;serialNumber&#34;:&#34;CML12311UAD&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:03&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:166488,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-28 17:40:38&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.10&#34;,&#34;platformId&#34;:&#34;C9KV-UADP-8P&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cisco Catalyst 9000 Series Virtual Switches&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Switches and Hubs&#34;,&#34;hostname&#34;:&#34;BR10.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:38&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.15.1, RELEASE SOFTWARE (fc4) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2024 by Cisco Systems, Inc. Compiled Sun 11-Aug-24 22:16 by mcpre netconf enabled&#34;,&#34;role&#34;:&#34;BORDER ROUTER&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;e7869917-cf34-44ed-998a-e72ef9866eeb&#34;,&#34;id&#34;:&#34;e7869917-cf34-44ed-998a-e72ef9866eeb&#34;},{&#34;type&#34;:&#34;Cisco Catalyst 9800-CL Wireless Controller for Cloud&#34;,&#34;lastUpdateTime&#34;:1769788114601,&#34;upTime&#34;:&#34;1 day, 22:11:07.90&#34;,&#34;macAddress&#34;:&#34;52:54:00:61:32:8e&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.35&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.3&#34;,&#34;serialNumber&#34;:&#34;9CCO6RG98IJ&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:04&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:166672,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-28 17:37:34&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.35&#34;,&#34;platformId&#34;:&#34;C9800-CL-K9&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cisco Catalyst 9800 Wireless Controllers for Cloud&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Wireless Controller&#34;,&#34;hostname&#34;:&#34;C9800-CL-WLC.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:34&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], C9800-CL Software (C9800-CL-K9_IOSXE), Version 17.15.3, RELEASE SOFTWARE (fc1) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2025 by Cisco Systems, Inc. Compiled Tue 25-Mar-25 23:38 by mcpre netconf enabled&#34;,&#34;role&#34;:&#34;ACCESS&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;29998034-a675-43db-9bcb-17a9d5d580f8&#34;,&#34;id&#34;:&#34;29998034-a675-43db-9bcb-17a9d5d580f8&#34;},{&#34;type&#34;:&#34;Cisco Catalyst 9000 UADP 8 Port Virtual Switch&#34;,&#34;lastUpdateTime&#34;:1769788118728,&#34;upTime&#34;:&#34;1 day, 22:07:58.00&#34;,&#34;macAddress&#34;:&#34;52:54:00:4a:73:11&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.1&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.1&#34;,&#34;serialNumber&#34;:&#34;CML12345UAD&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:04&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:166428,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-28 17:41:38&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.1&#34;,&#34;platformId&#34;:&#34;C9KV-UADP-8P&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cisco Catalyst 9000 Series Virtual Switches&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Switches and Hubs&#34;,&#34;hostname&#34;:&#34;EDGE01.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:38&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.15.1, RELEASE SOFTWARE (fc4) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2024 by Cisco Systems, Inc. Compiled Sun 11-Aug-24 22:16 by mcpre netconf enabled&#34;,&#34;role&#34;:&#34;ACCESS&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;7ef492ca-b008-479a-9de4-7e40438c7d10&#34;,&#34;id&#34;:&#34;7ef492ca-b008-479a-9de4-7e40438c7d10&#34;},{&#34;type&#34;:&#34;Cisco Catalyst 9000 UADP 8 Port Virtual Switch&#34;,&#34;lastUpdateTime&#34;:1769788118348,&#34;upTime&#34;:&#34;1 day, 22:07:51.00&#34;,&#34;macAddress&#34;:&#34;52:54:00:c8:dc:a0&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.2&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.1&#34;,&#34;serialNumber&#34;:&#34;CML12322UAD&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:03&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:166428,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-28 17:41:38&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.2&#34;,&#34;platformId&#34;:&#34;C9KV-UADP-8P&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cisco Catalyst 9000 Series Virtual Switches&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Switches and Hubs&#34;,&#34;hostname&#34;:&#34;EDGE02.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:38&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.15.1, RELEASE SOFTWARE (fc4) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2024 by Cisco Systems, Inc. Compiled Sun 11-Aug-24 22:16 by mcpre netconf enabled&#34;,&#34;role&#34;:&#34;ACCESS&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;024f383c-14a5-421c-b21d-b80910cde422&#34;,&#34;id&#34;:&#34;024f383c-14a5-421c-b21d-b80910cde422&#34;},{&#34;type&#34;:&#34;Cisco Catalyst 9000 UADP 8 Port Virtual Switch&#34;,&#34;lastUpdateTime&#34;:1769788118906,&#34;upTime&#34;:&#34;1 day, 22:08:31.00&#34;,&#34;macAddress&#34;:&#34;52:54:00:ae:e6:f2&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.33&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.1&#34;,&#34;serialNumber&#34;:&#34;FAB12345601&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:04&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:166487,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-28 17:40:38&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.33&#34;,&#34;platformId&#34;:&#34;C9KV-UADP-8P&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cisco Catalyst 9000 Series Virtual Switches&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Switches and Hubs&#34;,&#34;hostname&#34;:&#34;FIAB.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:38&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.15.1, RELEASE SOFTWARE (fc4) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2024 by Cisco Systems, Inc. Compiled Sun 11-Aug-24 22:16 by mcpre netconf enabled&#34;,&#34;role&#34;:&#34;BORDER ROUTER&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;28a9f0f0-2834-4f12-8409-26d34a7f5bbb&#34;,&#34;id&#34;:&#34;28a9f0f0-2834-4f12-8409-26d34a7f5bbb&#34;},{&#34;type&#34;:&#34;Cisco Catalyst 8000V Edge Software&#34;,&#34;lastUpdateTime&#34;:1769788113328,&#34;upTime&#34;:&#34;4:45:21.31&#34;,&#34;macAddress&#34;:&#34;00:1e:bd:6b:d8:00&#34;,&#34;syncRequestedByApp&#34;:&#34;&#34;,&#34;collectionInterval&#34;:&#34;Global Default&#34;,&#34;dnsResolvedManagementAddress&#34;:&#34;198.18.130.34&#34;,&#34;lastManagedResyncReasons&#34;:&#34;Periodic&#34;,&#34;managementState&#34;:&#34;Managed&#34;,&#34;pendingSyncRequestsCount&#34;:&#34;0&#34;,&#34;reasonsForDeviceResync&#34;:&#34;Periodic&#34;,&#34;reasonsForPendingSyncRequests&#34;:&#34;&#34;,&#34;inventoryStatusDetail&#34;:&#34;&lt;status&gt;&lt;general code=\&#34;SUCCESS\&#34;/&gt;&lt;/status&gt;&#34;,&#34;deviceSupportLevel&#34;:&#34;Supported&#34;,&#34;softwareType&#34;:&#34;IOS-XE&#34;,&#34;softwareVersion&#34;:&#34;17.15.1a&#34;,&#34;serialNumber&#34;:&#34;9VPGKWUU2LL&#34;,&#34;roleSource&#34;:&#34;MANUAL&#34;,&#34;associatedWlcIp&#34;:&#34;&#34;,&#34;apEthernetMacAddress&#34;:null,&#34;errorCode&#34;:null,&#34;errorDescription&#34;:null,&#34;lastDeviceResyncStartTime&#34;:&#34;2026-01-30 15:48:04&#34;,&#34;lineCardCount&#34;:&#34;0&#34;,&#34;lineCardId&#34;:&#34;&#34;,&#34;managedAtleastOnce&#34;:true,&#34;memorySize&#34;:&#34;NA&#34;,&#34;tagCount&#34;:&#34;0&#34;,&#34;tunnelUdpPort&#34;:null,&#34;uptimeSeconds&#34;:17513,&#34;vendor&#34;:&#34;Cisco&#34;,&#34;waasDeviceMode&#34;:null,&#34;interfaceCount&#34;:&#34;0&#34;,&#34;bootDateTime&#34;:&#34;2026-01-30 11:03:33&#34;,&#34;managementIpAddress&#34;:&#34;198.18.130.34&#34;,&#34;platformId&#34;:&#34;C8000V&#34;,&#34;reachabilityFailureReason&#34;:&#34;&#34;,&#34;reachabilityStatus&#34;:&#34;Reachable&#34;,&#34;series&#34;:&#34;Cloud Edge&#34;,&#34;snmpContact&#34;:&#34;&#34;,&#34;snmpLocation&#34;:&#34;&#34;,&#34;apManagerInterfaceIp&#34;:&#34;&#34;,&#34;collectionStatus&#34;:&#34;Managed&#34;,&#34;family&#34;:&#34;Routers&#34;,&#34;hostname&#34;:&#34;Transit-CP-1.cisco.eu&#34;,&#34;locationName&#34;:null,&#34;lastUpdated&#34;:&#34;2026-01-30 15:48:33&#34;,&#34;location&#34;:null,&#34;description&#34;:&#34;Cisco IOS Software [IOSXE], Virtual XE Software (X86_64_LINUX_IOSD-UNIVERSALK9-M), Version 17.15.1a, RELEASE SOFTWARE (fc1) Technical Support: http://www.cisco.com/techsupport Copyright (c) 1986-2024 by Cisco Systems, Inc. Compiled Wed 21-Aug-24 17:29 netconf enabled&#34;,&#34;role&#34;:&#34;BORDER ROUTER&#34;,&#34;instanceTenantId&#34;:&#34;650c8d0249ce15355112bd69&#34;,&#34;instanceUuid&#34;:&#34;e9272b6f-6ef0-487c-92dd-bce5c21747d7&#34;,&#34;id&#34;:&#34;e9272b6f-6ef0-487c-92dd-bce5c21747d7&#34;}],&#34;version&#34;:&#34;1.0&#34;}</pre>
+    <button class="format-json-btn" onclick="toggleJSONFormatting('raw-result0-exec0', this)" title="Format JSON for readability">
+        📋 Format JSON
+    </button>
+</div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                            </div>
+                        </div>
+            </div>
+        </section>
+
+        <!-- Handle orphaned commands (defensive programming for edge cases) -->
+        
+
+        <footer>
+            <p>Generated: 2026-01-30 17:03:08</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleCollapse(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                // Toggle collapsed class on the element
+                element.classList.toggle('collapsed');
+
+                // For command containers (both nested and orphaned), toggle the content differently
+                if (id.startsWith('cmd-content-') || id.startsWith('orphaned-cmd-content-')) {
+                    const content = element.querySelector('.device-content');
+                    if (content) {
+                        content.classList.toggle('content-collapsed');
+                    }
+                }
+                // For main sections toggle the content-collapsed class
+                else if (id.startsWith('section-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the header that triggered this section
+                    const header = document.querySelector(`h2[onclick*="${id}"]`);
+                    if (header) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
+                // For result command sections, toggle them and update the result header chevron
+                else if (id.startsWith('result-commands-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the result header that triggered this
+                    const header = element.previousElementSibling;
+                    if (header && header.classList.contains('result-header')) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
+            }
+        }
+
+        // JSON formatting toggle function with enhanced UX
+        function toggleJSONFormatting(elementId, button) {
+            const element = document.getElementById(elementId);
+            const isFormatted = element.classList.contains('formatted-json');
+            
+            if (isFormatted) {
+                // Switch back to raw
+                const rawOutput = element.dataset.rawOutput;
+                element.textContent = rawOutput;
+                element.classList.remove('formatted-json');
+                
+                // Update button to format state
+                button.textContent = '📋 Format JSON';
+                button.title = 'Format JSON for readability';
+                button.classList.remove('toggle-state');
+                button.disabled = false;
+                
+            } else {
+                try {
+                    const rawText = element.textContent;
+                    
+                    // Store original text in data attribute if not already stored
+                    if (!element.dataset.rawOutput) {
+                        element.dataset.rawOutput = rawText;
+                    }
+                    
+                    // Show loading state for potentially large JSON
+                    button.textContent = '⏳ Formatting...';
+                    button.disabled = true;
+                    
+                    // Use setTimeout to allow UI update and prevent blocking
+                    setTimeout(() => {
+                        try {
+                            // Check for JSON support (defensive programming)
+                            if (typeof JSON === 'undefined' || !JSON.parse) {
+                                button.textContent = '❌ Browser too old';
+                                button.title = 'Browser does not support JSON formatting';
+                                return;
+                            }
+                            
+                            // Attempt to parse JSON
+                            const parsed = JSON.parse(rawText);
+                            
+                            // Pretty-print with 2-space indentation
+                            const formatted = JSON.stringify(parsed, null, 2);
+                            
+                            // Apply syntax highlighting
+                            const highlighted = syntaxHighlightJSON(formatted);
+                            
+                            // Replace content
+                            element.innerHTML = highlighted;
+                            element.classList.add('formatted-json');
+                            
+                            // Update button to raw state
+                            button.textContent = '⬅️ Show Raw';
+                            button.title = 'Show raw, unformatted output';
+                            button.classList.add('toggle-state');
+                            button.disabled = false;
+                            
+                        } catch (error) {
+                            // Not valid JSON or parsing failed
+                            console.warn('JSON formatting failed:', error);
+                            button.textContent = '❌ Invalid JSON';
+                            button.title = `Invalid JSON format: ${error.message}`;
+                            button.style.backgroundColor = '#dc3545';
+                            // Keep button disabled
+                        }
+                    }, 10);
+                    
+                } catch (error) {
+                    // Immediate error
+                    console.warn('JSON formatting failed:', error);
+                    button.textContent = '❌ Invalid JSON';
+                    button.disabled = true;
+                    button.title = 'Invalid JSON format';
+                }
+            }
+        }
+
+        // Enhanced syntax highlighting function
+        function syntaxHighlightJSON(json) {
+            // Escape HTML entities first
+            return json
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
+        // Initialize sections
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // Initialize all result command sections as collapsed by default
+            const resultCommandSections = document.querySelectorAll('[id^="result-commands-"]');
+            resultCommandSections.forEach(function(section) {
+                section.classList.add('content-collapsed');
+                // Find the corresponding result header to add collapsed chevron
+                const resultHeader = section.previousElementSibling;
+                if (resultHeader && resultHeader.classList.contains('result-header')) {
+                    const chevron = resultHeader.querySelector('.chevron');
+                    if (chevron) {
+                        chevron.parentElement.classList.add('collapsed');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

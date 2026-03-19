@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Nac Tmp Epwwum2J" tests="2" errors="0" failures="0" skipped="0" time="0.343" timestamp="2026-03-17T20:30:16.657497">
+<testsuite name="Test1" tests="2" errors="0" failures="0" skipped="0" time="0.002" timestamp="2026-03-17T20:30:17.172000">
+<testcase classname="Nac Tmp Epwwum2J.Test1" name="Test ABC" time="0.001">
+</testcase>
+<testcase classname="Nac Tmp Epwwum2J.Test1" name="Test DEF" time="0.001">
+</testcase>
+<properties>
+<property name="Documentation" value="Test1"/>
+</properties>
+</testsuite>
+<properties>
+<property name="Pabot Info" value="[https://pabot.org/?ref=log|Pabot] result from 1 executions."/>
+<property name="Pabot Version" value="5.2.2"/>
+</properties>
+</testsuite>

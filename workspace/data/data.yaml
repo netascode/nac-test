@@ -1,0 +1,31 @@
+catalyst_center:
+  inventory:
+    devices:
+      - name: P3-BN1
+        device_ip: 10.62.190.64
+        fqdn_name: P3-BN1.cisco.eu
+        pid: C9300-24P
+        state: PROVISION
+        device_role: BORDER_NODE
+        site: Global/MAX_AREA/MAX_BUILDING
+      - name: P3-EN1
+        device_ip: 10.62.190.67
+        fqdn_name: P3-EN1.cisco.eu
+        pid: C9300-24P
+        state: INIT
+        device_role: ACCESS
+        site: Global/MAX_AREA/MAX_BUILDING/Floor1
+      # - name: P3-EN2
+      #   device_ip: 10.62.190.68
+      #   fqdn_name: P3-EN2.cisco.eu
+      #   pid: C9300-24P
+      #   state: PROVISION
+      #   device_role: ACCESS
+      #   site: Global/MAX_AREA/MAX_BUILDING/Floor2
+      # - name: P3-EN3
+      #   device_ip: 10.62.190.69
+      #   fqdn_name: P3-EN3.cisco.eu
+      #   pid: C9300-24P
+      #   state: PROVISION
+      #   device_role: ACCESS
+      #   site: Global/MAX_AREA/MAX_BUILDING/Floor3

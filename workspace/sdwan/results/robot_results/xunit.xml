@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Results" tests="2" errors="0" failures="0" skipped="0" time="-0.040" timestamp="2026-03-11T12:16:31.039570">
+<testsuite name="Api" tests="1" errors="0" failures="0" skipped="0" time="0.000" timestamp="2026-03-11T12:16:31.289000">
+<testsuite name="Test" tests="1" errors="0" failures="0" skipped="0" time="0.000" timestamp="2026-03-11T12:16:31.290000">
+<testcase classname="Results.Api.Test" name="Test" time="0.000">
+</testcase>
+</testsuite>
+</testsuite>
+<testsuite name="Test" tests="1" errors="0" failures="0" skipped="0" time="0.001" timestamp="2026-03-11T12:16:31.289705">
+<testcase classname="Results.Test" name="Test" time="0.000">
+</testcase>
+</testsuite>
+<properties>
+<property name="Pabot Info" value="[https://pabot.org/?ref=log|Pabot] result from 2 executions."/>
+<property name="Pabot Version" value="5.2.2"/>
+</properties>
+</testsuite>

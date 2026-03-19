@@ -1,0 +1,27 @@
+testbed:
+  name: testbed_C9800-CL-WLC
+  credentials:
+    default:
+      username: '%ENV{IOSXE_USERNAME}'
+      password: '%ENV{IOSXE_PASSWORD}'
+devices:
+  C9800-CL-WLC:
+    alias: C9800-CL-WLC
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: '%ENV{IOSXE_USERNAME}'
+        password: '%ENV{IOSXE_PASSWORD}'
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.130.35
+        port: 22
+        arguments:
+          init_config_commands: []
+          operating_mode: true
+    custom:
+      abstraction:
+        order:
+        - os

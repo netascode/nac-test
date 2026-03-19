@@ -1,0 +1,39 @@
+==============================================================================
+Out3                                                                          
+==============================================================================
+Out3.Config                                                                   
+==============================================================================
+Out3.Config.Fabric                                                            
+==============================================================================
+Out3.Config.Fabric.L3 Handoffs :: Verify Layer 3 Handoffs (IP Transit and S...
+==============================================================================
+Get API Data For L3 Handoffs                                          | PASS |
+------------------------------------------------------------------------------
+Verify SDA Transit L3 Handoff for BR10 :: Validate SDA Transit L3 ... Found device BR10 with ID: e7869917-cf34-44ed-998a-e72ef9866eeb
+Found SDA Transit SDA-TRANSIT with ID: 32fcd551-2c26-4ad1-96c2-9cd08d6a6163
+SDA Transit L3 Handoff Response: {'response': [{'fabricId': '3cf026bd-f2c6-45a1-ae4c-b327f7e29e4a', 'networkDeviceId': 'e7869917-cf34-44ed-998a-e72ef9866eeb', 'transitNetworkId': '32fcd551-2c26-4ad1-96c2-9cd08d6a6163', 'connectedToInternet': False, 'isMulticastOverTransitEnabled': False}], 'version': '1.0'}
+| PASS |
+------------------------------------------------------------------------------
+Verify IP Transit L3 Handoff BR10 - BGP65002 - GigabitEthernet1/0/... Found device BR10 with ID: e7869917-cf34-44ed-998a-e72ef9866eeb
+Found IP Transit BGP65002 with ID: 18222fae-2a90-474e-a39a-d5268b2cf516
+IP Transit L3 Handoff Response: {'response': [{'id': 'c877ab9b-c6ff-45be-ad33-4441f51519fa', 'fabricId': '3cf026bd-f2c6-45a1-ae4c-b327f7e29e4a', 'networkDeviceId': 'e7869917-cf34-44ed-998a-e72ef9866eeb', 'transitNetworkId': '18222fae-2a90-474e-a39a-d5268b2cf516', 'interfaceName': 'GigabitEthernet1/0/3', 'virtualNetworkName': 'Campus', 'vlanId': 100, 'tcpMssAdjustment': 0, 'localIpAddress': '172.16.100.1/24', 'remoteIpAddress': '172.16.100.2/24'}], 'version': '1.0'}
+| PASS |
+------------------------------------------------------------------------------
+Verify SDA Transit L3 Handoff for FIAB :: Validate SDA Transit L3 ... Found device FIAB with ID: 28a9f0f0-2834-4f12-8409-26d34a7f5bbb
+Found SDA Transit SDA-TRANSIT with ID: 32fcd551-2c26-4ad1-96c2-9cd08d6a6163
+SDA Transit L3 Handoff Response: {'response': [{'fabricId': '40f5ed97-a778-4d00-b6f1-eb3816fd476d', 'networkDeviceId': '28a9f0f0-2834-4f12-8409-26d34a7f5bbb', 'transitNetworkId': '32fcd551-2c26-4ad1-96c2-9cd08d6a6163', 'connectedToInternet': False, 'isMulticastOverTransitEnabled': False}], 'version': '1.0'}
+| PASS |
+------------------------------------------------------------------------------
+Out3.Config.Fabric.L3 Handoffs :: Verify Layer 3 Handoffs (IP Tran... | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Out3.Config.Fabric                                                    | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Out3.Config                                                           | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Out3                                                                  | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out3/pabot_results/7/output.xml

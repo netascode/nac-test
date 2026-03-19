@@ -1,0 +1,59 @@
+# rerun.results file that contains the information of each task and their
+# testcases.
+# Please Check the following link for more information:
+# https://pubhub.devnetcloud.com/media/pyats/docs/easypy/rerun.html
+verify_sdwan_sync:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync.py
+verify_sdwan_sync_01:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync01
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_01.py
+verify_sdwan_sync_02:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync02
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_02.py
+verify_sdwan_sync_03:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync03
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_03.py
+verify_sdwan_sync_04:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync04
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_04.py
+verify_sdwan_sync_05:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync05
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_05.py
+verify_sdwan_sync_06:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync06
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_06.py
+verify_sdwan_sync_07:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync07
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_07.py
+verify_sdwan_sync_08:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync08
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_08.py
+verify_sdwan_sync_09:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync09
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_09.py
+verify_sdwan_sync_10:
+  testcases:
+  - name: VerifySDWANManagerEdgeConfigSync10
+    result: ERRORED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_10.py

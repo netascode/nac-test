@@ -1,0 +1,18 @@
+--suite Results.Test
+--skiponfailure non-critical
+--variable CALLER_ID:f028985b28ff4ff99962ee3989e2d625
+--variable PABOTLIBURI:127.0.0.1:56477
+--variable PABOTEXECUTIONPOOLID:1
+--variable PABOTISLASTEXECUTIONINPOOL:1
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:1
+--variable PABOTLASTLEVEL:
+--outputdir /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/results/pabot_results/1
+--output output.xml
+--log NONE
+--report NONE
+--xunit NONE
+--loglevel DEBUG
+--consolecolors off
+--consolemarkers off
+results

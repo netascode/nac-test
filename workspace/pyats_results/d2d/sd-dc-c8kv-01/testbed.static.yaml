@@ -1,0 +1,21 @@
+testbed:
+  name: testbed_sd-dc-c8kv-01
+  credentials:
+    default:
+      username: admin
+      password: cisco123
+devices:
+  sd-dc-c8kv-01:
+    alias: sd-dc-c8kv-01
+    os: iosxe
+    type: router
+    platform: iosxe
+    credentials:
+      default:
+        username: admin
+        password: cisco123
+    connections:
+      cli:
+        protocol: ssh
+        ip: 10.100.1.1
+        port: 22

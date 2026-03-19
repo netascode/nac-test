@@ -1,0 +1,13 @@
+default_revision: latest
+features:
+  parser:
+    commands:
+      show license all:
+      - '|iosxe||||||||'
+      show lisp session established:
+      - '|iosxe||||||||'
+      show logging:
+      - '|iosxe||||||||'
+      show vtp status:
+      - '|iosxe||||||||'
+version: 1

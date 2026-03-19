@@ -1,0 +1,9 @@
+
+2026-01-26 12:33:04,099: %UNICON-INFO: +++ sd-dc-c8kv-02 logfile /Users/oboehmer/.pyats/runinfo/tmptolpeb11_2026Jan26_12_31_33_257122/sd-dc-c8kv-02-cli-1769427184.log +++
+
+2026-01-26 12:33:04,100: %UNICON-INFO: +++ Unicon plugin iosxe (unicon.plugins.iosxe) +++
+
+2026-01-26 12:33:16,111: %UNICON-INFO: +++ connection to spawn: ssh -l admin 10.100.1.2 -p 22, id: 4622463680 +++
+
+2026-01-26 12:33:16,116: %UNICON-INFO: connection to sd-dc-c8kv-02
+

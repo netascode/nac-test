@@ -1,0 +1,17 @@
+--suite Out3.Config.Fabric.Multicast
+--skiponfailure non-critical
+--variable CALLER_ID:9d62b635578a40ca9cc66f5c4ebc1a5b
+--variable PABOTLIBURI:127.0.0.1:64604
+--variable PABOTEXECUTIONPOOLID:10
+--variable PABOTISLASTEXECUTIONINPOOL:0
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:9
+--variable PABOTLASTLEVEL:Out3.Config.Fabric.Multicast
+--outputdir out3/pabot_results/9
+--xunit NONE
+--listener RobotStackTracer
+--log NONE
+--report NONE
+--consolecolors off
+--consolemarkers off
+out3

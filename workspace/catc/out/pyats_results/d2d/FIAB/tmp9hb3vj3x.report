@@ -1,0 +1,85 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp9hb3vj3x.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmploc003fh.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp1sj5560v_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out --archive-name pyats_archive_device_FIAB --no-archive-subdir --no-mail --no-xml-report --quiet
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmp9hb3vj3x
+    Result       : FAILED
+    Start time   : 2026-01-30 16:56:44.448887+01:00
+    Stop time    : 2026-01-30 16:57:07.392987+01:00
+    Elapsed time : 0:00:23
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out/pyats_archive_device_FIAB
+
+Total Tasks    : 4 
+
+Overall Stats
+    Passed     : 3
+    Passx      : 0
+    Failed     : 1
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 4
+
+Success Rate   : 75.00 %
+
+Section Stats
+    Passed     : 11
+    Passx      : 0
+    Failed     : 1
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 12
+
+Section Success Rate   : 91.67 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+FIAB_verify_iosxe_fabric_node_licensing_status: verify_iosxe_fabric...    PASSED
+FIAB_verify_iosxe_fabric_node_licensing_status: verify_iosxe_fabric...    PASSED
+FIAB_verify_iosxe_lisp_sessions_status: verify_iosxe_lisp_sessions_...    FAILED
+FIAB_verify_iosxe_lisp_sessions_status: verify_iosxe_lisp_sessions_...    FAILED
+FIAB_verify_iosxe_no_critical_errors_in_system_logs: verify_iosxe_n...    PASSED
+FIAB_verify_iosxe_no_critical_errors_in_system_logs: verify_iosxe_n...    PASSED
+FIAB_verify_iosxe_vtp_mode_status: verify_iosxe_vtp_mode_status           PASSED
+FIAB_verify_iosxe_vtp_mode_status: verify_iosxe_vtp_mode_status.Ver...    PASSED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+FIAB_verify_iosxe_fabric_node_licensing_status: verify_iosxe_fabric...    PASSED
+`-- VerifyFabricNodeLicensingStatus                                       PASSED
+    |-- setup                                                             PASSED
+    |-- test_fabric_node_licensing_status                                 PASSED
+    |   `-- STEP 1: SDA Fabric Node Licensing Verification                PASSED
+    `-- cleanup                                                           PASSED
+FIAB_verify_iosxe_lisp_sessions_status: verify_iosxe_lisp_sessions_...    FAILED
+`-- VerifyLISPSessionsStatus                                              FAILED
+    |-- setup                                                             PASSED
+    |-- test_lisp_sessions_status                                         FAILED
+    |   `-- STEP 1: LISP Session Verification                             FAILED
+    `-- cleanup                                                           PASSED
+FIAB_verify_iosxe_no_critical_errors_in_system_logs: verify_iosxe_n...    PASSED
+`-- VerifyNoCriticalErrorsInSystemLogs                                    PASSED
+    |-- setup                                                             PASSED
+    |-- test_system_log_health                                            PASSED
+    |   `-- STEP 1: System Log Verification                               PASSED
+    `-- cleanup                                                           PASSED
+FIAB_verify_iosxe_vtp_mode_status: verify_iosxe_vtp_mode_status           PASSED
+`-- VerifyVTPOperatingMode                                                PASSED
+    |-- setup                                                             PASSED
+    |-- test_vtp_operating_mode                                           PASSED
+    |   `-- STEP 1: VTP Operating Mode Verification                       PASSED
+    `-- cleanup                                                           PASSED

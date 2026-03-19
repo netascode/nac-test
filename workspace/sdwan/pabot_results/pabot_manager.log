@@ -1,0 +1,10 @@
+[INFO]    Initialized logging in ./pabot_results
+[INFO]    Robot Framework remote server at 127.0.0.1:8270 started.
+[ERROR]   Suite 'F' contains no tests or tasks.
+[DEBUG]   Finalizing Pabot execution...
+[DEBUG]   Stopping PabotLib process
+[INFO]    Robot Framework remote server at 127.0.0.1:8270 stopped.
+[DEBUG]   PabotLib process stopped
+[INFO]    Total testing: 0.0 seconds
+[INFO]    Elapsed time:  0.34 seconds
+[DEBUG]   Logs flushed successfully.

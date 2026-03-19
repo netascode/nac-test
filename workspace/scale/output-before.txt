@@ -1,0 +1,134 @@
+$ nac-test -d data -t templates-single/tests --testbed testbed.yaml -o ./results
+
+
+[12:56:00] 📄 Merging data model files...
+[12:56:00] ✅ Data model merging completed (0.0s)
+
+🧪 Running PyATS tests...
+
+Discovered 2 PyATS test files
+Running with 5 parallel workers
+Found 1 API test(s) - using standard execution
+Found 1 D2D test(s) - using device-centric execution
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpteyr2t5o_api_job.py --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp3hz419jk_plugin_config.yaml --pyats-configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpjg5ou06d_pyats_config.conf --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name nac_test_job_20260221_125601_445.zip --no-archive-subdir --no-mail --no-xml-report
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpm63csolq.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp1z2pucsp.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpu4hqccin_plugin_config.yaml --pyats-configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpd017n4kh_pyats_config.conf --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-01 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpbarisjsf.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpvqw8t04e.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp1oeqj5x__plugin_config.yaml --pyats-configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpki39mzi3_pyats_config.conf --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-02 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpw48g8ql1.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp_kxraqnz.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpmr4ai2ij_plugin_config.yaml --pyats-configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpvalmuiqg_pyats_config.conf --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-03 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpo_t5xy3d.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpfrvktbgj.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpjvddro9p_plugin_config.yaml --pyats-configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpdd14_ni__pyats_config.conf --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-04 --no-archive-subdir --no-mail --no-xml-report --quiet
+2026-02-21 12:56:09.498 [PID:80875] [80791] [ID:1] EXECUTING verify_sdwan_sync
+2026-02-21 12:56:09.812 [PID:80875] [80791] [ID:1] PASSED verify_sdwan_sync in 0.3 seconds
+------------------------------------------------------------------------------
+Verify All SD-WAN Edge Configurations Are In-Sync                      | PASSED |
+------------------------------------------------------------------------------
+2026-02-21 12:56:10.002 [PID:80883] [80793] [ID:2] EXECUTING verify_iosxe_control
+2026-02-21 12:56:10.036 [PID:80887] [80794] [ID:3] EXECUTING verify_iosxe_control
+2026-02-21 12:56:10.046 [PID:80888] [80796] [ID:4] EXECUTING verify_iosxe_control
+2026-02-21 12:56:10.057 [PID:80889] [80795] [ID:5] EXECUTING verify_iosxe_control
+2026-02-21 12:56:17.758 [PID:80888] [80796] [ID:4] PASSED verify_iosxe_control in 7.1 seconds
+------------------------------------------------------------------------------
+Verify All SD-WAN Control Connections Are Up (sd-dc-c8kv-04)           | PASSED |
+------------------------------------------------------------------------------
+2026-02-21 12:56:17.758 [PID:80883] [80793] [ID:2] PASSED verify_iosxe_control in 7.1 seconds
+------------------------------------------------------------------------------
+Verify All SD-WAN Control Connections Are Up (sd-dc-c8kv-01)           | PASSED |
+------------------------------------------------------------------------------
+2026-02-21 12:56:17.894 [PID:80889] [80795] [ID:5] PASSED verify_iosxe_control in 7.8 seconds
+------------------------------------------------------------------------------
+Verify All SD-WAN Control Connections Are Up (sd-dc-c8kv-03)           | PASSED |
+------------------------------------------------------------------------------
+2026-02-21 12:56:18.271 [PID:80887] [80794] [ID:3] PASSED verify_iosxe_control in 8.2 seconds
+------------------------------------------------------------------------------
+Verify All SD-WAN Control Connections Are Up (sd-dc-c8kv-02)           | PASSED |
+------------------------------------------------------------------------------
+
+================================================================================
+2 tests, 2 passed, 0 failed, 0 skipped.
+================================================================================
+
+PyATS Output Files:
+================================================================================
+Archive:         /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_api_20260221_125601_445.zip
+
+Archive:         /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_d2d_20260221_125629_542.zip
+
+Total testing: 8.55 seconds
+Elapsed time:  33.22 seconds
+
+Generating reports from 2 archive(s)...
+Total report generation time: 0.06 seconds
+Found API archive: nac_test_job_api_20260221_125601_445.zip
+Found D2D archive: nac_test_job_d2d_20260221_125629_542.zip
+
+HTML Reports Generated:
+================================================================================
+API Summary: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/api/html_reports/summary_report.html
+API Reports:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/api/html_reports
+D2D Summary: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports/summary_report.html
+D2D Reports:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports
+
+🤖 Running Robot Framework tests...
+
+[12:56:33] 📝 Rendering Robot Framework templates...
+[12:56:33] ✅ Template rendering completed (0.0s)
+📄 Creating merged data model for Robot tests...
+🤖 Executing Robot Framework tests...
+
+
+Robot Framework remote server at 127.0.0.1:59158 started.
+Storing .pabotsuitenames file
+2026-02-21 12:56:33.950377 [PID:80953] [0] [ID:0] EXECUTING Results.Config.Test
+2026-02-21 12:56:34.265978 [PID:80953] [0] [ID:0] PASSED Results.Config.Test in 0.3 seconds
+{'command': ['robot'], 'verbose': False, 'help': False, 'version': False, 'testlevelsplit': False, 'pabotlib': True, 'pabotlibhost': '127.0.0.1', 'pabotlibport': 0, 'processes': 14, 'processtimeout': None, 'artifacts': ['png'], 'artifactstimestamps': True, 'artifactsinsubfolders': False, 'shardindex': 0, 'shardcount': 1, 'chunk': False, 'no-rebot': False, 'argumentfiles': []}
+4 tests, 4 passed, 0 failed, 0 skipped.
+===================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/output.xml
+XUnit:   /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/xunit.xml
+Log:     /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/log.html
+Report:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/report.html
+Stopping PabotLib process
+Robot Framework remote server at 127.0.0.1:59158 stopped.
+PabotLib process stopped
+Total testing: 0.30 seconds
+Elapsed time:  0.76 seconds
+✅ Robot Framework tests completed
+📊 Generating Robot summary report...
+
+📊 Generating combined dashboard...
+   ✅ Combined dashboard: results/combined_summary.html
+
+======================================================================
+📋 Combined Test Execution Summary
+======================================================================
+
+📊 Overall Results:
+   Total: 9 tests
+   ✅ Passed: 9
+   ❌ Failed: 0
+   ⊘ Skipped: 0
+
+🎯 Combined Dashboard:
+   📊 results/combined_summary.html
+   (Aggregated results from all test frameworks)
+
+✅ Robot Framework tests: Completed
+   📁 Results: results/robot_results/
+   📊 4 tests: 4 passed, 0 failed
+   📊 Summary: results/robot_results/summary_report.html
+   📊 Detailed: results/robot_results/log.html
+
+✅ PyATS tests: Completed
+   📁 Results: results/pyats_results/
+   📊 API Summary: results/pyats_results/api/html_reports/summary_report.html
+   📊 D2D Summary: results/pyats_results/d2d/html_reports/summary_report.html
+
+📄 Merged data model: results/merged_data_model_test_variables.yaml
+======================================================================
+
+Total runtime: 34.10 seconds
+
+✅ All tests passed: 9 out of 9 tests

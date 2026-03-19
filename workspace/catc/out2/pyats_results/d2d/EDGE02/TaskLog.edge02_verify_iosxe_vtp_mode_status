@@ -1,0 +1,33 @@
+0: OBOEHMER-M-5D76: 2026-02-02T09:39:34: %AETEST-6-INFO: %[part=0.1/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +------------------------------------------------------------------------------+
+1: OBOEHMER-M-5D76: 2026-02-02T09:39:34: %AETEST-6-INFO: %[part=0.2/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: |                   Starting testcase VerifyVTPOperatingMode                   |
+2: OBOEHMER-M-5D76: 2026-02-02T09:39:34: %AETEST-6-INFO: %[part=0.3/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +------------------------------------------------------------------------------+
+3: OBOEHMER-M-5D76: 2026-02-02T09:39:34: %AETEST-6-INFO: %[part=3.1/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +------------------------------------------------------------------------------+
+4: OBOEHMER-M-5D76: 2026-02-02T09:39:34: %AETEST-6-INFO: %[part=3.2/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: |                            Starting section setup                            |
+5: OBOEHMER-M-5D76: 2026-02-02T09:39:34: %AETEST-6-INFO: %[part=3.3/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +------------------------------------------------------------------------------+
+6: OBOEHMER-M-5D76: 2026-02-02T09:39:35: %SCRIPT-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: Batching reporter initialized successfully (batch size: 200, flush timeout: 0.5s)
+7: OBOEHMER-M-5D76: 2026-02-02T09:39:35: %SCRIPT-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: Connecting to device EDGE02 via connection broker
+8: OBOEHMER-M-5D76: 2026-02-02T09:39:44: %AETEST-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: The result of section setup is => PASSED
+9: OBOEHMER-M-5D76: 2026-02-02T09:39:44: %AETEST-6-INFO: %[part=9.1/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +------------------------------------------------------------------------------+
+10: OBOEHMER-M-5D76: 2026-02-02T09:39:44: %AETEST-6-INFO: %[part=9.2/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: |                   Starting section test_vtp_operating_mode                   |
+11: OBOEHMER-M-5D76: 2026-02-02T09:39:44: %AETEST-6-INFO: %[part=9.3/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +------------------------------------------------------------------------------+
+12: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %SCRIPT-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: VTP Operating Mode Verification Verification Summary:
+13: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %SCRIPT-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]:   - Total configurations processed: 1
+14: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %SCRIPT-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]:   - Passed: 1
+15: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %SCRIPT-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]:   - Failed: 0
+16: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %SCRIPT-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]:   - Skipped: 0
+17: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[part=17.1/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +..............................................................................+
+18: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[part=17.2/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: :               Starting STEP 1: VTP Operating Mode Verification               :
+19: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[part=17.3/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +..............................................................................+
+20: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: The result of STEP 1: VTP Operating Mode Verification is => PASSED
+21: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[part=21.1/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +..........................................................+
+22: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[part=21.2/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: :                       STEPS Report                       :
+23: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[part=21.3/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +..........................................................+
+24: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: STEP 1 - VTP Operating Mode Verification          Passed    
+25: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: ............................................................
+26: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: The result of section test_vtp_operating_mode is => PASSED
+27: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[part=27.1/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +------------------------------------------------------------------------------+
+28: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[part=27.2/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: |                           Starting section cleanup                           |
+29: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[part=27.3/3][pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: +------------------------------------------------------------------------------+
+30: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %SCRIPT-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: Batching reporter shutdown complete - processed 0 messages in 0 batches
+31: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: The result of section cleanup is => PASSED
+32: OBOEHMER-M-5D76: 2026-02-02T09:39:46: %AETEST-6-INFO: %[pid=53730][pname=edge02_verify_iosxe_vtp_mode_status]: The result of testcase VerifyVTPOperatingMode is => PASSED

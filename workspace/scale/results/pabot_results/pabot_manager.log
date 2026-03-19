@@ -1,0 +1,18 @@
+[INFO]    Initialized logging in results/pabot_results
+[INFO]    Robot Framework remote server at 127.0.0.1:57640 started.
+[DEBUG]   Storing .pabotsuitenames file
+[DEBUG]   2026-02-24 15:02:43.835655 [PID:14283] [0] [ID:0] EXECUTING Results.Config.Test
+[INFO]    2026-02-24 15:02:44.147886 [PID:14283] [0] [ID:0] PASSED Results.Config.Test in 0.3 seconds
+[INFO]    1 tests, 1 passed, 0 failed, 0 skipped.
+[INFO]    ===================================================
+[INFO]    Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/output.xml
+[INFO]    XUnit:   /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/xunit.xml
+[INFO]    Log:     /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/log.html
+[INFO]    Report:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/report.html
+[DEBUG]   Finalizing Pabot execution...
+[DEBUG]   Stopping PabotLib process
+[INFO]    Robot Framework remote server at 127.0.0.1:57640 stopped.
+[DEBUG]   PabotLib process stopped
+[INFO]    Total testing: 0.30 seconds
+[INFO]    Elapsed time:  0.94 seconds
+[DEBUG]   Logs flushed successfully.

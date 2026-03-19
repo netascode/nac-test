@@ -1,0 +1,17 @@
+--suite Out.Robot.Config.Fabric.Transits
+--skiponfailure non-critical
+--variable CALLER_ID:51845eedde394c55884b706e2864c59b
+--variable PABOTLIBURI:127.0.0.1:60955
+--variable PABOTEXECUTIONPOOLID:10
+--variable PABOTISLASTEXECUTIONINPOOL:0
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:10
+--variable PABOTLASTLEVEL:Out.Robot
+--outputdir out/pabot_results/10
+--xunit NONE
+--listener RobotStackTracer
+--log NONE
+--report NONE
+--consolecolors off
+--consolemarkers off
+out

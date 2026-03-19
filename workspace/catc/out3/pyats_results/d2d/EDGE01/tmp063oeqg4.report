@@ -1,0 +1,61 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp063oeqg4.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpd8w42zym.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpz7yxf8i2_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out3 --archive-name pyats_archive_device_EDGE01 --no-archive-subdir --no-mail --no-xml-report --quiet
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmp063oeqg4
+    Result       : PASSED
+    Start time   : 2026-02-02 15:25:49.206611+01:00
+    Stop time    : 2026-02-02 15:26:03.355168+01:00
+    Elapsed time : 0:00:15
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out3/pyats_archive_device_EDGE01
+
+Total Tasks    : 1 
+
+Overall Stats
+    Passed     : 1
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 1
+
+Success Rate   : 100.00 %
+
+Section Stats
+    Passed     : 3
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 3
+
+Section Success Rate   : 100.00 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+edge01_verify_iosxe_vtp_mode_status: verify_iosxe_vtp_mode_status         PASSED
+edge01_verify_iosxe_vtp_mode_status: verify_iosxe_vtp_mode_status.V...    PASSED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+edge01_verify_iosxe_vtp_mode_status: verify_iosxe_vtp_mode_status         PASSED
+`-- VerifyVTPOperatingMode                                                PASSED
+    |-- setup                                                             PASSED
+    |-- test_vtp_operating_mode                                           PASSED
+    |   `-- STEP 1: VTP Operating Mode Verification                       PASSED
+    `-- cleanup                                                           PASSED

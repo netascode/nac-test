@@ -1,0 +1,9 @@
+# rerun.results file that contains the information of each task and their
+# testcases.
+# Please Check the following link for more information:
+# https://pubhub.devnetcloud.com/media/pyats/docs/easypy/rerun.html
+verify_dnac_catalyst_center_system_health_no_critical_events:
+  testcases:
+  - name: VerifyCatCSystemHealthNoCriticalEvents
+    result: PASSED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/tests/integration/fixtures/templates_pyats_qs/catc/tests/verify_dnac_catalyst_center_system_health_no_critical_events.py

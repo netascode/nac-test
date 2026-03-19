@@ -1,0 +1,396 @@
+Starting mock server on port 5678...
+Logs: /tmp/nac-test-mock-server.log
+PID file: /tmp/nac-test-mock-server.pid
+Stop with: python /Users/oboehmer/Documents/DD/nac-test/tests/e2e/mocks/stop_server.py
+======================================
+Running nac-test PoC with Dynamic Loop Marking
+======================================
+
+This PoC demonstrates:
+  - Consolidated test pattern using aetest.loop.mark()
+  - Multiple verification types in SINGLE subprocess
+  - Reduced subprocess overhead (11 → 1)
+
+
+
+[12:39:38] 📄 Merging data model files...
+INFO - Loading yaml files from data
+INFO - Writing merged data model to results/merged_data_model_test_variables.yaml
+[12:39:38] ✅ Data model merging completed (0.0s)
+INFO - Detected controller type: SDWAN
+INFO - Controller type detected: SDWAN
+
+
+⚠️  WARNING: --pyats flag is for development use only. Production runs should use combined execution.
+
+🧪 Running PyATS tests...
+
+INFO - Using provided controller type: SDWAN
+INFO - Using PYATS_MAX_WORKERS environment override: 5
+Discovered 1 PyATS test files
+Running with 5 parallel workers
+INFO - Detected test type 'd2d' from base class 'IOSXETestBase' in /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates-poc/tests/d2d/consolidated_iosxe_verifications.py
+INFO - Categorized 0 API tests and 1 D2D tests
+INFO - sys.path before add_tests_parent_to_syspath: ['/Users/oboehmer/Documents/DD/nac-test/.venv/bin', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python312.zip', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/lib-dynload', '/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages', '/Users/oboehmer/Documents/DD/nac-test', '/Users/oboehmer/Documents/DD/nac-test-pyats-common/src']
+INFO - Adding to sys.path: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates-poc
+INFO - sys.path after add_tests_parent_to_syspath: ['/Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates-poc', '/Users/oboehmer/Documents/DD/nac-test/.venv/bin', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python312.zip', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12', '/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/lib-dynload', '/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages', '/Users/oboehmer/Documents/DD/nac-test', '/Users/oboehmer/Documents/DD/nac-test-pyats-common/src']
+INFO - Attempting to import test file: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates-poc/tests/d2d/consolidated_iosxe_verifications.py
+INFO - Found device inventory method in IOSXETestBase
+INFO - Detected controller type: SDWAN
+INFO - Resolving device inventory for sdwan
+INFO - Resolved 4 devices for sdwan D2D testing
+Found 1 D2D test(s) - using device-centric execution
+INFO - Executing 1 SSH tests using device-centric execution with connection broker
+INFO - Creating consolidated testbed for 4 devices
+INFO - Loading user-provided testbed from: testbed.yaml
+INFO - User testbed contains 4 device(s): sd-dc-c8kv-01, sd-dc-c8kv-02, sd-dc-c8kv-03, sd-dc-c8kv-04
+INFO - Device 'sd-dc-c8kv-01' connection overridden by user-provided testbed
+INFO - Device 'sd-dc-c8kv-02' connection overridden by user-provided testbed
+INFO - Device 'sd-dc-c8kv-03' connection overridden by user-provided testbed
+INFO - Device 'sd-dc-c8kv-04' connection overridden by user-provided testbed
+INFO - Consolidated testbed written to: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/broker_testbed.yaml
+INFO - Starting connection broker with socket: /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/nac_test_broker_27897.sock
+INFO - Loading testbed from: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/broker_testbed.yaml
+INFO - Loaded testbed with 4 devices
+INFO - Socket server listening on: /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/nac_test_broker_27897.sock
+INFO - Connection broker started successfully
+INFO - Connection broker started at: /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/nac_test_broker_27897.sock
+INFO - Using system-calculated device parallelism: 5
+INFO - Processing 4 devices in 1 batches (batch size: 5)
+INFO - Processing batch 1/1 with 4 devices
+INFO - Starting tests for device sd-dc-c8kv-01
+INFO - Device 'sd-dc-c8kv-01' connection overridden by user-provided testbed
+INFO - Executing command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpv7of4y8y.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp9g_0j3my.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpvjrt8gz2_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-01 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpv7of4y8y.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp9g_0j3my.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpvjrt8gz2_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-01 --no-archive-subdir --no-mail --no-xml-report --quiet
+INFO - Starting tests for device sd-dc-c8kv-02
+INFO - Device 'sd-dc-c8kv-02' connection overridden by user-provided testbed
+INFO - Executing command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp4tj2cstv.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp7xxpx6fi.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpaw19xddz_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-02 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp4tj2cstv.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp7xxpx6fi.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpaw19xddz_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-02 --no-archive-subdir --no-mail --no-xml-report --quiet
+INFO - Starting tests for device sd-dc-c8kv-03
+INFO - Device 'sd-dc-c8kv-03' connection overridden by user-provided testbed
+INFO - Executing command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpqixewwqa.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp38iqn1p0.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp3tbcdpmt_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-03 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpqixewwqa.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp38iqn1p0.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp3tbcdpmt_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-03 --no-archive-subdir --no-mail --no-xml-report --quiet
+INFO - Starting tests for device sd-dc-c8kv-04
+INFO - Device 'sd-dc-c8kv-04' connection overridden by user-provided testbed
+INFO - Executing command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpinyi7u06.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmplsf9t6rz.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpix0vizd8_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-04 --no-archive-subdir --no-mail --no-xml-report --quiet
+
+Executing PyATS with command: /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpinyi7u06.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmplsf9t6rz.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpix0vizd8_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results --archive-name pyats_archive_device_sd-dc-c8kv-04 --no-archive-subdir --no-mail --no-xml-report --quiet
+2026-02-07 12:40:18.576 [PID:31965] [28441] [ID:1] EXECUTING d2d.consolidated_iosxe_verifications
+2026-02-07 12:40:18.635 [PID:31966] [28442] [ID:2] EXECUTING d2d.consolidated_iosxe_verifications
+2026-02-07 12:40:18.686 [PID:31967] [28447] [ID:3] EXECUTING d2d.consolidated_iosxe_verifications
+2026-02-07 12:40:18.691 [PID:31968] [28464] [ID:4] EXECUTING d2d.consolidated_iosxe_verifications
+INFO - [BROKER] Creating NEW connection for sd-dc-c8kv-03 (current connections: 0)
+INFO - Connecting to device: sd-dc-c8kv-03
+INFO - Unicon CLI log will be written to: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/sd-dc-c8kv-03-cli-4420659663.log
+INFO - [BROKER] Creating NEW connection for sd-dc-c8kv-02 (current connections: 0)
+INFO - Connecting to device: sd-dc-c8kv-02
+INFO - Unicon CLI log will be written to: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/sd-dc-c8kv-02-cli-4420672716.log
+INFO - [BROKER] Creating NEW connection for sd-dc-c8kv-01 (current connections: 0)
+INFO - Connecting to device: sd-dc-c8kv-01
+INFO - Unicon CLI log will be written to: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/sd-dc-c8kv-01-cli-4420673434.log
+INFO - [BROKER] Creating NEW connection for sd-dc-c8kv-04 (current connections: 0)
+INFO - Connecting to device: sd-dc-c8kv-04
+INFO - Unicon CLI log will be written to: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/sd-dc-c8kv-04-cli-4420686759.log
+INFO - Successfully connected to device: sd-dc-c8kv-02
+INFO - Successfully connected to device: sd-dc-c8kv-04
+INFO - Successfully connected to device: sd-dc-c8kv-01
+INFO - Successfully connected to device: sd-dc-c8kv-03
+INFO - Created command cache for device: sd-dc-c8kv-02
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-02 (total connections: 4)
+INFO - Created command cache for device: sd-dc-c8kv-04
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-04 (total connections: 4)
+INFO - Created command cache for device: sd-dc-c8kv-01
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-01 (total connections: 4)
+INFO - Created command cache for device: sd-dc-c8kv-03
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-03 (total connections: 4)
+INFO - Cached command output for 'show sdwan control connections' on sd-dc-c8kv-02 (1649 chars)
+INFO - Cached command output for 'show sdwan control connections' on sd-dc-c8kv-04 (1649 chars)
+INFO - Cached command output for 'show sdwan control connections' on sd-dc-c8kv-01 (1649 chars)
+INFO - Cached command output for 'show sdwan control connections' on sd-dc-c8kv-03 (1649 chars)
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-01 (total connections: 4)
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-02 (total connections: 4)
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-04 (total connections: 4)
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-03 (total connections: 4)
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-01 (total connections: 4)
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-02 (total connections: 4)
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-04 (total connections: 4)
+ERROR - Command execution failed on sd-dc-c8kv-01: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-01#"))
+ERROR - Command execution failed on sd-dc-c8kv-02: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-02#"))
+INFO - [BROKER] Reusing existing connection for sd-dc-c8kv-03 (total connections: 4)
+ERROR - Command execution failed on sd-dc-c8kv-04: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-04#"))
+ERROR - Command execution failed on sd-dc-c8kv-03: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-03#"))
+INFO - Disconnected from device: sd-dc-c8kv-02
+INFO - Clearing command cache for sd-dc-c8kv-02: {'total_entries': 1, 'expired_entries': 0, 'valid_entries': 1}
+ERROR - Error processing request: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-02#"))
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages/unicon/plugins/generic/service_implementation.py", line 737, in call_service
+    self.result = self.get_service_result()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/unicon/bases/routers/services.py", line 235, in unicon.bases.routers.services.BaseService.get_service_result
+unicon.core.errors.SubCommandFailure: ('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-02#")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 192, in _process_request
+    result = await self._execute_command(hostname, cmd_string)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 258, in _execute_command
+    output = await loop.run_in_executor(None, connection.execute, cmd)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/unicon/bases/routers/services.py", line 259, in unicon.bases.routers.services.BaseService.__call__
+  File "/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages/unicon/plugins/generic/service_implementation.py", line 744, in call_service
+    raise SubCommandFailure("Command execution failed", err) from err
+unicon.core.errors.SubCommandFailure: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-02#"))
+INFO - Disconnected from device: sd-dc-c8kv-01
+INFO - Clearing command cache for sd-dc-c8kv-01: {'total_entries': 1, 'expired_entries': 0, 'valid_entries': 1}
+ERROR - Error processing request: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-01#"))
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages/unicon/plugins/generic/service_implementation.py", line 737, in call_service
+    self.result = self.get_service_result()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/unicon/bases/routers/services.py", line 235, in unicon.bases.routers.services.BaseService.get_service_result
+unicon.core.errors.SubCommandFailure: ('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-01#")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 192, in _process_request
+    result = await self._execute_command(hostname, cmd_string)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 258, in _execute_command
+    output = await loop.run_in_executor(None, connection.execute, cmd)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/unicon/bases/routers/services.py", line 259, in unicon.bases.routers.services.BaseService.__call__
+  File "/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages/unicon/plugins/generic/service_implementation.py", line 744, in call_service
+    raise SubCommandFailure("Command execution failed", err) from err
+unicon.core.errors.SubCommandFailure: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-01#"))
+2026-02-07T12:40:53: %NAC_TEST-ERROR: Error communicating with broker: Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-02#"))
+2026-02-07T12:40:53: %NAC_TEST-ERROR: Error communicating with broker: Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-01#"))
+2026-02-07T12:40:53: %SCRIPT-ERROR: Command execution/parsing exception: Failed to execute or parse command 'show sdwan system status': Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-02#"))
+2026-02-07T12:40:53: %SCRIPT-ERROR: Traceback (most recent call last):
+2026-02-07T12:40:53: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates-poc/tests/d2d/consolidated_iosxe_verifications.py", line 444, in _verify_sdwan_config_sync
+2026-02-07T12:40:53: %SCRIPT-ERROR:     output = await self.execute_command(command)
+2026-02-07T12:40:53: %SCRIPT-ERROR:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:53: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/common/ssh_base_test.py", line 305, in execute_command
+2026-02-07T12:40:53: %SCRIPT-ERROR:     output = await connection.execute(command)
+2026-02-07T12:40:53: %SCRIPT-ERROR:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:53: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 243, in execute
+2026-02-07T12:40:53: %SCRIPT-ERROR:     return await self.broker_client.execute_command(self.hostname, command)
+2026-02-07T12:40:53: %SCRIPT-ERROR:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:53: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 143, in execute_command
+2026-02-07T12:40:53: %SCRIPT-ERROR:     response = await self._send_request(
+2026-02-07T12:40:53: %SCRIPT-ERROR:                ^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:53: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 118, in _send_request
+2026-02-07T12:40:53: %SCRIPT-ERROR:     raise ConnectionError(f"Broker error: {error_msg}")
+2026-02-07T12:40:53: %SCRIPT-ERROR: ConnectionError: Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-02#"))
+2026-02-07T12:40:53: %SCRIPT-ERROR: Command execution/parsing exception: Failed to execute or parse command 'show sdwan system status': Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-01#"))
+2026-02-07T12:40:53: %SCRIPT-ERROR: Traceback (most recent call last):
+2026-02-07T12:40:53: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates-poc/tests/d2d/consolidated_iosxe_verifications.py", line 444, in _verify_sdwan_config_sync
+2026-02-07T12:40:53: %SCRIPT-ERROR:     output = await self.execute_command(command)
+2026-02-07T12:40:53: %SCRIPT-ERROR:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:53: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/common/ssh_base_test.py", line 305, in execute_command
+2026-02-07T12:40:53: %SCRIPT-ERROR:     output = await connection.execute(command)
+2026-02-07T12:40:53: %SCRIPT-ERROR:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:53: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 243, in execute
+2026-02-07T12:40:53: %SCRIPT-ERROR:     return await self.broker_client.execute_command(self.hostname, command)
+2026-02-07T12:40:53: %SCRIPT-ERROR:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:53: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 143, in execute_command
+2026-02-07T12:40:53: %SCRIPT-ERROR:     response = await self._send_request(
+2026-02-07T12:40:53: %SCRIPT-ERROR:                ^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:53: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 118, in _send_request
+2026-02-07T12:40:53: %SCRIPT-ERROR:     raise ConnectionError(f"Broker error: {error_msg}")
+2026-02-07T12:40:53: %SCRIPT-ERROR: ConnectionError: Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-01#"))
+2026-02-07 12:40:54.523 [PID:31966] [28442] [ID:2] FAILED d2d.consolidated_iosxe_verifications in 35.9 seconds
+------------------------------------------------------------------------------
+d2d.consolidated_iosxe_verifications (sd-dc-c8kv-02)                   | FAILED |
+------------------------------------------------------------------------------
+2026-02-07 12:40:54.547 [PID:31965] [28441] [ID:1] FAILED d2d.consolidated_iosxe_verifications in 36.0 seconds
+------------------------------------------------------------------------------
+d2d.consolidated_iosxe_verifications (sd-dc-c8kv-01)                   | FAILED |
+------------------------------------------------------------------------------
+INFO - Disconnected from device: sd-dc-c8kv-04
+INFO - Clearing command cache for sd-dc-c8kv-04: {'total_entries': 1, 'expired_entries': 0, 'valid_entries': 1}
+ERROR - Error processing request: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-04#"))
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages/unicon/plugins/generic/service_implementation.py", line 737, in call_service
+    self.result = self.get_service_result()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/unicon/bases/routers/services.py", line 235, in unicon.bases.routers.services.BaseService.get_service_result
+unicon.core.errors.SubCommandFailure: ('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-04#")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 192, in _process_request
+    result = await self._execute_command(hostname, cmd_string)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 258, in _execute_command
+    output = await loop.run_in_executor(None, connection.execute, cmd)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/unicon/bases/routers/services.py", line 259, in unicon.bases.routers.services.BaseService.__call__
+  File "/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages/unicon/plugins/generic/service_implementation.py", line 744, in call_service
+    raise SubCommandFailure("Command execution failed", err) from err
+unicon.core.errors.SubCommandFailure: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-04#"))
+2026-02-07T12:40:54: %NAC_TEST-ERROR: Error communicating with broker: Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-04#"))
+2026-02-07T12:40:54: %SCRIPT-ERROR: Command execution/parsing exception: Failed to execute or parse command 'show sdwan system status': Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-04#"))
+2026-02-07T12:40:54: %SCRIPT-ERROR: Traceback (most recent call last):
+2026-02-07T12:40:54: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates-poc/tests/d2d/consolidated_iosxe_verifications.py", line 444, in _verify_sdwan_config_sync
+2026-02-07T12:40:54: %SCRIPT-ERROR:     output = await self.execute_command(command)
+2026-02-07T12:40:54: %SCRIPT-ERROR:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:54: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/common/ssh_base_test.py", line 305, in execute_command
+2026-02-07T12:40:54: %SCRIPT-ERROR:     output = await connection.execute(command)
+2026-02-07T12:40:54: %SCRIPT-ERROR:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:54: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 243, in execute
+2026-02-07T12:40:54: %SCRIPT-ERROR:     return await self.broker_client.execute_command(self.hostname, command)
+2026-02-07T12:40:54: %SCRIPT-ERROR:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:54: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 143, in execute_command
+2026-02-07T12:40:54: %SCRIPT-ERROR:     response = await self._send_request(
+2026-02-07T12:40:54: %SCRIPT-ERROR:                ^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:54: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 118, in _send_request
+2026-02-07T12:40:54: %SCRIPT-ERROR:     raise ConnectionError(f"Broker error: {error_msg}")
+2026-02-07T12:40:54: %SCRIPT-ERROR: ConnectionError: Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-04#"))
+2026-02-07 12:40:55.188 [PID:31968] [28464] [ID:4] FAILED d2d.consolidated_iosxe_verifications in 36.5 seconds
+------------------------------------------------------------------------------
+d2d.consolidated_iosxe_verifications (sd-dc-c8kv-04)                   | FAILED |
+------------------------------------------------------------------------------
+INFO - Disconnected from device: sd-dc-c8kv-03
+INFO - Clearing command cache for sd-dc-c8kv-03: {'total_entries': 1, 'expired_entries': 0, 'valid_entries': 1}
+ERROR - Error processing request: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-03#"))
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages/unicon/plugins/generic/service_implementation.py", line 737, in call_service
+    self.result = self.get_service_result()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/unicon/bases/routers/services.py", line 235, in unicon.bases.routers.services.BaseService.get_service_result
+unicon.core.errors.SubCommandFailure: ('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-03#")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 192, in _process_request
+    result = await self._execute_command(hostname, cmd_string)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/connection_broker.py", line 258, in _execute_command
+    output = await loop.run_in_executor(None, connection.execute, cmd)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/unicon/bases/routers/services.py", line 259, in unicon.bases.routers.services.BaseService.__call__
+  File "/Users/oboehmer/Documents/DD/nac-test/.venv/lib/python3.12/site-packages/unicon/plugins/generic/service_implementation.py", line 744, in call_service
+    raise SubCommandFailure("Command execution failed", err) from err
+unicon.core.errors.SubCommandFailure: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-03#"))
+2026-02-07T12:40:55: %NAC_TEST-ERROR: Error communicating with broker: Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-03#"))
+2026-02-07T12:40:55: %SCRIPT-ERROR: Command execution/parsing exception: Failed to execute or parse command 'show sdwan system status': Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-03#"))
+2026-02-07T12:40:55: %SCRIPT-ERROR: Traceback (most recent call last):
+2026-02-07T12:40:55: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates-poc/tests/d2d/consolidated_iosxe_verifications.py", line 444, in _verify_sdwan_config_sync
+2026-02-07T12:40:55: %SCRIPT-ERROR:     output = await self.execute_command(command)
+2026-02-07T12:40:55: %SCRIPT-ERROR:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:55: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/common/ssh_base_test.py", line 305, in execute_command
+2026-02-07T12:40:55: %SCRIPT-ERROR:     output = await connection.execute(command)
+2026-02-07T12:40:55: %SCRIPT-ERROR:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:55: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 243, in execute
+2026-02-07T12:40:55: %SCRIPT-ERROR:     return await self.broker_client.execute_command(self.hostname, command)
+2026-02-07T12:40:55: %SCRIPT-ERROR:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:55: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 143, in execute_command
+2026-02-07T12:40:55: %SCRIPT-ERROR:     response = await self._send_request(
+2026-02-07T12:40:55: %SCRIPT-ERROR:                ^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-07T12:40:55: %SCRIPT-ERROR:   File "/Users/oboehmer/Documents/DD/nac-test/nac_test/pyats_core/broker/broker_client.py", line 118, in _send_request
+2026-02-07T12:40:55: %SCRIPT-ERROR:     raise ConnectionError(f"Broker error: {error_msg}")
+2026-02-07T12:40:55: %SCRIPT-ERROR: ConnectionError: Broker error: ('Command execution failed', SubCommandFailure('sub_command failure, patterns matched in the output:', ['^\\s*%\\s*[Ii]nvalid (command|input)'], 'service result', "show sdwan system status\r\n% Invalid command 'show sdwan system status'\r\nValid commands:\r\n config term\r\n copy  bootflash: tftp:  vrf Mgmt-intf\r\n copy  tftp: bootflash:  vrf Mgmt-intf\r\n dir /all /recursive bootflash:/isr_image.ssr-4400-1\r\n disable\r\n install remove inactive\r\n not a real command\r\n not a real command partial\r\n ping\r\n ping vrf test\r\n request platform software system shell\r\n set platform software selinux default\r\n set platform software selinux permissive\r\n show install summary\r\n show logging\r\n show sdwan control connections\r\n show sdwan software\r\n show sdwan version\r\n show version\r\n show version | inc System image file is\r\n show version | include operating mode\r\n term length 0\r\n term width 0\r\n traceroute\r\n traceroute vrf MG501\r\r\nsd-dc-c8kv-03#"))
+2026-02-07 12:40:55.578 [PID:31967] [28447] [ID:3] FAILED d2d.consolidated_iosxe_verifications in 36.9 seconds
+------------------------------------------------------------------------------
+d2d.consolidated_iosxe_verifications (sd-dc-c8kv-03)                   | FAILED |
+------------------------------------------------------------------------------
+INFO - PyATS job completed with test failures (return code: 1)
+INFO - Completed tests for device sd-dc-c8kv-02: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_archive_device_sd-dc-c8kv-02.zip
+INFO - PyATS job completed with test failures (return code: 1)
+INFO - Completed tests for device sd-dc-c8kv-01: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_archive_device_sd-dc-c8kv-01.zip
+INFO - PyATS job completed with test failures (return code: 1)
+INFO - Completed tests for device sd-dc-c8kv-04: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_archive_device_sd-dc-c8kv-04.zip
+INFO - PyATS job completed with test failures (return code: 1)
+INFO - Completed tests for device sd-dc-c8kv-03: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_archive_device_sd-dc-c8kv-03.zip
+INFO - Completed batch 1/1
+INFO - Aggregating 4 device archives
+INFO - Created aggregated D2D archive: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_d2d_20260207_124059_139.zip
+INFO - Shutting down connection broker...
+INFO - BROKER_STATISTICS: connection_hits=12, connection_misses=4, command_hits=0, command_misses=8
+INFO - Connection broker shutdown complete
+
+================================================================================
+1 tests, 0 passed, 1 failed, 0 skipped.
+================================================================================
+
+PyATS Output Files:
+================================================================================
+Archive:         /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_d2d_20260207_124059_139.zip
+
+Total testing: 36.89 seconds
+Elapsed time:  1 minutes 20.80 seconds
+
+Generating reports from 1 archive(s)...
+INFO - Processing d2d archive: nac_test_job_d2d_20260207_124059_139.zip
+INFO - Extracted /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/nac_test_job_d2d_20260207_124059_139.zip to /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d
+INFO - Found 8 test results to process
+INFO - Successfully generated 8 reports
+INFO - Generated summary report: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports/summary_report.html
+INFO - Collected PyATS stats for 1 archive type(s)
+INFO - Cleaning up JSONL files after stats collection
+INFO - Cleaned up 8 JSONL file(s) total
+Total report generation time: 0.25 seconds
+Found D2D archive: nac_test_job_d2d_20260207_124059_139.zip
+
+HTML Reports Generated:
+================================================================================
+D2D Summary: /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports/summary_report.html
+D2D Reports:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/pyats_results/d2d/html_reports
+
+📊 Generating combined dashboard...
+INFO - Generated combined dashboard: results/combined_summary.html
+INFO -   Total tests across all frameworks: 8
+INFO -   Frameworks included: D2D
+   ✅ Combined dashboard: results/combined_summary.html
+
+======================================================================
+📋 Combined Test Execution Summary
+======================================================================
+
+📊 Overall Results:
+   Total: 8 tests
+   ✅ Passed: 4
+   ❌ Failed: 4
+   ⊘ Skipped: 0
+
+🎯 Combined Dashboard:
+   📊 results/combined_summary.html
+   (Aggregated results from all test frameworks)
+
+✅ PyATS tests: Completed
+   📁 Results: results/pyats_results/
+   📊 D2D Summary: results/pyats_results/d2d/html_reports/summary_report.html
+
+📄 Merged data model: results/merged_data_model_test_variables.yaml
+======================================================================
+
+Total runtime: 1 minutes 21.10 seconds
+
+✅ PoC Execution complete!
+
+Timing log saved to: timing_output_poc.log
+You can analyze phase durations with:
+  grep 'Completed phase' timing_output_poc.log
+
+Stopping server (PID: 27896)...
+Server stopped

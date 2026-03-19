@@ -1,0 +1,77 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmppgchiea5.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp4iyvrhjn.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpmwtqr3cz_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/integration_test_output --archive-name pyats_archive_device_sd-dc-c8kv-01 --no-archive-subdir --no-mail --no-xml-report --verbose
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmppgchiea5
+    Result       : PASSED
+    Start time   : 2026-01-28 19:13:28.110520+01:00
+    Stop time    : 2026-01-28 19:13:37.036317+01:00
+    Elapsed time : 0:00:09
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/integration_test_output/pyats_archive_device_sd-dc-c8kv-01
+
+Total Tasks    : 3 
+
+Overall Stats
+    Passed     : 3
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 3
+
+Success Rate   : 100.00 %
+
+Section Stats
+    Passed     : 9
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 9
+
+Section Success Rate   : 100.00 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+sd-dc-c8kv-01_test_broker_pooling_1: test_broker_pooling_1                PASSED
+sd-dc-c8kv-01_test_broker_pooling_1: test_broker_pooling_1.BrokerPo...    PASSED
+sd-dc-c8kv-01_test_broker_pooling_2: test_broker_pooling_2                PASSED
+sd-dc-c8kv-01_test_broker_pooling_2: test_broker_pooling_2.BrokerPo...    PASSED
+sd-dc-c8kv-01_test_broker_pooling_3: test_broker_pooling_3                PASSED
+sd-dc-c8kv-01_test_broker_pooling_3: test_broker_pooling_3.BrokerPo...    PASSED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+sd-dc-c8kv-01_test_broker_pooling_1: test_broker_pooling_1                PASSED
+`-- BrokerPoolingTest1                                                    PASSED
+    |-- setup                                                             PASSED
+    |-- test_sdwan_control_connections_state                              PASSED
+    |   `-- STEP 1: SD-WAN Control Connection Verification                PASSED
+    `-- cleanup                                                           PASSED
+sd-dc-c8kv-01_test_broker_pooling_2: test_broker_pooling_2                PASSED
+`-- BrokerPoolingTest2                                                    PASSED
+    |-- setup                                                             PASSED
+    |-- test_sdwan_control_connections_state                              PASSED
+    |   `-- STEP 1: SD-WAN Control Connection Verification                PASSED
+    `-- cleanup                                                           PASSED
+sd-dc-c8kv-01_test_broker_pooling_3: test_broker_pooling_3                PASSED
+`-- BrokerPoolingTest3                                                    PASSED
+    |-- setup                                                             PASSED
+    |-- test_sdwan_control_connections_state                              PASSED
+    |   `-- STEP 1: SD-WAN Control Connection Verification                PASSED
+    `-- cleanup                                                           PASSED

@@ -1,0 +1,28 @@
+hostname {{ device_host_name }}
+
+ip routing
+
+vlan {{ infra_vlan }}
+
+interface Vlan{{ infra_vlan }}
+ ip address {{ infra_vlan_network_add }} {{ infra_vlan_network_mask }}
+
+interface Loopback0
+ ip address {{ loopback_0_IP }} {{ loopback_0_mask }}
+
+interface {{ peer_interface }}
+ switchport mode trunk
+ switchport trunk allowed vlan all
+
+router bgp {{ Border_AS }}
+ bgp router-id interface  Loopback0
+ bgp log-neighbor-changes
+ bgp graceful-restart
+ neighbor {{ peer_BGP_neigbor }} remote-as {{ peer_AS }}
+ neighbor {{ peer_BGP_neigbor }} description *** eBGP to FUSION ***
+ redistribute connected
+
+
+ip http client source-interface Loopback0
+!
+ip http client connection forceclose

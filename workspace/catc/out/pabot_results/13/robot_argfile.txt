@@ -1,0 +1,17 @@
+--suite Out.Tests.Robot.Config.Fabric.Authentication Templates
+--skiponfailure non-critical
+--variable CALLER_ID:8bb04c587f6e467490bc3aa98863f05a
+--variable PABOTLIBURI:127.0.0.1:60955
+--variable PABOTEXECUTIONPOOLID:11
+--variable PABOTISLASTEXECUTIONINPOOL:0
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:13
+--variable PABOTLASTLEVEL:Out.Tests.Robot.Config.Fabric.Authentication Templates
+--outputdir out/pabot_results/13
+--xunit NONE
+--listener RobotStackTracer
+--log NONE
+--report NONE
+--consolecolors off
+--consolemarkers off
+out

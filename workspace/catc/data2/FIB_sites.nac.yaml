@@ -1,0 +1,23 @@
+---
+catalyst_center:
+  sites:
+    areas:
+      - name: Warsaw
+        parent_name: Global/Poland
+        network_settings:
+          aaa_servers: AAA_Settings
+        ip_pools_reservations:
+          - CampusVN2-IPPool
+          - GuestVN2-IPPool
+          - PrintersVN2-IPPool
+          - BYOD2-IPPool
+    buildings:
+      - name: Bld_B
+        latitude: 52.182150235
+        longitude: 21.005557857
+        country: Poland
+        parent_name: Global/Poland/Warsaw
+    floors:
+      - name: FLOOR_1
+        floor_number: 1
+        parent_name: Global/Poland/Warsaw/Bld_B

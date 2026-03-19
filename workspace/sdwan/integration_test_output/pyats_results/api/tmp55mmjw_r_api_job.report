@@ -1,0 +1,61 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmp55mmjw_r_api_job.py --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpi4wdgpq9_plugin_config.yaml --archive-dir /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/integration_test_output --archive-name nac_test_job_20260128_164358_205.zip --no-archive-subdir --no-mail --no-xml-report --verbose
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmp55mmjw_r_api_job
+    Result       : PASSED
+    Start time   : 2026-01-28 16:44:09.387723+01:00
+    Stop time    : 2026-01-28 16:44:10.351567+01:00
+    Elapsed time : 0:00:01
+    Archive      : /Users/oboehmer/Documents/DD/nac-test/workspace/sdwan/integration_test_output/nac_test_job_20260128_164358_205.zip
+
+Total Tasks    : 1 
+
+Overall Stats
+    Passed     : 1
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 1
+
+Success Rate   : 100.00 %
+
+Section Stats
+    Passed     : 3
+    Passx      : 0
+    Failed     : 0
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 3
+
+Section Success Rate   : 100.00 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+verify_sdwanmanager_all_sd_wan_edge_configurations_are_in_sync: ver...    PASSED
+verify_sdwanmanager_all_sd_wan_edge_configurations_are_in_sync: ver...    PASSED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+verify_sdwanmanager_all_sd_wan_edge_configurations_are_in_sync: ver...    PASSED
+`-- VerifySDWANManagerEdgeConfigSync                                      PASSED
+    |-- setup                                                             PASSED
+    |-- test_edge_config_sync                                             PASSED
+    |   `-- STEP 1: SDWAN Edge Configuration Sync Status Verification     PASSED
+    `-- cleanup                                                           PASSED

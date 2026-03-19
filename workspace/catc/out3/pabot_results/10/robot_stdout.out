@@ -1,0 +1,34 @@
+==============================================================================
+Out3                                                                          
+==============================================================================
+Out3.Config                                                                   
+==============================================================================
+Out3.Config.Fabric                                                            
+==============================================================================
+Out3.Config.Fabric.Transits :: Verify Transit Networks                        
+==============================================================================
+Get Transit Networks                                                  Transit Networks API Response: {'response': [{'id': '18222fae-2a90-474e-a39a-d5268b2cf516', 'name': 'BGP65002', 'type': 'IP_BASED_TRANSIT', 'ipTransitSettings': {'routingProtocolName': 'BGP', 'autonomousSystemNumber': '65002'}}, {'id': '32fcd551-2c26-4ad1-96c2-9cd08d6a6163', 'name': 'SDA-TRANSIT', 'type': 'SDA_LISP_PUB_SUB_TRANSIT', 'sdaTransitSettings': {'controlPlaneNetworkDeviceIds': ['e9272b6f-6ef0-487c-92dd-bce5c21747d7'], 'isMulticastOverTransitEnabled': False}}], 'version': '1.0'}
+| PASS |
+------------------------------------------------------------------------------
+Verify Transit BGP65002                                               Transit data: [{'id': '18222fae-2a90-474e-a39a-d5268b2cf516', 'name': 'BGP65002', 'type': 'IP_BASED_TRANSIT', 'ipTransitSettings': {'routingProtocolName': 'BGP', 'autonomousSystemNumber': '65002'}}]
+Extracted Transit Entry: {'id': '18222fae-2a90-474e-a39a-d5268b2cf516', 'name': 'BGP65002', 'type': 'IP_BASED_TRANSIT', 'ipTransitSettings': {'routingProtocolName': 'BGP', 'autonomousSystemNumber': '65002'}}
+| PASS |
+------------------------------------------------------------------------------
+Verify Transit SDA-TRANSIT                                            Transit data: [{'id': '32fcd551-2c26-4ad1-96c2-9cd08d6a6163', 'name': 'SDA-TRANSIT', 'type': 'SDA_LISP_PUB_SUB_TRANSIT', 'sdaTransitSettings': {'controlPlaneNetworkDeviceIds': ['e9272b6f-6ef0-487c-92dd-bce5c21747d7'], 'isMulticastOverTransitEnabled': False}}]
+Extracted Transit Entry: {'id': '32fcd551-2c26-4ad1-96c2-9cd08d6a6163', 'name': 'SDA-TRANSIT', 'type': 'SDA_LISP_PUB_SUB_TRANSIT', 'sdaTransitSettings': {'controlPlaneNetworkDeviceIds': ['e9272b6f-6ef0-487c-92dd-bce5c21747d7'], 'isMulticastOverTransitEnabled': False}}
+Control plane devices - Expected: Transit-CP-1, Actual: ['Transit-CP-1.cisco.eu'], Hostnames: ['Transit-CP-1']
+| PASS |
+------------------------------------------------------------------------------
+Out3.Config.Fabric.Transits :: Verify Transit Networks                | PASS |
+3 tests, 3 passed, 0 failed
+==============================================================================
+Out3.Config.Fabric                                                    | PASS |
+3 tests, 3 passed, 0 failed
+==============================================================================
+Out3.Config                                                           | PASS |
+3 tests, 3 passed, 0 failed
+==============================================================================
+Out3                                                                  | PASS |
+3 tests, 3 passed, 0 failed
+==============================================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out3/pabot_results/10/output.xml

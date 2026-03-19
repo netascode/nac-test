@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Results" tests="1" errors="0" failures="0" skipped="0" time="0.396" timestamp="2026-02-24T15:02:43.603800">
+<testsuite name="Config" tests="1" errors="0" failures="0" skipped="0" time="0.001" timestamp="2026-02-24T15:02:43.948000">
+<testsuite name="Test" tests="1" errors="0" failures="0" skipped="0" time="0.001" timestamp="2026-02-24T15:02:43.948000">
+<testcase classname="Results.Config.Test" name="Robot Test sd-dc-c8kv-01 Passes" time="0.001">
+</testcase>
+<properties>
+<property name="Documentation" value="Robot Framework test that always passes"/>
+</properties>
+</testsuite>
+</testsuite>
+<properties>
+<property name="Pabot Info" value="[https://pabot.org/?ref=log|Pabot] result from 1 executions."/>
+<property name="Pabot Version" value="5.2.2"/>
+</properties>
+</testsuite>

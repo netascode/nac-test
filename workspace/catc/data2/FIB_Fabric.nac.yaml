@@ -1,0 +1,52 @@
+---
+catalyst_center:
+  fabric:
+    l3_virtual_networks:
+      - name: BYOD
+      - name: Guest
+      - name: Printers
+      - name: Campus
+    transits:
+      - name: SDA-TRANSIT
+        type: SDA_LISP_PUB_SUB_TRANSIT
+        control_plane_devices:
+          - Transit-CP-1
+    fabric_sites:
+      - name: Global/Poland/Warsaw
+        authentication_template:
+          name: Closed Authentication
+          dot1x_to_mab_fallback_timeout: 30
+          wake_on_lan: false
+          number_of_hosts: Unlimited
+          authentication_order: dot1x
+        pub_sub_enabled: true
+        l3_virtual_networks:
+          - BYOD
+          - Guest
+          - Printers
+          - Campus
+        anycast_gateways:
+          - ip_pool_name: CampusVN2-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: Campus
+          - ip_pool_name: GuestVN2-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: Guest
+          - ip_pool_name: BYOD2-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: BYOD
+          - ip_pool_name: PrintersVN2-IPPool
+            auto_generate_vlan_name: true
+            traffic_type: DATA
+            l3_virtual_network: Printers
+    border_devices:
+      - name: FIAB
+        border_types:
+          - LAYER_3
+        default_exit: true
+        import_external_routes: false
+        local_autonomous_system_number: 65001
+        sda_transit: SDA-TRANSIT

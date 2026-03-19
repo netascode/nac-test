@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Nac Tmp Sxlajtj3" tests="10" errors="0" failures="0" skipped="0" time="0.602" timestamp="2026-03-17T20:30:17.397986">
+<testsuite name="Suite 1" tests="10" errors="0" failures="0" skipped="0" time="0.053" timestamp="2026-03-17T20:30:17.875000">
+<testsuite name="Disabled-Concurrent" tests="2" errors="0" failures="0" skipped="0" time="0.001" timestamp="2026-03-17T20:30:17.875000">
+<testcase classname="Nac Tmp Sxlajtj3.Suite 1.Disabled-Concurrent" name="Disabled Concurrent Test 1" time="0.001">
+</testcase>
+<testcase classname="Nac Tmp Sxlajtj3.Suite 1.Disabled-Concurrent" name="Disabled Concurrent Test 2" time="0.000">
+</testcase>
+<properties>
+<property name="Documentation" value="Test with Test Concurrency explicitly disabled"/>
+<property name="Test Concurrency" value="False"/>
+</properties>
+</testsuite>
+<testsuite name="Concurrent" tests="2" errors="0" failures="0" skipped="0" time="0.028" timestamp="2026-03-17T20:30:17.886000">
+<testcase classname="Nac Tmp Sxlajtj3.Suite 1.Concurrent" name="Concurrent Test 1" time="0.001">
+</testcase>
+<testcase classname="Nac Tmp Sxlajtj3.Suite 1.Concurrent" name="Concurrent Test 2" time="0.001">
+</testcase>
+<properties>
+<property name="Documentation" value="Test using Concurrency"/>
+<property name="Test Concurrency" value="True"/>
+</properties>
+</testsuite>
+<testsuite name="Mixedcase-Concurrent" tests="2" errors="0" failures="0" skipped="0" time="0.020" timestamp="2026-03-17T20:30:17.889000">
+<testcase classname="Nac Tmp Sxlajtj3.Suite 1.Mixedcase-Concurrent" name="Mixed Case Concurrent Test 1" time="0.001">
+</testcase>
+<testcase classname="Nac Tmp Sxlajtj3.Suite 1.Mixedcase-Concurrent" name="Mixed Case Concurrent Test 2" time="0.002">
+</testcase>
+<properties>
+<property name="Documentation" value="Test with mixed case &quot;TeSt CoNcUrReNcY&quot;"/>
+<property name="TeSt CoNcUrReNcY" value="True"/>
+</properties>
+</testsuite>
+<testsuite name="Non-Concurrent" tests="2" errors="0" failures="0" skipped="0" time="0.001" timestamp="2026-03-17T20:30:17.926988">
+<testcase classname="Nac Tmp Sxlajtj3.Suite 1.Non-Concurrent" name="Sequential Test 1" time="0.001">
+</testcase>
+<testcase classname="Nac Tmp Sxlajtj3.Suite 1.Non-Concurrent" name="Sequential Test 2" time="0.000">
+</testcase>
+<properties>
+<property name="Documentation" value="Suite not yet refactored"/>
+</properties>
+</testsuite>
+<testsuite name="Lowercase-Concurrent" tests="2" errors="0" failures="0" skipped="0" time="0.003" timestamp="2026-03-17T20:30:17.923000">
+<testcase classname="Nac Tmp Sxlajtj3.Suite 1.Lowercase-Concurrent" name="Lowercase Concurrent Test 1" time="0.001">
+</testcase>
+<testcase classname="Nac Tmp Sxlajtj3.Suite 1.Lowercase-Concurrent" name="Lowercase Concurrent Test 2" time="0.001">
+</testcase>
+<properties>
+<property name="Documentation" value="Test with lowercase &quot;test concurrency&quot;"/>
+<property name="test concurrency" value="True"/>
+</properties>
+</testsuite>
+</testsuite>
+<properties>
+<property name="Pabot Info" value="[https://pabot.org/?ref=log|Pabot] result from 8 executions."/>
+<property name="Pabot Version" value="5.2.2"/>
+</properties>
+</testsuite>

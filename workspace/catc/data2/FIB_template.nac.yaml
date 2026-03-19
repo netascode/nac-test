@@ -1,0 +1,21 @@
+---
+catalyst_center:
+  templates:
+    projects:
+      - name: FIB_SITE_TEMP
+        onboarding_templates:
+          - name: PNP_Template
+            description: border_dayzero to show PNP
+            language: JINJA
+            device_types:
+              - product_family: "Switches and Hubs"
+                product_series: "Cisco Catalyst 9000 Series Virtual Switches"
+            software_type: IOS-XE
+        dayn_templates:
+          - name: WLC_wlan_policy
+            description: WLC_Templates
+            language: JINJA
+            device_types:
+              - product_family: "Wireless Controller"
+                product_series: "Cisco Catalyst 9800 Wireless Controllers for Cloud"
+            software_type: IOS-XE

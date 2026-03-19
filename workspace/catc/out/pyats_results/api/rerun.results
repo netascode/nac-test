@@ -1,0 +1,19 @@
+# rerun.results file that contains the information of each task and their
+# testcases.
+# Please Check the following link for more information:
+# https://pubhub.devnetcloud.com/media/pyats/docs/easypy/rerun.html
+verify_dnac_catalyst_center_system_health_no_critical_events:
+  testcases:
+  - name: VerifyCatCSystemHealthNoCriticalEvents
+    result: PASSED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates/tests/pyats/verify_dnac_catalyst_center_system_health_no_critical_events.py
+verify_dnac_network_device_management_state:
+  testcases:
+  - name: VerifyDnacNetworkDeviceManagementState
+    result: PASSED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates/tests/pyats/verify_dnac_network_device_management_state.py
+verify_dnac_physical_topology_link_status:
+  testcases:
+  - name: VerifyPhysicalTopologyLinkStatus
+    result: PASSED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates/tests/pyats/verify_dnac_physical_topology_link_status.py

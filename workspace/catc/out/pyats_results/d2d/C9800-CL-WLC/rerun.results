@@ -1,0 +1,24 @@
+# rerun.results file that contains the information of each task and their
+# testcases.
+# Please Check the following link for more information:
+# https://pubhub.devnetcloud.com/media/pyats/docs/easypy/rerun.html
+C9800-CL-WLC_verify_iosxe_fabric_node_licensing_status:
+  testcases:
+  - name: VerifyFabricNodeLicensingStatus
+    result: FAILED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates/tests/pyats/verify_iosxe_fabric_node_licensing_status.py
+C9800-CL-WLC_verify_iosxe_lisp_sessions_status:
+  testcases:
+  - name: VerifyLISPSessionsStatus
+    result: FAILED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates/tests/pyats/verify_iosxe_lisp_sessions_status.py
+C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs:
+  testcases:
+  - name: VerifyNoCriticalErrorsInSystemLogs
+    result: FAILED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates/tests/pyats/verify_iosxe_no_critical_errors_in_system_logs.py
+C9800-CL-WLC_verify_iosxe_vtp_mode_status:
+  testcases:
+  - name: VerifyVTPOperatingMode
+    result: FAILED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates/tests/pyats/verify_iosxe_vtp_mode_status.py

@@ -1,0 +1,12 @@
+---
+catalyst_center:
+  templates:
+    projects:
+      - name: VirtualCat9k
+        dayn_templates:
+          - name: ACL_Block
+            description: ACL to block malicious IPs
+            device_types:
+              - product_family: "Switches and Hubs"
+                product_series: "Cisco Catalyst 9000 Series Virtual Switches"
+            software_type: IOS-XE

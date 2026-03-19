@@ -1,0 +1,67 @@
+testbed:
+  name: nac_test_consolidated_testbed
+  credentials:
+    default:
+      username: '%ENV{IOSXE_USERNAME}'
+      password: '%ENV{IOSXE_PASSWORD}'
+devices:
+  BR10:
+    alias: BR10
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: '%ENV{IOSXE_USERNAME}'
+        password: '%ENV{IOSXE_PASSWORD}'
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.130.10
+        port: 22
+        arguments:
+          init_config_commands: []
+          operating_mode: true
+    custom:
+      abstraction:
+        order:
+        - os
+  EDGE01:
+    alias: EDGE01
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: '%ENV{IOSXE_USERNAME}'
+        password: '%ENV{IOSXE_PASSWORD}'
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.130.1
+        port: 22
+        arguments:
+          init_config_commands: []
+          operating_mode: true
+    custom:
+      abstraction:
+        order:
+        - os
+  EDGE02:
+    alias: EDGE02
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: '%ENV{IOSXE_USERNAME}'
+        password: '%ENV{IOSXE_PASSWORD}'
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.130.2
+        port: 22
+        arguments:
+          init_config_commands: []
+          operating_mode: true
+    custom:
+      abstraction:
+        order:
+        - os

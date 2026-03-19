@@ -1,0 +1,39 @@
+TASK: Add Permissions Blocks (Findings #3, #4)
+STATUS: COMPLETED
+
+FILES MODIFIED:
+- .github/workflows/test.yml
+- .github/workflows/release.yml
+
+CHANGES APPLIED:
+
+1. test.yml - security job (line 14-15):
+   + Added: permissions: { contents: read }
+   
+2. test.yml - test job (line 83-84):
+   + Added: permissions: { contents: read }
+   
+3. test.yml - notification job (line 115):
+   + Added: permissions: {}
+   (Empty permissions block - network access only, no special permissions needed)
+   
+4. test.yml - lint job (line 42-43):
+   - NOT MODIFIED (already has permissions: { contents: write })
+   
+5. release.yml - build job (line 11-12):
+   + Added: permissions: { contents: read }
+
+VERIFICATION:
+✓ test.yml permissions count: 4 (lint + security + test + notification)
+✓ release.yml permissions count: 1 (build)
+✓ Both files are valid YAML
+✓ All permissions follow least-privilege principle:
+  - security job: contents: read (needs to checkout code for scanning)
+  - test job: contents: read (needs to checkout code for testing)
+  - notification job: {} (only needs network access for Webex notification)
+  - build job: contents: read (needs to checkout code for building)
+  - lint job: contents: write (required for dependabot to push lock file updates)
+
+PRINCIPLE APPLIED:
+Following least-privilege access model per GitHub Actions security best practices.
+Each job has minimum necessary permissions to complete its tasks.

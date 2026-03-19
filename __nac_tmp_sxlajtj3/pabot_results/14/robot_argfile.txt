@@ -1,0 +1,17 @@
+--suite Nac Tmp Sxlajtj3.Suite 1.Non-Concurrent
+--skiponfailure non-critical
+--variable CALLER_ID:f239f563c1bb461ab6bf1cd8bbcd7ab5
+--variable PABOTLIBURI:127.0.0.1:60170
+--variable PABOTEXECUTIONPOOLID:5
+--variable PABOTISLASTEXECUTIONINPOOL:0
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:14
+--variable PABOTLASTLEVEL:Nac Tmp Sxlajtj3.Suite 1.Non-Concurrent
+--outputdir /Users/oboehmer/Documents/DD/nac-test/__nac_tmp_sxlajtj3/pabot_results/14
+--output output.xml
+--log NONE
+--report NONE
+--xunit NONE
+--consolecolors off
+--consolemarkers off
+/Users/oboehmer/Documents/DD/nac-test/__nac_tmp_sxlajtj3

@@ -1,0 +1,7 @@
+default_revision: latest
+features:
+  sdk:
+    commands:
+      execute_clear_line:
+      - '|||||||||'
+version: 1

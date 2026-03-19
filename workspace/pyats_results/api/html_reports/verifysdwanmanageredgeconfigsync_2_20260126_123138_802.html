@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify All SD-WAN Edge Configurations Are In-Sync - Test Results</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --skip: #95a5a6;
+            --info: #3498db;
+            --neutral: #95a5a6;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+            background-color: #f9f9f9;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 6px var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        h1, h2, h3, h4 {
+            margin-top: 0;
+            line-height: 1.2;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        header h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .header-content {
+            position: relative;
+        }
+
+        .nav-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        @media (max-width: 768px) {
+            .nav-button {
+                position: static;
+                margin-bottom: 20px;
+                display: inline-flex;
+            }
+        }
+
+        .status-banner {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .pass-status {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .fail-status {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .skip-status {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: #7f8c8d;
+            border-left: 4px solid #95a5a6;
+        }
+
+        .abort-status {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e67e22;
+            border-left: 4px solid #e67e22;
+        }
+
+        .error-status {
+            background-color: rgba(142, 68, 173, 0.15);
+            color: #8e44ad;
+            border-left: 4px solid #8e44ad;
+        }
+
+        .block-status {
+            background-color: rgba(52, 73, 94, 0.15);
+            color: var(--secondary);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .neutral-status {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: var(--neutral);
+            border-left: 4px solid var(--neutral);
+        }
+
+        .result-pass {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .result-fail {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .result-info {
+            background-color: rgba(52, 152, 219, 0.15);
+            color: var(--info);
+            border-left: 4px solid var(--info);
+        }
+
+        .result-skip {
+            background-color: rgba(243, 156, 18, 0.15);
+            color: var(--warning);
+            border-left: 4px solid var(--warning);
+        }
+
+        .result-abort {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e67e22;
+            border-left: 4px solid #e67e22;
+        }
+
+        .result-error {
+            background-color: rgba(142, 68, 173, 0.15);
+            color: #8e44ad;
+            border-left: 4px solid #8e44ad;
+        }
+
+        .result-block {
+            background-color: rgba(52, 73, 94, 0.15);
+            color: var(--secondary);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .result-neutral {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: var(--neutral);
+            border-left: 4px solid var(--neutral);
+        }
+
+        section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            margin-bottom: 30px;
+            padding: 25px;
+        }
+
+        section h2 {
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 10px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--primary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow: auto;
+            border: 1px solid #e9ecef;
+            margin: 15px 0;
+        }
+
+        code {
+            font-family: 'Source Code Pro', Consolas, Monaco, 'Andale Mono', monospace;
+            font-size: 0.9em;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid #e9ecef;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        /* List styling */
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+
+        li {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+
+        /* Nested list styling */
+        ul ul, ol ol, ul ol, ol ul {
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        /* Bold text styling */
+        strong, b {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Jobfile path styling */
+        .jobfile-path {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85em;
+            font-weight: normal;
+            margin-top: 5px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+        }
+
+        /* Highlighted box styling for important criteria */
+        p:has(> strong:first-child) {
+            background-color: rgba(147, 112, 219, 0.15);
+            border-left: 4px solid #9370DB;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        /* Alternative for browsers that don't support :has() */
+        p > strong:first-child {
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        .result-item {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        /* ===== Universal Result Message Formatting (All Result Types) ===== */
+
+        .result-message {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* Apply consistent formatting to all result messages */
+        .result-message p {
+            margin: 0.5em 0;
+            line-height: 1.6;
+        }
+
+        .result-message p:first-child {
+            margin-top: 0;
+        }
+
+        .result-message p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Spacer paragraphs for visual separation */
+        .result-message p.spacer {
+            height: 0.75em;
+            margin: 0;
+        }
+
+        /* Strong emphasis in all result messages */
+        .result-message strong {
+            font-weight: 600;
+            color: inherit;  /* Inherit from parent result type */
+        }
+
+        /* Inline code formatting in all result messages */
+        .result-message code {
+            background-color: rgba(52, 73, 94, 0.08);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+
+        /* Universal bullet list styling for all result types */
+        .result-detail-list {
+            margin: 0.75em 0;
+            padding-left: 1.5em;
+            list-style: disc outside;
+        }
+
+        .result-detail-list li {
+            margin: 0.4em 0;
+            line-height: 1.5;
+            color: inherit;  /* Inherit from parent result type */
+        }
+
+        .result-detail-list li code {
+            /* Inline code within list items */
+            font-size: 0.85em;
+        }
+
+        /* Emoji styling in result messages */
+        .result-message span[style*="font-size: 1.2em"] {
+            margin-right: 0.3em;
+        }
+
+        /* ===== Result Type Specific Styling ===== */
+
+        /* Skip results - softer appearance */
+        .result-skip {
+            background-color: rgba(149, 165, 166, 0.08);
+            border-left: 4px solid var(--skip);
+            color: #5d6d7e;
+        }
+
+        .result-skip .result-message strong {
+            color: #5a6c7d;
+        }
+
+        .result-skip .result-message code {
+            background-color: rgba(149, 165, 166, 0.1);
+        }
+
+        /* Failed results - clear error presentation */
+        .result-fail {
+            background-color: rgba(231, 76, 60, 0.05);
+            border-left: 4px solid var(--danger);
+            color: #5a2321;
+        }
+
+        .result-fail .result-message strong {
+            color: #c0392b;
+            font-weight: 600;
+        }
+
+        .result-fail .result-message code {
+            background-color: rgba(231, 76, 60, 0.08);
+            color: #922b21;
+        }
+
+        /* Passed results - subtle success indication */
+        .result-pass {
+            background-color: rgba(46, 204, 113, 0.05);
+            border-left: 4px solid var(--success);
+            color: #1e4620;
+        }
+
+        .result-pass .result-message strong {
+            color: #27ae60;
+        }
+
+        .result-pass .result-message code {
+            background-color: rgba(46, 204, 113, 0.08);
+            color: #186a3b;
+        }
+
+        /* ===== Nested Result-Command Structure ===== */
+
+        .result-header.expandable {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-commands {
+            margin-top: 15px;
+            padding-left: 20px;
+            border-left: 2px solid #e9ecef;
+        }
+
+        .cmd-count {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            border-top: 1px solid var(--light);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* CLI Terminal Styling */
+        .cli-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .cli-header {
+            background-color: #f5f5f5;
+            padding: 8px 15px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cli-content {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        .cli-prompt {
+            color: #98c379;
+        }
+
+        .cli-command {
+            color: #61afef;
+            font-weight: bold;
+        }
+
+        .cli-output {
+            color: #abb2bf;
+            display: block;
+            margin-top: 10px;
+        }
+
+        /* Parsed Output Styling */
+        .parsed-data-header {
+            background-color: #2d333b;
+            color: #ddd;
+            padding: 8px 15px;
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .parsed-data-content {
+            background-color: #1a1f26;
+            color: #56b6c2;
+            padding: 15px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        /* JSON output styling */
+        .json-output {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+        }
+
+        /* Test context banner styling */
+        .test-context-banner {
+            background-color: #f0f4f8;
+            border-left: 4px solid var(--accent);
+            padding: 10px 15px;
+            margin: 15px 0 10px 0;
+            font-weight: 500;
+            color: var(--secondary);
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+
+        .test-context-banner::before {
+            content: "Test Context: ";
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Collapsible sections */
+        .chevron::before {
+            content: '\25BC'; /* Down-pointing triangle HTML entity */
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+
+        .collapsed .chevron::before {
+            content: '\25B6'; /* Right-pointing triangle HTML entity */
+        }
+
+        .content-collapsed {
+            display: none;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            header {
+                padding: 20px 15px;
+            }
+
+            section {
+                padding: 15px;
+            }
+        }
+
+        /* Client-side JSON formatting styles */
+        .command-output {
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .raw-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;  /* CRITICAL: Prevent layout breaks from extremely long unbreakable strings */
+            margin: 0;
+        }
+
+        .format-json-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 0.8em;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            min-width: 100px;  /* Consistent button width for toggle states */
+            text-align: center;
+        }
+
+        .format-json-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .format-json-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Toggle button states for better UX */
+        .format-json-btn.toggle-state {
+            background-color: #28a745;  /* Green when showing formatted JSON */
+        }
+
+        .format-json-btn.toggle-state:hover {
+            background-color: #1e7e34;
+        }
+
+        .formatted-json {
+            color: #333;
+        }
+
+        /* JSON syntax highlighting colors */
+        .json-key {
+            color: #0451a5;
+            font-weight: bold;
+        }
+
+        .json-string {
+            color: #0f7b0f;
+        }
+
+        .json-number {
+            color: #098658;
+        }
+
+        .json-boolean {
+            color: #0000ff;
+        }
+
+        .json-null {
+            color: #795e26;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="summary_report.html" class="nav-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                    Back to Summary
+                </a>
+                <h1>Verify All SD-WAN Edge Configurations Are In-Sync</h1>
+                <div class="status-banner fail-status">
+                    Test Status: FAILED
+                </div>
+                <div class="jobfile-path">
+                    Jobfile: tests/integration/fixtures/templates_pyats_qs/sdwan/
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <section id="section-description">
+            <h2 onclick="toggleCollapse('section-description-content')">
+                Description <span class="chevron"></span>
+            </h2>
+            <div id="section-description-content">
+                <p>This test validates configuration synchronization status for all managed SD-WAN edge devices<br />
+by querying the SD-WAN Manager REST API. SD-WAN edge devices must have a configured system IP and be in a managed<br />
+state to ensure that intended configurations are properly applied and running. Configuration synchronization is<br />
+critical for device stability, security policy enforcement, and consistent application performance across the SD-WAN fabric.</p>
+            </div>
+        </section>
+
+        <section id="section-setup">
+            <h2 onclick="toggleCollapse('section-setup-content')">
+                Setup <span class="chevron"></span>
+            </h2>
+            <div id="section-setup-content">
+                <ul>
+<li>Access to an active SD-WAN Manager controller is available via HTTPS API.</li>
+<li>Authentication credentials for the SD-WAN Manager controller are valid and configured.</li>
+<li>The SD-WAN fabric is deployed with managed edge devices that have completed onboarding.</li>
+<li>Edge devices have system IPs assigned and are not in an 'Unmanaged' state.</li>
+</ul>
+            </div>
+        </section>
+
+        <section id="section-procedure">
+            <h2 onclick="toggleCollapse('section-procedure-content')">
+                Procedure <span class="chevron"></span>
+            </h2>
+            <div id="section-procedure-content">
+                <ul>
+<li>Establish HTTPS connection to the SD-WAN Manager controller.</li>
+<li>Query the SD-WAN Manager API endpoint: <em>/dataservice/system/device/vedges</em>.</li>
+<li>Retrieve the JSON response containing all edge device objects.</li>
+<li>For EACH device object:<ul>
+<li>INCLUDE device in validation scope IF <code>configuredSystemIP</code> is present AND <code>managed-by</code> != 'Unmanaged'.</li>
+<li>For each included device, verify that <code>configStatusMessage</code> equals 'In Sync'.</li>
+<li>Record devices with missing, empty, or non-'In Sync' <code>configStatusMessage</code> as unhealthy.</li>
+</ul>
+</li>
+<li>Summarize results, reporting total checked devices, healthy (in sync), and unhealthy (out-of-sync) devices.</li>
+</ul>
+            </div>
+        </section>
+
+        <section id="section-criteria">
+            <h2 onclick="toggleCollapse('section-criteria-content')">
+                Pass/Fail Criteria <span class="chevron"></span>
+            </h2>
+            <div id="section-criteria-content">
+                <p><strong>This test passes when all of the following conditions are met:</strong></p>
+<ul>
+<li>At least one SD-WAN edge device is discovered with a configured system IP and is managed.</li>
+<li>For all included devices, the <code>configStatusMessage</code> attribute is present and equals 'In Sync'.</li>
+<li>No device within validation scope is missing the <code>configStatusMessage</code> attribute or shows 'Out-of-Sync' or empty values.</li>
+<li>The API query completes successfully and returns a valid response.</li>
+</ul>
+<p><strong>This test fails if any of the following criteria are met:</strong></p>
+<ul>
+<li>No managed SD-WAN edge devices with a configured system IP are discovered in the API response.</li>
+<li>ANY device in scope is missing the <code>configStatusMessage</code> attribute, has an empty string, or shows 'Out-of-Sync'.</li>
+<li>The API query fails or returns an error response.</li>
+</ul>
+            </div>
+        </section>
+
+        <section id="section-results">
+            <h2 onclick="toggleCollapse('section-results-content')">
+                Results <span class="chevron"></span>
+            </h2>
+            <div id="section-results-content">
+                    <!-- Leverage existing Jinja2 groupby filter (handle None values for sorting) -->
+                    
+                    <!-- Sort results: FAILED first, then PASSED, then SKIPPED (for better debugging UX) -->
+  
+                    
+                        <div class="result-item result-fail">
+                            
+                            <!-- Result header (clickable if has commands) -->
+                            <div class="result-header expandable"
+                                 onclick="toggleCollapse('result-commands-1')">
+                                <div class="result-message">
+                                    <!-- Universal formatting applied to ALL result types for consistent, readable output -->
+                                    <p><strong>SDWAN Edge Configuration Sync Status Check FAILED</strong></p>
+<p class="spacer"></p>
+<p>One or more managed SDWAN edge devices with a configured system IP do not have configuration status 'In Sync'.</p>
+<p class="spacer"></p>
+<p><strong>Validation Results:</strong></p>
+<p>[FAIL] Device 'test_device_CG1' (System IP: 100.1.1.1) configStatusMessage: Sync Pending</p>
+<p>[FAIL] Device 'test_device_CG2' (System IP: 100.1.1.2) configStatusMessage: Sync Pending</p>
+<p>[PASS] Device 'sd-dc-c8kv-01' (System IP: 10.0.0.1) configStatusMessage: In Sync</p>
+<p>[PASS] Device 'sd-dc-c8kv-02' (System IP: 10.0.0.2) configStatusMessage: In Sync</p>
+<p>[PASS] Device 'sd-br01-c8kv-r1' (System IP: 10.0.0.3) configStatusMessage: In Sync</p>
+<p>[FAIL] Device 'sd-br01-c8kv-r2' (System IP: 10.0.0.4) configStatusMessage: Sync Pending</p>
+<p>[PASS] Device 'sd-br02-c8kv-r1' (System IP: 10.0.0.5) configStatusMessage: In Sync</p>
+<p>[PASS] Device 'sd-br02-c8kv-r2' (System IP: 10.0.0.6) configStatusMessage: In Sync</p>
+<p class="spacer"></p>
+<p><strong>Detailed Failures:</strong></p>
+<p>Device 'test_device_CG1' (System IP: 100.1.1.1, Managed-By: Config-Group CG-02): Attribute 'configStatusMessage' expected 'In Sync', found 'Sync Pending'</p>
+<p>Device 'test_device_CG2' (System IP: 100.1.1.2, Managed-By: Config-Group CG-02): Attribute 'configStatusMessage' expected 'In Sync', found 'Sync Pending'</p>
+<p>Device 'sd-br01-c8kv-r2' (System IP: 10.0.0.4, Managed-By: Config-Group branch_type1_secondary): Attribute 'configStatusMessage' expected 'In Sync', found 'Sync Pending'</p>
+<p class="spacer"></p>
+<p><strong>Edge Configuration Sync Status:</strong></p>
+<ul class="result-detail-list">
+<li>Total checked devices: 8</li>
+<li>Devices 'In Sync': 5</li>
+<li>Devices out-of-sync: 3</li>
+</ul>
+<p class="spacer"></p>
+<p><strong>Please verify:</strong></p>
+<ul class="result-detail-list">
+<li>Devices have completed configuration push</li>
+<li>Devices are online and reachable</li>
+<li>No configuration push failures or errors</li>
+<li>Configuration groups/templates are correctly applied</li>
+<li>Device 'configStatusMessage' is not empty or in 'Out-of-Sync' state</li>
+<li>API query duration: 0.42s</li>
+</ul>
+                                </div>
+                                    <span class="cmd-count">(1 commands)</span>
+                                    <span class="chevron"></span>
+                            </div>
+                            
+                            <!-- Nested commands (reuse existing command rendering logic exactly) -->
+                            <div class="result-commands content-collapsed" id="result-commands-1">
+                                    <!-- REUSE existing command template code (no duplication) -->
+                                    <div class="cli-container" id="cmd-result0-exec0">
+                                        <div class="cli-header" onclick="toggleCollapse('cmd-content-result0-exec0')">
+                                            <span>Device: SDWAN Manager</span>
+                                            <span class="chevron"></span>
+                                        </div>
+                                        <div class="device-content" id="cmd-content-result0-exec0">
+                                            <div class="cli-content">
+<span class="cli-prompt">SDWAN Manager#</span> <span class="cli-command">GET /dataservice/system/device/vedges</span>
+<div class="command-output">
+    <pre class="raw-output" id="raw-result0-exec0" data-raw-output="{&#34;header&#34;:{&#34;generatedOn&#34;:1769427032573,&#34;viewKeys&#34;:{&#34;uniqueKey&#34;:[],&#34;preferenceKey&#34;:&#34;grid-vEdgeList&#34;},&#34;columns&#34;:[{&#34;title&#34;:&#34;Chassis Number&#34;,&#34;property&#34;:&#34;chasisNumber&#34;,&#34;hideable&#34;:false,&#34;visible&#34;:true,&#34;width&#34;:250,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Site Name&#34;,&#34;property&#34;:&#34;site-name&#34;,&#34;visible&#34;:true,&#34;width&#34;:80,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Hostname&#34;,&#34;property&#34;:&#34;host-name&#34;,&#34;hideable&#34;:true,&#34;visible&#34;:true,&#34;width&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Tags&#34;,&#34;property&#34;:&#34;tags&#34;,&#34;display&#34;:&#34;toggle&#34;,&#34;actionColumn&#34;:true,&#34;visible&#34;:true,&#34;minWidth&#34;:100,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Config Locked&#34;,&#34;property&#34;:&#34;device-lock&#34;,&#34;visible&#34;:true,&#34;width&#34;:80,&#34;dataType&#34;:&#34;boolean&#34;},{&#34;title&#34;:&#34;Managed By&#34;,&#34;property&#34;:&#34;managed-by&#34;,&#34;visible&#34;:true,&#34;headerTooltip&#34;:&#34;This field indicates whether device is being managed by a Configuration-Group, Template, or it is Unmanaged i.e. not managed by either of them. Note: A device that is Unlocked but, managed by a Configuration-Group  will become locked again when the Configuration-Group is deployed back to the device.&#34;,&#34;width&#34;:160,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Device Status&#34;,&#34;property&#34;:&#34;configStatusMessage&#34;,&#34;display&#34;:&#34;syncDiffChecker&#34;,&#34;visible&#34;:true,&#34;minWidth&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Version&#34;,&#34;property&#34;:&#34;version&#34;,&#34;visible&#34;:true,&#34;width&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Reachability&#34;,&#34;property&#34;:&#34;reachability&#34;,&#34;hideable&#34;:true,&#34;visible&#34;:true,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Site ID&#34;,&#34;property&#34;:&#34;site-id&#34;,&#34;visible&#34;:false,&#34;width&#34;:70,&#34;dataType&#34;:&#34;numberStr&#34;},{&#34;title&#34;:&#34;Region ID&#34;,&#34;property&#34;:&#34;region-id&#34;,&#34;visible&#34;:false,&#34;width&#34;:120,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Region Name&#34;,&#34;property&#34;:&#34;region-name&#34;,&#34;visible&#34;:false,&#34;width&#34;:120,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Mode&#34;,&#34;property&#34;:&#34;configOperationMode&#34;,&#34;display&#34;:&#34;keyvalue&#34;,&#34;keyvalueProperty&#34;:&#34;configOperationMode&#34;,&#34;visible&#34;:false,&#34;keyvalue&#34;:[{&#34;key&#34;:&#34;cli&#34;,&#34;value&#34;:&#34;CLI&#34;},{&#34;key&#34;:&#34;vmanage&#34;,&#34;value&#34;:&#34;vManage&#34;}],&#34;width&#34;:80,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;view.certificate.clientViewVedgeList.assignedConfigGroup&#34;,&#34;property&#34;:&#34;name&#34;,&#34;visible&#34;:false,&#34;width&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Assigned Template&#34;,&#34;property&#34;:&#34;template&#34;,&#34;visible&#34;:false,&#34;width&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Device Model&#34;,&#34;property&#34;:&#34;deviceModel&#34;,&#34;display&#34;:&#34;keyvalue&#34;,&#34;keyvalueProperty&#34;:&#34;deviceModel&#34;,&#34;visible&#34;:false,&#34;minWidth&#34;:120,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Draft Mode&#34;,&#34;property&#34;:&#34;draftMode&#34;,&#34;visible&#34;:false,&#34;width&#34;:80,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Serial No./Token&#34;,&#34;property&#34;:&#34;serialNumber&#34;,&#34;visible&#34;:false,&#34;width&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;State&#34;,&#34;property&#34;:&#34;vedgeCertificateState&#34;,&#34;display&#34;:&#34;iconAndToolTip&#34;,&#34;iconProperty&#34;:&#34;vedgeCertificateState&#34;,&#34;toolTipProperty&#34;:&#34;vedgeCertificateState&#34;,&#34;visible&#34;:false,&#34;icon&#34;:[{&#34;key&#34;:&#34;tokengenerated&#34;,&#34;value&#34;:&#34;images/certStates/token-generated.png&#34;,&#34;displayKey&#34;:&#34;Token Generated&#34;},{&#34;key&#34;:&#34;bootstrapconfiggenerated&#34;,&#34;value&#34;:&#34;images/certStates/bootstrap-config-generated.png&#34;,&#34;displayKey&#34;:&#34;Bootstrap Configuration Generated&#34;},{&#34;key&#34;:&#34;csrgenerated&#34;,&#34;value&#34;:&#34;images/certStates/csr-generated.png&#34;,&#34;displayKey&#34;:&#34;CSR Generated&#34;},{&#34;key&#34;:&#34;csrfailed&#34;,&#34;value&#34;:&#34;images/certStates/csr-failed.png&#34;,&#34;displayKey&#34;:&#34;CSR Failed&#34;},{&#34;key&#34;:&#34;certinstallfailed&#34;,&#34;value&#34;:&#34;images/certStates/cert-install-failed.png&#34;,&#34;displayKey&#34;:&#34;Certificate Installation Failed&#34;},{&#34;key&#34;:&#34;certinstalled&#34;,&#34;value&#34;:&#34;images/certStates/cert-installed.png&#34;,&#34;displayKey&#34;:&#34;Certificate Installed&#34;}],&#34;width&#34;:40,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Enterprise Cert Serial No&#34;,&#34;property&#34;:&#34;hardwareCertSerialNumber&#34;,&#34;visible&#34;:false,&#34;width&#34;:100,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Certificate Expiration Date&#34;,&#34;property&#34;:&#34;expirationDate&#34;,&#34;visible&#34;:false,&#34;width&#34;:100,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Subject SUDI serial #&#34;,&#34;property&#34;:&#34;subjectSerialNumber&#34;,&#34;visible&#34;:false,&#34;width&#34;:100,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Validity&#34;,&#34;property&#34;:&#34;validity&#34;,&#34;display&#34;:&#34;toggle&#34;,&#34;actionColumn&#34;:true,&#34;visible&#34;:false,&#34;minWidth&#34;:100,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;System IP    &#34;,&#34;property&#34;:&#34;local-system-ip&#34;,&#34;hideable&#34;:true,&#34;visible&#34;:false,&#34;minWidth&#34;:120,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;title&#34;:&#34;Configured System IP&#34;,&#34;property&#34;:&#34;configuredSystemIP&#34;,&#34;hideable&#34;:true,&#34;visible&#34;:false,&#34;minWidth&#34;:120,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;title&#34;:&#34;Upload Source&#34;,&#34;property&#34;:&#34;uploadSource&#34;,&#34;display&#34;:&#34;toggle&#34;,&#34;actionColumn&#34;:true,&#34;visible&#34;:false,&#34;minWidth&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Solution&#34;,&#34;property&#34;:&#34;solution&#34;,&#34;visible&#34;:false,&#34;minWidth&#34;:150,&#34;dataType&#34;:&#34;string&#34;}],&#34;fields&#34;:[{&#34;property&#34;:&#34;chasisNumber&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;site-name&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;host-name&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;tags&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;toggle&#34;},{&#34;property&#34;:&#34;device-lock&#34;,&#34;dataType&#34;:&#34;boolean&#34;},{&#34;property&#34;:&#34;managed-by&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;configStatusMessage&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;syncDiffChecker&#34;},{&#34;property&#34;:&#34;version&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;reachability&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;deviceIP&#34;,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;property&#34;:&#34;site-id&#34;,&#34;dataType&#34;:&#34;numberStr&#34;},{&#34;property&#34;:&#34;region-id&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;region-name&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;configOperationMode&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;keyvalue&#34;},{&#34;property&#34;:&#34;name&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;template&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;deviceModel&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;keyvalue&#34;},{&#34;property&#34;:&#34;draftMode&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;serialNumber&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;vedgeCertificateState&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;iconAndToolTip&#34;},{&#34;property&#34;:&#34;hardwareCertSerialNumber&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;expirationDate&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;subjectSerialNumber&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;validity&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;toggle&#34;},{&#34;property&#34;:&#34;local-system-ip&#34;,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;property&#34;:&#34;configuredSystemIP&#34;,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;property&#34;:&#34;vbond&#34;,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;property&#34;:&#34;uploadSource&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;toggle&#34;},{&#34;property&#34;:&#34;solution&#34;,&#34;dataType&#34;:&#34;string&#34;}]},&#34;data&#34;:[{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;1c09674cbfcd4e02aea175725eafc909&#34;,&#34;uuid&#34;:&#34;C8K-E5FA8EFC-7B65-C148-2D23-2C72D2745EFA&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-E5FA8EFC-7B65-C148-2D23-2C72D2745EFA&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;24d1314ddf8842aa8389f8be0922b406&#34;,&#34;uuid&#34;:&#34;C8K-C8F8EBD6-6D13-00B0-9656-7CC05D16556F&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-C8F8EBD6-6D13-00B0-9656-7CC05D16556F&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;03d65f32c5de4d258110b7c6cb4ec3fa&#34;,&#34;uuid&#34;:&#34;C8K-707E5133-7BE8-3824-8FCF-BAEBE93DB7E0&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-707E5133-7BE8-3824-8FCF-BAEBE93DB7E0&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;e4e11bd932084fbf9f623a45eaf8c238&#34;,&#34;uuid&#34;:&#34;C8K-4670E56C-77BE-1CDF-1B75-AA9E8C789CDD&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-4670E56C-77BE-1CDF-1B75-AA9E8C789CDD&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;1594f99bd13b40a989744387d42e97ac&#34;,&#34;uuid&#34;:&#34;C8K-DCF04BCC-561A-1B87-5E85-0CCF8DF9CDDB&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-DCF04BCC-561A-1B87-5E85-0CCF8DF9CDDB&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;c19d285c67c042289d8421806c13600f&#34;,&#34;uuid&#34;:&#34;C8K-B487D1C3-E921-6C90-65D2-6B87FEC8B570&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-B487D1C3-E921-6C90-65D2-6B87FEC8B570&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;c8705acd73994c3e9e1834ca81b1794e&#34;,&#34;uuid&#34;:&#34;C8K-03EF0434-2731-2C12-8E62-EAE077A6D2D0&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-03EF0434-2731-2C12-8E62-EAE077A6D2D0&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;f2bcddf4c46e48ba8ef6fd98a6a1dc9a&#34;,&#34;uuid&#34;:&#34;C8K-69613F58-CFC7-DF2D-10E9-853A261BE1E2&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-69613F58-CFC7-DF2D-10E9-853A261BE1E2&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;configuredHostname&#34;:&#34;test_device_CG1&#34;,&#34;configuredSiteId&#34;:&#34;4001&#34;,&#34;configuredSystemIP&#34;:&#34;100.1.1.1&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;dad9d9089a194349ade770c55d447ed6&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-3D1A8960-6E76-532C-DA93-50626FC5797E&#34;,&#34;configStatusMessage&#34;:&#34;Sync Pending&#34;,&#34;templateApplyLog&#34;:[&#34;[18-Dec-2025 8:10:31 UTC] Deploying device with Config Group CG-02&#34;,&#34;[18-Dec-2025 8:10:31 UTC] Generating configuration&#34;,&#34;[18-Dec-2025 8:10:33 UTC] Checking and creating device in Manager&#34;,&#34;[18-Dec-2025 8:10:37 UTC] Device is offline&#34;,&#34;[18-Dec-2025 8:10:37 UTC] Updating device configuration in Manager&#34;],&#34;uuid&#34;:&#34;C8K-3D1A8960-6E76-532C-DA93-50626FC5797E&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Pending&#34;,&#34;chasisNumber&#34;:&#34;C8K-3D1A8960-6E76-532C-DA93-50626FC5797E&#34;,&#34;configStatusMessageDetails&#34;:&#34;Device is offline&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;id&#34;:&#34;a1a7294c-6950-4fc8-8248-a25432b6036b&#34;,&#34;name&#34;:&#34;CG-02&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;CG-t1&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;3bed2269-ce4f-41d8-84fc-62e5f503cc97&#34;,&#34;description&#34;:&#34;CG-t1&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_4001&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group CG-02&#34;,&#34;local-system-ip&#34;:&#34;100.1.1.1&#34;,&#34;host-name&#34;:&#34;test_device_CG1&#34;,&#34;site-id&#34;:&#34;4001&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;bb264969408942debe56496ad44cbafb&#34;,&#34;uuid&#34;:&#34;C8K-E87FBD01-C68B-CD52-7518-33C41B468C69&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-E87FBD01-C68B-CD52-7518-33C41B468C69&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;configuredHostname&#34;:&#34;test_device_CG2&#34;,&#34;configuredSiteId&#34;:&#34;4001&#34;,&#34;configuredSystemIP&#34;:&#34;100.1.1.2&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;2917f0b00eb44e48b9c78a08b2f9737b&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-D4CE7174-5261-7E6F-91EA-4926BCF4C2DD&#34;,&#34;configStatusMessage&#34;:&#34;Sync Pending&#34;,&#34;templateApplyLog&#34;:[&#34;[18-Dec-2025 8:10:31 UTC] Deploying device with Config Group CG-02&#34;,&#34;[18-Dec-2025 8:10:31 UTC] Generating configuration&#34;,&#34;[18-Dec-2025 8:10:33 UTC] Checking and creating device in Manager&#34;,&#34;[18-Dec-2025 8:10:37 UTC] Device is offline&#34;,&#34;[18-Dec-2025 8:10:37 UTC] Updating device configuration in Manager&#34;],&#34;uuid&#34;:&#34;C8K-D4CE7174-5261-7E6F-91EA-4926BCF4C2DD&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Pending&#34;,&#34;chasisNumber&#34;:&#34;C8K-D4CE7174-5261-7E6F-91EA-4926BCF4C2DD&#34;,&#34;configStatusMessageDetails&#34;:&#34;Device is offline&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;id&#34;:&#34;a1a7294c-6950-4fc8-8248-a25432b6036b&#34;,&#34;name&#34;:&#34;CG-02&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;CG-t2&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;75b42799-cea9-4a12-90f9-3948f2e577fd&#34;,&#34;description&#34;:&#34;CG-t2&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_4001&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group CG-02&#34;,&#34;local-system-ip&#34;:&#34;100.1.1.2&#34;,&#34;host-name&#34;:&#34;test_device_CG2&#34;,&#34;site-id&#34;:&#34;4001&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;0e8e648aff0f409392c6dac857d983e0&#34;,&#34;uuid&#34;:&#34;C8K-27148AFE-7160-69D3-ACC5-F77560530D63&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-27148AFE-7160-69D3-ACC5-F77560530D63&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;b648d0d455f940aabab0384b7472a4a9&#34;,&#34;uuid&#34;:&#34;C8K-D865D5C8-C7E1-66CD-1716-35EDB2EA036C&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-D865D5C8-C7E1-66CD-1716-35EDB2EA036C&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;e76dca4cece942c9b15e0d30f12b51ce&#34;,&#34;uuid&#34;:&#34;C8K-3188FA44-8A8A-8392-0E4B-0DA5A445C10B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-3188FA44-8A8A-8392-0E4B-0DA5A445C10B&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;28a7ec1973f54bcba9f9f1f7085a60e6&#34;,&#34;uuid&#34;:&#34;C8K-3A3DD488-D04F-3204-90F5-2E754FD14877&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-3A3DD488-D04F-3204-90F5-2E754FD14877&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;54d2da9493314f8f87293208481970f9&#34;,&#34;configStatusMessage&#34;:&#34;&#34;,&#34;uuid&#34;:&#34;C8K-5BAF9C99-7676-401F-9DFE-B1A3BEBD644B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-5BAF9C99-7676-401F-9DFE-B1A3BEBD644B&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;tt22&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;1b6f38d2-f044-4361-a170-6b5bb35f51a7&#34;,&#34;description&#34;:&#34;tt22&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;25d8581306c34db78c24fd08dd82019e&#34;,&#34;configStatusMessage&#34;:&#34;&#34;,&#34;uuid&#34;:&#34;C8K-4A88C7BA-BC26-2009-F933-641392D21AB5&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-4A88C7BA-BC26-2009-F933-641392D21AB5&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;ttttttt&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;368c0716-2d47-4644-83dc-9536f02da718&#34;,&#34;description&#34;:&#34;ttttttt&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;06e0a62290814c389d825a96a8de17bf&#34;,&#34;uuid&#34;:&#34;C8K-C38D156C-34E4-909A-15BB-96D0E9D0E808&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-C38D156C-34E4-909A-15BB-96D0E9D0E808&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;configuredHostname&#34;:&#34;sd-dc-c8kv-01&#34;,&#34;configuredSiteId&#34;:&#34;100&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.1&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;2F5F03F9&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B&#34;,&#34;configStatusMessage&#34;:&#34;In Sync&#34;,&#34;templateApplyLog&#34;:[&#34;[15-Jan-2026 17:34:38 UTC] Deploying device with Config Group dc_hub&#34;,&#34;[15-Jan-2026 17:34:39 UTC] Generating configuration&#34;,&#34;[15-Jan-2026 17:34:40 UTC] Checking and creating device in Manager&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Device is online&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Updating device configuration in Manager&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Sending configuration to device&#34;,&#34;[15-Jan-2026 17:34:50 UTC] Successfully notified device to pull configuration&#34;,&#34;[15-Jan-2026 17:34:51 UTC] Device has pulled the configuration&#34;,&#34;[15-Jan-2026 17:34:52 UTC] Device: Config applied successfully&#34;,&#34;[15-Jan-2026 17:34:52 UTC] Config Group successfully deployed to device&#34;],&#34;uuid&#34;:&#34;C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Success&#34;,&#34;chasisNumber&#34;:&#34;C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B&#34;,&#34;configStatusMessageDetails&#34;:&#34;&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstNDBD\nMENDRkQtOUVBOC0yQjJFLUU3M0ItMzJDNTkyNEVDNzlCLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQC2aXOnzKZyh6l2aF26IJOS6YInRpEoi5X8c5zG\ng/H9Pin/MgJ82VUyMO5h2Fh0UJJINIW7HWm6iOc6Ub7Gskde0jNSSfLXozjrSS8i\nibQPjM9VYLI235rHJ0uWfvLPfuCKeiv3ID69JhFPfjQrqkbbbZ2gbbMiMvjtdYWc\ntKXasOE+n9pH89ecpRfD9TnjW0JvOmUtJb22ZYxkaNTqjb62lDuSFBZY6tT7UTTu\n+lrLr/zWARohVa2fAABDGgTYJpfRpw5to2dvOxLJEwrGlY05FrmZSw+SErmDe//z\nKOn8MdhvWyN9+VQSJOje9tWP0jsn+oE2DAj5UxFVjcdemITFAgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFCKJpfj+1jjOXsvLorse\nZHrv06FwMA0GCSqGSIb3DQEBCwUAA4IBAQAOeNjW1mAqG3KLIxJqE3uNVV3BiOwg\nKS8Hba1G9Q4Q7EjOmZgrFSPNSbreNSewcNqpV5o5j8pqJXPUPny3sfBy2KomybXW\nVip9Hk/mtwvUQFcQJllKvzIY6RW1xAplh/bWdS55XIiDoEO7IHG6PUt3P+cafTLk\nWaXMsSbix/cC+CU5C9XGcBZ1QvHE+gF/HAAQhK2ClAfPk4/KuYGJ+QABZHKBgsBU\nlyHKYWyBafuLcUaHSlOckcpWLj9bpnYtCiHr/7+BTQf3fRDVGv3t2s2l7OZOYEeA\njUToJhH06EhzjlmQg0asXd/1OzBkJaWkvFKG9ejs3QelR5xVGG0U7FnE\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:11 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046591000,&#34;deviceIP&#34;:&#34;10.0.0.1&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:10 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694050530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;100&#34;,&#34;host-name&#34;:&#34;sd-dc-c8kv-01&#34;,&#34;system-ip&#34;:&#34;10.0.0.1&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.1&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;reachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686400000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1769407052034,&#34;vmanage-system-ip&#34;:&#34;10.0.0.1&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;f384f87b-15fd-4261-829c-69a8dc3890ad&#34;,&#34;name&#34;:&#34;dc_hub&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;dc_primary&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;85cdc17b-efcf-4578-a14c-620056716031&#34;,&#34;description&#34;:&#34;dc_primary&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_100&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group dc_hub&#34;},{&#34;configuredHostname&#34;:&#34;sd-dc-c8kv-02&#34;,&#34;configuredSiteId&#34;:&#34;100&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.2&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;B430E0DE&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B&#34;,&#34;configStatusMessage&#34;:&#34;In Sync&#34;,&#34;templateApplyLog&#34;:[&#34;[15-Jan-2026 17:34:39 UTC] Deploying device with Config Group dc_hub&#34;,&#34;[15-Jan-2026 17:34:39 UTC] Generating configuration&#34;,&#34;[15-Jan-2026 17:34:40 UTC] Checking and creating device in Manager&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Device is online&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Updating device configuration in Manager&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Sending configuration to device&#34;,&#34;[15-Jan-2026 17:34:51 UTC] Successfully notified device to pull configuration&#34;,&#34;[15-Jan-2026 17:34:51 UTC] Device has pulled the configuration&#34;,&#34;[15-Jan-2026 17:34:53 UTC] Device: Config applied successfully&#34;,&#34;[15-Jan-2026 17:34:53 UTC] Config Group successfully deployed to device&#34;],&#34;uuid&#34;:&#34;C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Success&#34;,&#34;chasisNumber&#34;:&#34;C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B&#34;,&#34;configStatusMessageDetails&#34;:&#34;&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstRTk0\nRDdCODgtNEI5RS0zMzIzLUM2QzMtRjI5MDc5RkFBQzNCLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQDvGMt/0rz4atO5LGbFlkOhqwWnonP9U+Wq9DHr\njfJxdzAnchvsEs3v2H9dnAAR2APcLxSndvn60ZFhhJSCiCrWTQSzu39TOWEU3TKt\nrdOR2MfsQPQQIfkYTA9IZ4oxtVJZt1vfKgDuBuOjrJ7rO20L8VKhDCfDt/8iAPIm\nWNJ1X7CXuYAC7AB728InSZtOdYgB40Ln48AUYbHswYI4lgaAUVuUgKjZD88hiCYF\nDPHsvPX8bW5i2f3aL9Vb41SkOh2z8aPzPIpoQLyFyvOabTA0VkyKohfhe+/nk/ia\ndk4SEtPPkzV0GgG8TdmA7oascA8b70GOC+K7veUfUJ6ySx23AgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFPu6FT8pcMYt/g03EvWx\nS/m02E10MA0GCSqGSIb3DQEBCwUAA4IBAQA6j0v5oZaI3O8K2h3m8I9uPXejZm11\nWBtrsd/2Cn3ymjjEMJM9UN2UboU/9Qby5JRGUDhQgCgzpUML2gQ26mhvYXmUgwfJ\n4tFK9udQ93NF0T0iR7c3Fj45TiJDbXPEOTZ45kAfdMMdz5nq45YdHOi7Iah/UXUG\nt4zzBqPdeCpqcFs7pMfx3rJXwjEZR3V6ne5Wx0+jMX03A9E3Xq/baUY0e/R1LyQ6\n1j4EJUVA9VSgT9ZI1cuRD5a1cDVpszJSsGiycMGpvdAaykYXfm5Ag4nZECbckYpO\nEAqvFiagllpjq2pjO8PHQcv3jGMLb+EIO69pVdJpwYSDS7FAzsv1gne0\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:15 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046595000,&#34;deviceIP&#34;:&#34;10.0.0.2&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:14 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694054530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;100&#34;,&#34;host-name&#34;:&#34;sd-dc-c8kv-02&#34;,&#34;system-ip&#34;:&#34;10.0.0.2&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.2&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;reachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686460000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1769407052452,&#34;vmanage-system-ip&#34;:&#34;10.0.0.2&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;f384f87b-15fd-4261-829c-69a8dc3890ad&#34;,&#34;name&#34;:&#34;dc_hub&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;dc_secondary&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;31d9ec4e-df59-41b9-b692-acb5894f6dad&#34;,&#34;description&#34;:&#34;dc_secondary&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_100&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group dc_hub&#34;},{&#34;configuredHostname&#34;:&#34;sd-br01-c8kv-r1&#34;,&#34;configuredSiteId&#34;:&#34;200&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.3&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;639BA65E&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A&#34;,&#34;configStatusMessage&#34;:&#34;In Sync&#34;,&#34;templateApplyLog&#34;:[&#34;[15-Jan-2026 14:17:54 UTC] Deploying device with Config Group branch_type1_primary&#34;,&#34;[15-Jan-2026 14:17:54 UTC] Generating configuration&#34;,&#34;[15-Jan-2026 14:17:55 UTC] Checking and creating device in Manager&#34;,&#34;[15-Jan-2026 14:18:01 UTC] Device is online&#34;,&#34;[15-Jan-2026 14:18:01 UTC] Updating device configuration in Manager&#34;,&#34;[15-Jan-2026 14:18:01 UTC] Sending configuration to device&#34;,&#34;[15-Jan-2026 14:18:05 UTC] Successfully notified device to pull configuration&#34;,&#34;[15-Jan-2026 14:18:06 UTC] Device has pulled the configuration&#34;,&#34;[15-Jan-2026 14:18:07 UTC] Device: Config applied successfully&#34;,&#34;[15-Jan-2026 14:18:07 UTC] Config Group successfully deployed to device&#34;],&#34;uuid&#34;:&#34;C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Success&#34;,&#34;chasisNumber&#34;:&#34;C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A&#34;,&#34;configStatusMessageDetails&#34;:&#34;&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstQjVF\nRTExN0UtMTIxMC1DMzk2LUVDNDEtRDNEQTY0RDZBNTFBLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQC6B7c2WMdF9RmhwJOfrJDUEtnORZMSTjPZplAo\n/s/sXleNoCJ8rz8iu0g1bqdmTSvP4MVwtt5Rsg8JFchlk1/oKpsDIsI5/GXFp2Nf\nJcegY5lSzZaXBLAATajwZd7tsSTWH7ECN9CEp/3V8M1Sa5jcZHYYUEUsChpv+Z8E\nxQoh5sVlFvt4JEbv8p6MaXFk734ExIYlXgfM9QBnpzUdaQPZaSAS7AK+ZQwrsqnz\n53OIE5ajK7LGMOkoYu0WD59qelrtQ3eramY2XY3I6hNQItsef+eBC76Og8q5gbTX\nTH3FJii7EVzkKaD1kjtfm3XUJl7MQq4oTnUYXKnAdqJq5B19AgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFOZiXA+EQIyoFk8W4gBd\n1mXtpfk7MA0GCSqGSIb3DQEBCwUAA4IBAQAKDabXfBVXamB3Ikoa5zdAKYrFwsSM\n+Clmp8VxRmvLzjJJpCalDxJPzNVJKywRvXchA47KueF9HzH4n9xFktRDuHtffJep\nULtD4RhgtDL9SvCuUbOAyxHBdd+AOsP2U5r2oA4crAimSaiceNk6DYcQtKQxOSQ8\nVBckW2s7bRiBza9K88uyCMEQDCRfw69Y9pfP2qBftf+Y4Pr5mUCHNxKKa1kb5syk\nsr1WL0f3oOEBN6MAjpqc1HSVi8gnRw/4yluF2xS1dtq7eEOC3miAOVCnBx+1S6Ei\nxsfN5YUWqVD+pkXF5eeCyoGjUE0k1gvIEqhdrtags8jTbFXru1ZhLzec\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:11 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046591000,&#34;deviceIP&#34;:&#34;10.0.0.3&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:11 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694050530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;200&#34;,&#34;host-name&#34;:&#34;sd-br01-c8kv-r1&#34;,&#34;system-ip&#34;:&#34;10.0.0.3&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.3&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;reachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686400000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1769424557255,&#34;vmanage-system-ip&#34;:&#34;10.0.0.3&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;ed1f9dcc-70b8-4107-a272-e78e3b3e093a&#34;,&#34;name&#34;:&#34;branch_type1_primary&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_200&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group branch_type1_primary&#34;},{&#34;configuredHostname&#34;:&#34;sd-br01-c8kv-r2&#34;,&#34;configuredSiteId&#34;:&#34;200&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.4&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;80301B60&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-83E4B5EE-52AC-075F-B5E4-0050110680F3&#34;,&#34;configStatusMessage&#34;:&#34;Sync Pending&#34;,&#34;templateApplyLog&#34;:[&#34;[15-Jan-2026 14:17:54 UTC] Deploying device with Config Group branch_type1_secondary&#34;,&#34;[15-Jan-2026 14:17:54 UTC] Generating configuration&#34;,&#34;[15-Jan-2026 14:17:55 UTC] Checking and creating device in Manager&#34;,&#34;[15-Jan-2026 14:18:01 UTC] Device is offline&#34;,&#34;[15-Jan-2026 14:18:01 UTC] Updating device configuration in Manager&#34;],&#34;uuid&#34;:&#34;C8K-83E4B5EE-52AC-075F-B5E4-0050110680F3&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Pending&#34;,&#34;chasisNumber&#34;:&#34;C8K-83E4B5EE-52AC-075F-B5E4-0050110680F3&#34;,&#34;configStatusMessageDetails&#34;:&#34;Device is offline&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstODNF\nNEI1RUUtNTJBQy0wNzVGLUI1RTQtMDA1MDExMDY4MEYzLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQDEOkKMCJ+FY68gki7yICi5H17AiqawU33qRHuv\n7yNUPWodkzwjSD/J8RZHoQKzhsGWr3PDkygvu/+TaFUw357J2ylCP0+0WPD9WoRF\nujgZ6F/GWmkzzQPmSdetzX1kDKnUFXen52uaL68U3JoOSR6HdfJWKZegsqh907fN\noEny5tcAZb/v9zmb5cwrGt419WMjB9J85gb113DbrWzahZpOoj8565lBo26YNrdG\nV0UIMdWqVKJ/bRu+ZSceDgXPKSy5x4pLYSbb/Iw/T+UnHxmROYsnVSKcHmSeu5zZ\ncEcaHxwlFypWc94eEmQKT00CQfAL4FvtbphvGpWxLN8OvICZAgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFDCy2qbxcgDeoggVY0zg\nnBoc5O0xMA0GCSqGSIb3DQEBCwUAA4IBAQAyixoqIADe3MnrWNkN/5H6pSIZ44wM\nvDH9Jb7fmciSM08wcKNwLbqiDn6VcSa5AfJFAFLUiq6DJW7N00wqdh7PGklBkGgb\nRLtxZuXPQnMKbhi9OhzSu7kQ8qB/aa+EhQR+jaxSwlEL5+FS5AQoLlZ+qznKaUvP\nY6SeZ5x+QgSuzvZYsqvAWTnk2ljFCRwYl7TXoTgujDDKpAQrQJcB2DLdTRQSOTe+\nQaczjiYyiIcAeCPbiNVUSBktabId+vtuyVdj0Pf8olB/j7lP0MvKfdXmWQ9pkdeI\nwB4YLxnWdYS/PTdVbzEZHKWLdNvSOOIvCLpd44/8jYsjsz/P8YD6vQ0P\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-83E4B5EE-52AC-075F-B5E4-0050110680F3-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:45 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046625000,&#34;deviceIP&#34;:&#34;10.0.0.4&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:45 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694084530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;200&#34;,&#34;host-name&#34;:&#34;sd-br01-c8kv-r2&#34;,&#34;system-ip&#34;:&#34;10.0.0.4&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.4&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;unreachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686460000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1766146082991,&#34;vmanage-system-ip&#34;:&#34;10.0.0.4&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;0b7de0f5-bfb0-40b0-978c-c5a076c9bd69&#34;,&#34;name&#34;:&#34;branch_type1_secondary&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_200&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group branch_type1_secondary&#34;},{&#34;configuredHostname&#34;:&#34;sd-br02-c8kv-r1&#34;,&#34;configuredSiteId&#34;:&#34;300&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.5&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;9C87296B&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-D4D8222C-26DA-83D1-EFA8-EAA6C881AFBF&#34;,&#34;configStatusMessage&#34;:&#34;In Sync&#34;,&#34;templateApplyLog&#34;:[&#34;[14-Jan-2026 8:52:41 UTC] Deploying device with Config Group branch_type2&#34;,&#34;[14-Jan-2026 8:52:41 UTC] Generating configuration&#34;,&#34;[14-Jan-2026 8:52:42 UTC] Checking and creating device in Manager&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Device is online&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Updating device configuration in Manager&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Sending configuration to device&#34;,&#34;[14-Jan-2026 8:52:54 UTC] Successfully notified device to pull configuration&#34;,&#34;[14-Jan-2026 8:52:57 UTC] Device has pulled the configuration&#34;,&#34;[14-Jan-2026 8:52:58 UTC] Device: Config applied successfully&#34;,&#34;[14-Jan-2026 8:52:58 UTC] Config Group successfully deployed to device&#34;],&#34;uuid&#34;:&#34;C8K-D4D8222C-26DA-83D1-EFA8-EAA6C881AFBF&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Success&#34;,&#34;chasisNumber&#34;:&#34;C8K-D4D8222C-26DA-83D1-EFA8-EAA6C881AFBF&#34;,&#34;configStatusMessageDetails&#34;:&#34;&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstRDRE\nODIyMkMtMjZEQS04M0QxLUVGQTgtRUFBNkM4ODFBRkJGLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQCkP+gKy/itXdUSPdxdG4NCkOY+O4QTqUoxwcWl\nGfr+NjehwqfPbv0nGupdKz7VFgKkVPMpEBrcgtravF3VyRPVS26xQR3CSkwkyRth\nP1Hyj5APfA7426GB+Si/n3cRJixkQ7zt8UmJVdvK2ay5DbmsnqSufhpdnFdUd4GP\n5TlZ2m27PQ52mBvsflwOICU5WfNZdM2Ur9Reayoz7+96PBzFQmGvhO6m9W2s0Qa4\nIqNmxDRNEL1u6V8LD27VNgaatidaN5D1eNQ3nl6sgvaQb8tf7JBBwKvaSLjhbrbz\nFsExrSed48f2pigsd1EuYndq8XURYr1CXTAe+x73+CTOI9mBAgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFKUX9fCXl6zEB1A7SQ2N\nmrCrtcWBMA0GCSqGSIb3DQEBCwUAA4IBAQCOjwRnT2IA40SXm+avzK1zh3xcJThm\nHrgmdvp7MyK7ANvYqRVNvm7aJ2oB9Dr/a33UpkHLeT3LAdd8CpmV47nnkByc5RdE\ncAHTEuh2Ft/bHGwk3m8ER12ArjhI50C+iIf7v+nMGCjEPAlyI1p4TuPY+njZ6x/a\nZk8+yXC3hcT4dDNcYsfYma/+4ffRtOG65YjPzxekezvJpXyjSNNCCrDdfwAtZA1q\nOayr/nHYgfYnjaBx9unu4gBFnaOHqqUdYTX94PsPkYcAT4MmMdSD3dsIUzihUxGA\n1exCFfHoUhgTwcn83rkVnfnJQy0eUKUmnuaNolDsXXoYQXCIvtLC6plL\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-D4D8222C-26DA-83D1-EFA8-EAA6C881AFBF-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:25 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046605000,&#34;deviceIP&#34;:&#34;10.0.0.5&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:25 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694064530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;300&#34;,&#34;host-name&#34;:&#34;sd-br02-c8kv-r1&#34;,&#34;system-ip&#34;:&#34;10.0.0.5&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.5&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;reachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686460000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1769419066470,&#34;vmanage-system-ip&#34;:&#34;10.0.0.5&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;25035a95-31ef-408f-b4b2-cd30d970020c&#34;,&#34;name&#34;:&#34;branch_type2&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;type2_primary&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;53323e49-607d-4709-bb21-f621c9706de9&#34;,&#34;description&#34;:&#34;type2_primary&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_300&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group branch_type2&#34;},{&#34;configuredHostname&#34;:&#34;sd-br02-c8kv-r2&#34;,&#34;configuredSiteId&#34;:&#34;300&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.6&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;3A7A773D&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-25679DF5-DE95-81BC-5D4A-56907294945B&#34;,&#34;configStatusMessage&#34;:&#34;In Sync&#34;,&#34;templateApplyLog&#34;:[&#34;[14-Jan-2026 8:52:41 UTC] Deploying device with Config Group branch_type2&#34;,&#34;[14-Jan-2026 8:52:41 UTC] Generating configuration&#34;,&#34;[14-Jan-2026 8:52:42 UTC] Checking and creating device in Manager&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Device is online&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Updating device configuration in Manager&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Sending configuration to device&#34;,&#34;[14-Jan-2026 8:52:53 UTC] Successfully notified device to pull configuration&#34;,&#34;[14-Jan-2026 8:52:54 UTC] Device has pulled the configuration&#34;,&#34;[14-Jan-2026 8:52:55 UTC] Device: Config applied successfully&#34;,&#34;[14-Jan-2026 8:52:56 UTC] Config Group successfully deployed to device&#34;],&#34;uuid&#34;:&#34;C8K-25679DF5-DE95-81BC-5D4A-56907294945B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Success&#34;,&#34;chasisNumber&#34;:&#34;C8K-25679DF5-DE95-81BC-5D4A-56907294945B&#34;,&#34;configStatusMessageDetails&#34;:&#34;&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstMjU2\nNzlERjUtREU5NS04MUJDLTVENEEtNTY5MDcyOTQ5NDVCLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQC/QBf716Rz1KniSjiyzq5/vzyJFTiqdO1JghOy\nfCVay4LCIuVjcLq81H2WPyEo7GnsB6LOtg5Xvh4dvym4bxRafUTUYEW6QVQQkHSl\nrgyVBqi2PYdKRUMPwkv7ioScU9fHIz06QR4nAxTwJ9YycCQgJ7LKRYhReAef0R6B\nv32vKOVjy+CjByHSckQi0BVQI3TP9rBAWY+k06hF1OZCprsGlY1kSUSLhsbGfz85\n5622ou1C9igAMlpW0oy0miAdHpYyBlD+cliqdpU5S+iljTTtMXf1lF22r4zBUTTS\nGAqK9TXY1Qd1xdqsqI6XqvGau3tFKMLcMWNmFoDrdhjJAfM5AgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFEoHActiPcSa92mmQzIw\nVaraddooMA0GCSqGSIb3DQEBCwUAA4IBAQB2Fjjkys84RCSW6nHIIviBj5NW35e3\nO3adL0ju7wui8JNOR8QgXMMgwZJ3s7+9qVGYWYaM59EF4/n8+rvahOZjL8CTPGvk\n/zAYT/nmJc/XqnHD9LIJ4s37HjZPirQvf1Ao9saUtsFgrXXJXpwiU9GqZYsWIv06\nXXhewCOeLsszsEYuC2nXPsqCaSip+whO+GmX/4szPAM9SJ54gKAlIoXhPoqo1r9e\niIuRYYOHC6HcnhtqdlbDQkJyybpll9Jet6D3xDidpq1mgGmq/I2cHZvPH5cDvzOp\nwpxK8PInbD78LYx7EoxnCcm0hBN9gWwVt53zfoXUzjgLFDQLKcBwgyQT\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-25679DF5-DE95-81BC-5D4A-56907294945B-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:34 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046614000,&#34;deviceIP&#34;:&#34;10.0.0.6&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:34 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694073530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;300&#34;,&#34;host-name&#34;:&#34;sd-br02-c8kv-r2&#34;,&#34;system-ip&#34;:&#34;10.0.0.6&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.6&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;reachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686460000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1769419066905,&#34;vmanage-system-ip&#34;:&#34;10.0.0.6&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;25035a95-31ef-408f-b4b2-cd30d970020c&#34;,&#34;name&#34;:&#34;branch_type2&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;type2_secondary&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;c3f97f8b-ba85-426f-baa6-23971aa22b30&#34;,&#34;description&#34;:&#34;type2_secondary&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_300&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group branch_type2&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;97f81da233b64ed1854a2cb0e3fa5ad6&#34;,&#34;configStatusMessage&#34;:&#34;&#34;,&#34;uuid&#34;:&#34;C8K-172343D2-7380-8B1B-5509-6FCB24AFA689&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-172343D2-7380-8B1B-5509-6FCB24AFA689&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;b8a229b5926f48368f4ca59e6693db33&#34;,&#34;configStatusMessage&#34;:&#34;&#34;,&#34;uuid&#34;:&#34;C8K-15411CCC-D476-0B3B-21F2-5D6AC387EE7B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-15411CCC-D476-0B3B-21F2-5D6AC387EE7B&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;76d9deeba1bd4aa29326f8709bc0f7be&#34;,&#34;uuid&#34;:&#34;C8K-ED2CAF40-ABDC-A02A-A072-46DA307DD7D5&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-ED2CAF40-ABDC-A02A-A072-46DA307DD7D5&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;970aec4dfd084a4dbf84962fc932264b&#34;,&#34;uuid&#34;:&#34;C8K-A5032213-D3C7-C452-187E-38CCE4C5AF87&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-A5032213-D3C7-C452-187E-38CCE4C5AF87&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;1df9fc7723a3455395c6a1023f1ab604&#34;,&#34;uuid&#34;:&#34;C8K-679A6A64-288E-5F4A-082E-300770A277A1&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-679A6A64-288E-5F4A-082E-300770A277A1&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;cce941364f254f14bcf67a6cc624c50e&#34;,&#34;uuid&#34;:&#34;C8K-A04B6934-B7D7-6D80-F2F9-0ECD2551DACB&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-A04B6934-B7D7-6D80-F2F9-0ECD2551DACB&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;}]}">{&#34;header&#34;:{&#34;generatedOn&#34;:1769427032573,&#34;viewKeys&#34;:{&#34;uniqueKey&#34;:[],&#34;preferenceKey&#34;:&#34;grid-vEdgeList&#34;},&#34;columns&#34;:[{&#34;title&#34;:&#34;Chassis Number&#34;,&#34;property&#34;:&#34;chasisNumber&#34;,&#34;hideable&#34;:false,&#34;visible&#34;:true,&#34;width&#34;:250,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Site Name&#34;,&#34;property&#34;:&#34;site-name&#34;,&#34;visible&#34;:true,&#34;width&#34;:80,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Hostname&#34;,&#34;property&#34;:&#34;host-name&#34;,&#34;hideable&#34;:true,&#34;visible&#34;:true,&#34;width&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Tags&#34;,&#34;property&#34;:&#34;tags&#34;,&#34;display&#34;:&#34;toggle&#34;,&#34;actionColumn&#34;:true,&#34;visible&#34;:true,&#34;minWidth&#34;:100,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Config Locked&#34;,&#34;property&#34;:&#34;device-lock&#34;,&#34;visible&#34;:true,&#34;width&#34;:80,&#34;dataType&#34;:&#34;boolean&#34;},{&#34;title&#34;:&#34;Managed By&#34;,&#34;property&#34;:&#34;managed-by&#34;,&#34;visible&#34;:true,&#34;headerTooltip&#34;:&#34;This field indicates whether device is being managed by a Configuration-Group, Template, or it is Unmanaged i.e. not managed by either of them. Note: A device that is Unlocked but, managed by a Configuration-Group  will become locked again when the Configuration-Group is deployed back to the device.&#34;,&#34;width&#34;:160,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Device Status&#34;,&#34;property&#34;:&#34;configStatusMessage&#34;,&#34;display&#34;:&#34;syncDiffChecker&#34;,&#34;visible&#34;:true,&#34;minWidth&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Version&#34;,&#34;property&#34;:&#34;version&#34;,&#34;visible&#34;:true,&#34;width&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Reachability&#34;,&#34;property&#34;:&#34;reachability&#34;,&#34;hideable&#34;:true,&#34;visible&#34;:true,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Site ID&#34;,&#34;property&#34;:&#34;site-id&#34;,&#34;visible&#34;:false,&#34;width&#34;:70,&#34;dataType&#34;:&#34;numberStr&#34;},{&#34;title&#34;:&#34;Region ID&#34;,&#34;property&#34;:&#34;region-id&#34;,&#34;visible&#34;:false,&#34;width&#34;:120,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Region Name&#34;,&#34;property&#34;:&#34;region-name&#34;,&#34;visible&#34;:false,&#34;width&#34;:120,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Mode&#34;,&#34;property&#34;:&#34;configOperationMode&#34;,&#34;display&#34;:&#34;keyvalue&#34;,&#34;keyvalueProperty&#34;:&#34;configOperationMode&#34;,&#34;visible&#34;:false,&#34;keyvalue&#34;:[{&#34;key&#34;:&#34;cli&#34;,&#34;value&#34;:&#34;CLI&#34;},{&#34;key&#34;:&#34;vmanage&#34;,&#34;value&#34;:&#34;vManage&#34;}],&#34;width&#34;:80,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;view.certificate.clientViewVedgeList.assignedConfigGroup&#34;,&#34;property&#34;:&#34;name&#34;,&#34;visible&#34;:false,&#34;width&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Assigned Template&#34;,&#34;property&#34;:&#34;template&#34;,&#34;visible&#34;:false,&#34;width&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Device Model&#34;,&#34;property&#34;:&#34;deviceModel&#34;,&#34;display&#34;:&#34;keyvalue&#34;,&#34;keyvalueProperty&#34;:&#34;deviceModel&#34;,&#34;visible&#34;:false,&#34;minWidth&#34;:120,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Draft Mode&#34;,&#34;property&#34;:&#34;draftMode&#34;,&#34;visible&#34;:false,&#34;width&#34;:80,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Serial No./Token&#34;,&#34;property&#34;:&#34;serialNumber&#34;,&#34;visible&#34;:false,&#34;width&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;State&#34;,&#34;property&#34;:&#34;vedgeCertificateState&#34;,&#34;display&#34;:&#34;iconAndToolTip&#34;,&#34;iconProperty&#34;:&#34;vedgeCertificateState&#34;,&#34;toolTipProperty&#34;:&#34;vedgeCertificateState&#34;,&#34;visible&#34;:false,&#34;icon&#34;:[{&#34;key&#34;:&#34;tokengenerated&#34;,&#34;value&#34;:&#34;images/certStates/token-generated.png&#34;,&#34;displayKey&#34;:&#34;Token Generated&#34;},{&#34;key&#34;:&#34;bootstrapconfiggenerated&#34;,&#34;value&#34;:&#34;images/certStates/bootstrap-config-generated.png&#34;,&#34;displayKey&#34;:&#34;Bootstrap Configuration Generated&#34;},{&#34;key&#34;:&#34;csrgenerated&#34;,&#34;value&#34;:&#34;images/certStates/csr-generated.png&#34;,&#34;displayKey&#34;:&#34;CSR Generated&#34;},{&#34;key&#34;:&#34;csrfailed&#34;,&#34;value&#34;:&#34;images/certStates/csr-failed.png&#34;,&#34;displayKey&#34;:&#34;CSR Failed&#34;},{&#34;key&#34;:&#34;certinstallfailed&#34;,&#34;value&#34;:&#34;images/certStates/cert-install-failed.png&#34;,&#34;displayKey&#34;:&#34;Certificate Installation Failed&#34;},{&#34;key&#34;:&#34;certinstalled&#34;,&#34;value&#34;:&#34;images/certStates/cert-installed.png&#34;,&#34;displayKey&#34;:&#34;Certificate Installed&#34;}],&#34;width&#34;:40,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Enterprise Cert Serial No&#34;,&#34;property&#34;:&#34;hardwareCertSerialNumber&#34;,&#34;visible&#34;:false,&#34;width&#34;:100,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Certificate Expiration Date&#34;,&#34;property&#34;:&#34;expirationDate&#34;,&#34;visible&#34;:false,&#34;width&#34;:100,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Subject SUDI serial #&#34;,&#34;property&#34;:&#34;subjectSerialNumber&#34;,&#34;visible&#34;:false,&#34;width&#34;:100,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Validity&#34;,&#34;property&#34;:&#34;validity&#34;,&#34;display&#34;:&#34;toggle&#34;,&#34;actionColumn&#34;:true,&#34;visible&#34;:false,&#34;minWidth&#34;:100,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;System IP    &#34;,&#34;property&#34;:&#34;local-system-ip&#34;,&#34;hideable&#34;:true,&#34;visible&#34;:false,&#34;minWidth&#34;:120,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;title&#34;:&#34;Configured System IP&#34;,&#34;property&#34;:&#34;configuredSystemIP&#34;,&#34;hideable&#34;:true,&#34;visible&#34;:false,&#34;minWidth&#34;:120,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;title&#34;:&#34;Upload Source&#34;,&#34;property&#34;:&#34;uploadSource&#34;,&#34;display&#34;:&#34;toggle&#34;,&#34;actionColumn&#34;:true,&#34;visible&#34;:false,&#34;minWidth&#34;:150,&#34;dataType&#34;:&#34;string&#34;},{&#34;title&#34;:&#34;Solution&#34;,&#34;property&#34;:&#34;solution&#34;,&#34;visible&#34;:false,&#34;minWidth&#34;:150,&#34;dataType&#34;:&#34;string&#34;}],&#34;fields&#34;:[{&#34;property&#34;:&#34;chasisNumber&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;site-name&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;host-name&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;tags&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;toggle&#34;},{&#34;property&#34;:&#34;device-lock&#34;,&#34;dataType&#34;:&#34;boolean&#34;},{&#34;property&#34;:&#34;managed-by&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;configStatusMessage&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;syncDiffChecker&#34;},{&#34;property&#34;:&#34;version&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;reachability&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;deviceIP&#34;,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;property&#34;:&#34;site-id&#34;,&#34;dataType&#34;:&#34;numberStr&#34;},{&#34;property&#34;:&#34;region-id&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;region-name&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;configOperationMode&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;keyvalue&#34;},{&#34;property&#34;:&#34;name&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;template&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;deviceModel&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;keyvalue&#34;},{&#34;property&#34;:&#34;draftMode&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;serialNumber&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;vedgeCertificateState&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;iconAndToolTip&#34;},{&#34;property&#34;:&#34;hardwareCertSerialNumber&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;expirationDate&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;subjectSerialNumber&#34;,&#34;dataType&#34;:&#34;string&#34;},{&#34;property&#34;:&#34;validity&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;toggle&#34;},{&#34;property&#34;:&#34;local-system-ip&#34;,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;property&#34;:&#34;configuredSystemIP&#34;,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;property&#34;:&#34;vbond&#34;,&#34;dataType&#34;:&#34;ipv4&#34;},{&#34;property&#34;:&#34;uploadSource&#34;,&#34;dataType&#34;:&#34;string&#34;,&#34;display&#34;:&#34;toggle&#34;},{&#34;property&#34;:&#34;solution&#34;,&#34;dataType&#34;:&#34;string&#34;}]},&#34;data&#34;:[{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;1c09674cbfcd4e02aea175725eafc909&#34;,&#34;uuid&#34;:&#34;C8K-E5FA8EFC-7B65-C148-2D23-2C72D2745EFA&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-E5FA8EFC-7B65-C148-2D23-2C72D2745EFA&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;24d1314ddf8842aa8389f8be0922b406&#34;,&#34;uuid&#34;:&#34;C8K-C8F8EBD6-6D13-00B0-9656-7CC05D16556F&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-C8F8EBD6-6D13-00B0-9656-7CC05D16556F&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;03d65f32c5de4d258110b7c6cb4ec3fa&#34;,&#34;uuid&#34;:&#34;C8K-707E5133-7BE8-3824-8FCF-BAEBE93DB7E0&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-707E5133-7BE8-3824-8FCF-BAEBE93DB7E0&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;e4e11bd932084fbf9f623a45eaf8c238&#34;,&#34;uuid&#34;:&#34;C8K-4670E56C-77BE-1CDF-1B75-AA9E8C789CDD&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-4670E56C-77BE-1CDF-1B75-AA9E8C789CDD&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;1594f99bd13b40a989744387d42e97ac&#34;,&#34;uuid&#34;:&#34;C8K-DCF04BCC-561A-1B87-5E85-0CCF8DF9CDDB&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-DCF04BCC-561A-1B87-5E85-0CCF8DF9CDDB&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;c19d285c67c042289d8421806c13600f&#34;,&#34;uuid&#34;:&#34;C8K-B487D1C3-E921-6C90-65D2-6B87FEC8B570&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-B487D1C3-E921-6C90-65D2-6B87FEC8B570&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;c8705acd73994c3e9e1834ca81b1794e&#34;,&#34;uuid&#34;:&#34;C8K-03EF0434-2731-2C12-8E62-EAE077A6D2D0&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-03EF0434-2731-2C12-8E62-EAE077A6D2D0&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;f2bcddf4c46e48ba8ef6fd98a6a1dc9a&#34;,&#34;uuid&#34;:&#34;C8K-69613F58-CFC7-DF2D-10E9-853A261BE1E2&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-69613F58-CFC7-DF2D-10E9-853A261BE1E2&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;configuredHostname&#34;:&#34;test_device_CG1&#34;,&#34;configuredSiteId&#34;:&#34;4001&#34;,&#34;configuredSystemIP&#34;:&#34;100.1.1.1&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;dad9d9089a194349ade770c55d447ed6&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-3D1A8960-6E76-532C-DA93-50626FC5797E&#34;,&#34;configStatusMessage&#34;:&#34;Sync Pending&#34;,&#34;templateApplyLog&#34;:[&#34;[18-Dec-2025 8:10:31 UTC] Deploying device with Config Group CG-02&#34;,&#34;[18-Dec-2025 8:10:31 UTC] Generating configuration&#34;,&#34;[18-Dec-2025 8:10:33 UTC] Checking and creating device in Manager&#34;,&#34;[18-Dec-2025 8:10:37 UTC] Device is offline&#34;,&#34;[18-Dec-2025 8:10:37 UTC] Updating device configuration in Manager&#34;],&#34;uuid&#34;:&#34;C8K-3D1A8960-6E76-532C-DA93-50626FC5797E&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Pending&#34;,&#34;chasisNumber&#34;:&#34;C8K-3D1A8960-6E76-532C-DA93-50626FC5797E&#34;,&#34;configStatusMessageDetails&#34;:&#34;Device is offline&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;id&#34;:&#34;a1a7294c-6950-4fc8-8248-a25432b6036b&#34;,&#34;name&#34;:&#34;CG-02&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;CG-t1&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;3bed2269-ce4f-41d8-84fc-62e5f503cc97&#34;,&#34;description&#34;:&#34;CG-t1&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_4001&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group CG-02&#34;,&#34;local-system-ip&#34;:&#34;100.1.1.1&#34;,&#34;host-name&#34;:&#34;test_device_CG1&#34;,&#34;site-id&#34;:&#34;4001&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;bb264969408942debe56496ad44cbafb&#34;,&#34;uuid&#34;:&#34;C8K-E87FBD01-C68B-CD52-7518-33C41B468C69&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-E87FBD01-C68B-CD52-7518-33C41B468C69&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;configuredHostname&#34;:&#34;test_device_CG2&#34;,&#34;configuredSiteId&#34;:&#34;4001&#34;,&#34;configuredSystemIP&#34;:&#34;100.1.1.2&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;2917f0b00eb44e48b9c78a08b2f9737b&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-D4CE7174-5261-7E6F-91EA-4926BCF4C2DD&#34;,&#34;configStatusMessage&#34;:&#34;Sync Pending&#34;,&#34;templateApplyLog&#34;:[&#34;[18-Dec-2025 8:10:31 UTC] Deploying device with Config Group CG-02&#34;,&#34;[18-Dec-2025 8:10:31 UTC] Generating configuration&#34;,&#34;[18-Dec-2025 8:10:33 UTC] Checking and creating device in Manager&#34;,&#34;[18-Dec-2025 8:10:37 UTC] Device is offline&#34;,&#34;[18-Dec-2025 8:10:37 UTC] Updating device configuration in Manager&#34;],&#34;uuid&#34;:&#34;C8K-D4CE7174-5261-7E6F-91EA-4926BCF4C2DD&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Pending&#34;,&#34;chasisNumber&#34;:&#34;C8K-D4CE7174-5261-7E6F-91EA-4926BCF4C2DD&#34;,&#34;configStatusMessageDetails&#34;:&#34;Device is offline&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;id&#34;:&#34;a1a7294c-6950-4fc8-8248-a25432b6036b&#34;,&#34;name&#34;:&#34;CG-02&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;CG-t2&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;75b42799-cea9-4a12-90f9-3948f2e577fd&#34;,&#34;description&#34;:&#34;CG-t2&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_4001&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group CG-02&#34;,&#34;local-system-ip&#34;:&#34;100.1.1.2&#34;,&#34;host-name&#34;:&#34;test_device_CG2&#34;,&#34;site-id&#34;:&#34;4001&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;0e8e648aff0f409392c6dac857d983e0&#34;,&#34;uuid&#34;:&#34;C8K-27148AFE-7160-69D3-ACC5-F77560530D63&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-27148AFE-7160-69D3-ACC5-F77560530D63&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;b648d0d455f940aabab0384b7472a4a9&#34;,&#34;uuid&#34;:&#34;C8K-D865D5C8-C7E1-66CD-1716-35EDB2EA036C&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-D865D5C8-C7E1-66CD-1716-35EDB2EA036C&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V-SD-ROUTING&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sd-routing&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;e76dca4cece942c9b15e0d30f12b51ce&#34;,&#34;uuid&#34;:&#34;C8K-3188FA44-8A8A-8392-0E4B-0DA5A445C10B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-3188FA44-8A8A-8392-0E4B-0DA5A445C10B&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;28a7ec1973f54bcba9f9f1f7085a60e6&#34;,&#34;uuid&#34;:&#34;C8K-3A3DD488-D04F-3204-90F5-2E754FD14877&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-3A3DD488-D04F-3204-90F5-2E754FD14877&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;54d2da9493314f8f87293208481970f9&#34;,&#34;configStatusMessage&#34;:&#34;&#34;,&#34;uuid&#34;:&#34;C8K-5BAF9C99-7676-401F-9DFE-B1A3BEBD644B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-5BAF9C99-7676-401F-9DFE-B1A3BEBD644B&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;tt22&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;1b6f38d2-f044-4361-a170-6b5bb35f51a7&#34;,&#34;description&#34;:&#34;tt22&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;25d8581306c34db78c24fd08dd82019e&#34;,&#34;configStatusMessage&#34;:&#34;&#34;,&#34;uuid&#34;:&#34;C8K-4A88C7BA-BC26-2009-F933-641392D21AB5&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-4A88C7BA-BC26-2009-F933-641392D21AB5&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;ttttttt&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;368c0716-2d47-4644-83dc-9536f02da718&#34;,&#34;description&#34;:&#34;ttttttt&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;06e0a62290814c389d825a96a8de17bf&#34;,&#34;uuid&#34;:&#34;C8K-C38D156C-34E4-909A-15BB-96D0E9D0E808&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-C38D156C-34E4-909A-15BB-96D0E9D0E808&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;configuredHostname&#34;:&#34;sd-dc-c8kv-01&#34;,&#34;configuredSiteId&#34;:&#34;100&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.1&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;2F5F03F9&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B&#34;,&#34;configStatusMessage&#34;:&#34;In Sync&#34;,&#34;templateApplyLog&#34;:[&#34;[15-Jan-2026 17:34:38 UTC] Deploying device with Config Group dc_hub&#34;,&#34;[15-Jan-2026 17:34:39 UTC] Generating configuration&#34;,&#34;[15-Jan-2026 17:34:40 UTC] Checking and creating device in Manager&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Device is online&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Updating device configuration in Manager&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Sending configuration to device&#34;,&#34;[15-Jan-2026 17:34:50 UTC] Successfully notified device to pull configuration&#34;,&#34;[15-Jan-2026 17:34:51 UTC] Device has pulled the configuration&#34;,&#34;[15-Jan-2026 17:34:52 UTC] Device: Config applied successfully&#34;,&#34;[15-Jan-2026 17:34:52 UTC] Config Group successfully deployed to device&#34;],&#34;uuid&#34;:&#34;C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Success&#34;,&#34;chasisNumber&#34;:&#34;C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B&#34;,&#34;configStatusMessageDetails&#34;:&#34;&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstNDBD\nMENDRkQtOUVBOC0yQjJFLUU3M0ItMzJDNTkyNEVDNzlCLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQC2aXOnzKZyh6l2aF26IJOS6YInRpEoi5X8c5zG\ng/H9Pin/MgJ82VUyMO5h2Fh0UJJINIW7HWm6iOc6Ub7Gskde0jNSSfLXozjrSS8i\nibQPjM9VYLI235rHJ0uWfvLPfuCKeiv3ID69JhFPfjQrqkbbbZ2gbbMiMvjtdYWc\ntKXasOE+n9pH89ecpRfD9TnjW0JvOmUtJb22ZYxkaNTqjb62lDuSFBZY6tT7UTTu\n+lrLr/zWARohVa2fAABDGgTYJpfRpw5to2dvOxLJEwrGlY05FrmZSw+SErmDe//z\nKOn8MdhvWyN9+VQSJOje9tWP0jsn+oE2DAj5UxFVjcdemITFAgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFCKJpfj+1jjOXsvLorse\nZHrv06FwMA0GCSqGSIb3DQEBCwUAA4IBAQAOeNjW1mAqG3KLIxJqE3uNVV3BiOwg\nKS8Hba1G9Q4Q7EjOmZgrFSPNSbreNSewcNqpV5o5j8pqJXPUPny3sfBy2KomybXW\nVip9Hk/mtwvUQFcQJllKvzIY6RW1xAplh/bWdS55XIiDoEO7IHG6PUt3P+cafTLk\nWaXMsSbix/cC+CU5C9XGcBZ1QvHE+gF/HAAQhK2ClAfPk4/KuYGJ+QABZHKBgsBU\nlyHKYWyBafuLcUaHSlOckcpWLj9bpnYtCiHr/7+BTQf3fRDVGv3t2s2l7OZOYEeA\njUToJhH06EhzjlmQg0asXd/1OzBkJaWkvFKG9ejs3QelR5xVGG0U7FnE\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:11 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046591000,&#34;deviceIP&#34;:&#34;10.0.0.1&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:10 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694050530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;100&#34;,&#34;host-name&#34;:&#34;sd-dc-c8kv-01&#34;,&#34;system-ip&#34;:&#34;10.0.0.1&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.1&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;reachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686400000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1769407052034,&#34;vmanage-system-ip&#34;:&#34;10.0.0.1&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;f384f87b-15fd-4261-829c-69a8dc3890ad&#34;,&#34;name&#34;:&#34;dc_hub&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;dc_primary&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;85cdc17b-efcf-4578-a14c-620056716031&#34;,&#34;description&#34;:&#34;dc_primary&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_100&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group dc_hub&#34;},{&#34;configuredHostname&#34;:&#34;sd-dc-c8kv-02&#34;,&#34;configuredSiteId&#34;:&#34;100&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.2&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;B430E0DE&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B&#34;,&#34;configStatusMessage&#34;:&#34;In Sync&#34;,&#34;templateApplyLog&#34;:[&#34;[15-Jan-2026 17:34:39 UTC] Deploying device with Config Group dc_hub&#34;,&#34;[15-Jan-2026 17:34:39 UTC] Generating configuration&#34;,&#34;[15-Jan-2026 17:34:40 UTC] Checking and creating device in Manager&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Device is online&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Updating device configuration in Manager&#34;,&#34;[15-Jan-2026 17:34:46 UTC] Sending configuration to device&#34;,&#34;[15-Jan-2026 17:34:51 UTC] Successfully notified device to pull configuration&#34;,&#34;[15-Jan-2026 17:34:51 UTC] Device has pulled the configuration&#34;,&#34;[15-Jan-2026 17:34:53 UTC] Device: Config applied successfully&#34;,&#34;[15-Jan-2026 17:34:53 UTC] Config Group successfully deployed to device&#34;],&#34;uuid&#34;:&#34;C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Success&#34;,&#34;chasisNumber&#34;:&#34;C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B&#34;,&#34;configStatusMessageDetails&#34;:&#34;&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstRTk0\nRDdCODgtNEI5RS0zMzIzLUM2QzMtRjI5MDc5RkFBQzNCLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQDvGMt/0rz4atO5LGbFlkOhqwWnonP9U+Wq9DHr\njfJxdzAnchvsEs3v2H9dnAAR2APcLxSndvn60ZFhhJSCiCrWTQSzu39TOWEU3TKt\nrdOR2MfsQPQQIfkYTA9IZ4oxtVJZt1vfKgDuBuOjrJ7rO20L8VKhDCfDt/8iAPIm\nWNJ1X7CXuYAC7AB728InSZtOdYgB40Ln48AUYbHswYI4lgaAUVuUgKjZD88hiCYF\nDPHsvPX8bW5i2f3aL9Vb41SkOh2z8aPzPIpoQLyFyvOabTA0VkyKohfhe+/nk/ia\ndk4SEtPPkzV0GgG8TdmA7oascA8b70GOC+K7veUfUJ6ySx23AgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFPu6FT8pcMYt/g03EvWx\nS/m02E10MA0GCSqGSIb3DQEBCwUAA4IBAQA6j0v5oZaI3O8K2h3m8I9uPXejZm11\nWBtrsd/2Cn3ymjjEMJM9UN2UboU/9Qby5JRGUDhQgCgzpUML2gQ26mhvYXmUgwfJ\n4tFK9udQ93NF0T0iR7c3Fj45TiJDbXPEOTZ45kAfdMMdz5nq45YdHOi7Iah/UXUG\nt4zzBqPdeCpqcFs7pMfx3rJXwjEZR3V6ne5Wx0+jMX03A9E3Xq/baUY0e/R1LyQ6\n1j4EJUVA9VSgT9ZI1cuRD5a1cDVpszJSsGiycMGpvdAaykYXfm5Ag4nZECbckYpO\nEAqvFiagllpjq2pjO8PHQcv3jGMLb+EIO69pVdJpwYSDS7FAzsv1gne0\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:15 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046595000,&#34;deviceIP&#34;:&#34;10.0.0.2&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:14 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694054530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;100&#34;,&#34;host-name&#34;:&#34;sd-dc-c8kv-02&#34;,&#34;system-ip&#34;:&#34;10.0.0.2&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.2&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;reachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686460000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1769407052452,&#34;vmanage-system-ip&#34;:&#34;10.0.0.2&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;f384f87b-15fd-4261-829c-69a8dc3890ad&#34;,&#34;name&#34;:&#34;dc_hub&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;dc_secondary&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;31d9ec4e-df59-41b9-b692-acb5894f6dad&#34;,&#34;description&#34;:&#34;dc_secondary&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_100&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group dc_hub&#34;},{&#34;configuredHostname&#34;:&#34;sd-br01-c8kv-r1&#34;,&#34;configuredSiteId&#34;:&#34;200&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.3&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;639BA65E&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A&#34;,&#34;configStatusMessage&#34;:&#34;In Sync&#34;,&#34;templateApplyLog&#34;:[&#34;[15-Jan-2026 14:17:54 UTC] Deploying device with Config Group branch_type1_primary&#34;,&#34;[15-Jan-2026 14:17:54 UTC] Generating configuration&#34;,&#34;[15-Jan-2026 14:17:55 UTC] Checking and creating device in Manager&#34;,&#34;[15-Jan-2026 14:18:01 UTC] Device is online&#34;,&#34;[15-Jan-2026 14:18:01 UTC] Updating device configuration in Manager&#34;,&#34;[15-Jan-2026 14:18:01 UTC] Sending configuration to device&#34;,&#34;[15-Jan-2026 14:18:05 UTC] Successfully notified device to pull configuration&#34;,&#34;[15-Jan-2026 14:18:06 UTC] Device has pulled the configuration&#34;,&#34;[15-Jan-2026 14:18:07 UTC] Device: Config applied successfully&#34;,&#34;[15-Jan-2026 14:18:07 UTC] Config Group successfully deployed to device&#34;],&#34;uuid&#34;:&#34;C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Success&#34;,&#34;chasisNumber&#34;:&#34;C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A&#34;,&#34;configStatusMessageDetails&#34;:&#34;&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstQjVF\nRTExN0UtMTIxMC1DMzk2LUVDNDEtRDNEQTY0RDZBNTFBLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQC6B7c2WMdF9RmhwJOfrJDUEtnORZMSTjPZplAo\n/s/sXleNoCJ8rz8iu0g1bqdmTSvP4MVwtt5Rsg8JFchlk1/oKpsDIsI5/GXFp2Nf\nJcegY5lSzZaXBLAATajwZd7tsSTWH7ECN9CEp/3V8M1Sa5jcZHYYUEUsChpv+Z8E\nxQoh5sVlFvt4JEbv8p6MaXFk734ExIYlXgfM9QBnpzUdaQPZaSAS7AK+ZQwrsqnz\n53OIE5ajK7LGMOkoYu0WD59qelrtQ3eramY2XY3I6hNQItsef+eBC76Og8q5gbTX\nTH3FJii7EVzkKaD1kjtfm3XUJl7MQq4oTnUYXKnAdqJq5B19AgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFOZiXA+EQIyoFk8W4gBd\n1mXtpfk7MA0GCSqGSIb3DQEBCwUAA4IBAQAKDabXfBVXamB3Ikoa5zdAKYrFwsSM\n+Clmp8VxRmvLzjJJpCalDxJPzNVJKywRvXchA47KueF9HzH4n9xFktRDuHtffJep\nULtD4RhgtDL9SvCuUbOAyxHBdd+AOsP2U5r2oA4crAimSaiceNk6DYcQtKQxOSQ8\nVBckW2s7bRiBza9K88uyCMEQDCRfw69Y9pfP2qBftf+Y4Pr5mUCHNxKKa1kb5syk\nsr1WL0f3oOEBN6MAjpqc1HSVi8gnRw/4yluF2xS1dtq7eEOC3miAOVCnBx+1S6Ei\nxsfN5YUWqVD+pkXF5eeCyoGjUE0k1gvIEqhdrtags8jTbFXru1ZhLzec\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:11 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046591000,&#34;deviceIP&#34;:&#34;10.0.0.3&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:11 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694050530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;200&#34;,&#34;host-name&#34;:&#34;sd-br01-c8kv-r1&#34;,&#34;system-ip&#34;:&#34;10.0.0.3&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.3&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;reachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686400000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1769424557255,&#34;vmanage-system-ip&#34;:&#34;10.0.0.3&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;ed1f9dcc-70b8-4107-a272-e78e3b3e093a&#34;,&#34;name&#34;:&#34;branch_type1_primary&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_200&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group branch_type1_primary&#34;},{&#34;configuredHostname&#34;:&#34;sd-br01-c8kv-r2&#34;,&#34;configuredSiteId&#34;:&#34;200&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.4&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;80301B60&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-83E4B5EE-52AC-075F-B5E4-0050110680F3&#34;,&#34;configStatusMessage&#34;:&#34;Sync Pending&#34;,&#34;templateApplyLog&#34;:[&#34;[15-Jan-2026 14:17:54 UTC] Deploying device with Config Group branch_type1_secondary&#34;,&#34;[15-Jan-2026 14:17:54 UTC] Generating configuration&#34;,&#34;[15-Jan-2026 14:17:55 UTC] Checking and creating device in Manager&#34;,&#34;[15-Jan-2026 14:18:01 UTC] Device is offline&#34;,&#34;[15-Jan-2026 14:18:01 UTC] Updating device configuration in Manager&#34;],&#34;uuid&#34;:&#34;C8K-83E4B5EE-52AC-075F-B5E4-0050110680F3&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Pending&#34;,&#34;chasisNumber&#34;:&#34;C8K-83E4B5EE-52AC-075F-B5E4-0050110680F3&#34;,&#34;configStatusMessageDetails&#34;:&#34;Device is offline&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstODNF\nNEI1RUUtNTJBQy0wNzVGLUI1RTQtMDA1MDExMDY4MEYzLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQDEOkKMCJ+FY68gki7yICi5H17AiqawU33qRHuv\n7yNUPWodkzwjSD/J8RZHoQKzhsGWr3PDkygvu/+TaFUw357J2ylCP0+0WPD9WoRF\nujgZ6F/GWmkzzQPmSdetzX1kDKnUFXen52uaL68U3JoOSR6HdfJWKZegsqh907fN\noEny5tcAZb/v9zmb5cwrGt419WMjB9J85gb113DbrWzahZpOoj8565lBo26YNrdG\nV0UIMdWqVKJ/bRu+ZSceDgXPKSy5x4pLYSbb/Iw/T+UnHxmROYsnVSKcHmSeu5zZ\ncEcaHxwlFypWc94eEmQKT00CQfAL4FvtbphvGpWxLN8OvICZAgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFDCy2qbxcgDeoggVY0zg\nnBoc5O0xMA0GCSqGSIb3DQEBCwUAA4IBAQAyixoqIADe3MnrWNkN/5H6pSIZ44wM\nvDH9Jb7fmciSM08wcKNwLbqiDn6VcSa5AfJFAFLUiq6DJW7N00wqdh7PGklBkGgb\nRLtxZuXPQnMKbhi9OhzSu7kQ8qB/aa+EhQR+jaxSwlEL5+FS5AQoLlZ+qznKaUvP\nY6SeZ5x+QgSuzvZYsqvAWTnk2ljFCRwYl7TXoTgujDDKpAQrQJcB2DLdTRQSOTe+\nQaczjiYyiIcAeCPbiNVUSBktabId+vtuyVdj0Pf8olB/j7lP0MvKfdXmWQ9pkdeI\nwB4YLxnWdYS/PTdVbzEZHKWLdNvSOOIvCLpd44/8jYsjsz/P8YD6vQ0P\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-83E4B5EE-52AC-075F-B5E4-0050110680F3-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:45 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046625000,&#34;deviceIP&#34;:&#34;10.0.0.4&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:45 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694084530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;200&#34;,&#34;host-name&#34;:&#34;sd-br01-c8kv-r2&#34;,&#34;system-ip&#34;:&#34;10.0.0.4&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.4&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;unreachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686460000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1766146082991,&#34;vmanage-system-ip&#34;:&#34;10.0.0.4&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;0b7de0f5-bfb0-40b0-978c-c5a076c9bd69&#34;,&#34;name&#34;:&#34;branch_type1_secondary&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_200&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group branch_type1_secondary&#34;},{&#34;configuredHostname&#34;:&#34;sd-br02-c8kv-r1&#34;,&#34;configuredSiteId&#34;:&#34;300&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.5&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;9C87296B&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-D4D8222C-26DA-83D1-EFA8-EAA6C881AFBF&#34;,&#34;configStatusMessage&#34;:&#34;In Sync&#34;,&#34;templateApplyLog&#34;:[&#34;[14-Jan-2026 8:52:41 UTC] Deploying device with Config Group branch_type2&#34;,&#34;[14-Jan-2026 8:52:41 UTC] Generating configuration&#34;,&#34;[14-Jan-2026 8:52:42 UTC] Checking and creating device in Manager&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Device is online&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Updating device configuration in Manager&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Sending configuration to device&#34;,&#34;[14-Jan-2026 8:52:54 UTC] Successfully notified device to pull configuration&#34;,&#34;[14-Jan-2026 8:52:57 UTC] Device has pulled the configuration&#34;,&#34;[14-Jan-2026 8:52:58 UTC] Device: Config applied successfully&#34;,&#34;[14-Jan-2026 8:52:58 UTC] Config Group successfully deployed to device&#34;],&#34;uuid&#34;:&#34;C8K-D4D8222C-26DA-83D1-EFA8-EAA6C881AFBF&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Success&#34;,&#34;chasisNumber&#34;:&#34;C8K-D4D8222C-26DA-83D1-EFA8-EAA6C881AFBF&#34;,&#34;configStatusMessageDetails&#34;:&#34;&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstRDRE\nODIyMkMtMjZEQS04M0QxLUVGQTgtRUFBNkM4ODFBRkJGLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQCkP+gKy/itXdUSPdxdG4NCkOY+O4QTqUoxwcWl\nGfr+NjehwqfPbv0nGupdKz7VFgKkVPMpEBrcgtravF3VyRPVS26xQR3CSkwkyRth\nP1Hyj5APfA7426GB+Si/n3cRJixkQ7zt8UmJVdvK2ay5DbmsnqSufhpdnFdUd4GP\n5TlZ2m27PQ52mBvsflwOICU5WfNZdM2Ur9Reayoz7+96PBzFQmGvhO6m9W2s0Qa4\nIqNmxDRNEL1u6V8LD27VNgaatidaN5D1eNQ3nl6sgvaQb8tf7JBBwKvaSLjhbrbz\nFsExrSed48f2pigsd1EuYndq8XURYr1CXTAe+x73+CTOI9mBAgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFKUX9fCXl6zEB1A7SQ2N\nmrCrtcWBMA0GCSqGSIb3DQEBCwUAA4IBAQCOjwRnT2IA40SXm+avzK1zh3xcJThm\nHrgmdvp7MyK7ANvYqRVNvm7aJ2oB9Dr/a33UpkHLeT3LAdd8CpmV47nnkByc5RdE\ncAHTEuh2Ft/bHGwk3m8ER12ArjhI50C+iIf7v+nMGCjEPAlyI1p4TuPY+njZ6x/a\nZk8+yXC3hcT4dDNcYsfYma/+4ffRtOG65YjPzxekezvJpXyjSNNCCrDdfwAtZA1q\nOayr/nHYgfYnjaBx9unu4gBFnaOHqqUdYTX94PsPkYcAT4MmMdSD3dsIUzihUxGA\n1exCFfHoUhgTwcn83rkVnfnJQy0eUKUmnuaNolDsXXoYQXCIvtLC6plL\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-D4D8222C-26DA-83D1-EFA8-EAA6C881AFBF-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:25 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046605000,&#34;deviceIP&#34;:&#34;10.0.0.5&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:25 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694064530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;300&#34;,&#34;host-name&#34;:&#34;sd-br02-c8kv-r1&#34;,&#34;system-ip&#34;:&#34;10.0.0.5&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.5&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;reachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686460000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1769419066470,&#34;vmanage-system-ip&#34;:&#34;10.0.0.5&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;25035a95-31ef-408f-b4b2-cd30d970020c&#34;,&#34;name&#34;:&#34;branch_type2&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;type2_primary&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;53323e49-607d-4709-bb21-f621c9706de9&#34;,&#34;description&#34;:&#34;type2_primary&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_300&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group branch_type2&#34;},{&#34;configuredHostname&#34;:&#34;sd-br02-c8kv-r2&#34;,&#34;configuredSiteId&#34;:&#34;300&#34;,&#34;configuredSystemIP&#34;:&#34;10.0.0.6&#34;,&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;3A7A773D&#34;,&#34;ncsDeviceName&#34;:&#34;vedge-C8K-25679DF5-DE95-81BC-5D4A-56907294945B&#34;,&#34;configStatusMessage&#34;:&#34;In Sync&#34;,&#34;templateApplyLog&#34;:[&#34;[14-Jan-2026 8:52:41 UTC] Deploying device with Config Group branch_type2&#34;,&#34;[14-Jan-2026 8:52:41 UTC] Generating configuration&#34;,&#34;[14-Jan-2026 8:52:42 UTC] Checking and creating device in Manager&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Device is online&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Updating device configuration in Manager&#34;,&#34;[14-Jan-2026 8:52:49 UTC] Sending configuration to device&#34;,&#34;[14-Jan-2026 8:52:53 UTC] Successfully notified device to pull configuration&#34;,&#34;[14-Jan-2026 8:52:54 UTC] Device has pulled the configuration&#34;,&#34;[14-Jan-2026 8:52:55 UTC] Device: Config applied successfully&#34;,&#34;[14-Jan-2026 8:52:56 UTC] Config Group successfully deployed to device&#34;],&#34;uuid&#34;:&#34;C8K-25679DF5-DE95-81BC-5D4A-56907294945B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;templateStatus&#34;:&#34;Success&#34;,&#34;chasisNumber&#34;:&#34;C8K-25679DF5-DE95-81BC-5D4A-56907294945B&#34;,&#34;configStatusMessageDetails&#34;:&#34;&#34;,&#34;configOperationMode&#34;:&#34;vmanage&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;platformFamily&#34;:&#34;c8000v&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;certinstalled&#34;,&#34;vedgeCSR&#34;:&#34;-----BEGIN CERTIFICATE REQUEST-----\nMIIDVjCCAj4CAQAwgdUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlh\nMREwDwYDVQQHEwhTYW4gSm9zZTEbMBkGA1UECxMSY21sLXNkd2FuLWxhYi10b29s\nMRYwFAYDVQQKEw1DaXNjbyBTeXN0ZW1zMUUwQwYDVQQDEzx2ZWRnZS1DOEstMjU2\nNzlERjUtREU5NS04MUJDLTVENEEtNTY5MDcyOTQ5NDVCLTEudmlwdGVsYS5jb20x\nIjAgBgkqhkiG9w0BCQEWE3N1cHBvcnRAdmlwdGVsYS5jb20wggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQC/QBf716Rz1KniSjiyzq5/vzyJFTiqdO1JghOy\nfCVay4LCIuVjcLq81H2WPyEo7GnsB6LOtg5Xvh4dvym4bxRafUTUYEW6QVQQkHSl\nrgyVBqi2PYdKRUMPwkv7ioScU9fHIz06QR4nAxTwJ9YycCQgJ7LKRYhReAef0R6B\nv32vKOVjy+CjByHSckQi0BVQI3TP9rBAWY+k06hF1OZCprsGlY1kSUSLhsbGfz85\n5622ou1C9igAMlpW0oy0miAdHpYyBlD+cliqdpU5S+iljTTtMXf1lF22r4zBUTTS\nGAqK9TXY1Qd1xdqsqI6XqvGau3tFKMLcMWNmFoDrdhjJAfM5AgMBAAGgOzA5Bgkq\nhkiG9w0BCQ4xLDAqMAkGA1UdEwQCMAAwHQYDVR0OBBYEFEoHActiPcSa92mmQzIw\nVaraddooMA0GCSqGSIb3DQEBCwUAA4IBAQB2Fjjkys84RCSW6nHIIviBj5NW35e3\nO3adL0ju7wui8JNOR8QgXMMgwZJ3s7+9qVGYWYaM59EF4/n8+rvahOZjL8CTPGvk\n/zAYT/nmJc/XqnHD9LIJ4s37HjZPirQvf1Ao9saUtsFgrXXJXpwiU9GqZYsWIv06\nXXhewCOeLsszsEYuC2nXPsqCaSip+whO+GmX/4szPAM9SJ54gKAlIoXhPoqo1r9e\niIuRYYOHC6HcnhtqdlbDQkJyybpll9Jet6D3xDidpq1mgGmq/I2cHZvPH5cDvzOp\nwpxK8PInbD78LYx7EoxnCcm0hBN9gWwVt53zfoXUzjgLFDQLKcBwgyQT\n-----END CERTIFICATE REQUEST-----\n&#34;,&#34;vedgeCSRCommonName&#34;:&#34;vedge-C8K-25679DF5-DE95-81BC-5D4A-56907294945B-1.viptela.com&#34;,&#34;rootCertHash&#34;:&#34;d75d511664bbebbe0ccb1760ac52d57ae6185016&#34;,&#34;rsaKey4096Compatible&#34;:true,&#34;keyLength&#34;:&#34;2048&#34;,&#34;state&#34;:&#34;Installed&#34;,&#34;globalState&#34;:&#34;normal&#34;,&#34;expirationDate&#34;:&#34;Nov 30 14:43:34 2035 UTC&#34;,&#34;expirationDateLong&#34;:2080046614000,&#34;deviceIP&#34;:&#34;10.0.0.6&#34;,&#34;activity&#34;:[&#34;[2-Dec-2025 14:43:34 UTC] CSR Generated&#34;],&#34;certInstallStatus&#34;:&#34;Installed&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;expirationStatus&#34;:&#34;normal&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;timeRemainingForExpiration&#34;:310694073530,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;region-id&#34;:[],&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;site-id&#34;:&#34;300&#34;,&#34;host-name&#34;:&#34;sd-br02-c8kv-r2&#34;,&#34;system-ip&#34;:&#34;10.0.0.6&#34;,&#34;vbond&#34;:&#34;validator.sdwan.local&#34;,&#34;vmanageConnectionState&#34;:&#34;connected&#34;,&#34;local-system-ip&#34;:&#34;10.0.0.6&#34;,&#34;availableVersions&#34;:[],&#34;defaultVersion&#34;:&#34;17.15.03a.0.176&#34;,&#34;reachability&#34;:&#34;reachable&#34;,&#34;version&#34;:&#34;17.15.03a.0.176&#34;,&#34;uptime-date&#34;:1764686460000,&#34;model_sku&#34;:&#34;None&#34;,&#34;lastupdated&#34;:1769419066905,&#34;vmanage-system-ip&#34;:&#34;10.0.0.6&#34;,&#34;domain-id&#34;:&#34;1&#34;,&#34;sp-organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;organization-name&#34;:&#34;cml-sdwan-lab-tool&#34;,&#34;id&#34;:&#34;25035a95-31ef-408f-b4b2-cd30d970020c&#34;,&#34;name&#34;:&#34;branch_type2&#34;,&#34;lifeCycleRequired&#34;:true,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;tags&#34;:[{&#34;name&#34;:&#34;type2_secondary&#34;,&#34;type&#34;:&#34;USER&#34;,&#34;id&#34;:&#34;c3f97f8b-ba85-426f-baa6-23971aa22b30&#34;,&#34;description&#34;:&#34;type2_secondary&#34;}],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;site-name&#34;:&#34;SITE_300&#34;,&#34;device-lock&#34;:&#34;Yes&#34;,&#34;managed-by&#34;:&#34;Config-Group branch_type2&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;97f81da233b64ed1854a2cb0e3fa5ad6&#34;,&#34;configStatusMessage&#34;:&#34;&#34;,&#34;uuid&#34;:&#34;C8K-172343D2-7380-8B1B-5509-6FCB24AFA689&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-172343D2-7380-8B1B-5509-6FCB24AFA689&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;b8a229b5926f48368f4ca59e6693db33&#34;,&#34;configStatusMessage&#34;:&#34;&#34;,&#34;uuid&#34;:&#34;C8K-15411CCC-D476-0B3B-21F2-5D6AC387EE7B&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-15411CCC-D476-0B3B-21F2-5D6AC387EE7B&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;addedByRule&#34;:false,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;76d9deeba1bd4aa29326f8709bc0f7be&#34;,&#34;uuid&#34;:&#34;C8K-ED2CAF40-ABDC-A02A-A072-46DA307DD7D5&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-ED2CAF40-ABDC-A02A-A072-46DA307DD7D5&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;970aec4dfd084a4dbf84962fc932264b&#34;,&#34;uuid&#34;:&#34;C8K-A5032213-D3C7-C452-187E-38CCE4C5AF87&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-A5032213-D3C7-C452-187E-38CCE4C5AF87&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;1df9fc7723a3455395c6a1023f1ab604&#34;,&#34;uuid&#34;:&#34;C8K-679A6A64-288E-5F4A-082E-300770A277A1&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-679A6A64-288E-5F4A-082E-300770A277A1&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;},{&#34;deviceType&#34;:&#34;vedge&#34;,&#34;serialNumber&#34;:&#34;cce941364f254f14bcf67a6cc624c50e&#34;,&#34;uuid&#34;:&#34;C8K-A04B6934-B7D7-6D80-F2F9-0ECD2551DACB&#34;,&#34;managementSystemIP&#34;:&#34;0.0.0.0&#34;,&#34;chasisNumber&#34;:&#34;C8K-A04B6934-B7D7-6D80-F2F9-0ECD2551DACB&#34;,&#34;configOperationMode&#34;:&#34;cli&#34;,&#34;deviceModel&#34;:&#34;vedge-C8000V&#34;,&#34;deviceState&#34;:&#34;READY&#34;,&#34;validity&#34;:&#34;valid&#34;,&#34;hardwareVedge&#34;:false,&#34;vedgeCertificateState&#34;:&#34;tokengenerated&#34;,&#34;personality&#34;:&#34;vedge&#34;,&#34;uploadSource&#34;:&#34;File Upload&#34;,&#34;subjectSerialNumber&#34;:&#34;&#34;,&#34;solution&#34;:&#34;sdwan&#34;,&#34;lifeCycleRequired&#34;:true,&#34;expirationDate&#34;:&#34;NA&#34;,&#34;hardwareCertSerialNumber&#34;:&#34;NA&#34;,&#34;id&#34;:&#34;NA&#34;,&#34;tags&#34;:[],&#34;draftMode&#34;:&#34;Disabled&#34;,&#34;device-lock&#34;:&#34;No&#34;,&#34;managed-by&#34;:&#34;Unmanaged&#34;}]}</pre>
+    <button class="format-json-btn" onclick="toggleJSONFormatting('raw-result0-exec0', this)" title="Format JSON for readability">
+        📋 Format JSON
+    </button>
+</div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                            </div>
+                        </div>
+            </div>
+        </section>
+
+        <!-- Handle orphaned commands (defensive programming for edge cases) -->
+        
+
+        <footer>
+            <p>Generated: 2026-01-26 12:34:31</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleCollapse(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                // Toggle collapsed class on the element
+                element.classList.toggle('collapsed');
+
+                // For command containers (both nested and orphaned), toggle the content differently
+                if (id.startsWith('cmd-content-') || id.startsWith('orphaned-cmd-content-')) {
+                    const content = element.querySelector('.device-content');
+                    if (content) {
+                        content.classList.toggle('content-collapsed');
+                    }
+                }
+                // For main sections toggle the content-collapsed class
+                else if (id.startsWith('section-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the header that triggered this section
+                    const header = document.querySelector(`h2[onclick*="${id}"]`);
+                    if (header) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
+                // For result command sections, toggle them and update the result header chevron
+                else if (id.startsWith('result-commands-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the result header that triggered this
+                    const header = element.previousElementSibling;
+                    if (header && header.classList.contains('result-header')) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
+            }
+        }
+
+        // JSON formatting toggle function with enhanced UX
+        function toggleJSONFormatting(elementId, button) {
+            const element = document.getElementById(elementId);
+            const isFormatted = element.classList.contains('formatted-json');
+            
+            if (isFormatted) {
+                // Switch back to raw
+                const rawOutput = element.dataset.rawOutput;
+                element.textContent = rawOutput;
+                element.classList.remove('formatted-json');
+                
+                // Update button to format state
+                button.textContent = '📋 Format JSON';
+                button.title = 'Format JSON for readability';
+                button.classList.remove('toggle-state');
+                button.disabled = false;
+                
+            } else {
+                try {
+                    const rawText = element.textContent;
+                    
+                    // Store original text in data attribute if not already stored
+                    if (!element.dataset.rawOutput) {
+                        element.dataset.rawOutput = rawText;
+                    }
+                    
+                    // Show loading state for potentially large JSON
+                    button.textContent = '⏳ Formatting...';
+                    button.disabled = true;
+                    
+                    // Use setTimeout to allow UI update and prevent blocking
+                    setTimeout(() => {
+                        try {
+                            // Check for JSON support (defensive programming)
+                            if (typeof JSON === 'undefined' || !JSON.parse) {
+                                button.textContent = '❌ Browser too old';
+                                button.title = 'Browser does not support JSON formatting';
+                                return;
+                            }
+                            
+                            // Attempt to parse JSON
+                            const parsed = JSON.parse(rawText);
+                            
+                            // Pretty-print with 2-space indentation
+                            const formatted = JSON.stringify(parsed, null, 2);
+                            
+                            // Apply syntax highlighting
+                            const highlighted = syntaxHighlightJSON(formatted);
+                            
+                            // Replace content
+                            element.innerHTML = highlighted;
+                            element.classList.add('formatted-json');
+                            
+                            // Update button to raw state
+                            button.textContent = '⬅️ Show Raw';
+                            button.title = 'Show raw, unformatted output';
+                            button.classList.add('toggle-state');
+                            button.disabled = false;
+                            
+                        } catch (error) {
+                            // Not valid JSON or parsing failed
+                            console.warn('JSON formatting failed:', error);
+                            button.textContent = '❌ Invalid JSON';
+                            button.title = `Invalid JSON format: ${error.message}`;
+                            button.style.backgroundColor = '#dc3545';
+                            // Keep button disabled
+                        }
+                    }, 10);
+                    
+                } catch (error) {
+                    // Immediate error
+                    console.warn('JSON formatting failed:', error);
+                    button.textContent = '❌ Invalid JSON';
+                    button.disabled = true;
+                    button.title = 'Invalid JSON format';
+                }
+            }
+        }
+
+        // Enhanced syntax highlighting function
+        function syntaxHighlightJSON(json) {
+            // Escape HTML entities first
+            return json
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
+        // Initialize sections
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // Initialize all result command sections as collapsed by default
+            const resultCommandSections = document.querySelectorAll('[id^="result-commands-"]');
+            resultCommandSections.forEach(function(section) {
+                section.classList.add('content-collapsed');
+                // Find the corresponding result header to add collapsed chevron
+                const resultHeader = section.previousElementSibling;
+                if (resultHeader && resultHeader.classList.contains('result-header')) {
+                    const chevron = resultHeader.querySelector('.chevron');
+                    if (chevron) {
+                        chevron.parentElement.classList.add('collapsed');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

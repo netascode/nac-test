@@ -1,0 +1,32 @@
+==============================================================================
+Config
+==============================================================================
+Config.Test :: Robot Framework test that always passes
+==============================================================================
+Robot Test sd-dc-c8kv-01 Passes :: Test for device sd-dc-c8kv-01 -... | PASS |
+------------------------------------------------------------------------------
+Robot Test sd-dc-c8kv-02 Passes :: Test for device sd-dc-c8kv-02 -... | PASS |
+------------------------------------------------------------------------------
+Robot Test sd-dc-c8kv-03 Passes :: Test for device sd-dc-c8kv-03 -... | PASS |
+------------------------------------------------------------------------------
+Robot Test sd-dc-c8kv-04 Passes :: Test for device sd-dc-c8kv-04 -... | PASS |
+------------------------------------------------------------------------------
+Failing Tests
+  Traceback (most recent call last):
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    File  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/config/test.robot:26
+    T:  Failing Tests
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    File  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/config/test.robot:27
+      Fail    this test is meant to fail
+______________________________________________________________________________
+| FAIL |
+this test is meant to fail
+------------------------------------------------------------------------------
+Config.Test :: Robot Framework test that always passes                | FAIL |
+5 tests, 4 passed, 1 failed
+==============================================================================
+Config                                                                | FAIL |
+5 tests, 4 passed, 1 failed
+==============================================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/pabot_results/0/output.xml

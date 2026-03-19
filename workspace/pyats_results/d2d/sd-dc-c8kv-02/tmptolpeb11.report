@@ -1,0 +1,67 @@
++------------------------------------------------------------------------------+
+|                                Easypy Report                                 |
++------------------------------------------------------------------------------+
+pyATS Instance   : /Users/oboehmer/Documents/DD/nac-test/.venv
+Python Version   : cpython-3.12.10 (64bit)
+CLI Arguments    : /Users/oboehmer/Documents/DD/nac-test/.venv/bin/pyats run job /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmptolpeb11.py --testbed-file /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmphhjhmg1j.yaml --configuration /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpv1et_nic_plugin_config.yaml --archive-dir /private/tmp/pyats-sdwan --archive-name pyats_archive_device_sd-dc-c8kv-02 --no-archive-subdir --no-mail --no-xml-report --verbose
+User             : oboehmer
+Host Server      : OBOEHMER-M-5D76
+Host OS Version  : Mac OSX 26.2 (arm64)
+
+Job Information
+    Name         : tmptolpeb11
+    Result       : FAILED
+    Start time   : 2026-01-26 12:31:37.886731+01:00
+    Stop time    : 2026-01-26 12:34:29.487812+01:00
+    Elapsed time : 0:02:52
+    Archive      : /private/tmp/pyats-sdwan/pyats_archive_device_sd-dc-c8kv-02
+
+Total Tasks    : 2 
+
+Overall Stats
+    Passed     : 0
+    Passx      : 0
+    Failed     : 2
+    Aborted    : 0
+    Blocked    : 0
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 2
+
+Success Rate   : 0.00 %
+
+Section Stats
+    Passed     : 2
+    Passx      : 0
+    Failed     : 2
+    Aborted    : 0
+    Blocked    : 2
+    Skipped    : 0
+    Errored    : 0
+
+    TOTAL      : 6
+
+Section Success Rate   : 33.33 %
+
++------------------------------------------------------------------------------+
+|                             Task Result Summary                              |
++------------------------------------------------------------------------------+
+sd-dc-c8kv-02_verify_iosxe_all_sd_wan_control_connections_are_up: v...    FAILED
+sd-dc-c8kv-02_verify_iosxe_all_sd_wan_control_connections_are_up: v...    FAILED
+sd-dc-c8kv-02_verify_iosxe_all_sd_wan_control_connections_are_up_2:...    FAILED
+sd-dc-c8kv-02_verify_iosxe_all_sd_wan_control_connections_are_up_2:...    FAILED
+
++------------------------------------------------------------------------------+
+|                             Task Result Details                              |
++------------------------------------------------------------------------------+
+sd-dc-c8kv-02_verify_iosxe_all_sd_wan_control_connections_are_up: v...    FAILED
+`-- VerifySdwanControlConnectionsState                                    FAILED
+    |-- setup                                                             FAILED
+    |-- test_sdwan_control_connections_state                             BLOCKED
+    `-- cleanup                                                           PASSED
+sd-dc-c8kv-02_verify_iosxe_all_sd_wan_control_connections_are_up_2:...    FAILED
+`-- VerifySdwanControlConnectionsState_2                                  FAILED
+    |-- setup                                                             FAILED
+    |-- test_sdwan_control_connections_state                             BLOCKED
+    `-- cleanup                                                           PASSED

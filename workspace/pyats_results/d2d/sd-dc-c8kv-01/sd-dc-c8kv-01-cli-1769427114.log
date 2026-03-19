@@ -1,0 +1,10 @@
+
+2026-01-26 12:31:54,924: %UNICON-INFO: +++ sd-dc-c8kv-01 logfile /Users/oboehmer/.pyats/runinfo/tmpdy5ydtgs_2026Jan26_12_31_33_248856/sd-dc-c8kv-01-cli-1769427114.log +++
+
+2026-01-26 12:31:54,925: %UNICON-INFO: +++ Unicon plugin iosxe (unicon.plugins.iosxe) +++
+ssh: connect to host 10.100.1.1 port 22: Connection refused
+
+
+2026-01-26 12:32:00,068: %UNICON-INFO: +++ connection to spawn: ssh -l admin 10.100.1.1 -p 22, id: 4632412528 +++
+
+2026-01-26 12:32:00,072: %UNICON-INFO: connection to sd-dc-c8kv-01

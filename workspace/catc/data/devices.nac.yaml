@@ -1,0 +1,45 @@
+---
+catalyst_center:
+  inventory:
+    devices:
+      - name: BR10
+        fqdn_name: BR10.cisco.eu
+        device_ip: 198.18.130.10
+        pid: C9KV-UADP-8P
+        state: PROVISION
+        device_role: BORDER ROUTER
+        site: Global/Poland/Krakow/Bld A
+        fabric_site: Global/Poland/Krakow
+        fabric_roles:
+          - BORDER_NODE
+          - CONTROL_PLANE_NODE
+      - name: EDGE01
+        fqdn_name: EDGE01.cisco.eu
+        device_ip: 198.18.130.1
+        pid: C9KV-UADP-8P
+        state: PROVISION
+        device_role: ACCESS
+        site: Global/Poland/Krakow/Bld A
+        fabric_site: Global/Poland/Krakow
+        fabric_roles:
+          - EDGE_NODE
+        port_assignments:
+          - interface_name: GigabitEthernet1/0/2
+            connected_device_type: "USER_DEVICE"
+            data_vlan_name: "192_168_100_0-Campus"
+            authenticate_template_name: "No Authentication"
+      - name: EDGE02
+        fqdn_name: EDGE02.cisco.eu
+        device_ip: 198.18.130.2
+        pid: C9KV-UADP-8P
+        state: PROVISION
+        device_role: ACCESS
+        site: Global/Poland/Krakow/Bld A
+        fabric_site: Global/Poland/Krakow
+        fabric_roles:
+          - EDGE_NODE
+        port_assignments:
+          - interface_name: GigabitEthernet1/0/3
+            connected_device_type: "USER_DEVICE"
+            data_vlan_name: "192_168_100_0-Campus"
+            authenticate_template_name: "No Authentication"

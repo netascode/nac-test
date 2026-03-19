@@ -1,0 +1,40 @@
+BASELINE TEST COVERAGE REPORT (CORRECTED - FULL TEST SUITE)
+Captured: 2026-02-14 16:00 UTC
+Command: uv run pytest --cov=nac_test --cov-report=term -n auto --dist loadscope tests/
+
+==================== SUMMARY ====================
+Exit Code: 0
+Tests Passed: 492
+Tests Skipped: 74
+Total Coverage: 61%
+Execution Time: 86.78s (0:01:26)
+
+==================== KEY MODULE COVERAGE (Focus Areas) ====================
+Module                                                          Stmts   Miss  Cover
+-------------------------------------------------------------------------------------
+nac_test/pyats_core/execution/subprocess_runner.py              167     33    80%
+nac_test/robot/pabot.py                                          62      5    92%
+nac_test/robot/orchestrator.py                                 110      1    99%
+nac_test/robot/reporting/robot_output_parser.py                  65      7    89%
+nac_test/core/types.py                                          105     19    82%
+
+==================== NOTES ====================
+- Previous baseline was INCORRECT (unit tests only: 31% coverage, 162 tests)
+- This baseline includes ALL tests (unit + integration + e2e)
+- subprocess_runner.py already at 80% due to integration/e2e tests
+  * Previous unit-only showed 13% (146/167 missed)
+  * Full suite shows 80% (33/167 missed)
+  * New unit tests added in Task 1 will further improve this
+- Target: Verify new tests added in Tasks 1-5 improve edge case coverage
+- Final comparison in Task 7 should compare against THIS baseline (61%)
+
+==================== COMPARISON TO PREVIOUS (INCORRECT) BASELINE ====================
+Previous (unit only):     31% coverage,  162 tests
+Current (full suite):     61% coverage,  492 tests passed, 74 skipped
+
+Key module improvements from integration/e2e tests:
+- subprocess_runner.py: 13% → 80% (+67 percentage points)
+- pabot.py: 74% → 92% (+18 pp)
+- orchestrator.py: 98% → 99% (+1 pp)
+- robot_output_parser.py: 85% → 89% (+4 pp)
+- core/types.py: 80% → 82% (+2 pp)

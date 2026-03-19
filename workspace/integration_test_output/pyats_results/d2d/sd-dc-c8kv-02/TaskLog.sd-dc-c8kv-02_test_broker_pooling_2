@@ -1,0 +1,259 @@
+12: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %LOG-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Enabled forked tasklog generation
+22: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %UTILS-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Loading: /Users/oboehmer/Documents/DD/nac-test/tests/integration/fixtures/templates_broker/tests/test_broker_pooling_2.py
+23: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST_PYATS_COMMON-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Registered IOS-XE resolver CatalystCenterDeviceResolver for controller type 'CC'
+24: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST_PYATS_COMMON-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Registered IOS-XE resolver SDWANDeviceResolver for controller type 'SDWAN'
+25: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %UTILS-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Loaded: <module 'pyats.aetest.testscript.test_broker_pooling_2' from '/Users/oboehmer/Documents/DD/nac-test/tests/integration/fixtures/templates_broker/tests/test_broker_pooling_2.py'>
+26: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %UTILS-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: parser skipping argument run
+27: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %UTILS-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: parser skipping argument job
+28: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %UTILS-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: parser skipping argument /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpkrdwo_54.py
+29: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %UTILS-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: parser skipping argument run
+30: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %UTILS-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: parser skipping argument job
+31: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %UTILS-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: parser skipping argument /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/tmpkrdwo_54.py
+32: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: sys.platform='darwin', git_executable='git'
+33: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'cat-file', '--batch-check'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=<valid stream>, shell=False, universal_newlines=False)
+34: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'diff', '--abbrev=40', '--full-index', '-M', '--raw', '-z', '--no-color'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=None, shell=False, universal_newlines=False)
+35: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: sys.platform='darwin', git_executable='git'
+36: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'cat-file', '--batch-check'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=<valid stream>, shell=False, universal_newlines=False)
+37: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'diff', '--abbrev=40', '--full-index', '-M', '--raw', '-z', '--no-color'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=None, shell=False, universal_newlines=False)
+38: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %AETEST-6-INFO: %[part=38.1/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +------------------------------------------------------------------------------+
+39: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %AETEST-6-INFO: %[part=38.2/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: |                     Starting testcase BrokerPoolingTest2                     |
+40: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %AETEST-6-INFO: %[part=38.3/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +------------------------------------------------------------------------------+
+41: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: sys.platform='darwin', git_executable='git'
+42: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'cat-file', '--batch-check'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=<valid stream>, shell=False, universal_newlines=False)
+43: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'diff', '--abbrev=40', '--full-index', '-M', '--raw', '-z', '--no-color'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=None, shell=False, universal_newlines=False)
+44: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %AETEST-6-INFO: %[part=44.1/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +------------------------------------------------------------------------------+
+45: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %AETEST-6-INFO: %[part=44.2/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: |                            Starting section setup                            |
+46: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %AETEST-6-INFO: %[part=44.3/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +------------------------------------------------------------------------------+
+47: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Starting controller type detection
+48: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Checking for credentials: ['ACI', 'SDWAN', 'CC', 'MERAKI', 'FMC', 'ISE', 'IOSXE']
+49: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   ACI: Missing ACI_URL
+50: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   ACI: Missing ACI_USERNAME
+51: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   ACI: Missing ACI_PASSWORD
+52: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   SDWAN: Found SDWAN_URL
+53: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   SDWAN: Found SDWAN_USERNAME
+54: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   SDWAN: Found SDWAN_PASSWORD
+55: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   CC: Missing CC_URL
+56: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   CC: Missing CC_USERNAME
+57: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   CC: Missing CC_PASSWORD
+58: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   MERAKI: Missing MERAKI_URL
+59: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   MERAKI: Missing MERAKI_USERNAME
+60: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   MERAKI: Missing MERAKI_PASSWORD
+61: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   FMC: Missing FMC_URL
+62: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   FMC: Missing FMC_USERNAME
+63: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   FMC: Missing FMC_PASSWORD
+64: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   ISE: Missing ISE_URL
+65: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   ISE: Missing ISE_USERNAME
+66: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   ISE: Missing ISE_PASSWORD
+67: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   IOSXE: Missing IOSXE_URL
+68: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Complete credential sets found: ['SDWAN']
+69: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Partial credential sets found: []
+70: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Detected controller type: SDWAN
+71: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %SCRIPT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Using HTML report data directory for test type 'd2d': /Users/oboehmer/Documents/DD/nac-test/workspace/integration_test_output/d2d/html_report_data_temp
+72: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+73: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+74: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+75: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+76: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.tables.TableExtension".
+77: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+78: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+79: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+80: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.nl2br.Nl2BrExtension".
+81: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+82: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+83: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+84: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+85: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+86: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.tables.TableExtension".
+87: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+88: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+89: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+90: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.nl2br.Nl2BrExtension".
+91: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+92: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+93: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+94: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+95: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+96: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.tables.TableExtension".
+97: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+98: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+99: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+100: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.nl2br.Nl2BrExtension".
+101: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+102: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+103: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+104: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+105: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+106: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.tables.TableExtension".
+107: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+108: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+109: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+110: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.nl2br.Nl2BrExtension".
+111: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %MARKDOWN-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+112: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %SCRIPT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Initialized result collector with test_id: brokerpoolingtest2_20260128_191355_564
+113: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: BatchAccumulator initialized with batch_size=200, timeout=0.50s, debug=False
+114: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: BatchingReporter initialized: batch_size=200, timeout=0.50s, debug=False
+115: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: StepInterceptor initialized
+116: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Step interceptors installed successfully
+117: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %SCRIPT-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Batching reporter initialized successfully (batch size: 200, flush timeout: 0.5s)
+118: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %ASYNCIO-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Using selector: KqueueSelector
+119: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %SCRIPT-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Connecting to device sd-dc-c8kv-02 via connection broker
+120: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Connecting to broker at: /var/folders/_f/vfw2shn13kqfdqskxs8s70qh0000gn/T/nac_test_broker_96386.sock
+121: OBOEHMER-M-5D76: 2026-01-28T19:13:55: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Connected to broker successfully
+122: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Initialized command cache for device sd-dc-c8kv-02 with TTL 3600s
+123: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: The result of section setup is => PASSED
+124: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: sys.platform='darwin', git_executable='git'
+125: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'cat-file', '--batch-check'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=<valid stream>, shell=False, universal_newlines=False)
+126: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'diff', '--abbrev=40', '--full-index', '-M', '--raw', '-z', '--no-color'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=None, shell=False, universal_newlines=False)
+127: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=127.1/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +------------------------------------------------------------------------------+
+128: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=127.2/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: |            Starting section test_sdwan_control_connections_state             |
+129: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=127.3/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +------------------------------------------------------------------------------+
+130: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %ROOT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Executing command: show sdwan control connections
+131: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Executing command on sd-dc-c8kv-02: show sdwan control connections
+132: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Command output length: 1649 characters
+133: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Cached 'show sdwan control connections' output for sd-dc-c8kv-02 (1649 chars)
+134: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Recording command execution on sd-dc-c8kv-02: show sdwan control connections
+135: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %SCRIPT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Tracked SSH command: show sdwan control connections on sd-dc-c8kv-02
+136: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: External parser packages: set()
+137: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Parsers found for command "show sdwan control connections": [('show sdwan control connections', <class 'genie.libs.parser.iosxe.show_sdwan.ShowSdwanControlConnections'>, {})]
+138: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Parser class: <class 'genie.libs.parser.iosxe.show_sdwan.ShowSdwanControlConnections'> arguments: {}
+139: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.1/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: {
+140: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.2/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:     'local_color': {
+141: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.3/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:         'biz-internet': {
+142: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.4/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:             'peer_system_ip': {
+143: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.5/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                 '100.0.0.103': {
+144: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.6/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'controller_group_id': '2',
+145: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.7/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'domain_id': '1',
+146: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.8/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_organization': 'cml-sdwan-lab-tool',
+147: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.9/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_private_ip': '172.16.0.103',
+148: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.10/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_private_port': '12346',
+149: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.11/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_protocol': 'dtls',
+150: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.12/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_public_ip': '172.16.0.103',
+151: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.13/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_public_port': '12346',
+152: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.14/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_type': 'vsmart',
+153: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.15/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'proxy_state': 'No',
+154: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.16/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'site_id': '100',
+155: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.17/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'state': 'up',
+156: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.18/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'uptime': '14:18:15:46',
+157: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.19/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                 },
+158: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.20/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                 '100.0.0.104': {
+159: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.21/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'controller_group_id': '2',
+160: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.22/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'domain_id': '1',
+161: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.23/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_organization': 'cml-sdwan-lab-tool',
+162: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.24/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_private_ip': '172.16.0.104',
+163: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.25/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_private_port': '12346',
+164: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.26/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_protocol': 'dtls',
+165: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.27/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_public_ip': '172.16.0.104',
+166: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.28/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_public_port': '12346',
+167: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.29/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_type': 'vsmart',
+168: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.30/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'proxy_state': 'No',
+169: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.31/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'site_id': '100',
+170: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.32/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'state': 'up',
+171: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.33/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'uptime': '5:00:17:14',
+172: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.34/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                 },
+173: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.35/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:             },
+174: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.36/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:         },
+175: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.37/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:         'mpls': {
+176: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.38/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:             'peer_system_ip': {
+177: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.39/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                 '100.0.0.1': {
+178: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.40/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'controller_group_id': '0',
+179: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.41/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'domain_id': '0',
+180: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.42/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_organization': 'cml-sdwan-lab-tool',
+181: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.43/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_private_ip': '172.16.0.1',
+182: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.44/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_private_port': '12946',
+183: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.45/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_protocol': 'dtls',
+184: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.46/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_public_ip': '172.16.0.1',
+185: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.47/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_public_port': '12946',
+186: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.48/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_type': 'vmanage',
+187: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.49/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'proxy_state': 'No',
+188: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.50/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'site_id': '100',
+189: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.51/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'state': 'up',
+190: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.52/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'uptime': '14:18:15:45',
+191: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.53/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                 },
+192: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.54/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                 '100.0.0.103': {
+193: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.55/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'controller_group_id': '2',
+194: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.56/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'domain_id': '1',
+195: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.57/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_organization': 'cml-sdwan-lab-tool',
+196: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.58/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_private_ip': '172.16.0.103',
+197: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.59/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_private_port': '12346',
+198: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.60/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_protocol': 'dtls',
+199: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.61/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_public_ip': '172.16.0.103',
+200: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.62/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_public_port': '12346',
+201: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.63/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_type': 'vsmart',
+202: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.64/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'proxy_state': 'No',
+203: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.65/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'site_id': '100',
+204: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.66/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'state': 'up',
+205: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.67/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'uptime': '14:18:15:45',
+206: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.68/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                 },
+207: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.69/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                 '100.0.0.104': {
+208: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.70/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'controller_group_id': '2',
+209: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.71/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'domain_id': '1',
+210: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.72/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_organization': 'cml-sdwan-lab-tool',
+211: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.73/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_private_ip': '172.16.0.104',
+212: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.74/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_private_port': '12346',
+213: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.75/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_protocol': 'dtls',
+214: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.76/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_public_ip': '172.16.0.104',
+215: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.77/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_public_port': '12346',
+216: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.78/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'peer_type': 'vsmart',
+217: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.79/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'proxy_state': 'No',
+218: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.80/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'site_id': '100',
+219: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.81/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'state': 'up',
+220: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.82/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                     'uptime': '5:00:17:14',
+221: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.83/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:                 },
+222: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.84/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:             },
+223: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.85/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:         },
+224: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.86/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:     },
+225: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GENIE-7-DEBUG: %[part=139.87/87][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: }
+226: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %SCRIPT-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: SD-WAN Control Connection Verification Verification Summary:
+227: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %SCRIPT-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   - Total configurations processed: 1
+228: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %SCRIPT-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   - Passed: 1
+229: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %SCRIPT-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   - Failed: 0
+230: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %SCRIPT-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]:   - Skipped: 0
+231: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: sys.platform='darwin', git_executable='git'
+232: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'cat-file', '--batch-check'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=<valid stream>, shell=False, universal_newlines=False)
+233: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'diff', '--abbrev=40', '--full-index', '-M', '--raw', '-z', '--no-color'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=None, shell=False, universal_newlines=False)
+234: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=234.1/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +..............................................................................+
+235: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=234.2/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: :           Starting STEP 1: SD-WAN Control Connection Verification            :
+236: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=234.3/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +..............................................................................+
+237: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.1/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: [RESULT][ResultStatus.PASSED] **SD-WAN Control Connection Check PASSED**
+238: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.2/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: 
+239: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.3/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: All 5 discovered SD-WAN control connections are in 'up' state.
+240: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.4/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: 
+241: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.5/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: • Ensures full SD-WAN control plane connectivity to all controllers (vSmart/vManage)
+242: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.6/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: • OMP routes, policies, and management are fully operational
+243: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.7/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: 
+244: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.8/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: **Validation Results:**
+245: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.9/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: [PASS] vsmart Unknown (Group: 2) - state=up
+246: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.10/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: [PASS] vsmart Unknown (Group: 2) - state=up
+247: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.11/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: [PASS] vsmart Unknown (Group: 2) - state=up
+248: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.12/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: [PASS] vsmart Unknown (Group: 2) - state=up
+249: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.13/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: [PASS] vmanage Unknown (Group: 0) - state=up
+250: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.14/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: 
+251: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.15/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: **SD-WAN Control Connection Status:**
+252: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.16/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: • Total control connections: 5
+253: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.17/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: • Connections in 'up' state: 5
+254: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.18/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: • All control connections up: Yes
+255: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[part=237.19/19][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: • Command execution duration: 0.20s
+256: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: The result of STEP 1: SD-WAN Control Connection Verification is => PASSED
+257: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: internal signal: (None, None, None, None)
+258: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=258.1/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +..........................................................+
+259: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=258.2/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: :                       STEPS Report                       :
+260: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=258.3/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +..........................................................+
+261: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: STEP 1 - SD-WAN Control Connection Verification   Passed    
+262: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: ............................................................
+263: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: The result of section test_sdwan_control_connections_state is => PASSED
+264: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: sys.platform='darwin', git_executable='git'
+265: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'cat-file', '--batch-check'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=<valid stream>, shell=False, universal_newlines=False)
+266: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %GIT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Popen(['git', 'diff', '--abbrev=40', '--full-index', '-M', '--raw', '-z', '--no-color'], cwd=/Users/oboehmer/Documents/DD/nac-test, stdin=None, shell=False, universal_newlines=False)
+267: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=267.1/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +------------------------------------------------------------------------------+
+268: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=267.2/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: |                           Starting section cleanup                           |
+269: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[part=267.3/3][pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: +------------------------------------------------------------------------------+
+270: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %SCRIPT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Shutting down batching reporter...
+271: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Graceful shutdown initiated
+272: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Graceful shutdown complete
+273: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %SCRIPT-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Batching reporter shutdown complete - processed 0 messages in 0 batches
+274: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Step interceptors uninstalled successfully
+275: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %NAC_TEST-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Finalized JSONL results to /Users/oboehmer/Documents/DD/nac-test/workspace/integration_test_output/d2d/html_report_data_temp/brokerpoolingtest2_20260128_191355_564.jsonl
+276: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %SCRIPT-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Saved test results to: /Users/oboehmer/Documents/DD/nac-test/workspace/integration_test_output/d2d/html_report_data_temp/brokerpoolingtest2_20260128_191355_564.jsonl
+277: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: The result of section cleanup is => PASSED
+278: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %AETEST-6-INFO: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: The result of testcase BrokerPoolingTest2 is => PASSED
+284: OBOEHMER-M-5D76: 2026-01-28T19:13:56: %LOG-7-DEBUG: %[pid=1368][pname=sd-dc-c8kv-02_test_broker_pooling_2]: Disabled forked tasklog generation

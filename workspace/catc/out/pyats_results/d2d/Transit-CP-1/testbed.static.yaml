@@ -1,0 +1,27 @@
+testbed:
+  name: testbed_Transit-CP-1
+  credentials:
+    default:
+      username: '%ENV{IOSXE_USERNAME}'
+      password: '%ENV{IOSXE_PASSWORD}'
+devices:
+  Transit-CP-1:
+    alias: Transit-CP-1
+    os: iosxe
+    type: router
+    credentials:
+      default:
+        username: '%ENV{IOSXE_USERNAME}'
+        password: '%ENV{IOSXE_PASSWORD}'
+    connections:
+      cli:
+        protocol: ssh
+        ip: 198.18.130.34
+        port: 22
+        arguments:
+          init_config_commands: []
+          operating_mode: true
+    custom:
+      abstraction:
+        order:
+        - os

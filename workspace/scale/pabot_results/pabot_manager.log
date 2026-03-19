@@ -1,0 +1,48 @@
+[INFO]    Initialized logging in ./pabot_results
+[INFO]    Robot Framework remote server at 127.0.0.1:8270 started.
+[DEBUG]   2026-02-20 17:01:07.528373 [PID:90962] [0] [ID:0] EXECUTING Config.Test
+[INFO]    2026-02-20 17:01:08.158714 [PID:90962] [0] [ID:0] Execution failed in Config.Test with 1 failing test(s)
+==============================================================================
+Config
+==============================================================================
+Config.Test :: Robot Framework test that always passes
+==============================================================================
+Robot Test sd-dc-c8kv-01 Passes :: Test for device sd-dc-c8kv-01 -... | PASS |
+------------------------------------------------------------------------------
+Robot Test sd-dc-c8kv-02 Passes :: Test for device sd-dc-c8kv-02 -... | PASS |
+------------------------------------------------------------------------------
+Robot Test sd-dc-c8kv-03 Passes :: Test for device sd-dc-c8kv-03 -... | PASS |
+------------------------------------------------------------------------------
+Robot Test sd-dc-c8kv-04 Passes :: Test for device sd-dc-c8kv-04 -... | PASS |
+------------------------------------------------------------------------------
+Failing Tests
+  Traceback (most recent call last):
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    File  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/config/test.robot:26
+    T:  Failing Tests
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    File  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/results/config/test.robot:27
+      Fail    this test is meant to fail
+______________________________________________________________________________
+| FAIL |
+this test is meant to fail
+------------------------------------------------------------------------------
+Config.Test :: Robot Framework test that always passes                | FAIL |
+5 tests, 4 passed, 1 failed
+==============================================================================
+Config                                                                | FAIL |
+5 tests, 4 passed, 1 failed
+==============================================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/pabot_results/0/output.xml
+[INFO]    5 tests, 4 passed, 1 failed, 0 skipped.
+[INFO]    ===================================================
+[INFO]    Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/output.xml
+[INFO]    Log:     /Users/oboehmer/Documents/DD/nac-test/workspace/scale/log.html
+[INFO]    Report:  /Users/oboehmer/Documents/DD/nac-test/workspace/scale/report.html
+[DEBUG]   Finalizing Pabot execution...
+[DEBUG]   Stopping PabotLib process
+[INFO]    Robot Framework remote server at 127.0.0.1:8270 stopped.
+[DEBUG]   PabotLib process stopped
+[INFO]    Total testing: 0.60 seconds
+[INFO]    Elapsed time:  1.11 seconds
+[DEBUG]   Logs flushed successfully.

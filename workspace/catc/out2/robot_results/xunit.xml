@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Out2" tests="12" errors="0" failures="2" skipped="0" time="5.758" timestamp="2026-02-02T09:40:23.122621">
+<testsuite name="Robot" tests="6" errors="0" failures="1" skipped="0" time="2.512" timestamp="2026-02-02T09:40:24.906000">
+<testsuite name="Config" tests="6" errors="0" failures="1" skipped="0" time="2.509" timestamp="2026-02-02T09:40:24.910000">
+<testsuite name="Devices" tests="5" errors="0" failures="0" skipped="0" time="2.504" timestamp="2026-02-02T09:40:24.916000">
+<testsuite name="Devices" tests="5" errors="0" failures="0" skipped="0" time="2.504" timestamp="2026-02-02T09:40:24.916000">
+<testcase classname="Out2.Robot.Config.Devices.Devices" name="Get Device Inventory" time="1.121">
+</testcase>
+<testcase classname="Out2.Robot.Config.Devices.Devices" name="Get Device Tags" time="0.089">
+</testcase>
+<testcase classname="Out2.Robot.Config.Devices.Devices" name="Verify Device BR10" time="0.439">
+</testcase>
+<testcase classname="Out2.Robot.Config.Devices.Devices" name="Verify Device EDGE01" time="0.182">
+</testcase>
+<testcase classname="Out2.Robot.Config.Devices.Devices" name="Verify Device EDGE02" time="0.041">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Device Inventory in Catalyst Center"/>
+</properties>
+</testsuite>
+</testsuite>
+<testsuite name="Fail" tests="1" errors="0" failures="1" skipped="0" time="0.002" timestamp="2026-02-02T09:40:24.911050">
+<testcase classname="Out2.Robot.Config.Fail" name="Fail a test" time="0.001">
+<failure message="This test is designed to fail." type="AssertionError"/>
+</testcase>
+</testsuite>
+</testsuite>
+</testsuite>
+<testsuite name="Tests" tests="6" errors="0" failures="1" skipped="0" time="3.323" timestamp="2026-02-02T09:40:24.907000">
+<testsuite name="Robot" tests="6" errors="0" failures="1" skipped="0" time="3.313" timestamp="2026-02-02T09:40:24.910000">
+<testsuite name="Config" tests="6" errors="0" failures="1" skipped="0" time="3.305" timestamp="2026-02-02T09:40:24.911000">
+<testsuite name="Devices" tests="5" errors="0" failures="0" skipped="0" time="3.295" timestamp="2026-02-02T09:40:24.920453">
+<testsuite name="Devices" tests="5" errors="0" failures="0" skipped="0" time="3.292" timestamp="2026-02-02T09:40:24.920786">
+<testcase classname="Out2.Tests.Robot.Config.Devices.Devices" name="Get Device Inventory" time="1.000">
+</testcase>
+<testcase classname="Out2.Tests.Robot.Config.Devices.Devices" name="Get Device Tags" time="0.156">
+</testcase>
+<testcase classname="Out2.Tests.Robot.Config.Devices.Devices" name="Verify Device BR10" time="0.398">
+</testcase>
+<testcase classname="Out2.Tests.Robot.Config.Devices.Devices" name="Verify Device EDGE01" time="0.179">
+</testcase>
+<testcase classname="Out2.Tests.Robot.Config.Devices.Devices" name="Verify Device EDGE02" time="0.036">
+</testcase>
+<properties>
+<property name="Documentation" value="Verify Device Inventory in Catalyst Center"/>
+</properties>
+</testsuite>
+</testsuite>
+<testsuite name="Fail" tests="1" errors="0" failures="1" skipped="0" time="0.002" timestamp="2026-02-02T09:40:24.913015">
+<testcase classname="Out2.Tests.Robot.Config.Fail" name="Fail a test" time="0.001">
+<failure message="This test is designed to fail." type="AssertionError"/>
+</testcase>
+</testsuite>
+</testsuite>
+</testsuite>
+</testsuite>
+<properties>
+<property name="Documentation" value="[https://pabot.org/?ref=log|Pabot] result from 4 executions."/>
+</properties>
+</testsuite>

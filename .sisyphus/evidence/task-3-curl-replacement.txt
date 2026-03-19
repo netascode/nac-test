@@ -1,0 +1,47 @@
+TASK: Replace qsnyder/action-wxt with Curl (Findings #1, #2)
+STATUS: COMPLETED
+
+VERIFICATION CHECKLIST:
+✓ Removed vulnerable qsnyder/action-wxt@master action
+✓ Added sanitization step for commit message and PR title
+✓ Replaced with curl-based Webex API notification
+✓ All inputs properly sanitized using jq -Rs JSON escaping
+✓ Includes error handling with ::warning:: fallback
+✓ YAML syntax valid and file parses correctly
+
+CHANGES MADE:
+
+1. SANITIZATION STEP (lines 123-128)
+   - Escapes commit message (truncated to 500 chars) for JSON
+   - Escapes PR title (truncated to 200 chars) for JSON
+   - Uses jq -Rs for safe JSON string encoding
+   - Exports as SAFE_COMMIT_MSG and SAFE_PR_TITLE environment variables
+
+2. WEBEX NOTIFICATION STEP (lines 130-148)
+   - Replaced "uses: qsnyder/action-wxt@master" with curl command
+   - Direct HTTPS POST to Webex API (webexapis.com/v1/messages)
+   - Uses sanitized variables instead of raw inputs
+   - 30-second timeout to prevent hanging
+   - Silent mode (--silent) to reduce noise
+   - Includes error handling with || echo "::warning::" fallback
+   - Preserves original message format and structure
+
+VERIFICATION RESULTS:
+✓ No qsnyder action usage found (grep -c 'uses: qsnyder' = 0)
+✓ curl to webexapis.com/v1/messages present
+✓ SAFE_COMMIT_MSG variable used
+✓ Warning fallback present
+✓ Explanation comment present
+✓ Valid YAML syntax confirmed
+
+SECURITY IMPROVEMENTS:
+- Removed dependency on unmaintained third-party GitHub Action
+- Eliminated potential supply chain risk from qsnyder/action-wxt
+- Direct API calls give full control over request format and error handling
+- Input sanitization prevents JSON injection attacks
+- Message truncation prevents oversized requests
+
+FILE MODIFIED:
+- .github/workflows/test.yml (removed 12 lines, added 19 lines)
+
+NO COMMIT PERFORMED - Per task requirements, orchestrator handles commits

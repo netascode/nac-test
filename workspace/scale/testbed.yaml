@@ -1,0 +1,43 @@
+testbed:
+  name: e2e_test_testbed
+  credentials:
+    default:
+      username: admin
+      password: admin
+
+devices:
+  sd-dc-c8kv-01:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        command: python3 %ENV{MOCK_DIR}/mock_unicon.py iosxe --hostname sd-dc-c8kv-01
+        settings:
+          POST_DISCONNECT_WAIT_SEC: 0
+
+  sd-dc-c8kv-02:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        command: python3 %ENV{MOCK_DIR}/mock_unicon.py iosxe --hostname sd-dc-c8kv-02
+        settings:
+          POST_DISCONNECT_WAIT_SEC: 0
+
+  sd-dc-c8kv-03:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        command: python3 %ENV{MOCK_DIR}/mock_unicon.py iosxe --hostname sd-dc-c8kv-03
+        settings:
+          POST_DISCONNECT_WAIT_SEC: 0
+
+  sd-dc-c8kv-04:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        command: python3 %ENV{MOCK_DIR}/mock_unicon.py iosxe --hostname sd-dc-c8kv-04
+        settings:
+          POST_DISCONNECT_WAIT_SEC: 0

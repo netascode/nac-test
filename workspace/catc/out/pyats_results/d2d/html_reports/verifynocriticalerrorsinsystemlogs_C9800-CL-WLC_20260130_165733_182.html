@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify No Critical Errors in System Logs - Test Results</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --skip: #95a5a6;
+            --info: #3498db;
+            --neutral: #95a5a6;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+            background-color: #f9f9f9;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 6px var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        h1, h2, h3, h4 {
+            margin-top: 0;
+            line-height: 1.2;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        header h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .header-content {
+            position: relative;
+        }
+
+        .nav-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        @media (max-width: 768px) {
+            .nav-button {
+                position: static;
+                margin-bottom: 20px;
+                display: inline-flex;
+            }
+        }
+
+        .status-banner {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .pass-status {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .fail-status {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .skip-status {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: #7f8c8d;
+            border-left: 4px solid #95a5a6;
+        }
+
+        .abort-status {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e67e22;
+            border-left: 4px solid #e67e22;
+        }
+
+        .error-status {
+            background-color: rgba(142, 68, 173, 0.15);
+            color: #8e44ad;
+            border-left: 4px solid #8e44ad;
+        }
+
+        .block-status {
+            background-color: rgba(52, 73, 94, 0.15);
+            color: var(--secondary);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .neutral-status {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: var(--neutral);
+            border-left: 4px solid var(--neutral);
+        }
+
+        .result-pass {
+            background-color: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border-left: 4px solid var(--success);
+        }
+
+        .result-fail {
+            background-color: rgba(231, 76, 60, 0.15);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .result-info {
+            background-color: rgba(52, 152, 219, 0.15);
+            color: var(--info);
+            border-left: 4px solid var(--info);
+        }
+
+        .result-skip {
+            background-color: rgba(243, 156, 18, 0.15);
+            color: var(--warning);
+            border-left: 4px solid var(--warning);
+        }
+
+        .result-abort {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e67e22;
+            border-left: 4px solid #e67e22;
+        }
+
+        .result-error {
+            background-color: rgba(142, 68, 173, 0.15);
+            color: #8e44ad;
+            border-left: 4px solid #8e44ad;
+        }
+
+        .result-block {
+            background-color: rgba(52, 73, 94, 0.15);
+            color: var(--secondary);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .result-neutral {
+            background-color: rgba(149, 165, 166, 0.15);
+            color: var(--neutral);
+            border-left: 4px solid var(--neutral);
+        }
+
+        section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow);
+            margin-bottom: 30px;
+            padding: 25px;
+        }
+
+        section h2 {
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 10px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--primary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow: auto;
+            border: 1px solid #e9ecef;
+            margin: 15px 0;
+        }
+
+        code {
+            font-family: 'Source Code Pro', Consolas, Monaco, 'Andale Mono', monospace;
+            font-size: 0.9em;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid #e9ecef;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        /* List styling */
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+
+        li {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+
+        /* Nested list styling */
+        ul ul, ol ol, ul ol, ol ul {
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        /* Bold text styling */
+        strong, b {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Jobfile path styling */
+        .jobfile-path {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85em;
+            font-weight: normal;
+            margin-top: 5px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+        }
+
+        /* Highlighted box styling for important criteria */
+        p:has(> strong:first-child) {
+            background-color: rgba(147, 112, 219, 0.15);
+            border-left: 4px solid #9370DB;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        /* Alternative for browsers that don't support :has() */
+        p > strong:first-child {
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        .result-item {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        /* ===== Universal Result Message Formatting (All Result Types) ===== */
+
+        .result-message {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* Apply consistent formatting to all result messages */
+        .result-message p {
+            margin: 0.5em 0;
+            line-height: 1.6;
+        }
+
+        .result-message p:first-child {
+            margin-top: 0;
+        }
+
+        .result-message p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Spacer paragraphs for visual separation */
+        .result-message p.spacer {
+            height: 0.75em;
+            margin: 0;
+        }
+
+        /* Strong emphasis in all result messages */
+        .result-message strong {
+            font-weight: 600;
+            color: inherit;  /* Inherit from parent result type */
+        }
+
+        /* Inline code formatting in all result messages */
+        .result-message code {
+            background-color: rgba(52, 73, 94, 0.08);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+
+        /* Universal bullet list styling for all result types */
+        .result-detail-list {
+            margin: 0.75em 0;
+            padding-left: 1.5em;
+            list-style: disc outside;
+        }
+
+        .result-detail-list li {
+            margin: 0.4em 0;
+            line-height: 1.5;
+            color: inherit;  /* Inherit from parent result type */
+        }
+
+        .result-detail-list li code {
+            /* Inline code within list items */
+            font-size: 0.85em;
+        }
+
+        /* Emoji styling in result messages */
+        .result-message span[style*="font-size: 1.2em"] {
+            margin-right: 0.3em;
+        }
+
+        /* ===== Result Type Specific Styling ===== */
+
+        /* Skip results - softer appearance */
+        .result-skip {
+            background-color: rgba(149, 165, 166, 0.08);
+            border-left: 4px solid var(--skip);
+            color: #5d6d7e;
+        }
+
+        .result-skip .result-message strong {
+            color: #5a6c7d;
+        }
+
+        .result-skip .result-message code {
+            background-color: rgba(149, 165, 166, 0.1);
+        }
+
+        /* Failed results - clear error presentation */
+        .result-fail {
+            background-color: rgba(231, 76, 60, 0.05);
+            border-left: 4px solid var(--danger);
+            color: #5a2321;
+        }
+
+        .result-fail .result-message strong {
+            color: #c0392b;
+            font-weight: 600;
+        }
+
+        .result-fail .result-message code {
+            background-color: rgba(231, 76, 60, 0.08);
+            color: #922b21;
+        }
+
+        /* Passed results - subtle success indication */
+        .result-pass {
+            background-color: rgba(46, 204, 113, 0.05);
+            border-left: 4px solid var(--success);
+            color: #1e4620;
+        }
+
+        .result-pass .result-message strong {
+            color: #27ae60;
+        }
+
+        .result-pass .result-message code {
+            background-color: rgba(46, 204, 113, 0.08);
+            color: #186a3b;
+        }
+
+        /* ===== Nested Result-Command Structure ===== */
+
+        .result-header.expandable {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-commands {
+            margin-top: 15px;
+            padding-left: 20px;
+            border-left: 2px solid #e9ecef;
+        }
+
+        .cmd-count {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            border-top: 1px solid var(--light);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* CLI Terminal Styling */
+        .cli-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .cli-header {
+            background-color: #f5f5f5;
+            padding: 8px 15px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cli-content {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        .cli-prompt {
+            color: #98c379;
+        }
+
+        .cli-command {
+            color: #61afef;
+            font-weight: bold;
+        }
+
+        .cli-output {
+            color: #abb2bf;
+            display: block;
+            margin-top: 10px;
+        }
+
+        /* Parsed Output Styling */
+        .parsed-data-header {
+            background-color: #2d333b;
+            color: #ddd;
+            padding: 8px 15px;
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .parsed-data-content {
+            background-color: #1a1f26;
+            color: #56b6c2;
+            padding: 15px;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        /* JSON output styling */
+        .json-output {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre;
+            font-family: 'Source Code Pro', Consolas, Monaco, monospace;
+            font-size: 0.9em;
+        }
+
+        /* Test context banner styling */
+        .test-context-banner {
+            background-color: #f0f4f8;
+            border-left: 4px solid var(--accent);
+            padding: 10px 15px;
+            margin: 15px 0 10px 0;
+            font-weight: 500;
+            color: var(--secondary);
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+
+        .test-context-banner::before {
+            content: "Test Context: ";
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Collapsible sections */
+        .chevron::before {
+            content: '\25BC'; /* Down-pointing triangle HTML entity */
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+
+        .collapsed .chevron::before {
+            content: '\25B6'; /* Right-pointing triangle HTML entity */
+        }
+
+        .content-collapsed {
+            display: none;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            header {
+                padding: 20px 15px;
+            }
+
+            section {
+                padding: 15px;
+            }
+        }
+
+        /* Client-side JSON formatting styles */
+        .command-output {
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .raw-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;  /* CRITICAL: Prevent layout breaks from extremely long unbreakable strings */
+            margin: 0;
+        }
+
+        .format-json-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 0.8em;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            min-width: 100px;  /* Consistent button width for toggle states */
+            text-align: center;
+        }
+
+        .format-json-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .format-json-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Toggle button states for better UX */
+        .format-json-btn.toggle-state {
+            background-color: #28a745;  /* Green when showing formatted JSON */
+        }
+
+        .format-json-btn.toggle-state:hover {
+            background-color: #1e7e34;
+        }
+
+        .formatted-json {
+            color: #333;
+        }
+
+        /* JSON syntax highlighting colors */
+        .json-key {
+            color: #0451a5;
+            font-weight: bold;
+        }
+
+        .json-string {
+            color: #0f7b0f;
+        }
+
+        .json-number {
+            color: #098658;
+        }
+
+        .json-boolean {
+            color: #0000ff;
+        }
+
+        .json-null {
+            color: #795e26;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="summary_report.html" class="nav-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                    Back to Summary
+                </a>
+                <h1>Verify No Critical Errors in System Logs <span style="color: #7f8c8d;">(C9800-CL-WLC)</span></h1>
+                <div class="status-banner fail-status">
+                    Test Status: FAILED
+                </div>
+                <div class="jobfile-path">
+                    Jobfile: tests/pyats/verify_iosxe_no_critical_errors_in_system_logs.py
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <section id="section-description">
+            <h2 onclick="toggleCollapse('section-description-content')">
+                Description <span class="chevron"></span>
+            </h2>
+            <div id="section-description-content">
+                <p>This test checks the system log on an IOS-XE device for the presence of any<br />
+critical errors, hardware failures, configuration rollbacks, AAA failures, software exceptions,<br />
+or recurring error-level messages. System logs are essential for identifying operational issues,<br />
+hardware faults, authentication problems, or abnormal software behavior. Ensuring that the<br />
+system log is free of high-severity or persistent errors is vital for network reliability,<br />
+device stability, and early detection of infrastructure issues.</p>
+            </div>
+        </section>
+
+        <section id="section-setup">
+            <h2 onclick="toggleCollapse('section-setup-content')">
+                Setup <span class="chevron"></span>
+            </h2>
+            <div id="section-setup-content">
+                <ul>
+<li>SSH access to the target IOS-XE network device is available.</li>
+<li>Authentication credentials for the device are valid and configured.</li>
+<li>System logging is enabled and log buffer contains current entries.</li>
+<li>The device is operational and reachable via the management network.</li>
+</ul>
+            </div>
+        </section>
+
+        <section id="section-procedure">
+            <h2 onclick="toggleCollapse('section-procedure-content')">
+                Procedure <span class="chevron"></span>
+            </h2>
+            <div id="section-procedure-content">
+                <ul>
+<li>Establish SSH connection to the IOS-XE network device.</li>
+<li>Execute the CLI command: <em>show logging</em> to retrieve the device system log buffer.</li>
+<li>Parse the command output using the Genie parser to obtain structured log entries.</li>
+<li>For EACH log entry discovered in the parsed output:<ul>
+<li>Extract the log message severity from the syslog header (e.g., %FAC-SEV-CODE).</li>
+<li>Check for the following:<ul>
+<li>Any log entry with severity 0 (Emergency), 1 (Alert), or 2 (Critical).</li>
+<li>Any message text indicating hardware failures (e.g., power, fan, module).</li>
+<li>Any message text indicating configuration rollback or abort.</li>
+<li>Any message text indicating AAA (authentication/authorization/accounting) failure.</li>
+<li>Any message text indicating a software exception or crash.</li>
+<li>Recurring (persistent) severity 3 (Error) messages by counting repeated signatures.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Summarize results, reporting any discovered critical or recurring issues.</li>
+</ul>
+            </div>
+        </section>
+
+        <section id="section-criteria">
+            <h2 onclick="toggleCollapse('section-criteria-content')">
+                Pass/Fail Criteria <span class="chevron"></span>
+            </h2>
+            <div id="section-criteria-content">
+                <p><strong>This test passes when all of the following conditions are met:</strong></p>
+<ul>
+<li>At least one log entry is discovered in the system log buffer.</li>
+<li>No log entries have severity 0, 1, or 2 (Emergency, Alert, Critical).</li>
+<li>No log entries indicate hardware failures (e.g., FAN, PSU, module, overheat, sensor).</li>
+<li>No log entries indicate configuration rollback or abort events.</li>
+<li>No log entries indicate AAA (authentication/authorization/accounting) failures.</li>
+<li>No log entries indicate software exceptions or crashes.</li>
+<li>No recurring (persistent) severity 3 (Error) messages with the same signature.</li>
+</ul>
+<p><strong>This test fails if any of the following criteria are met:</strong></p>
+<ul>
+<li>The system log buffer is empty or cannot be parsed.</li>
+<li>One or more log entries have severity 0, 1, or 2 (Emergency, Alert, Critical).</li>
+<li>Any log entry indicates hardware failure, configuration rollback, AAA failure, or software exception.</li>
+<li>One or more recurring severity 3 (Error) messages are found with the same signature.</li>
+<li>The CLI command fails to execute or returns an error.</li>
+<li>The Genie parser fails to parse the command output.</li>
+</ul>
+            </div>
+        </section>
+
+        <section id="section-results">
+            <h2 onclick="toggleCollapse('section-results-content')">
+                Results <span class="chevron"></span>
+            </h2>
+            <div id="section-results-content">
+                    <!-- Leverage existing Jinja2 groupby filter (handle None values for sorting) -->
+                    
+                    <!-- Sort results: FAILED first, then PASSED, then SKIPPED (for better debugging UX) -->
+  
+                    
+                        <div class="result-item result-fail">
+                            
+                            <!-- Result header (clickable if has commands) -->
+                            <div class="result-header expandable"
+                                 onclick="toggleCollapse('result-commands-1')">
+                                <div class="result-message">
+                                    <!-- Universal formatting applied to ALL result types for consistent, readable output -->
+                                    <p><strong>System Log Check FAILED</strong></p>
+<p class="spacer"></p>
+<p>One or more system log entries indicate critical errors or issues.</p>
+<p class="spacer"></p>
+<p><strong>Validation Results:</strong></p>
+<ul class="result-detail-list">
+<li>Total log entries checked: 1086</li>
+<li>Critical severity (0/1/2): 2</li>
+<li>Hardware error logs: 4</li>
+<li>Config rollback logs: 0</li>
+<li>AAA failure logs: 0</li>
+<li>SW exception logs: 0</li>
+<li>Persistent severity 3 errors: 1</li>
+</ul>
+<p class="spacer"></p>
+<p><strong>Detailed Failures:</strong></p>
+<p><strong>Critical severity logs (0/1/2) found (2):</strong></p>
+<ul class="result-detail-list">
+<li>*Jan 28 17:36:59.811: %STACKMGR-1-DUAL_ACTIVE_CFG_MSG: Chassis 1 R0/0: stack_mgr: Dual Active Detection links are not available anymore</li>
+<li>Jan 28 17:38:01.996: %DMI-2-CONFD_SUB_FAIL: Chassis 1 R0/0: dmiauthd: Failed to subscribe /native/router/ios-lisp:lisp/ios-lisp:instance-container/ios-lisp:instance-list/ios-lisp:dynamic-eid model badly formatted or nonexistent path (8): No such namespace "'ios-lisp'" after: /native/router.</li>
+</ul>
+<p><strong>Hardware failure logs found (4):</strong></p>
+<ul class="result-detail-list">
+<li>begin Crypto Module self-tests</li>
+<li>begin Crypto Module Integrity Test</li>
+<li>Jan 28 17:37:52.453: %IOSXE_OIR-6-ONLINECARD: Card (fp) online in slot F0</li>
+<li>begin Crypto Module self-tests</li>
+</ul>
+<p><strong>Persistent (recurring) severity 3 errors found (1):</strong></p>
+<ul class="result-detail-list">
+<li>'PKI-CRL_FETCH_FAIL: CRL fetch for trustpoint DNAC-CA failed' occurred 2 times</li>
+</ul>
+<p class="spacer"></p>
+<p><strong>System Log Status:</strong></p>
+<ul class="result-detail-list">
+<li>Total logs checked: 1086</li>
+<li>Critical severity logs: 2</li>
+<li>Hardware error logs: 4</li>
+<li>Config rollback logs: 0</li>
+<li>AAA failure logs: 0</li>
+<li>SW exception logs: 0</li>
+<li>Persistent severity 3 errors: 1</li>
+</ul>
+<p class="spacer"></p>
+<p><strong>Please verify:</strong></p>
+<ul class="result-detail-list">
+<li>Hardware status and replace failed components</li>
+<li>Configuration history for rollbacks or aborts</li>
+<li>AAA server/device user authentication configuration</li>
+<li>Software version and known bugs (if exceptions found)</li>
+<li>Recurring error messages for root cause analysis</li>
+<li>Device clock and log buffer size (for completeness)</li>
+<li>See sample log entries above for details</li>
+<li>Command execution duration: 4.67s</li>
+</ul>
+                                </div>
+                                    <span class="cmd-count">(1 commands)</span>
+                                    <span class="chevron"></span>
+                            </div>
+                            
+                            <!-- Nested commands (reuse existing command rendering logic exactly) -->
+                            <div class="result-commands content-collapsed" id="result-commands-1">
+                                    <!-- REUSE existing command template code (no duplication) -->
+                                    <div class="cli-container" id="cmd-result0-exec0">
+                                        <div class="cli-header" onclick="toggleCollapse('cmd-content-result0-exec0')">
+                                            <span>Device: C9800-CL-WLC</span>
+                                            <span class="chevron"></span>
+                                        </div>
+                                        <div class="device-content" id="cmd-content-result0-exec0">
+                                            <div class="cli-content">
+<span class="cli-prompt">C9800-CL-WLC#</span> <span class="cli-command">show logging</span>
+<div class="command-output">
+    <pre class="raw-output" id="raw-result0-exec0" data-raw-output="Syslog logging: enabled (0 messages dropped, 3 messages rate-limited, 0 flushes, 0 overruns, xml disabled, filtering disabled)
+
+No Active Message Discriminator.
+
+
+
+No Inactive Message Discriminator.
+
+
+    Console logging: disabled
+    Monitor logging: level debugging, 0 messages logged, xml disabled,
+                     filtering disabled
+    Buffer logging:  level debugging, 1082 messages logged, xml disabled,
+                    filtering disabled
+    Exception Logging: size (4096 bytes)
+    Count and timestamp logging messages: disabled
+    Persistent logging: disabled
+
+No active filter modules.
+
+    Trap logging: level informational, 1074 message lines logged
+        Logging to 198.18.129.101  (Mgmt-vrf) (udp port 514, audit disabled,
+              link up),
+              949 message lines logged, 
+              0 message lines rate-limited, 
+              0 message lines dropped-by-MD, 
+              xml disabled, sequence number disabled
+              filtering disabled
+        Logging Source-Interface:       VRF Name:
+        GigabitEthernet1                
+        GigabitEthernet2                Mgmt-vrf
+    TLS Profiles: 
+
+Log Buffer (8388608 bytes):
+
+*Jan 28 17:37:26.210: %CRYPTO-5-SELF_TEST_START: Crypto algorithms release (Rel5a), Entropy release (3.4.1)
+       begin Crypto Module self-tests
+*Jan 28 17:37:26.210: %CRYPTO-5-SELF_TEST_START: Crypto algorithms release (Rel5a), Entropy release (3.4.1)
+       begin Crypto Module Integrity Test
+*Jan 28 17:37:26.215: %CRYPTO-5-SELF_TEST_END: Crypto Integrity self-test completed successfully
+       All tests passed.
+*Jan 28 17:37:26.409: %CRYPTO-5-SELF_TEST_END: Crypto Algorithm self-test completed successfully
+       All tests passed.
+*Jan 28 17:37:27.352: RMI-HAINFRA-NOTICE: Interface, Local and Remote IP set to invalid, ret -1
+Adding registry invocations for the WLC platform
+
+*Jan 28 17:37:28.716: %SMART_LIC-6-AGENT_ENABLED: Smart Agent for Licensing is enabled 
+*Jan 28 17:37:30.544: %LINK-3-UPDOWN: Interface Lsmpi0, changed state to up
+*Jan 28 17:37:30.605: %LINK-3-UPDOWN: Interface EOBC0, changed state to up
+*Jan 28 17:37:31.543: %LINEPROTO-5-UPDOWN: Line protocol on Interface Lsmpi0, changed state to up
+*Jan 28 17:37:31.605: %LINEPROTO-5-UPDOWN: Line protocol on Interface EOBC0, changed state to up
+*Jan 28 17:37:31.677: WLC-HA-Notice: RF Progression event: RF_PROG_ACTIVE_FAST, Switchover triggered
+*Jan 28 17:37:31.695: %VUDI-6-EVENT: [serial number: 9CCO6RG98IJ], [vUDI: C9800-CL-K9:9CCO6RG98IJ], vUDI initialization is now complete
+*Jan 28 17:37:31.702: mcp_pm_subsys_init : Init done sucessfully
+*Jan 28 17:37:31.781: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet1, changed state to down
+*Jan 28 17:37:31.791: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet2, changed state to down
+*Jan 28 17:37:31.794: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet3, changed state to down
+*Jan 28 17:37:31.798: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet4, changed state to downAdding registry invocations for the eWLC custom port
+
+*Jan 28 17:37:33.344: %SMART_LIC-6-AGENT_ENABLED: Smart Agent for Licensing is enabled 
+*Jan 28 17:37:33.881: %TLSCLIENT-5-TLSCLIENT_BINOS: TLS Client is BINOS based
+*Jan 28 17:37:33.931: %SPANTREE-5-EXTENDED_SYSID: Extended SysId enabled for type vlan
+*Jan 28 17:37:34.064: %CRYPTO_ENGINE-4-CSDL_COMPLIANCE_DISABLED: Cisco PSB security compliance has been disabled by platform
+*Jan 28 17:37:34.198: %CUBE-3-LICENSING:  SIP trunking (CUBE) licensing is now based on dynamic sessions counting, static license capacity configuration through &#39;mode border-element license capacity&#39; would be ignored.
+*Jan 28 17:37:34.198: %SIP-5-LICENSING: CUBE license reporting period has been set to the minimum value of 8 hours.
+*Jan 28 17:37:34.199: %VOICE_HA-7-STATUS: CUBE HA-supported platform detected.IOSd ipc listen handler status 0
+*Jan 28 17:37:34.433: Meraki ncmd bipc initialization, rc = 0
+[CSOD-RP]: IFS: Created IOS &#39;cloudfs&#39; filesystem for S3 cloud storage: /bootflash/.cloudfs
+
+*Jan 28 17:37:34.692: mcp_pm_init_done : Called
+*Jan 28 17:37:35.060: %PNP-6-PNP_DISCOVERY_STARTED: PnP Discovery startedIOSD CMAN IPC BR notification receivedcman channel UP, remote location 1/0/0/0IOSD-CMAN IPC setting TDL domian and handleIOSD CMAN IPC setting TDL domaincman channel, local location 1/0/0/0TDL domain set iosd_cmrp.rp_0_0_rp_0_0
+*Jan 28 17:36:01.120: %IOSXE-3-PLATFORM: Chassis 1 R0/0: kernel: Warning: unable to open an initial console.
+*Jan 28 17:36:59.805: %RIF_MGR_FSM-6-RP_LINK_DOWN: Chassis 1 R0/0: rif_mgr: Setting RP link status to DOWN
+*Jan 28 17:36:59.811: %STACKMGR-1-DUAL_ACTIVE_CFG_MSG: Chassis 1 R0/0: stack_mgr: Dual Active Detection links are not available anymore
+*Jan 28 17:36:59.811: %STACKMGR-6-STACK_LINK_CHANGE: Chassis 1 R0/0: stack_mgr: Stack port 1 on Chassis 0 is cable-not-connected
+*Jan 28 17:36:59.811: %STACKMGR-6-STACK_LINK_CHANGE: Chassis 1 R0/0: stack_mgr: Stack port 2 on Chassis 0 is down
+*Jan 28 17:36:59.811: %STACKMGR-6-STACK_LINK_CHANGE: Chassis 1 R0/0: stack_mgr: Stack port 2 on Chassis 0 is cable-not-connected
+*Jan 28 17:36:59.811: %STACKMGR-6-CHASSIS_ADDED: Chassis 1 R0/0: stack_mgr: Chassis 1 has been added to the stack.
+*Jan 28 17:37:02.478: %STACKMGR-6-CHASSIS_ADDED: Chassis 1 R0/0: stack_mgr: Chassis 1 has been added to the stack.
+*Jan 28 17:37:02.479: %STACKMGR-6-ACTIVE_ELECTED: Chassis 1 R0/0: stack_mgr: Chassis 1 has been elected ACTIVE.
+*Jan 28 17:37:10.692: %ODM_SERVER_ERRMSG-3-ODM_TABLE_REGISTER_TABLE_NOT_CONFIG: Chassis 1 R0/0: odm: Client (wncd/0) table [WNCD_DB/238bb08c8ae0368fbc9c7da84f6937b2] registration table is not found in server DB [EWLC_OPERATIONAL_DB] configuration
+*Jan 28 17:37:11.293: %ODM_SERVER_ERRMSG-3-ODM_TABLE_REGISTER_TABLE_NOT_CONFIG: Chassis 1 R0/0: odm: Client (wncmgrd/0) table [EWLC_PERSISTENT_DB/130b66900fc602de48628219e3bc337a] registration table is not found in server DB [EWLC_OPERATIONAL_DB] configuration
+*Jan 28 17:37:14.573: %PSD_MOD-5-DMI_NOTIFY_NETCONF_START: Chassis 1 R0/0: psd: PSD/DMI: netconf-yang server has been notified to start
+*Jan 28 17:37:35.191: %LINEPROTO-5-UPDOWN: Line protocol on Interface LI-Null0, changed state to up
+*Jan 28 17:37:35.192: %LINEPROTO-5-UPDOWN: Line protocol on Interface VoIP-Null0, changed state to up
+*Jan 28 17:37:35.192: %LINK-3-UPDOWN: Interface LIIN0, changed state to up
+*Jan 28 17:37:35.193: %LINK-3-UPDOWN: Interface GigabitEthernet1, changed state to down
+*Jan 28 17:37:35.193: %LINK-3-UPDOWN: Interface GigabitEthernet2, changed state to down
+*Jan 28 17:37:35.194: %LINK-3-UPDOWN: Interface GigabitEthernet3, changed state to down
+*Jan 28 17:37:35.194: %LINK-3-UPDOWN: Interface GigabitEthernet4, changed state to down
+*Jan 28 17:37:35.797: %LINEPROTO-5-UPDOWN: Line protocol on Interface Vlan1, changed state to down
+*Jan 28 17:37:36.161: %ONEP_BASE-6-SS_ENABLED: ONEP: Service set Base was enabled by Default
+*Jan 28 17:37:36.192: %LINEPROTO-5-UPDOWN: Line protocol on Interface LIIN0, changed state to up
+*Jan 28 17:37:36.192: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet1, changed state to down
+*Jan 28 17:37:36.194: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet2, changed state to down
+*Jan 28 17:37:36.194: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet3, changed state to down
+*Jan 28 17:37:36.194: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet4, changed state to down
+*Jan 28 17:37:44.780: %LINEPROTO-5-UPDOWN: Line protocol on Interface Vlan1, changed state to up
+*Jan 28 17:37:51.023: %CVAC-4-FILE_IGNORED: Configuration file cdrom0:/iosxe_config.txt is ignored: checksum unchanged since last inspected
+*Jan 28 17:37:51.036: %SYS-7-NVRAM_INIT_WAIT_TIME: Waited 0 seconds for NVRAM to be available
+*Jan 28 17:37:51.211: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named CLOUDM_PKEY has been generated or imported by crypto config
+*Jan 28 17:37:51.221: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named TP-self-signed-898552859 has been generated or imported by crypto config
+*Jan 28 17:37:51.225: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named WLC_CA has been generated or imported by crypto config
+*Jan 28 17:37:51.230: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named C9800-CL-WLC_WLC_TP has been generated or imported by crypto config
+*Jan 28 17:37:51.234: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named sdn-network-infra-iwan has been generated or imported by crypto config
+*Jan 28 17:37:51.236: %SYS-6-PRIVCFG_DECRYPT_SUCCESS: Successfully apply the private config file
+*Jan 28 17:37:51.426: %IOSXE_RP_CFG_INFO-6-MCPRP_BINARY_CFG_APPLIED: System configuration : Binary 
+Jan 28 17:37:51.594: %IOSXE_RP_PAE_NOT-6-PAE_STARTUP: Product Analytics is Enabled
+Jan 28 17:37:51.601: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: TP-self-signed-898552859 created succesfully
+Jan 28 17:37:51.618: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: SLA-TrustPoint created succesfully
+Jan 28 17:37:51.619: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: WLC_CA created succesfully
+Jan 28 17:37:51.620: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: C9800-CL-WLC_WLC_TP created succesfully
+Jan 28 17:37:51.711: %AAA-6-USERNAME_CONFIGURATION: user with username: dnacadmin configured
+Jan 28 17:37:51.728: %AAAA-4-CLI_DEPRECATED: WARNING: Command has been added to the configuration using a type 7 password. However, recommended to migrate to strong type-6 encryption
+Jan 28 17:37:51.728: %AAA-6-USER_PRIVILEGE_UPDATE: username: dnacadmin privilege updated with priv-15
+Jan 28 17:37:51.772: % Redundancy mode change to SSO
+
+Jan 28 17:37:51.772: %VOICE_HA-7-STATUS: NONE-&gt;SSO; SSO mode will not take effect until after a platform reload.
+Jan 28 17:37:52.429: %SYS-5-CONFIG_I: Configured from memory by console
+Jan 28 17:37:52.453: %IOSXE_OIR-6-INSCARD: Card (fp) inserted in slot F0
+Jan 28 17:37:52.453: %IOSXE_OIR-6-ONLINECARD: Card (fp) online in slot F0
+Jan 28 17:37:52.558: %CRYPTO-5-SELF_TEST_START: Crypto algorithms release (Rel5a), Entropy release (3.4.1)
+       begin Crypto Module self-tests
+Jan 28 17:37:52.583: %CRYPTO-5-SELF_TEST_END: Crypto Algorithm self-test completed successfully
+       All tests passed.
+Jan 28 17:37:52.589: %LINK-3-UPDOWN: Interface GigabitEthernet4, changed state to up
+Jan 28 17:37:53.082: %LINK-3-UPDOWN: Interface GigabitEthernet3, changed state to up
+Jan 28 17:37:52.631: %NDBMAN-5-ACTIVE: Chassis 1 R0/0: ndbmand: All data providers active.
+Jan 28 17:37:52.795: %MCAST_ERROR_MESSAGE-6-MCAST_MOM_CONFIG_CHANGE: Chassis 1 R0/0: wncd: Capwap multicast mode is Multicast-over-Unicast. IPv4 [Multicast-over-Unicast:] and IPv6 [Multicast-over-Unicast:] with Wireless multicast status Disabled.
+Jan 28 17:37:52.800: %CFMGR_LOG-4-COUNTRY_CFG_DEPRECATED_CLI: Chassis 1 R0/0: wncd: Deprecated CLI used: &#39;ap country &lt;coutry-code&gt;&#39; is deprecated, instead use &#39;wireless country &lt;country-code&gt;&#39;
+Jan 28 17:37:53.471: %CVAC-4-FILE_IGNORED: Configuration file ^B is ignored: cvac_load_config: found cdrom0:/iosxe_config.txt earlier
+Jan 28 17:37:53.569: %CVAC-4-FILE_IGNORED: Configuration file cdrom0:/iosxe_config.txt is ignored: cvac_load_config: found cdrom0:/iosxe_config.txt earlier
+Jan 28 17:37:53.623: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet4, changed state to up
+Jan 28 17:37:54.166: %LINK-5-CHANGED: Interface Vlan1, changed state to administratively down
+Jan 28 17:37:54.167: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet3, changed state to upDisk size get failed
+Jan 28 17:37:55.353: %SSH-5-ENABLED: SSH 2.0 has been enabled
+Jan 28 17:37:55.356: %LINEPROTO-5-UPDOWN: Line protocol on Interface Vlan1, changed state to down
+Jan 28 17:37:55.461: %CRYPTO-6-ISAKMP_ON_OFF: ISAKMP is OFF
+Jan 28 17:37:55.461: %CRYPTO-6-GDOI_ON_OFF: GDOI is OFF
+Jan 28 17:37:55.544: %SYS-5-RESTART: System restarted --
+Cisco IOS Software [IOSXE], C9800-CL Software (C9800-CL-K9_IOSXE), Version 17.15.3, RELEASE SOFTWARE (fc1)
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2025 by Cisco Systems, Inc.
+Compiled Tue 25-Mar-25 23:38 by mcpre
+Jan 28 17:37:55.786: %SNMP-5-COLDSTART: SNMP agent on host C9800-CL-WLC is undergoing a cold start
+Jan 28 17:37:55.791: %SYS-5-CONFIG_I: Configured from console by console
+Jan 28 17:37:56.162: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named CLOUDM_PKEY.server has been generated or imported by crypto-engine
+Jan 28 17:38:00.430: %PNP-6-PNP_BEST_UDI_UPDATE: Best UDI [PID:C9800-CL-K9,VID:V00,SN:9CCO6RG98IJ] identified via (entity-mibs)
+Jan 28 17:38:00.430: %PNP-6-PNP_CDP_UPDATE: Device UDI [PID:C9800-CL-K9,VID:V00,SN:9CCO6RG98IJ] identified for CDP
+Jan 28 17:38:00.430: %PNP-6-PNP_DISCOVERY_STOPPED: PnP Discovery stopped (Startup Config Present)
+Jan 28 17:38:01.996: %DMI-2-CONFD_SUB_FAIL: Chassis 1 R0/0: dmiauthd: Failed to subscribe /native/router/ios-lisp:lisp/ios-lisp:instance-container/ios-lisp:instance-list/ios-lisp:dynamic-eid model badly formatted or nonexistent path (8): No such namespace &#34;&#39;ios-lisp&#39;&#34; after: /native/router.
+Jan 28 17:38:02.954: %DMI-5-SYNC_NEEDED: Chassis 1 R0/0: dmiauthd: Configuration change requiring running configuration sync detected - &#39;Initial sync&#39;. The running configuration will be synchronized  to the NETCONF running data store.
+Jan 28 17:38:03.773: %LINK-3-UPDOWN: Interface GigabitEthernet1, changed state to up
+Jan 28 17:38:03.821: %LINK-3-UPDOWN: Interface GigabitEthernet2, changed state to up
+Jan 28 17:38:03.414: %DMI-5-SYNC_START: Chassis 1 R0/0: dmiauthd: Synchronization of the running configuration to the NETCONF running data store has started.
+Jan 28 17:38:04.774: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet1, changed state to up
+Jan 28 17:38:04.821: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet2, changed state to up
+Jan 28 17:38:05.227: %DMI-5-SYNC_COMPLETE: Chassis 1 R0/0: dmiauthd: The running configuration has been synchronized to the NETCONF running data store.
+Jan 28 17:38:15.232: %PKI-6-SUDI_INFO: PKI: platform doesn&#39;t support sudi certificate
+Jan 28 17:38:15.232: %PKI-6-SUDI_INFO: PKI: no sudi certificate is installed
+Jan 28 17:39:37.405: %SMART_LIC-3-COMM_FAILED: Communications failure with the Cisco Smart License Utility (CSLU) : Unable to resolve server hostname/domain name 
+Jan 28 17:40:12.632: %CLOUDM_ONBOARDING_DRAGONFLY-3-CLOUDM_ONBOARDING_HTTPCON_ERROR: Chassis 1 R0/0: cloudm: cloud onboarding challenge request failed with HTTP connection error: unknown.
+Jan 28 17:44:56.396: %PLATFORM_INFRA-5-IOS_INTR_OVER_LIMIT: IOS thread disabled interrupt for Total: 15 msec, utime: 15 msec, stime: 0 msec.
+-Traceback= 1#fb8d9c1c1d5f99c4b90d4e37fa7e193e :5C92B43C4000+45C60D0 :5C92B43C4000+53B01A7 :5C92B43C4000+53AFF53 :5C92B43C4000+6011655
+Jan 28 17:58:02.667: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 17:58:02.703: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 17:58:02 UTC Wed Jan 28 2026
+Jan 28 17:58:02.708: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 17:58:04.538: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:36589  for netconf over ssh. External groups: PRIV15
+Jan 28 18:01:35.402: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:01:35.403: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:13:37.478: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:13:37.483: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:13:37 UTC Wed Jan 28 2026
+Jan 28 18:13:37.483: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:13:37.863: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:46294  for netconf over ssh. External groups: PRIV15
+Jan 28 18:13:50.325: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 1) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:13:50.349: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:13:50 UTC Wed Jan 28 2026
+Jan 28 18:13:50.349: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 1) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:13:50.571: %SYS-6-LOGGINGHOST_STARTSTOP: Logging to host 198.18.129.101 port 0 CLI Request Triggered
+Jan 28 18:13:50.572: %SYS-6-LOGGINGHOST_STARTSTOP: Logging to host 198.18.129.101 port 514 (Mgmt-vrf) started - CLI initiated
+Jan 28 18:13:50.662: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:13:50.746: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;yang-mapping&#39; from 127.0.0.1:0 via INTERNAL-API user yang_mgmt_infra session 20, transaction-id 26
+Jan 28 18:13:51.932: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:13:55.662: %SYS-6-LOGGINGHOST_STARTSTOP: Logging to host 198.18.129.101 port 514 (Mgmt-vrf) started - reconnection
+Jan 28 18:13:57.743: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:13:57.439: %DMI-5-SYNC_NEEDED: Chassis 1 R0/0: dmiauthd: Configuration change requiring running configuration sync detected - &#39;snmp-server enable traps &#39;. The running configuration will be synchronized  to the NETCONF running data store.
+Jan 28 18:13:57.492: %DMI-5-SYNC_START: Chassis 1 R0/0: dmiauthd: Synchronization of the running configuration to the NETCONF running data store has started.
+Jan 28 18:13:57.989: %DMI-5-SYNC_COMPLETE: Chassis 1 R0/0: dmiauthd: The running configuration has been synchronized to the NETCONF running data store.
+Jan 28 18:13:59.098: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:14:01.964: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:14278  for netconf over ssh. External groups: PRIV15
+Jan 28 18:14:02.579: %SYS-5-CONFIG_P: Configured programmatically by process iosp_dmiauthd_conn_100001_vty_100001 from console as dnacadmin on vty63
+Jan 28 18:14:02.569: %DMI-5-CONFIG_I: Chassis 1 R0/0: dmiauthd: Configured from NETCONF/RESTCONF by dnacadmin, transaction-id 45
+Jan 28 18:14:04.039: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:14:11.666: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: DNAC-CA created succesfully
+Jan 28 18:14:11.588: %DMI-5-SYNC_NEEDED: Chassis 1 R0/0: dmiauthd: Configuration change requiring running configuration sync detected - &#39;ip ssh source-interface GigabitEthernet2 &#39;. The running configuration will be synchronized  to the NETCONF running data store.
+Jan 28 18:14:11.744: %DMI-5-SYNC_START: Chassis 1 R0/0: dmiauthd: Synchronization of the running configuration to the NETCONF running data store has started.
+Jan 28 18:14:11.910: %DMI-5-SYNC_COMPLETE: Chassis 1 R0/0: dmiauthd: The running configuration has been synchronized to the NETCONF running data store.
+Jan 28 18:14:13.179: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:14:14.493: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:14:20.278: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.278: %RADIUS-4-NOSERVNAME: Warning: Server dnac-radius_198.18.133.27 is not defined.
+Jan 28 18:14:20.288: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.288: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.289: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.290: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.291: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.293: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.294: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.296: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.297: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.300: %AAAA-4-CLI_DEPRECATED: WARNING: Command has been added to the configuration using a type 0 password. However, recommended to migrate to strong type-6 encryption
+Jan 28 18:14:20.325: %AAAA-4-CLI_DEPRECATED: WARNING: Command has been added to the configuration using a type 0 password. However, recommended to migrate to strong type-6 encryption
+Jan 28 18:14:20.326: %AAA-6-RADIUS_SERVER_KEY_UPDATE: Radius server:dnac-radius_198.18.133.27 key is updated
+Jan 28 18:14:20.328:  Request successfully sent to PAC Provisioning driver.
+Jan 28 18:14:20.573: %SYS-5-CONFIG_P: Configured programmatically by process iosp_dmiauthd_conn_100001_vty_100001 from console as dnacadmin on vty63
+Jan 28 18:14:20.356: %DMI-5-CONFIG_I: Chassis 1 R0/0: dmiauthd: Configured from NETCONF/RESTCONF by dnacadmin, transaction-id 62
+Jan 28 18:14:20.375: %AAA_AUDIT_MESSAGE-6-METHOD_LIST_STATE: Chassis 1 R0/0: wncd: mlist dnac-cts-802_1X_SSI-f4f077ce of 8021X service is marked for notifying  state and its current state is : DEAD
+Jan 28 18:14:20.412: %AAA_AUDIT_MESSAGE-6-METHOD_LIST_STATE: Chassis 1 R0/0: sessmgrd: mlist dnac-cts-802_1X_SSI-f4f077ce of 8021X service is marked for notifying  state and its current state is : DEAD
+Jan 28 18:14:20.428: %RADIUS_AUDIT_MESSAGE-3-SOCKET_OPERATION_FAILURE: Chassis 1 R0/0: sessmgrd: Cannot open UDP socket for service Radius server
+Jan 28 18:14:20.434: %RADIUS_AUDIT_MESSAGE-3-SOCKET_OPERATION_FAILURE: Chassis 1 R0/0: wncd: Cannot open UDP socket for service Radius server
+Jan 28 18:14:20.435: %AAA_AUDIT_MESSAGE-6-NOTIFY_MLIST_STATE_TO_AAA_CLIENT: Chassis 1 R0/0: sessmgrd: Notifying state of authentication method list dnac-cts-802_1X_SSI-f4f077ce of 8021X service as ALIVE
+Jan 28 18:14:20.574: %DMI-5-SYNC_NEEDED: Chassis 1 R0/0: dmiauthd: Configuration change requiring running configuration sync detected - &#39;pac key 0 C1sco12345&#39;. The running configuration will be synchronized  to the NETCONF running data store.
+Jan 28 18:14:20.583: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;yang-mapping&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 62
+Jan 28 18:14:20.591: %DMI-5-SYNC_START: Chassis 1 R0/0: dmiauthd: Synchronization of the running configuration to the NETCONF running data store has started.
+Jan 28 18:14:20.597: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;wireless&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 62
+Jan 28 18:14:21.315: %DMI-5-SYNC_COMPLETE: Chassis 1 R0/0: dmiauthd: The running configuration has been synchronized to the NETCONF running data store.
+Jan 28 18:14:22.136: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:14:26.775: %SYS-5-CONFIG_P: Configured programmatically by process iosp_dmiauthd_conn_100001_vty_100001 from console as dnacadmin on vty63
+Jan 28 18:14:26.763: %DMI-5-CONFIG_I: Chassis 1 R0/0: dmiauthd: Configured from NETCONF/RESTCONF by dnacadmin, transaction-id 104
+Jan 28 18:14:26.785: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;wireless&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 104
+Jan 28 18:14:28.149: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:14:38.763: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:14:38.876: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:14:38 UTC Wed Jan 28 2026
+Jan 28 18:14:38.876: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:14:58.007: %PKI-3-CRL_FETCH_FAIL: CRL fetch for trustpoint DNAC-CA failed
+                      Reason : Enrollment URL not configured.
+Jan 28 18:14:58.401: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: sdn-network-infra-iwan created succesfully
+Jan 28 18:14:58.401: %CRYPTO_ENGINE-5-KEY_DELETED: A key named sdn-network-infra-iwan has been removed from key storage
+Jan 28 18:14:58.402: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named sdn-network-infra-iwan has been generated or imported by pki-pkcs12
+Jan 28 18:14:58.409: %PKI-6-PKCS12_IMPORT_SUCCESS: PKCS #12 import in to trustpoint sdn-network-infra-iwan successfully imported.
+Jan 28 18:14:58.446: %SYS-5-CONFIG_P: Configured programmatically by process iosp_dmiauthd_conn_100001_vty_100001 from console as dnacadmin on vty63
+Jan 28 18:14:58.436: %DMI-5-CONFIG_I: Chassis 1 R0/0: dmiauthd: Configured from NETCONF/RESTCONF by dnacadmin, transaction-id 111
+Jan 28 18:14:59.903: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:15:01.312: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:43341  for netconf over ssh. External groups: PRIV15
+Jan 28 18:15:07.396: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:15:07.396: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:15:08.048: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;telemetry&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 118
+Jan 28 18:15:09.476: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:15:10.463: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:15:10.515: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:15:10 UTC Wed Jan 28 2026
+Jan 28 18:15:10.515: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:15:13.167: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;wireless&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 122
+Jan 28 18:15:14.573: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:15:20.726: %PKI-3-CRL_FETCH_FAIL: CRL fetch for trustpoint DNAC-CA failed
+                      Reason : Enrollment URL not configured.
+Jan 28 18:15:20.613: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;telemetry&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 126
+Jan 28 18:15:20.761: %MDT_CONNECTION-6-STATE_CHANGED: Chassis 1 R0/0: pubd: Connection state changed (id 0 - 198.18.129.101:25103:1:198.18.130.35): UP
+Jan 28 18:15:22.316: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:15:27.520: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:15:27.520: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:15:28.203: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:15:29.789: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:15:30.887: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:15:30.940: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:15:30 UTC Wed Jan 28 2026
+Jan 28 18:15:30.940: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:16:45.741: %SYS-6-LOGOUT: User dnacadmin has exited tty session 3(198.18.129.100)
+Jan 28 18:16:45.741: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 2) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:17:27.656: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:17:29.412: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:17:29.924: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:17:46.698: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:17:46.744: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:17:46 UTC Wed Jan 28 2026
+Jan 28 18:17:46.744: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:17:53.811: %SYS-6-LOGOUT: User dnacadmin has exited tty session 3(198.18.129.100)
+Jan 28 18:17:53.811: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 2) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:17:54.314: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:17:54.361: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:17:54 UTC Wed Jan 28 2026
+Jan 28 18:17:54.361: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:17:55.578: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 2) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:18:20.614: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:18:20.614: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:19:34.385: %SYS-6-LOGOUT: User dnacadmin has exited tty session 2(198.18.129.100)
+Jan 28 18:19:34.385: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 1) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:20:04.357: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:20:04.400: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:20:04 UTC Wed Jan 28 2026
+Jan 28 18:20:04.400: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:22:10.816: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:22:10.816: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:22:57.433: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:22:57.479: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:22:57 UTC Wed Jan 28 2026
+Jan 28 18:22:57.479: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:22:57.855: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:15872  for netconf over ssh. External groups: PRIV15
+Jan 28 18:26:50.743: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:26:50.743: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:47:57.917: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:47:57.967: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:47:57 UTC Wed Jan 28 2026
+Jan 28 18:47:57.967: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:47:58.325: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:32054  for netconf over ssh. External groups: PRIV15
+Jan 28 18:50:36.020: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:50:36.020: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 19:12:58.058: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 19:12:58.161: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 19:12:58 UTC Wed Jan 28 2026
+Jan 28 19:12:58.161: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 19:12:58.550: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:25721  for netconf over ssh. External groups: PRIV15
+Jan 28 19:15:41.325: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 19:15:41.325: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 19:37:58.494: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 19:37:58.599: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 19:37:58 UTC Wed Jan 28 2026
+Jan 28 19:37:58.599: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 19:37:59.033: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:18721  for netconf over ssh. External groups: PRIV15
+Jan 28 19:40:31.649: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 19:40:31.649: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 20:02:58.842: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:02:58.937: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 20:02:58 UTC Wed Jan 28 2026
+Jan 28 20:02:58.937: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:02:59.303: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:47518  for netconf over ssh. External groups: PRIV15
+Jan 28 20:05:36.938: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 20:05:36.938: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 20:27:59.051: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:27:59.112: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 20:27:59 UTC Wed Jan 28 2026
+Jan 28 20:27:59.112: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:27:59.694: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:53176  for netconf over ssh. External groups: PRIV15
+Jan 28 20:30:37.241: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 20:30:37.241: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 20:52:59.448: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:52:59.492: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 20:52:59 UTC Wed Jan 28 2026
+Jan 28 20:52:59.492: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:52:59.927: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:20859  for netconf over ssh. External groups: PRIV15
+Jan 28 20:55:37.591: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 20:55:37.591: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 21:17:59.728: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 21:17:59.831: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 21:17:59 UTC Wed Jan 28 2026
+Jan 28 21:17:59.831: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 21:18:00.235: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:47714  for netconf over ssh. External groups: PRIV15
+Jan 28 21:20:32.881: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 21:20:32.881: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 21:43:00.069: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 21:43:00.185: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 21:43:00 UTC Wed Jan 28 2026
+Jan 28 21:43:00.185: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 21:43:00.576: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:49776  for netconf over ssh. External groups: PRIV15
+Jan 28 21:45:33.179: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 21:45:33.179: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 22:08:00.433: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:08:00.537: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 22:08:00 UTC Wed Jan 28 2026
+Jan 28 22:08:00.537: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:08:01.161: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:37052  for netconf over ssh. External groups: PRIV15
+Jan 28 22:10:33.472: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 22:10:33.472: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 22:33:00.656: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:33:00.761: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 22:33:00 UTC Wed Jan 28 2026
+Jan 28 22:33:00.761: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:33:01.134: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:22710  for netconf over ssh. External groups: PRIV15
+Jan 28 22:35:33.768: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 22:35:33.768: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 22:58:01.166: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:58:01.261: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 22:58:01 UTC Wed Jan 28 2026
+Jan 28 22:58:01.261: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:58:01.644: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:27044  for netconf over ssh. External groups: PRIV15
+Jan 28 23:00:34.069: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 23:00:34.070: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 23:23:01.311: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 23:23:01.363: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 23:23:01 UTC Wed Jan 28 2026
+Jan 28 23:23:01.364: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 23:23:01.713: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:16946  for netconf over ssh. External groups: PRIV15
+Jan 28 23:25:39.358: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 23:25:39.358: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 23:48:01.632: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 23:48:01.676: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 23:48:01 UTC Wed Jan 28 2026
+Jan 28 23:48:01.676: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 23:48:02.015: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:2517  for netconf over ssh. External groups: PRIV15
+Jan 28 23:50:34.652: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 23:50:34.653: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 29 00:13:01.897: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 00:13:01.938: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 00:13:01 UTC Thu Jan 29 2026
+Jan 29 00:13:01.938: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 00:13:02.296: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:33608  for netconf over ssh. External groups: PRIV15
+Jan 29 00:15:34.944: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 29 00:15:34.944: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 29 00:38:02.284: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 00:38:02.376: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 00:38:02 UTC Thu Jan 29 2026
+Jan 29 00:38:02.376: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 00:38:02.834: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:26052  for netconf over ssh. External groups: PRIV15
+Jan 29 00:40:35.236: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 29 00:40:35.236: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 29 01:03:02.590: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 01:03:02.688: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 01:03:02 UTC Thu Jan 29 2026
+Jan 29 01:03:02.688: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 01:03:03.041: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:26470  for netconf over ssh. External groups: PRIV15
+Jan 29 01:05:35.538: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 29 01:05:35.538: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr">Syslog logging: enabled (0 messages dropped, 3 messages rate-limited, 0 flushes, 0 overruns, xml disabled, filtering disabled)
+
+No Active Message Discriminator.
+
+
+
+No Inactive Message Discriminator.
+
+
+    Console logging: disabled
+    Monitor logging: level debugging, 0 messages logged, xml disabled,
+                     filtering disabled
+    Buffer logging:  level debugging, 1082 messages logged, xml disabled,
+                    filtering disabled
+    Exception Logging: size (4096 bytes)
+    Count and timestamp logging messages: disabled
+    Persistent logging: disabled
+
+No active filter modules.
+
+    Trap logging: level informational, 1074 message lines logged
+        Logging to 198.18.129.101  (Mgmt-vrf) (udp port 514, audit disabled,
+              link up),
+              949 message lines logged, 
+              0 message lines rate-limited, 
+              0 message lines dropped-by-MD, 
+              xml disabled, sequence number disabled
+              filtering disabled
+        Logging Source-Interface:       VRF Name:
+        GigabitEthernet1                
+        GigabitEthernet2                Mgmt-vrf
+    TLS Profiles: 
+
+Log Buffer (8388608 bytes):
+
+*Jan 28 17:37:26.210: %CRYPTO-5-SELF_TEST_START: Crypto algorithms release (Rel5a), Entropy release (3.4.1)
+       begin Crypto Module self-tests
+*Jan 28 17:37:26.210: %CRYPTO-5-SELF_TEST_START: Crypto algorithms release (Rel5a), Entropy release (3.4.1)
+       begin Crypto Module Integrity Test
+*Jan 28 17:37:26.215: %CRYPTO-5-SELF_TEST_END: Crypto Integrity self-test completed successfully
+       All tests passed.
+*Jan 28 17:37:26.409: %CRYPTO-5-SELF_TEST_END: Crypto Algorithm self-test completed successfully
+       All tests passed.
+*Jan 28 17:37:27.352: RMI-HAINFRA-NOTICE: Interface, Local and Remote IP set to invalid, ret -1
+Adding registry invocations for the WLC platform
+
+*Jan 28 17:37:28.716: %SMART_LIC-6-AGENT_ENABLED: Smart Agent for Licensing is enabled 
+*Jan 28 17:37:30.544: %LINK-3-UPDOWN: Interface Lsmpi0, changed state to up
+*Jan 28 17:37:30.605: %LINK-3-UPDOWN: Interface EOBC0, changed state to up
+*Jan 28 17:37:31.543: %LINEPROTO-5-UPDOWN: Line protocol on Interface Lsmpi0, changed state to up
+*Jan 28 17:37:31.605: %LINEPROTO-5-UPDOWN: Line protocol on Interface EOBC0, changed state to up
+*Jan 28 17:37:31.677: WLC-HA-Notice: RF Progression event: RF_PROG_ACTIVE_FAST, Switchover triggered
+*Jan 28 17:37:31.695: %VUDI-6-EVENT: [serial number: 9CCO6RG98IJ], [vUDI: C9800-CL-K9:9CCO6RG98IJ], vUDI initialization is now complete
+*Jan 28 17:37:31.702: mcp_pm_subsys_init : Init done sucessfully
+*Jan 28 17:37:31.781: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet1, changed state to down
+*Jan 28 17:37:31.791: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet2, changed state to down
+*Jan 28 17:37:31.794: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet3, changed state to down
+*Jan 28 17:37:31.798: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet4, changed state to downAdding registry invocations for the eWLC custom port
+
+*Jan 28 17:37:33.344: %SMART_LIC-6-AGENT_ENABLED: Smart Agent for Licensing is enabled 
+*Jan 28 17:37:33.881: %TLSCLIENT-5-TLSCLIENT_BINOS: TLS Client is BINOS based
+*Jan 28 17:37:33.931: %SPANTREE-5-EXTENDED_SYSID: Extended SysId enabled for type vlan
+*Jan 28 17:37:34.064: %CRYPTO_ENGINE-4-CSDL_COMPLIANCE_DISABLED: Cisco PSB security compliance has been disabled by platform
+*Jan 28 17:37:34.198: %CUBE-3-LICENSING:  SIP trunking (CUBE) licensing is now based on dynamic sessions counting, static license capacity configuration through &#39;mode border-element license capacity&#39; would be ignored.
+*Jan 28 17:37:34.198: %SIP-5-LICENSING: CUBE license reporting period has been set to the minimum value of 8 hours.
+*Jan 28 17:37:34.199: %VOICE_HA-7-STATUS: CUBE HA-supported platform detected.IOSd ipc listen handler status 0
+*Jan 28 17:37:34.433: Meraki ncmd bipc initialization, rc = 0
+[CSOD-RP]: IFS: Created IOS &#39;cloudfs&#39; filesystem for S3 cloud storage: /bootflash/.cloudfs
+
+*Jan 28 17:37:34.692: mcp_pm_init_done : Called
+*Jan 28 17:37:35.060: %PNP-6-PNP_DISCOVERY_STARTED: PnP Discovery startedIOSD CMAN IPC BR notification receivedcman channel UP, remote location 1/0/0/0IOSD-CMAN IPC setting TDL domian and handleIOSD CMAN IPC setting TDL domaincman channel, local location 1/0/0/0TDL domain set iosd_cmrp.rp_0_0_rp_0_0
+*Jan 28 17:36:01.120: %IOSXE-3-PLATFORM: Chassis 1 R0/0: kernel: Warning: unable to open an initial console.
+*Jan 28 17:36:59.805: %RIF_MGR_FSM-6-RP_LINK_DOWN: Chassis 1 R0/0: rif_mgr: Setting RP link status to DOWN
+*Jan 28 17:36:59.811: %STACKMGR-1-DUAL_ACTIVE_CFG_MSG: Chassis 1 R0/0: stack_mgr: Dual Active Detection links are not available anymore
+*Jan 28 17:36:59.811: %STACKMGR-6-STACK_LINK_CHANGE: Chassis 1 R0/0: stack_mgr: Stack port 1 on Chassis 0 is cable-not-connected
+*Jan 28 17:36:59.811: %STACKMGR-6-STACK_LINK_CHANGE: Chassis 1 R0/0: stack_mgr: Stack port 2 on Chassis 0 is down
+*Jan 28 17:36:59.811: %STACKMGR-6-STACK_LINK_CHANGE: Chassis 1 R0/0: stack_mgr: Stack port 2 on Chassis 0 is cable-not-connected
+*Jan 28 17:36:59.811: %STACKMGR-6-CHASSIS_ADDED: Chassis 1 R0/0: stack_mgr: Chassis 1 has been added to the stack.
+*Jan 28 17:37:02.478: %STACKMGR-6-CHASSIS_ADDED: Chassis 1 R0/0: stack_mgr: Chassis 1 has been added to the stack.
+*Jan 28 17:37:02.479: %STACKMGR-6-ACTIVE_ELECTED: Chassis 1 R0/0: stack_mgr: Chassis 1 has been elected ACTIVE.
+*Jan 28 17:37:10.692: %ODM_SERVER_ERRMSG-3-ODM_TABLE_REGISTER_TABLE_NOT_CONFIG: Chassis 1 R0/0: odm: Client (wncd/0) table [WNCD_DB/238bb08c8ae0368fbc9c7da84f6937b2] registration table is not found in server DB [EWLC_OPERATIONAL_DB] configuration
+*Jan 28 17:37:11.293: %ODM_SERVER_ERRMSG-3-ODM_TABLE_REGISTER_TABLE_NOT_CONFIG: Chassis 1 R0/0: odm: Client (wncmgrd/0) table [EWLC_PERSISTENT_DB/130b66900fc602de48628219e3bc337a] registration table is not found in server DB [EWLC_OPERATIONAL_DB] configuration
+*Jan 28 17:37:14.573: %PSD_MOD-5-DMI_NOTIFY_NETCONF_START: Chassis 1 R0/0: psd: PSD/DMI: netconf-yang server has been notified to start
+*Jan 28 17:37:35.191: %LINEPROTO-5-UPDOWN: Line protocol on Interface LI-Null0, changed state to up
+*Jan 28 17:37:35.192: %LINEPROTO-5-UPDOWN: Line protocol on Interface VoIP-Null0, changed state to up
+*Jan 28 17:37:35.192: %LINK-3-UPDOWN: Interface LIIN0, changed state to up
+*Jan 28 17:37:35.193: %LINK-3-UPDOWN: Interface GigabitEthernet1, changed state to down
+*Jan 28 17:37:35.193: %LINK-3-UPDOWN: Interface GigabitEthernet2, changed state to down
+*Jan 28 17:37:35.194: %LINK-3-UPDOWN: Interface GigabitEthernet3, changed state to down
+*Jan 28 17:37:35.194: %LINK-3-UPDOWN: Interface GigabitEthernet4, changed state to down
+*Jan 28 17:37:35.797: %LINEPROTO-5-UPDOWN: Line protocol on Interface Vlan1, changed state to down
+*Jan 28 17:37:36.161: %ONEP_BASE-6-SS_ENABLED: ONEP: Service set Base was enabled by Default
+*Jan 28 17:37:36.192: %LINEPROTO-5-UPDOWN: Line protocol on Interface LIIN0, changed state to up
+*Jan 28 17:37:36.192: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet1, changed state to down
+*Jan 28 17:37:36.194: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet2, changed state to down
+*Jan 28 17:37:36.194: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet3, changed state to down
+*Jan 28 17:37:36.194: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet4, changed state to down
+*Jan 28 17:37:44.780: %LINEPROTO-5-UPDOWN: Line protocol on Interface Vlan1, changed state to up
+*Jan 28 17:37:51.023: %CVAC-4-FILE_IGNORED: Configuration file cdrom0:/iosxe_config.txt is ignored: checksum unchanged since last inspected
+*Jan 28 17:37:51.036: %SYS-7-NVRAM_INIT_WAIT_TIME: Waited 0 seconds for NVRAM to be available
+*Jan 28 17:37:51.211: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named CLOUDM_PKEY has been generated or imported by crypto config
+*Jan 28 17:37:51.221: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named TP-self-signed-898552859 has been generated or imported by crypto config
+*Jan 28 17:37:51.225: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named WLC_CA has been generated or imported by crypto config
+*Jan 28 17:37:51.230: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named C9800-CL-WLC_WLC_TP has been generated or imported by crypto config
+*Jan 28 17:37:51.234: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named sdn-network-infra-iwan has been generated or imported by crypto config
+*Jan 28 17:37:51.236: %SYS-6-PRIVCFG_DECRYPT_SUCCESS: Successfully apply the private config file
+*Jan 28 17:37:51.426: %IOSXE_RP_CFG_INFO-6-MCPRP_BINARY_CFG_APPLIED: System configuration : Binary 
+Jan 28 17:37:51.594: %IOSXE_RP_PAE_NOT-6-PAE_STARTUP: Product Analytics is Enabled
+Jan 28 17:37:51.601: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: TP-self-signed-898552859 created succesfully
+Jan 28 17:37:51.618: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: SLA-TrustPoint created succesfully
+Jan 28 17:37:51.619: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: WLC_CA created succesfully
+Jan 28 17:37:51.620: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: C9800-CL-WLC_WLC_TP created succesfully
+Jan 28 17:37:51.711: %AAA-6-USERNAME_CONFIGURATION: user with username: dnacadmin configured
+Jan 28 17:37:51.728: %AAAA-4-CLI_DEPRECATED: WARNING: Command has been added to the configuration using a type 7 password. However, recommended to migrate to strong type-6 encryption
+Jan 28 17:37:51.728: %AAA-6-USER_PRIVILEGE_UPDATE: username: dnacadmin privilege updated with priv-15
+Jan 28 17:37:51.772: % Redundancy mode change to SSO
+
+Jan 28 17:37:51.772: %VOICE_HA-7-STATUS: NONE-&gt;SSO; SSO mode will not take effect until after a platform reload.
+Jan 28 17:37:52.429: %SYS-5-CONFIG_I: Configured from memory by console
+Jan 28 17:37:52.453: %IOSXE_OIR-6-INSCARD: Card (fp) inserted in slot F0
+Jan 28 17:37:52.453: %IOSXE_OIR-6-ONLINECARD: Card (fp) online in slot F0
+Jan 28 17:37:52.558: %CRYPTO-5-SELF_TEST_START: Crypto algorithms release (Rel5a), Entropy release (3.4.1)
+       begin Crypto Module self-tests
+Jan 28 17:37:52.583: %CRYPTO-5-SELF_TEST_END: Crypto Algorithm self-test completed successfully
+       All tests passed.
+Jan 28 17:37:52.589: %LINK-3-UPDOWN: Interface GigabitEthernet4, changed state to up
+Jan 28 17:37:53.082: %LINK-3-UPDOWN: Interface GigabitEthernet3, changed state to up
+Jan 28 17:37:52.631: %NDBMAN-5-ACTIVE: Chassis 1 R0/0: ndbmand: All data providers active.
+Jan 28 17:37:52.795: %MCAST_ERROR_MESSAGE-6-MCAST_MOM_CONFIG_CHANGE: Chassis 1 R0/0: wncd: Capwap multicast mode is Multicast-over-Unicast. IPv4 [Multicast-over-Unicast:] and IPv6 [Multicast-over-Unicast:] with Wireless multicast status Disabled.
+Jan 28 17:37:52.800: %CFMGR_LOG-4-COUNTRY_CFG_DEPRECATED_CLI: Chassis 1 R0/0: wncd: Deprecated CLI used: &#39;ap country &lt;coutry-code&gt;&#39; is deprecated, instead use &#39;wireless country &lt;country-code&gt;&#39;
+Jan 28 17:37:53.471: %CVAC-4-FILE_IGNORED: Configuration file ^B is ignored: cvac_load_config: found cdrom0:/iosxe_config.txt earlier
+Jan 28 17:37:53.569: %CVAC-4-FILE_IGNORED: Configuration file cdrom0:/iosxe_config.txt is ignored: cvac_load_config: found cdrom0:/iosxe_config.txt earlier
+Jan 28 17:37:53.623: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet4, changed state to up
+Jan 28 17:37:54.166: %LINK-5-CHANGED: Interface Vlan1, changed state to administratively down
+Jan 28 17:37:54.167: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet3, changed state to upDisk size get failed
+Jan 28 17:37:55.353: %SSH-5-ENABLED: SSH 2.0 has been enabled
+Jan 28 17:37:55.356: %LINEPROTO-5-UPDOWN: Line protocol on Interface Vlan1, changed state to down
+Jan 28 17:37:55.461: %CRYPTO-6-ISAKMP_ON_OFF: ISAKMP is OFF
+Jan 28 17:37:55.461: %CRYPTO-6-GDOI_ON_OFF: GDOI is OFF
+Jan 28 17:37:55.544: %SYS-5-RESTART: System restarted --
+Cisco IOS Software [IOSXE], C9800-CL Software (C9800-CL-K9_IOSXE), Version 17.15.3, RELEASE SOFTWARE (fc1)
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2025 by Cisco Systems, Inc.
+Compiled Tue 25-Mar-25 23:38 by mcpre
+Jan 28 17:37:55.786: %SNMP-5-COLDSTART: SNMP agent on host C9800-CL-WLC is undergoing a cold start
+Jan 28 17:37:55.791: %SYS-5-CONFIG_I: Configured from console by console
+Jan 28 17:37:56.162: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named CLOUDM_PKEY.server has been generated or imported by crypto-engine
+Jan 28 17:38:00.430: %PNP-6-PNP_BEST_UDI_UPDATE: Best UDI [PID:C9800-CL-K9,VID:V00,SN:9CCO6RG98IJ] identified via (entity-mibs)
+Jan 28 17:38:00.430: %PNP-6-PNP_CDP_UPDATE: Device UDI [PID:C9800-CL-K9,VID:V00,SN:9CCO6RG98IJ] identified for CDP
+Jan 28 17:38:00.430: %PNP-6-PNP_DISCOVERY_STOPPED: PnP Discovery stopped (Startup Config Present)
+Jan 28 17:38:01.996: %DMI-2-CONFD_SUB_FAIL: Chassis 1 R0/0: dmiauthd: Failed to subscribe /native/router/ios-lisp:lisp/ios-lisp:instance-container/ios-lisp:instance-list/ios-lisp:dynamic-eid model badly formatted or nonexistent path (8): No such namespace &#34;&#39;ios-lisp&#39;&#34; after: /native/router.
+Jan 28 17:38:02.954: %DMI-5-SYNC_NEEDED: Chassis 1 R0/0: dmiauthd: Configuration change requiring running configuration sync detected - &#39;Initial sync&#39;. The running configuration will be synchronized  to the NETCONF running data store.
+Jan 28 17:38:03.773: %LINK-3-UPDOWN: Interface GigabitEthernet1, changed state to up
+Jan 28 17:38:03.821: %LINK-3-UPDOWN: Interface GigabitEthernet2, changed state to up
+Jan 28 17:38:03.414: %DMI-5-SYNC_START: Chassis 1 R0/0: dmiauthd: Synchronization of the running configuration to the NETCONF running data store has started.
+Jan 28 17:38:04.774: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet1, changed state to up
+Jan 28 17:38:04.821: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet2, changed state to up
+Jan 28 17:38:05.227: %DMI-5-SYNC_COMPLETE: Chassis 1 R0/0: dmiauthd: The running configuration has been synchronized to the NETCONF running data store.
+Jan 28 17:38:15.232: %PKI-6-SUDI_INFO: PKI: platform doesn&#39;t support sudi certificate
+Jan 28 17:38:15.232: %PKI-6-SUDI_INFO: PKI: no sudi certificate is installed
+Jan 28 17:39:37.405: %SMART_LIC-3-COMM_FAILED: Communications failure with the Cisco Smart License Utility (CSLU) : Unable to resolve server hostname/domain name 
+Jan 28 17:40:12.632: %CLOUDM_ONBOARDING_DRAGONFLY-3-CLOUDM_ONBOARDING_HTTPCON_ERROR: Chassis 1 R0/0: cloudm: cloud onboarding challenge request failed with HTTP connection error: unknown.
+Jan 28 17:44:56.396: %PLATFORM_INFRA-5-IOS_INTR_OVER_LIMIT: IOS thread disabled interrupt for Total: 15 msec, utime: 15 msec, stime: 0 msec.
+-Traceback= 1#fb8d9c1c1d5f99c4b90d4e37fa7e193e :5C92B43C4000+45C60D0 :5C92B43C4000+53B01A7 :5C92B43C4000+53AFF53 :5C92B43C4000+6011655
+Jan 28 17:58:02.667: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 17:58:02.703: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 17:58:02 UTC Wed Jan 28 2026
+Jan 28 17:58:02.708: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 17:58:04.538: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:36589  for netconf over ssh. External groups: PRIV15
+Jan 28 18:01:35.402: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:01:35.403: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:13:37.478: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:13:37.483: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:13:37 UTC Wed Jan 28 2026
+Jan 28 18:13:37.483: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:13:37.863: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:46294  for netconf over ssh. External groups: PRIV15
+Jan 28 18:13:50.325: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 1) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:13:50.349: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:13:50 UTC Wed Jan 28 2026
+Jan 28 18:13:50.349: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 1) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:13:50.571: %SYS-6-LOGGINGHOST_STARTSTOP: Logging to host 198.18.129.101 port 0 CLI Request Triggered
+Jan 28 18:13:50.572: %SYS-6-LOGGINGHOST_STARTSTOP: Logging to host 198.18.129.101 port 514 (Mgmt-vrf) started - CLI initiated
+Jan 28 18:13:50.662: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:13:50.746: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;yang-mapping&#39; from 127.0.0.1:0 via INTERNAL-API user yang_mgmt_infra session 20, transaction-id 26
+Jan 28 18:13:51.932: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:13:55.662: %SYS-6-LOGGINGHOST_STARTSTOP: Logging to host 198.18.129.101 port 514 (Mgmt-vrf) started - reconnection
+Jan 28 18:13:57.743: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:13:57.439: %DMI-5-SYNC_NEEDED: Chassis 1 R0/0: dmiauthd: Configuration change requiring running configuration sync detected - &#39;snmp-server enable traps &#39;. The running configuration will be synchronized  to the NETCONF running data store.
+Jan 28 18:13:57.492: %DMI-5-SYNC_START: Chassis 1 R0/0: dmiauthd: Synchronization of the running configuration to the NETCONF running data store has started.
+Jan 28 18:13:57.989: %DMI-5-SYNC_COMPLETE: Chassis 1 R0/0: dmiauthd: The running configuration has been synchronized to the NETCONF running data store.
+Jan 28 18:13:59.098: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:14:01.964: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:14278  for netconf over ssh. External groups: PRIV15
+Jan 28 18:14:02.579: %SYS-5-CONFIG_P: Configured programmatically by process iosp_dmiauthd_conn_100001_vty_100001 from console as dnacadmin on vty63
+Jan 28 18:14:02.569: %DMI-5-CONFIG_I: Chassis 1 R0/0: dmiauthd: Configured from NETCONF/RESTCONF by dnacadmin, transaction-id 45
+Jan 28 18:14:04.039: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:14:11.666: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: DNAC-CA created succesfully
+Jan 28 18:14:11.588: %DMI-5-SYNC_NEEDED: Chassis 1 R0/0: dmiauthd: Configuration change requiring running configuration sync detected - &#39;ip ssh source-interface GigabitEthernet2 &#39;. The running configuration will be synchronized  to the NETCONF running data store.
+Jan 28 18:14:11.744: %DMI-5-SYNC_START: Chassis 1 R0/0: dmiauthd: Synchronization of the running configuration to the NETCONF running data store has started.
+Jan 28 18:14:11.910: %DMI-5-SYNC_COMPLETE: Chassis 1 R0/0: dmiauthd: The running configuration has been synchronized to the NETCONF running data store.
+Jan 28 18:14:13.179: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:14:14.493: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:14:20.278: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.278: %RADIUS-4-NOSERVNAME: Warning: Server dnac-radius_198.18.133.27 is not defined.
+Jan 28 18:14:20.288: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.288: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.289: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.290: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.291: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.293: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.294: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.296: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.297: %AAA-6-METHOD_LIST_STATE: authen mlist  pvt_authen_0 of DOT1X service is marked for notifyingstate and its current state is : DEAD
+Jan 28 18:14:20.300: %AAAA-4-CLI_DEPRECATED: WARNING: Command has been added to the configuration using a type 0 password. However, recommended to migrate to strong type-6 encryption
+Jan 28 18:14:20.325: %AAAA-4-CLI_DEPRECATED: WARNING: Command has been added to the configuration using a type 0 password. However, recommended to migrate to strong type-6 encryption
+Jan 28 18:14:20.326: %AAA-6-RADIUS_SERVER_KEY_UPDATE: Radius server:dnac-radius_198.18.133.27 key is updated
+Jan 28 18:14:20.328:  Request successfully sent to PAC Provisioning driver.
+Jan 28 18:14:20.573: %SYS-5-CONFIG_P: Configured programmatically by process iosp_dmiauthd_conn_100001_vty_100001 from console as dnacadmin on vty63
+Jan 28 18:14:20.356: %DMI-5-CONFIG_I: Chassis 1 R0/0: dmiauthd: Configured from NETCONF/RESTCONF by dnacadmin, transaction-id 62
+Jan 28 18:14:20.375: %AAA_AUDIT_MESSAGE-6-METHOD_LIST_STATE: Chassis 1 R0/0: wncd: mlist dnac-cts-802_1X_SSI-f4f077ce of 8021X service is marked for notifying  state and its current state is : DEAD
+Jan 28 18:14:20.412: %AAA_AUDIT_MESSAGE-6-METHOD_LIST_STATE: Chassis 1 R0/0: sessmgrd: mlist dnac-cts-802_1X_SSI-f4f077ce of 8021X service is marked for notifying  state and its current state is : DEAD
+Jan 28 18:14:20.428: %RADIUS_AUDIT_MESSAGE-3-SOCKET_OPERATION_FAILURE: Chassis 1 R0/0: sessmgrd: Cannot open UDP socket for service Radius server
+Jan 28 18:14:20.434: %RADIUS_AUDIT_MESSAGE-3-SOCKET_OPERATION_FAILURE: Chassis 1 R0/0: wncd: Cannot open UDP socket for service Radius server
+Jan 28 18:14:20.435: %AAA_AUDIT_MESSAGE-6-NOTIFY_MLIST_STATE_TO_AAA_CLIENT: Chassis 1 R0/0: sessmgrd: Notifying state of authentication method list dnac-cts-802_1X_SSI-f4f077ce of 8021X service as ALIVE
+Jan 28 18:14:20.574: %DMI-5-SYNC_NEEDED: Chassis 1 R0/0: dmiauthd: Configuration change requiring running configuration sync detected - &#39;pac key 0 C1sco12345&#39;. The running configuration will be synchronized  to the NETCONF running data store.
+Jan 28 18:14:20.583: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;yang-mapping&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 62
+Jan 28 18:14:20.591: %DMI-5-SYNC_START: Chassis 1 R0/0: dmiauthd: Synchronization of the running configuration to the NETCONF running data store has started.
+Jan 28 18:14:20.597: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;wireless&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 62
+Jan 28 18:14:21.315: %DMI-5-SYNC_COMPLETE: Chassis 1 R0/0: dmiauthd: The running configuration has been synchronized to the NETCONF running data store.
+Jan 28 18:14:22.136: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:14:26.775: %SYS-5-CONFIG_P: Configured programmatically by process iosp_dmiauthd_conn_100001_vty_100001 from console as dnacadmin on vty63
+Jan 28 18:14:26.763: %DMI-5-CONFIG_I: Chassis 1 R0/0: dmiauthd: Configured from NETCONF/RESTCONF by dnacadmin, transaction-id 104
+Jan 28 18:14:26.785: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;wireless&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 104
+Jan 28 18:14:28.149: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:14:38.763: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:14:38.876: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:14:38 UTC Wed Jan 28 2026
+Jan 28 18:14:38.876: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:14:58.007: %PKI-3-CRL_FETCH_FAIL: CRL fetch for trustpoint DNAC-CA failed
+                      Reason : Enrollment URL not configured.
+Jan 28 18:14:58.401: %PKI-6-TRUSTPOINT_CREATE: Trustpoint: sdn-network-infra-iwan created succesfully
+Jan 28 18:14:58.401: %CRYPTO_ENGINE-5-KEY_DELETED: A key named sdn-network-infra-iwan has been removed from key storage
+Jan 28 18:14:58.402: %CRYPTO_ENGINE-5-KEY_ADDITION: A key named sdn-network-infra-iwan has been generated or imported by pki-pkcs12
+Jan 28 18:14:58.409: %PKI-6-PKCS12_IMPORT_SUCCESS: PKCS #12 import in to trustpoint sdn-network-infra-iwan successfully imported.
+Jan 28 18:14:58.446: %SYS-5-CONFIG_P: Configured programmatically by process iosp_dmiauthd_conn_100001_vty_100001 from console as dnacadmin on vty63
+Jan 28 18:14:58.436: %DMI-5-CONFIG_I: Chassis 1 R0/0: dmiauthd: Configured from NETCONF/RESTCONF by dnacadmin, transaction-id 111
+Jan 28 18:14:59.903: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:15:01.312: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:43341  for netconf over ssh. External groups: PRIV15
+Jan 28 18:15:07.396: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:15:07.396: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:15:08.048: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;telemetry&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 118
+Jan 28 18:15:09.476: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:15:10.463: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:15:10.515: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:15:10 UTC Wed Jan 28 2026
+Jan 28 18:15:10.515: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:15:13.167: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;wireless&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 122
+Jan 28 18:15:14.573: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:15:20.726: %PKI-3-CRL_FETCH_FAIL: CRL fetch for trustpoint DNAC-CA failed
+                      Reason : Enrollment URL not configured.
+Jan 28 18:15:20.613: %NDBMAN-5-CONFIG_I: Chassis 1 R0/0: ndbmand: Configured feature &#39;telemetry&#39; from 198.18.129.100:14278 via NETCONF user dnacadmin session 27, transaction-id 126
+Jan 28 18:15:20.761: %MDT_CONNECTION-6-STATE_CHANGED: Chassis 1 R0/0: pubd: Connection state changed (id 0 - 198.18.129.101:25103:1:198.18.130.35): UP
+Jan 28 18:15:22.316: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:15:27.520: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:15:27.520: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:15:28.203: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:15:29.789: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:15:30.887: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:15:30.940: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:15:30 UTC Wed Jan 28 2026
+Jan 28 18:15:30.940: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:16:45.741: %SYS-6-LOGOUT: User dnacadmin has exited tty session 3(198.18.129.100)
+Jan 28 18:16:45.741: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 2) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:17:27.656: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:17:29.412: %SYS-6-PRIVCFG_ENCRYPT_SUCCESS: Successfully encrypted private config file
+Jan 28 18:17:29.924: %SYS-5-CONFIG_I: Configured from console by dnacadmin on vty1 (198.18.129.100)
+Jan 28 18:17:46.698: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:17:46.744: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:17:46 UTC Wed Jan 28 2026
+Jan 28 18:17:46.744: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:17:53.811: %SYS-6-LOGOUT: User dnacadmin has exited tty session 3(198.18.129.100)
+Jan 28 18:17:53.811: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 2) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:17:54.314: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:17:54.361: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:17:54 UTC Wed Jan 28 2026
+Jan 28 18:17:54.361: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 2) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:17:55.578: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 2) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:18:20.614: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:18:20.614: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:19:34.385: %SYS-6-LOGOUT: User dnacadmin has exited tty session 2(198.18.129.100)
+Jan 28 18:19:34.385: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 1) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:20:04.357: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:20:04.400: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:20:04 UTC Wed Jan 28 2026
+Jan 28 18:20:04.400: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:22:10.816: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:22:10.816: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:22:57.433: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:22:57.479: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:22:57 UTC Wed Jan 28 2026
+Jan 28 18:22:57.479: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:22:57.855: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:15872  for netconf over ssh. External groups: PRIV15
+Jan 28 18:26:50.743: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:26:50.743: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 18:47:57.917: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:47:57.967: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 18:47:57 UTC Wed Jan 28 2026
+Jan 28 18:47:57.967: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 18:47:58.325: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:32054  for netconf over ssh. External groups: PRIV15
+Jan 28 18:50:36.020: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 18:50:36.020: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 19:12:58.058: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 19:12:58.161: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 19:12:58 UTC Wed Jan 28 2026
+Jan 28 19:12:58.161: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 19:12:58.550: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:25721  for netconf over ssh. External groups: PRIV15
+Jan 28 19:15:41.325: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 19:15:41.325: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 19:37:58.494: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 19:37:58.599: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 19:37:58 UTC Wed Jan 28 2026
+Jan 28 19:37:58.599: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 19:37:59.033: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:18721  for netconf over ssh. External groups: PRIV15
+Jan 28 19:40:31.649: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 19:40:31.649: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 20:02:58.842: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:02:58.937: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 20:02:58 UTC Wed Jan 28 2026
+Jan 28 20:02:58.937: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:02:59.303: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:47518  for netconf over ssh. External groups: PRIV15
+Jan 28 20:05:36.938: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 20:05:36.938: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 20:27:59.051: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:27:59.112: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 20:27:59 UTC Wed Jan 28 2026
+Jan 28 20:27:59.112: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:27:59.694: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:53176  for netconf over ssh. External groups: PRIV15
+Jan 28 20:30:37.241: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 20:30:37.241: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 20:52:59.448: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:52:59.492: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 20:52:59 UTC Wed Jan 28 2026
+Jan 28 20:52:59.492: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 20:52:59.927: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:20859  for netconf over ssh. External groups: PRIV15
+Jan 28 20:55:37.591: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 20:55:37.591: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 21:17:59.728: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 21:17:59.831: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 21:17:59 UTC Wed Jan 28 2026
+Jan 28 21:17:59.831: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 21:18:00.235: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:47714  for netconf over ssh. External groups: PRIV15
+Jan 28 21:20:32.881: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 21:20:32.881: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 21:43:00.069: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 21:43:00.185: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 21:43:00 UTC Wed Jan 28 2026
+Jan 28 21:43:00.185: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 21:43:00.576: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:49776  for netconf over ssh. External groups: PRIV15
+Jan 28 21:45:33.179: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 21:45:33.179: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 22:08:00.433: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:08:00.537: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 22:08:00 UTC Wed Jan 28 2026
+Jan 28 22:08:00.537: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:08:01.161: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:37052  for netconf over ssh. External groups: PRIV15
+Jan 28 22:10:33.472: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 22:10:33.472: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 22:33:00.656: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:33:00.761: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 22:33:00 UTC Wed Jan 28 2026
+Jan 28 22:33:00.761: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:33:01.134: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:22710  for netconf over ssh. External groups: PRIV15
+Jan 28 22:35:33.768: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 22:35:33.768: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 22:58:01.166: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:58:01.261: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 22:58:01 UTC Wed Jan 28 2026
+Jan 28 22:58:01.261: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 22:58:01.644: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:27044  for netconf over ssh. External groups: PRIV15
+Jan 28 23:00:34.069: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 23:00:34.070: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 23:23:01.311: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 23:23:01.363: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 23:23:01 UTC Wed Jan 28 2026
+Jan 28 23:23:01.364: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 23:23:01.713: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:16946  for netconf over ssh. External groups: PRIV15
+Jan 28 23:25:39.358: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 23:25:39.358: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 28 23:48:01.632: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 23:48:01.676: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 23:48:01 UTC Wed Jan 28 2026
+Jan 28 23:48:01.676: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 28 23:48:02.015: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:2517  for netconf over ssh. External groups: PRIV15
+Jan 28 23:50:34.652: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 28 23:50:34.653: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 29 00:13:01.897: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 00:13:01.938: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 00:13:01 UTC Thu Jan 29 2026
+Jan 29 00:13:01.938: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 00:13:02.296: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:33608  for netconf over ssh. External groups: PRIV15
+Jan 29 00:15:34.944: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 29 00:15:34.944: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 29 00:38:02.284: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 00:38:02.376: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 00:38:02 UTC Thu Jan 29 2026
+Jan 29 00:38:02.376: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 00:38:02.834: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:26052  for netconf over ssh. External groups: PRIV15
+Jan 29 00:40:35.236: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 29 00:40:35.236: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; closed
+Jan 29 01:03:02.590: %SSH-5-SSH2_SESSION: SSH2 Session request from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 01:03:02.688: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: dnacadmin] [Source: 198.18.129.100] [localport: 22] at 01:03:02 UTC Thu Jan 29 2026
+Jan 29 01:03:02.688: %SSH-5-SSH2_USERAUTH: User &#39;dnacadmin&#39; authentication for SSH2 Session from 198.18.129.100 (tty = 0) using crypto cipher &#39;aes128-ctr&#39;, hmac &#39;hmac-sha2-256-etm@openssh.com&#39; Succeeded
+Jan 29 01:03:03.041: %DMI-5-AUTH_PASSED: Chassis 1 R0/0: dmiauthd: User &#39;dnacadmin&#39; authenticated successfully from 198.18.129.100:26470  for netconf over ssh. External groups: PRIV15
+Jan 29 01:05:35.538: %SYS-6-LOGOUT: User dnacadmin has exited tty session 1(198.18.129.100)
+Jan 29 01:05:35.538: %SSH-5-SSH2_CLOSE: SSH2 Session from 198.18.129.100 (tty = 0) for user &#39;dnacadmin&#39; using crypto cipher &#39;aes128-ctr</pre>
+</div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                            </div>
+                        </div>
+            </div>
+        </section>
+
+        <!-- Handle orphaned commands (defensive programming for edge cases) -->
+        
+
+        <footer>
+            <p>Generated: 2026-01-30 17:03:08</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleCollapse(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                // Toggle collapsed class on the element
+                element.classList.toggle('collapsed');
+
+                // For command containers (both nested and orphaned), toggle the content differently
+                if (id.startsWith('cmd-content-') || id.startsWith('orphaned-cmd-content-')) {
+                    const content = element.querySelector('.device-content');
+                    if (content) {
+                        content.classList.toggle('content-collapsed');
+                    }
+                }
+                // For main sections toggle the content-collapsed class
+                else if (id.startsWith('section-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the header that triggered this section
+                    const header = document.querySelector(`h2[onclick*="${id}"]`);
+                    if (header) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
+                // For result command sections, toggle them and update the result header chevron
+                else if (id.startsWith('result-commands-')) {
+                    element.classList.toggle('content-collapsed');
+                    // Find and toggle the chevron in the result header that triggered this
+                    const header = element.previousElementSibling;
+                    if (header && header.classList.contains('result-header')) {
+                        header.classList.toggle('collapsed');
+                    }
+                }
+            }
+        }
+
+        // JSON formatting toggle function with enhanced UX
+        function toggleJSONFormatting(elementId, button) {
+            const element = document.getElementById(elementId);
+            const isFormatted = element.classList.contains('formatted-json');
+            
+            if (isFormatted) {
+                // Switch back to raw
+                const rawOutput = element.dataset.rawOutput;
+                element.textContent = rawOutput;
+                element.classList.remove('formatted-json');
+                
+                // Update button to format state
+                button.textContent = '📋 Format JSON';
+                button.title = 'Format JSON for readability';
+                button.classList.remove('toggle-state');
+                button.disabled = false;
+                
+            } else {
+                try {
+                    const rawText = element.textContent;
+                    
+                    // Store original text in data attribute if not already stored
+                    if (!element.dataset.rawOutput) {
+                        element.dataset.rawOutput = rawText;
+                    }
+                    
+                    // Show loading state for potentially large JSON
+                    button.textContent = '⏳ Formatting...';
+                    button.disabled = true;
+                    
+                    // Use setTimeout to allow UI update and prevent blocking
+                    setTimeout(() => {
+                        try {
+                            // Check for JSON support (defensive programming)
+                            if (typeof JSON === 'undefined' || !JSON.parse) {
+                                button.textContent = '❌ Browser too old';
+                                button.title = 'Browser does not support JSON formatting';
+                                return;
+                            }
+                            
+                            // Attempt to parse JSON
+                            const parsed = JSON.parse(rawText);
+                            
+                            // Pretty-print with 2-space indentation
+                            const formatted = JSON.stringify(parsed, null, 2);
+                            
+                            // Apply syntax highlighting
+                            const highlighted = syntaxHighlightJSON(formatted);
+                            
+                            // Replace content
+                            element.innerHTML = highlighted;
+                            element.classList.add('formatted-json');
+                            
+                            // Update button to raw state
+                            button.textContent = '⬅️ Show Raw';
+                            button.title = 'Show raw, unformatted output';
+                            button.classList.add('toggle-state');
+                            button.disabled = false;
+                            
+                        } catch (error) {
+                            // Not valid JSON or parsing failed
+                            console.warn('JSON formatting failed:', error);
+                            button.textContent = '❌ Invalid JSON';
+                            button.title = `Invalid JSON format: ${error.message}`;
+                            button.style.backgroundColor = '#dc3545';
+                            // Keep button disabled
+                        }
+                    }, 10);
+                    
+                } catch (error) {
+                    // Immediate error
+                    console.warn('JSON formatting failed:', error);
+                    button.textContent = '❌ Invalid JSON';
+                    button.disabled = true;
+                    button.title = 'Invalid JSON format';
+                }
+            }
+        }
+
+        // Enhanced syntax highlighting function
+        function syntaxHighlightJSON(json) {
+            // Escape HTML entities first
+            return json
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
+        // Initialize sections
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // Initialize all result command sections as collapsed by default
+            const resultCommandSections = document.querySelectorAll('[id^="result-commands-"]');
+            resultCommandSections.forEach(function(section) {
+                section.classList.add('content-collapsed');
+                // Find the corresponding result header to add collapsed chevron
+                const resultHeader = section.previousElementSibling;
+                if (resultHeader && resultHeader.classList.contains('result-header')) {
+                    const chevron = resultHeader.querySelector('.chevron');
+                    if (chevron) {
+                        chevron.parentElement.classList.add('collapsed');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

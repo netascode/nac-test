@@ -1,0 +1,82 @@
+0: OBOEHMER-M-5D76: 2026-01-30T16:57:33: %AETEST-6-INFO: %[part=0.1/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+1: OBOEHMER-M-5D76: 2026-01-30T16:57:33: %AETEST-6-INFO: %[part=0.2/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: |             Starting testcase VerifyNoCriticalErrorsInSystemLogs             |
+2: OBOEHMER-M-5D76: 2026-01-30T16:57:33: %AETEST-6-INFO: %[part=0.3/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+3: OBOEHMER-M-5D76: 2026-01-30T16:57:33: %AETEST-6-INFO: %[part=3.1/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+4: OBOEHMER-M-5D76: 2026-01-30T16:57:33: %AETEST-6-INFO: %[part=3.2/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: |                            Starting section setup                            |
+5: OBOEHMER-M-5D76: 2026-01-30T16:57:33: %AETEST-6-INFO: %[part=3.3/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+6: OBOEHMER-M-5D76: 2026-01-30T16:57:33: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: Batching reporter initialized successfully (batch size: 200, flush timeout: 0.5s)
+7: OBOEHMER-M-5D76: 2026-01-30T16:57:33: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: Connecting to device C9800-CL-WLC via connection broker
+8: OBOEHMER-M-5D76: 2026-01-30T16:57:34: %AETEST-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: The result of section setup is => PASSED
+9: OBOEHMER-M-5D76: 2026-01-30T16:57:34: %AETEST-6-INFO: %[part=9.1/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+10: OBOEHMER-M-5D76: 2026-01-30T16:57:34: %AETEST-6-INFO: %[part=9.2/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: |                   Starting section test_system_log_health                    |
+11: OBOEHMER-M-5D76: 2026-01-30T16:57:34: %AETEST-6-INFO: %[part=9.3/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+12: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: System Log Verification Verification Summary:
+13: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   - Total configurations processed: 1
+14: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   - Passed: 0
+15: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   - Failed: 1
+16: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   - Skipped: 0
+17: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[part=17.1/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +..............................................................................+
+18: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[part=17.2/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: :                   Starting STEP 1: System Log Verification                   :
+19: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[part=17.3/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +..............................................................................+
+20: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   - Check Type: system_log_health
+21: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   - Verification Scope: all_syslog_entries
+22: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   - Total Logs: 1086
+23: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   - Critical Logs: 2
+24: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   - Hardware Error Logs: 4
+25: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   - Persistent Error Logs: 1
+26: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.1/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: Failed reason: **System Log Check FAILED**
+27: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.2/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: 
+28: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.3/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: One or more system log entries indicate critical errors or issues.
+29: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.4/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: 
+30: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.5/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: **Validation Results:**
+31: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.6/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Total log entries checked: 1086
+32: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.7/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Critical severity (0/1/2): 2
+33: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.8/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Hardware error logs: 4
+34: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.9/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Config rollback logs: 0
+35: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.10/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • AAA failure logs: 0
+36: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.11/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • SW exception logs: 0
+37: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.12/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Persistent severity 3 errors: 1
+38: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.13/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: 
+39: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.14/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: **Detailed Failures:**
+40: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.15/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: **Critical severity logs (0/1/2) found (2):**
+41: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.16/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   • *Jan 28 17:36:59.811: %STACKMGR-1-DUAL_ACTIVE_CFG_MSG: Chassis 1 R0/0: stack_mgr: Dual Active Detection links are not available anymore
+42: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.17/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   • Jan 28 17:38:01.996: %DMI-2-CONFD_SUB_FAIL: Chassis 1 R0/0: dmiauthd: Failed to subscribe /native/router/ios-lisp:lisp/ios-lisp:instance-container/ios-lisp:instance-list/ios-lisp:dynamic-eid model badly formatted or nonexistent path (8): No such namespace "'ios-lisp'" after: /native/router.
+43: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.18/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: **Hardware failure logs found (4):**
+44: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.19/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   • begin Crypto Module self-tests
+45: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.20/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   • begin Crypto Module Integrity Test
+46: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.21/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   • Jan 28 17:37:52.453: %IOSXE_OIR-6-ONLINECARD: Card (fp) online in slot F0
+47: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.22/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   • begin Crypto Module self-tests
+48: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.23/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: **Persistent (recurring) severity 3 errors found (1):**
+49: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.24/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]:   • 'PKI-CRL_FETCH_FAIL: CRL fetch for trustpoint DNAC-CA failed' occurred 2 times
+50: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.25/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: 
+51: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.26/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: **System Log Status:**
+52: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.27/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Total logs checked: 1086
+53: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.28/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Critical severity logs: 2
+54: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.29/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Hardware error logs: 4
+55: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.30/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Config rollback logs: 0
+56: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.31/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • AAA failure logs: 0
+57: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.32/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • SW exception logs: 0
+58: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.33/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Persistent severity 3 errors: 1
+59: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.34/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: 
+60: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.35/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: **Please verify:**
+61: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.36/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Hardware status and replace failed components
+62: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.37/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Configuration history for rollbacks or aborts
+63: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.38/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • AAA server/device user authentication configuration
+64: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.39/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Software version and known bugs (if exceptions found)
+65: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.40/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Recurring error messages for root cause analysis
+66: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.41/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Device clock and log buffer size (for completeness)
+67: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.42/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • See sample log entries above for details
+68: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-3-ERROR: %[part=26.43/43][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: • Command execution duration: 4.67s
+69: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: The result of STEP 1: System Log Verification is => FAILED
+70: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[part=70.1/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +..........................................................+
+71: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[part=70.2/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: :                       STEPS Report                       :
+72: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[part=70.3/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +..........................................................+
+73: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: STEP 1 - System Log Verification                  Failed    
+74: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: ............................................................
+75: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: The result of section test_system_log_health is => FAILED
+76: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[part=76.1/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+77: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[part=76.2/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: |                           Starting section cleanup                           |
+78: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[part=76.3/3][pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: +------------------------------------------------------------------------------+
+79: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %SCRIPT-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: Batching reporter shutdown complete - processed 0 messages in 0 batches
+80: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: The result of section cleanup is => PASSED
+81: OBOEHMER-M-5D76: 2026-01-30T16:57:38: %AETEST-6-INFO: %[pid=2851][pname=C9800-CL-WLC_verify_iosxe_no_critical_errors_in_system_logs]: The result of testcase VerifyNoCriticalErrorsInSystemLogs is => FAILED

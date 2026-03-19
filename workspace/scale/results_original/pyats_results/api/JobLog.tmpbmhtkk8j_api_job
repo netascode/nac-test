@@ -1,0 +1,45 @@
+3: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[part=3.1/3][pid=65447][pname=MainProcess]: +------------------------------------------------------------------------------+
+4: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[part=3.2/3][pid=65447][pname=MainProcess]: |                          Bringup/Clean Information                           |
+5: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[part=3.3/3][pid=65447][pname=MainProcess]: +------------------------------------------------------------------------------+
+6: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[pid=65447][pname=MainProcess]: {'bringup': {}, 'cleaners': {}, 'devices': {}}
+
+7: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[part=7.1/3][pid=65447][pname=MainProcess]: +------------------------------------------------------------------------------+
+8: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[part=7.2/3][pid=65447][pname=MainProcess]: |           Bringup/Clean Information after applying clean templates           |
+9: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[part=7.3/3][pid=65447][pname=MainProcess]: +------------------------------------------------------------------------------+
+10: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[pid=65447][pname=MainProcess]: {'bringup': {}, 'cleaners': {}, 'devices': {}}
+
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[pid=67870][pname=verify_sdwan_sync]: Starting task execution: verify_sdwan_sync
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[pid=67870][pname=verify_sdwan_sync]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:15: %EASYPY-6-INFO: %[pid=67870][pname=verify_sdwan_sync]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync.py
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:17: %EASYPY-6-INFO: %[pid=68075][pname=verify_sdwan_sync_01]: Starting task execution: verify_sdwan_sync_01
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:17: %EASYPY-6-INFO: %[pid=68075][pname=verify_sdwan_sync_01]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:17: %EASYPY-6-INFO: %[pid=68075][pname=verify_sdwan_sync_01]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_01.py
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:18: %EASYPY-6-INFO: %[pid=68155][pname=verify_sdwan_sync_02]: Starting task execution: verify_sdwan_sync_02
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:18: %EASYPY-6-INFO: %[pid=68155][pname=verify_sdwan_sync_02]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:18: %EASYPY-6-INFO: %[pid=68155][pname=verify_sdwan_sync_02]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_02.py
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:19: %EASYPY-6-INFO: %[pid=68271][pname=verify_sdwan_sync_03]: Starting task execution: verify_sdwan_sync_03
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:19: %EASYPY-6-INFO: %[pid=68271][pname=verify_sdwan_sync_03]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:19: %EASYPY-6-INFO: %[pid=68271][pname=verify_sdwan_sync_03]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_03.py
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:19: %EASYPY-6-INFO: %[pid=68383][pname=verify_sdwan_sync_04]: Starting task execution: verify_sdwan_sync_04
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:19: %EASYPY-6-INFO: %[pid=68383][pname=verify_sdwan_sync_04]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:19: %EASYPY-6-INFO: %[pid=68383][pname=verify_sdwan_sync_04]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_04.py
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:20: %EASYPY-6-INFO: %[pid=68400][pname=verify_sdwan_sync_05]: Starting task execution: verify_sdwan_sync_05
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:20: %EASYPY-6-INFO: %[pid=68400][pname=verify_sdwan_sync_05]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:20: %EASYPY-6-INFO: %[pid=68400][pname=verify_sdwan_sync_05]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_05.py
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:21: %EASYPY-6-INFO: %[pid=68605][pname=verify_sdwan_sync_06]: Starting task execution: verify_sdwan_sync_06
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:21: %EASYPY-6-INFO: %[pid=68605][pname=verify_sdwan_sync_06]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:21: %EASYPY-6-INFO: %[pid=68605][pname=verify_sdwan_sync_06]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_06.py
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:22: %EASYPY-6-INFO: %[pid=68645][pname=verify_sdwan_sync_07]: Starting task execution: verify_sdwan_sync_07
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:22: %EASYPY-6-INFO: %[pid=68645][pname=verify_sdwan_sync_07]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:22: %EASYPY-6-INFO: %[pid=68645][pname=verify_sdwan_sync_07]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_07.py
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:23: %EASYPY-6-INFO: %[pid=68758][pname=verify_sdwan_sync_08]: Starting task execution: verify_sdwan_sync_08
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:23: %EASYPY-6-INFO: %[pid=68758][pname=verify_sdwan_sync_08]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:23: %EASYPY-6-INFO: %[pid=68758][pname=verify_sdwan_sync_08]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_08.py
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:24: %EASYPY-6-INFO: %[pid=68877][pname=verify_sdwan_sync_09]: Starting task execution: verify_sdwan_sync_09
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:24: %EASYPY-6-INFO: %[pid=68877][pname=verify_sdwan_sync_09]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:24: %EASYPY-6-INFO: %[pid=68877][pname=verify_sdwan_sync_09]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_09.py
+0: OBOEHMER-M-5D76: 2026-02-07T13:19:25: %EASYPY-6-INFO: %[pid=68955][pname=verify_sdwan_sync_10]: Starting task execution: verify_sdwan_sync_10
+1: OBOEHMER-M-5D76: 2026-02-07T13:19:25: %EASYPY-6-INFO: %[pid=68955][pname=verify_sdwan_sync_10]:     test harness = pyats.aetest
+2: OBOEHMER-M-5D76: 2026-02-07T13:19:25: %EASYPY-6-INFO: %[pid=68955][pname=verify_sdwan_sync_10]:     testscript   = /Users/oboehmer/Documents/DD/nac-test/workspace/scale/templates/tests/verify_sdwan_sync_10.py
+11: OBOEHMER-M-5D76: 2026-02-07T13:19:26: %GENIE-6-INFO: %[pid=65447][pname=MainProcess]: Saving Abstract Tree...
+12: OBOEHMER-M-5D76: 2026-02-07T13:19:26: %GENIE-6-INFO: %[pid=65447][pname=MainProcess]: Abstract Tree saved

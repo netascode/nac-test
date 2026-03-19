@@ -1,0 +1,17 @@
+--suite Out.Robot.Config.Fabric.Fabric Sites
+--skiponfailure non-critical
+--variable CALLER_ID:56e102712746483a973fcac3a6ffed6a
+--variable PABOTLIBURI:127.0.0.1:60955
+--variable PABOTEXECUTIONPOOLID:1
+--variable PABOTISLASTEXECUTIONINPOOL:0
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:4
+--variable PABOTLASTLEVEL:Out.Robot.Config.Fabric.Fabric Sites
+--outputdir out/pabot_results/4
+--xunit NONE
+--listener RobotStackTracer
+--log NONE
+--report NONE
+--consolecolors off
+--consolemarkers off
+out

@@ -1,0 +1,17 @@
+--suite Results.Config.Test
+--skiponfailure non-critical
+--variable CALLER_ID:b48faa46056a4969ab5a570d605cd2ac
+--variable PABOTLIBURI:127.0.0.1:57640
+--variable PABOTEXECUTIONPOOLID:0
+--variable PABOTISLASTEXECUTIONINPOOL:1
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:0
+--variable PABOTLASTLEVEL:
+--outputdir results/pabot_results/0
+--xunit NONE
+--output output.xml
+--log NONE
+--report NONE
+--consolecolors off
+--consolemarkers off
+results

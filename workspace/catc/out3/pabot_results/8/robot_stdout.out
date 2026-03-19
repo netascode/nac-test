@@ -1,0 +1,44 @@
+==============================================================================
+Out3                                                                          
+==============================================================================
+Out3.Config                                                                   
+==============================================================================
+Out3.Config.Fabric                                                            
+==============================================================================
+Out3.Config.Fabric.L3 Virtual Networks :: Verify L3 Virtual Networks Associ...
+==============================================================================
+Get Fabric Zones                                                      | PASS |
+------------------------------------------------------------------------------
+Get L3 Virtual Networks                                               | PASS |
+------------------------------------------------------------------------------
+Verify L3 Virtual Networks for Fabric Site Global/Poland/Krakow       Validating L3 virtual networks for fabric site Global/Poland/Krakow
+Fabric site ID: 3cf026bd-f2c6-45a1-ae4c-b327f7e29e4a
+L3 Virtual Network BYOD associated with fabric site Global/Poland/Krakow
+L3 Virtual Network Guest associated with fabric site Global/Poland/Krakow
+L3 Virtual Network Printers associated with fabric site Global/Poland/Krakow
+L3 Virtual Network Campus associated with fabric site Global/Poland/Krakow
+L3 virtual networks validation completed for fabric site Global/Poland/Krakow
+| PASS |
+------------------------------------------------------------------------------
+Verify L3 Virtual Networks for Fabric Site Global/Poland/Warsaw       Validating L3 virtual networks for fabric site Global/Poland/Warsaw
+Fabric site ID: 40f5ed97-a778-4d00-b6f1-eb3816fd476d
+L3 Virtual Network BYOD associated with fabric site Global/Poland/Warsaw
+L3 Virtual Network Guest associated with fabric site Global/Poland/Warsaw
+L3 Virtual Network Printers associated with fabric site Global/Poland/Warsaw
+L3 Virtual Network Campus associated with fabric site Global/Poland/Warsaw
+L3 virtual networks validation completed for fabric site Global/Poland/Warsaw
+| PASS |
+------------------------------------------------------------------------------
+Out3.Config.Fabric.L3 Virtual Networks :: Verify L3 Virtual Networ... | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Out3.Config.Fabric                                                    | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Out3.Config                                                           | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Out3                                                                  | PASS |
+4 tests, 4 passed, 0 failed
+==============================================================================
+Output:  /Users/oboehmer/Documents/DD/nac-test/workspace/catc/out3/pabot_results/8/output.xml

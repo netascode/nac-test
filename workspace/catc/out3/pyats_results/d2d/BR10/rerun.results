@@ -1,0 +1,9 @@
+# rerun.results file that contains the information of each task and their
+# testcases.
+# Please Check the following link for more information:
+# https://pubhub.devnetcloud.com/media/pyats/docs/easypy/rerun.html
+br10_verify_iosxe_vtp_mode_status:
+  testcases:
+  - name: VerifyVTPOperatingMode
+    result: PASSED
+  testscript: /Users/oboehmer/Documents/DD/nac-test/workspace/catc/templates-mini/tests/pyats/verify_iosxe_vtp_mode_status.py

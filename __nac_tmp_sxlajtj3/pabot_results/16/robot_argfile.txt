@@ -1,0 +1,17 @@
+--test Nac Tmp Sxlajtj3.Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 2
+--skiponfailure non-critical
+--variable CALLER_ID:55b8a2ac5587486faf03358df75484a3
+--variable PABOTLIBURI:127.0.0.1:60170
+--variable PABOTEXECUTIONPOOLID:7
+--variable PABOTISLASTEXECUTIONINPOOL:1
+--variable PABOTNUMBEROFPROCESSES:14
+--variable PABOTQUEUEINDEX:16
+--variable PABOTLASTLEVEL:
+--outputdir /Users/oboehmer/Documents/DD/nac-test/__nac_tmp_sxlajtj3/pabot_results/16
+--output output.xml
+--log NONE
+--report NONE
+--xunit NONE
+--consolecolors off
+--consolemarkers off
+/Users/oboehmer/Documents/DD/nac-test/__nac_tmp_sxlajtj3
