@@ -43,7 +43,11 @@ from nac_test.pyats_core.reporting.multi_archive_generator import (
 )
 from nac_test.pyats_core.reporting.utils.archive_aggregator import ArchiveAggregator
 from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspector
-from nac_test.utils.cleanup import cleanup_old_test_outputs, cleanup_pyats_runtime
+from nac_test.utils.cleanup import (
+    cleanup_old_test_outputs,
+    cleanup_pyats_runtime,
+    cleanup_stale_test_artifacts,
+)
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.environment import EnvironmentValidator
 from nac_test.utils.formatting import format_duration
@@ -595,6 +599,10 @@ class PyATSOrchestrator:
 
         # Clean up before test execution
         cleanup_pyats_runtime()
+
+        # Clean up stale test artifacts (api/, d2d/ directories under output root)
+        # to prevent JSONL files from interrupted runs being picked up (fixes issue #526)
+        cleanup_stale_test_artifacts(self.base_output_dir)
 
         # Clean up old test outputs (CI/CD only)
         if os.environ.get("CI"):
