@@ -26,6 +26,7 @@ import pytest
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     HTML_REPORTS_DIRNAME,
+    IS_WINDOWS,
     LOG_HTML,
     OUTPUT_XML,
     PYATS_RESULTS_DIRNAME,
@@ -35,6 +36,7 @@ from nac_test.core.constants import (
     XUNIT_XML,
 )
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
+from tests.conftest import assert_is_link_to
 from tests.e2e.conftest import E2EResults
 from tests.e2e.html_helpers import (
     assert_combined_stats,
@@ -222,29 +224,25 @@ class E2ECombinedTestBase:
         )
 
     # -------------------------------------------------------------------------
-    # Robot Backward Compatibility Tests (symlinks)
+    # Robot Backward Compatibility Tests (hard links preferred, symlinks as fallback)
     # -------------------------------------------------------------------------
 
-    def test_robot_output_xml_symlink_exists(self, results: E2EResults) -> None:
-        """Verify output.xml symlink exists at root."""
+    def test_robot_output_xml_link_exists(self, results: E2EResults) -> None:
+        """Verify output.xml link exists at root."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        symlink = results.output_dir / OUTPUT_XML
-        assert symlink.exists(), "Missing output.xml symlink at root"
-        assert symlink.is_symlink(), "output.xml is not a symlink"
+        link = results.output_dir / OUTPUT_XML
+        source = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
+        assert link.exists(), "Missing output.xml link at root"
+        assert_is_link_to(link, source)
 
-    def test_robot_symlinks_point_correctly(self, results: E2EResults) -> None:
-        """Verify symlinks correctly point to robot_results/ subdirectory."""
+    def test_robot_links_point_correctly(self, results: E2EResults) -> None:
+        """Verify links correctly point to robot_results/ subdirectory."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        symlink = results.output_dir / OUTPUT_XML
-        target = symlink.resolve()
-        expected = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
-        assert target == expected, (
-            f"Symlink points to wrong location:\n"
-            f"  Expected: {expected}\n"
-            f"  Got: {target}"
-        )
+        link = results.output_dir / OUTPUT_XML
+        source = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
+        assert_is_link_to(link, source)
 
     # -------------------------------------------------------------------------
     # Robot Summary Report Tests
@@ -1036,6 +1034,7 @@ class TestE2EMixedRelativeOutput(E2ECombinedTestBase):
 # =============================================================================
 
 
+@pytest.mark.windows
 class TestE2ERobotOnly(E2ECombinedTestBase):
     """E2E tests for the robot-only scenario.
 
@@ -1329,3 +1328,39 @@ class TestE2EDryRunRobotFail(E2ECombinedTestBase):
     @pytest.fixture
     def results(self, e2e_dry_run_robot_fail_results: E2EResults) -> E2EResults:
         return e2e_dry_run_robot_fail_results
+
+
+# =============================================================================
+# WINDOWS PYATS SKIP SCENARIO TESTS
+# =============================================================================
+
+
+@pytest.mark.skipif(not IS_WINDOWS, reason="Windows-only test scenario")
+@pytest.mark.windows
+class TestE2EWindowsPyatsSkip(E2ECombinedTestBase):
+    """E2E tests for the Windows PyATS skip scenario.
+
+    Scenario: Windows platform with PyATS tests in templates but PyATS not supported.
+    Robot (1 pass), PyATS tests discovered but skipped.
+    Expected: CLI exits with code 0, warning message in stdout.
+
+    This test class validates that on Windows:
+    - Robot Framework tests execute normally
+    - PyATS tests are discovered but skipped (not executed)
+    - A warning is displayed about PyATS being unsupported on Windows
+    """
+
+    @pytest.fixture
+    def results(self, e2e_windows_pyats_skip_results: E2EResults) -> E2EResults:
+        return e2e_windows_pyats_skip_results
+
+    def test_pyats_skip_warning_in_stdout(self, results: E2EResults) -> None:
+        """Verify the PyATS skip warning message appears in stdout."""
+        expected_warning = (
+            "PyATS tests found but skipped — PyATS is not supported on Windows"
+        )
+        assert expected_warning in results.stdout, (
+            f"Missing Windows PyATS skip warning in stdout.\n"
+            f"Expected: '{expected_warning}'\n"
+            f"Stdout: {results.stdout[:500]}"
+        )
