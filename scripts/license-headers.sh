@@ -1,5 +1,4 @@
 #!/bin/bash
-<<<<<<< HEAD
 # Script to check or fix SPDX license identifier and copyright notice in Python files
 #
 # Usage:
@@ -24,16 +23,6 @@ cleanup() {
     exit "$exit_code"
 }
 trap cleanup EXIT INT TERM
-=======
-# Script to check or fix SPDX license identifier and copyright notice in all Python files
-#
-# Usage:
-#   ./scripts/license-headers.sh          # Check mode (default)
-#   ./scripts/license-headers.sh --fix    # Fix mode (add missing headers)
-#   ./scripts/license-headers.sh --help   # Show help
-
-set -e
->>>>>>> 903a1a2
 
 # Configuration
 EXPECTED_SPDX="# SPDX-License-Identifier: MPL-2.0"
@@ -46,7 +35,6 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-<<<<<<< HEAD
 # Parse arguments
 MODE="check"
 FILES=()
@@ -84,27 +72,6 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
-=======
-# Mode selection
-MODE="check"
-if [[ "$1" == "--fix" ]]; then
-    MODE="fix"
-elif [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
-    echo "Usage: $0 [OPTIONS]"
-    echo ""
-    echo "Check or fix SPDX license headers in Python files."
-    echo ""
-    echo "Options:"
-    echo "  (none)      Check mode - verify headers are present and correct (exit 1 if issues found)"
-    echo "  --fix       Fix mode - add missing headers to files"
-    echo "  --help, -h  Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  $0              # Check all Python files"
-    echo "  $0 --fix        # Add headers to files missing them"
-    exit 0
-fi
->>>>>>> 903a1a2
 
 # Counters
 files_checked=0
@@ -115,7 +82,6 @@ files_fixed=0
 # Array to store files with issues (check mode only)
 declare -a failed_files
 
-<<<<<<< HEAD
 # Validate file before processing
 validate_file() {
     local file="$1"
@@ -124,28 +90,6 @@ validate_file() {
     [[ ! -L "$file" ]] || { echo "ERROR: Refusing symlink: $file" >&2; return 1; }
     [[ -w "$file" ]] || { echo "ERROR: File not writable: $file" >&2; return 1; }
     return 0
-=======
-# Common exclusion patterns
-EXCLUDE_PATTERNS=(
-    "./venv/*"
-    "./.venv/*"
-    "*/__pycache__/*"
-    "./.tox/*"
-    "./.eggs/*"
-    "./build/*"
-    "./dist/*"
-    "./.pytest_cache/*"
-    "./.mypy_cache/*"
-)
-
-# Build find command with exclusions
-build_find_command() {
-    local cmd="find . -name '*.py' -type f"
-    for pattern in "${EXCLUDE_PATTERNS[@]}"; do
-        cmd="$cmd -not -path '$pattern'"
-    done
-    echo "$cmd"
->>>>>>> 903a1a2
 }
 
 # Check if file has correct headers
@@ -174,16 +118,11 @@ check_headers() {
 # Add headers to file
 add_headers() {
     local file="$1"
-<<<<<<< HEAD
     TEMP_FILE=$(mktemp)
-=======
-    local temp_file=$(mktemp)
->>>>>>> 903a1a2
     local first_line=$(head -n 1 "$file")
 
     if [[ "$first_line" == "#!"* ]]; then
         # Preserve shebang, add headers after it
-<<<<<<< HEAD
         echo "$first_line" > "$TEMP_FILE"
         echo "$EXPECTED_SPDX" >> "$TEMP_FILE"
         echo "$EXPECTED_COPYRIGHT" >> "$TEMP_FILE"
@@ -199,22 +138,6 @@ add_headers() {
 
     mv "$TEMP_FILE" "$file"
     TEMP_FILE=""
-=======
-        echo "$first_line" > "$temp_file"
-        echo "$EXPECTED_SPDX" >> "$temp_file"
-        echo "$EXPECTED_COPYRIGHT" >> "$temp_file"
-        echo "" >> "$temp_file"
-        tail -n +2 "$file" >> "$temp_file"
-    else
-        # No shebang, add headers at the top
-        echo "$EXPECTED_SPDX" > "$temp_file"
-        echo "$EXPECTED_COPYRIGHT" >> "$temp_file"
-        echo "" >> "$temp_file"
-        cat "$file" >> "$temp_file"
-    fi
-
-    mv "$temp_file" "$file"
->>>>>>> 903a1a2
 }
 
 # Print header based on mode
@@ -225,7 +148,6 @@ else
 fi
 echo ""
 
-<<<<<<< HEAD
 # Get list of files to process
 if [[ ${#FILES[@]} -gt 0 ]]; then
     # Files passed as arguments (e.g., from pre-commit)
@@ -247,14 +169,6 @@ for file in "${file_list[@]}"; do
         continue
     fi
 
-=======
-# Find all Python files and store in temp file
-temp_file=$(mktemp)
-eval "$(build_find_command)" > "$temp_file"
-
-# Process each file
-while IFS= read -r file; do
->>>>>>> 903a1a2
     # Skip empty files or files with only whitespace
     if [ ! -s "$file" ] || ! grep -q '[^[:space:]]' "$file"; then
         echo -e "${YELLOW}⊘${NC} $file (empty file, skipped)"
@@ -277,7 +191,6 @@ while IFS= read -r file; do
             failed_files+=("$file")
         else
             # Fix mode - add headers
-<<<<<<< HEAD
             if add_headers "$file"; then
                 echo -e "${GREEN}✓${NC} $file (header added)"
                 files_fixed=$((files_fixed + 1))
@@ -289,17 +202,6 @@ while IFS= read -r file; do
         fi
     fi
 done
-=======
-            add_headers "$file"
-            echo -e "${GREEN}✓${NC} $file (header added)"
-            files_fixed=$((files_fixed + 1))
-        fi
-    fi
-done < "$temp_file"
-
-# Cleanup temp file
-rm -f "$temp_file"
->>>>>>> 903a1a2
 
 # Print summary
 echo ""
@@ -326,7 +228,6 @@ if [[ "$MODE" == "check" ]]; then
 else
     # Fix mode
     echo "Files fixed: $files_fixed"
-<<<<<<< HEAD
     if [ $files_failed -gt 0 ]; then
         echo -e "${RED}Files failed: $files_failed${NC}"
     fi
@@ -338,10 +239,6 @@ else
         done
         exit 1
     elif [ $files_fixed -eq 0 ]; then
-=======
-    echo ""
-    if [ $files_fixed -eq 0 ]; then
->>>>>>> 903a1a2
         echo -e "${GREEN}✓ All files already had correct headers!${NC}"
     else
         echo -e "${GREEN}✓ Header addition complete!${NC}"
