@@ -206,16 +206,21 @@ class SubprocessRunner:
             str(job_file_path),
             "--testbed-file",
             str(testbed_file_path),
-            "--configuration",
-            plugin_config_file,
-            "--archive-dir",
-            str(self.output_dir),
-            "--archive-name",
-            archive_name,
-            "--no-archive-subdir",
-            "--no-mail",
-            "--no-xml-report",
         ]
+
+        cmd.extend(
+            [
+                "--configuration",
+                plugin_config_file,
+                "--archive-dir",
+                str(self.output_dir),
+                "--archive-name",
+                archive_name,
+                "--no-archive-subdir",
+                "--no-mail",
+                "--no-xml-report",
+            ]
+        )
 
         # Add verbose flag if logging level is DEBUG, otherwise use quiet
         if logger.isEnabledFor(logging.DEBUG):
