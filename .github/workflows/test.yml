@@ -104,7 +104,7 @@ jobs:
 
       - name: Test
         run: |
-          uv sync --extra dev
+          uv sync --extra dev --extra adapters    # --extra adapters will pull in nac-test-pyats-common
           uv run pytest
 
   notification:
