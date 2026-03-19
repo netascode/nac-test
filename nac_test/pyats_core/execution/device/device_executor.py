@@ -30,6 +30,7 @@ class DeviceExecutor:
         test_status: dict[str, Any],
         test_dir: Path,
         base_output_dir: Path,
+        custom_testbed_path: Path | None = None,
     ):
         """Initialize device executor.
 
@@ -39,12 +40,14 @@ class DeviceExecutor:
             test_status: Dictionary for tracking test status
             test_dir: Directory containing PyATS test files (user-specified)
             base_output_dir: Base output directory for test results
+            custom_testbed_path: Optional path to custom PyATS testbed YAML
         """
         self.job_generator = job_generator
         self.subprocess_runner = subprocess_runner
         self.test_status = test_status
         self.test_dir = test_dir
         self.base_output_dir = base_output_dir
+        self.custom_testbed_path = custom_testbed_path
 
     async def run_device_job_with_semaphore(
         self,
@@ -88,7 +91,9 @@ class DeviceExecutor:
                 with tempfile.NamedTemporaryFile(
                     mode="w", suffix=".yaml", delete=False
                 ) as testbed_file:
-                    testbed_content = TestbedGenerator.generate_testbed_yaml(device)
+                    testbed_content = TestbedGenerator.generate_testbed_yaml(
+                        device, base_testbed_path=self.custom_testbed_path
+                    )
                     testbed_file.write(testbed_content)
                     testbed_file_path = Path(testbed_file.name)
 
