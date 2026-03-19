@@ -82,7 +82,7 @@ For Robot Framework tests, [Pabot](https://pabot.org/) executes test suites in p
 
 - **Linux**: Python 3.10 or higher
 - **macOS**: Python 3.12 or higher (earlier versions have known incompatibilities)
-- **Windows**: Not supported in nac-test 2.x
+- **Windows**: Python 3.10 or higher, Robot tests only
 
 Don't have the right Python version? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/), or install using:
 - `brew install python@3.12`
@@ -284,7 +284,7 @@ tests
 └── test1.robot
 ```
 
-Note: Root-level `log.html`, `output.xml`, `report.html`, and `xunit.xml` are symlinks to the corresponding files in `robot_results/` for backward compatibility.
+Note: Root-level `log.html`, `output.xml`, `report.html`, and `xunit.xml` are links to the corresponding files in `robot_results/` for backward compatibility.
 
 ## PyATS Testing
 

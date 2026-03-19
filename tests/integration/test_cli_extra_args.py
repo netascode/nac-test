@@ -18,6 +18,7 @@ from nac_test.core.constants import EXIT_DATA_ERROR
 
 pytestmark = [
     pytest.mark.integration,
+    pytest.mark.windows,
     pytest.mark.usefixtures("setup_bogus_controller_env"),
 ]
 

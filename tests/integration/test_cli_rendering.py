@@ -12,13 +12,13 @@ import filecmp
 from pathlib import Path
 
 import pytest
-import yaml  # type: ignore
+import yaml
 from typer.testing import CliRunner
 
 import nac_test.cli.main
 from nac_test.core.constants import EXIT_ERROR, ROBOT_RESULTS_DIRNAME
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.windows]
 
 
 def verify_file_content(expected_yaml_path: Path, output_dir: Path) -> None:
