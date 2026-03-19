@@ -1,3 +1,7 @@
+# Unreleased
+
+- Fix path handling on Windows platform
+
 # 1.2.0
 
 - Add `--processes` CLI argument to configure the number of parallel processes for test execution
