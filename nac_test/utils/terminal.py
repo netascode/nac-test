@@ -8,6 +8,8 @@ import re
 
 from colorama import Fore, Style, init
 
+from nac_test.core.types import CombinedResults
+
 # autoreset=True means colors reset after each print
 init(autoreset=True)
 
@@ -202,6 +204,40 @@ class TerminalColors:
         lines.append(cls.error("=" * 70))
 
         return "\n".join(lines)
+
+    @classmethod
+    def format_test_summary(cls, results: CombinedResults) -> str:
+        """Format test results in Robot-style with colored numbers.
+
+        Numbers are colored only when > 0:
+        - passed: green
+        - failed: red
+        - skipped: yellow
+        - other: magenta (only shown when > 0)
+        """
+        passed_str = (
+            cls.success(str(results.passed))
+            if results.passed > 0
+            else str(results.passed)
+        )
+        failed_str = (
+            cls.error(str(results.failed))
+            if results.failed > 0
+            else str(results.failed)
+        )
+        skipped_str = (
+            cls.warning(str(results.skipped))
+            if results.skipped > 0
+            else str(results.skipped)
+        )
+        summary = (
+            f"{results.total} tests, {passed_str} passed, "
+            f"{failed_str} failed, {skipped_str} skipped."
+        )
+        if results.other > 0:
+            other_str = cls.highlight(str(results.other))
+            summary = summary[:-1] + f", {other_str} other."
+        return summary
 
 
 # Single instance for use across the codebase

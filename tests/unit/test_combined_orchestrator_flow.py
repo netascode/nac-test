@@ -707,10 +707,8 @@ class TestExecutionSummary(TestCombinedOrchestratorFlow):
         # Summary should be printed
         mock_print.assert_called_once()
         call_args = mock_print.call_args
-        assert call_args[0][0] is True  # has_pyats
-        assert call_args[0][1] is False  # has_robot
-        # Third arg is CombinedResults
-        results = call_args[0][2]
+        # Single arg is CombinedResults (signature changed in #540)
+        results = call_args[0][0]
         assert isinstance(results, CombinedResults)
         assert results.total == 10
 
