@@ -21,6 +21,7 @@ from nac_test.core.constants import (
     PYATS_SUPPORTED,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    SUMMARY_SEPARATOR_WIDTH,
     XUNIT_XML,
 )
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
@@ -382,12 +383,12 @@ class CombinedOrchestrator:
         """Print execution summary with statistics."""
         # typer.echo("\n") prints two newlines for visual separation
         typer.echo("\n")
-        typer.echo("=" * 70)
+        typer.echo("=" * SUMMARY_SEPARATOR_WIDTH)
         typer.echo("Combined Test Execution Summary")
-        typer.echo("-" * 70)
+        typer.echo("-" * SUMMARY_SEPARATOR_WIDTH)
         if results.has_any_results:
             typer.echo(terminal.format_test_summary(results))
-            typer.echo("-" * 70)
+            typer.echo("-" * SUMMARY_SEPARATOR_WIDTH)
 
         # print absolute filenames in our summary to align with robot/rebot output
         combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME
@@ -422,5 +423,5 @@ class CombinedOrchestrator:
             if xunit_path.exists():
                 typer.echo(f"xUnit:      {xunit_path.resolve()}")
 
-        typer.echo("=" * 70)
+        typer.echo("=" * SUMMARY_SEPARATOR_WIDTH)
         typer.echo()

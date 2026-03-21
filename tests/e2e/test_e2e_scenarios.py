@@ -34,6 +34,7 @@ from nac_test.core.constants import (
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    SUMMARY_SEPARATOR_WIDTH,
     XUNIT_XML,
 )
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
@@ -898,7 +899,7 @@ class E2ECombinedTestBase:
         """
         stdout = results.filtered_stdout
         summary_header = "Combined Test Execution Summary"
-        separator = "=" * 70
+        separator = "=" * SUMMARY_SEPARATOR_WIDTH
 
         summary_pos = stdout.find(summary_header)
         assert summary_pos != -1, "Combined Summary section not found"
