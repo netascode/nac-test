@@ -409,11 +409,24 @@ class CombinedOrchestrator:
 
         typer.echo("=" * 70)
 
+        stale_files = self._detect_stale_artifacts(results, merged_xunit_path)
+        if stale_files:
+            self._warn_stale_artifacts(stale_files)
+
+        typer.echo()
+
+    def _detect_stale_artifacts(
+        self, results: CombinedResults, merged_xunit_path: Path | None
+    ) -> list[str]:
+        """Return filenames of stale artifacts left over from a prior run.
+
+        Checks root-level Robot Framework artifacts (log.html, output.xml,
+        report.html) and the merged xunit.xml. PyATS artifacts under
+        pyats_results/ are intentionally excluded because
+        multi_archive_generator.py unconditionally recreates that directory
+        each run.
+        """
         stale_files = []
-        # Root-level stale artifact detection covers Robot Framework artifacts only
-        # (log.html, output.xml, report.html) and the merged xunit.xml.
-        # PyATS artifacts under pyats_results/ are intentionally excluded:
-        # multi_archive_generator.py unconditionally recreates that directory each run.
         stale_artifacts = [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]
         for artifact in stale_artifacts:
             artifact_path = self.output_dir / artifact
@@ -430,18 +443,18 @@ class CombinedOrchestrator:
                     continue
 
             stale_files.append(artifact)
+        return stale_files
 
-        if stale_files:
-            typer.secho(
-                "\n\n⚠️  Note: Stale artifacts from a previous run detected, delete the\n"
-                f"   output directory {self.output_dir} to clear them.",
-                fg=typer.colors.YELLOW,
-                err=True,
-            )
-            typer.secho(
-                f"    Files: {', '.join(stale_files)}",
-                fg=typer.colors.YELLOW,
-                err=True,
-            )
-
-        typer.echo()
+    def _warn_stale_artifacts(self, stale_files: list[str]) -> None:
+        """Print a YELLOW warning listing stale artifacts from a prior run."""
+        typer.secho(
+            "\n\n⚠️  Note: Stale artifacts from a previous run detected, delete the\n"
+            f"   output directory {self.output_dir} to clear them.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        typer.secho(
+            f"    Files: {', '.join(stale_files)}",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
