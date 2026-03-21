@@ -8,9 +8,10 @@ passed in from the orchestrators.
 """
 
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
@@ -48,6 +49,23 @@ FRAMEWORK_METADATA: dict[str, dict[str, str]] = {
         "report_path": f"{ROBOT_RESULTS_DIRNAME}/{SUMMARY_REPORT_FILENAME}",
     },
 }
+
+
+@dataclass
+class FrameworkRenderData:
+    """Per-framework data passed to the combined dashboard template.
+
+    Attributes:
+        title: Human-readable framework name shown in the dashboard.
+        stats: Test result counts, or None when pre-flight failed for this framework.
+        report_path: Relative path to the framework's detail report.
+        is_pre_flight_failure: True when the framework was skipped due to pre-flight failure.
+    """
+
+    title: str
+    stats: object  # TestResults | None — kept as object to avoid circular imports
+    report_path: str
+    is_pre_flight_failure: bool
 
 
 class _CurlTemplate(NamedTuple):
@@ -131,7 +149,7 @@ class CombinedReportGenerator:
         - If pre_flight_failure is set with no other results, generates child report
           and hard-links it to combined_summary.html
         - If pre_flight_failure is set and Robot results exist, includes pre-flight in
-          the combined dashboard with link to child report (TO BE DISCUSSED in design review)
+          the combined dashboard with a link to the child report
         - Otherwise, renders the normal combined dashboard template
 
         Args:
@@ -174,7 +192,7 @@ class CombinedReportGenerator:
                 return None
 
         try:
-            test_type_stats: dict[str, dict[str, Any]] = {}
+            test_type_stats: dict[str, FrameworkRenderData] = {}
 
             # Build per-framework stats for template rendering
             if results is not None:
@@ -185,12 +203,12 @@ class CombinedReportGenerator:
                     )
                     for framework_key in ("API", "D2D"):
                         metadata = FRAMEWORK_METADATA.get(framework_key, {})
-                        test_type_stats[framework_key] = {
-                            "title": metadata.get("title", framework_key),
-                            "stats": None,
-                            "report_path": relative_path,
-                            "is_pre_flight_failure": True,
-                        }
+                        test_type_stats[framework_key] = FrameworkRenderData(
+                            title=metadata.get("title", framework_key),
+                            stats=None,
+                            report_path=relative_path,
+                            is_pre_flight_failure=True,
+                        )
 
                 # Map CombinedResults attributes to framework keys
                 framework_mapping = [
@@ -206,12 +224,12 @@ class CombinedReportGenerator:
                         continue
 
                     metadata = FRAMEWORK_METADATA.get(framework_key, {})
-                    test_type_stats[framework_key] = {
-                        "title": metadata.get("title", framework_key),
-                        "stats": test_results,
-                        "report_path": metadata.get("report_path", "#"),
-                        "is_pre_flight_failure": False,
-                    }
+                    test_type_stats[framework_key] = FrameworkRenderData(
+                        title=metadata.get("title", framework_key),
+                        stats=test_results,
+                        report_path=metadata.get("report_path", "#"),
+                        is_pre_flight_failure=False,
+                    )
 
             overall_stats = results if results is not None else CombinedResults()
 
