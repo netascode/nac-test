@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
     LOG_HTML,
     ORDERING_FILENAME,
     OUTPUT_XML,
@@ -266,8 +267,8 @@ class TestRobotOrchestrator:
         orchestrator.robot_writer.write = MagicMock()
         orchestrator.robot_writer.write_merged_data_model = MagicMock()
 
-        # Mock pabot exit code 252 (no tests matched --include/--exclude filters)
-        mock_pabot.return_value = 252
+        # Mock pabot exit code EXIT_DATA_ERROR (for example no tests matched --include/--exclude filters)
+        mock_pabot.return_value = EXIT_DATA_ERROR
 
         # Should return empty TestResults (not error) - "no tests executed" warning
         result = orchestrator.run_tests()

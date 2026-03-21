@@ -172,7 +172,7 @@ class RobotOrchestrator:
             if exit_code == EXIT_DATA_ERROR:
                 # Note: invalid Robot args are caught pre-flight by validate_extra_args.
                 # In the unlikely event the pabot parse_args API change goes unnoticed by CI,
-                # a genuine invalid-arg 252 may appear here as "no tests", which is a known limitation.
+                # a genuine invalid-arg EXIT_DATA_ERROR may appear here as "no tests", which is a known limitation.
                 logger.info("No Robot Framework tests were executed")
                 return TestResults.empty()
             elif exit_code == EXIT_INTERRUPTED:
