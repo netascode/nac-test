@@ -159,7 +159,7 @@ class E2ECombinedTestBase:
         expected_dirs = set()
         if results.has_robot_results:
             expected_dirs.add(ROBOT_RESULTS_DIRNAME)
-        if results.has_pyats_results:
+        if results.has_pyats_results or results.scenario.expected_preflight_failure:
             expected_dirs.add(PYATS_RESULTS_DIRNAME)
 
         expected_files = {
