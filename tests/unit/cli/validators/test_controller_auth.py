@@ -200,10 +200,10 @@ class TestGetAuthCallable:
 class TestPreflightAuthCheck:
     """Tests for preflight_auth_check main function."""
 
-    def test_returns_success_when_no_auth_adapter(
+    def test_returns_skipped_when_no_auth_adapter(
         self, monkeypatch: MonkeyPatch
     ) -> None:
-        """Returns success when no auth adapter is available."""
+        """Returns skipped (not success) when no auth adapter is available."""
         monkeypatch.setenv("IOSXE_URL", "https://device.example.com")
 
         result = preflight_auth_check("IOSXE")
