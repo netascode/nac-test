@@ -152,6 +152,34 @@ class E2ECombinedTestBase:
         assert combined.exists(), f"Missing {COMBINED_SUMMARY_FILENAME} at root"
         assert combined.is_file()
 
+    def test_output_root_contains_only_expected_entries(
+        self, results: E2EResults
+    ) -> None:
+        """Verify the output root contains only whitelisted entries."""
+        expected_dirs = set()
+        if results.has_robot_results:
+            expected_dirs.add(ROBOT_RESULTS_DIRNAME)
+        if results.has_pyats_results:
+            expected_dirs.add(PYATS_RESULTS_DIRNAME)
+
+        expected_files = {
+            COMBINED_SUMMARY_FILENAME,
+            "merged_data_model_test_variables.yaml",
+        }
+        if results.has_robot_results or results.has_pyats_results:
+            expected_files.add(XUNIT_XML)
+        if results.has_robot_results:
+            expected_files.update({OUTPUT_XML, LOG_HTML, REPORT_HTML})
+
+        allowed = expected_dirs | expected_files
+        actual = {path.name for path in results.output_dir.iterdir()}
+        unexpected = actual - allowed
+
+        assert not unexpected, (
+            f"Unexpected entries in output root: {sorted(unexpected)}\n"
+            f"Expected only: {sorted(allowed)}"
+        )
+
     # -------------------------------------------------------------------------
     # Robot Framework Output Tests
     # -------------------------------------------------------------------------

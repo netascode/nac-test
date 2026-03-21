@@ -83,6 +83,7 @@ OUTPUT_XML: str = "output.xml"
 LOG_HTML: str = "log.html"
 REPORT_HTML: str = "report.html"
 XUNIT_XML: str = "xunit.xml"
+ORDERING_FILENAME: str = "ordering.txt"
 SUMMARY_SEPARATOR_WIDTH: int = 70
 
 # HTTP status code range boundaries
