@@ -8,6 +8,7 @@ import re
 
 from colorama import Fore, Style, init
 
+from nac_test.core.constants import SUMMARY_SEPARATOR_WIDTH
 from nac_test.core.types import CombinedResults
 
 # autoreset=True means colors reset after each print
@@ -201,7 +202,7 @@ class TerminalColors:
         )
         lines.append("")
 
-        lines.append(cls.error("=" * 70))
+        lines.append(cls.error("=" * SUMMARY_SEPARATOR_WIDTH))
 
         return "\n".join(lines)
 
