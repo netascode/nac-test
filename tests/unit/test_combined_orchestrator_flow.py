@@ -90,6 +90,27 @@ class TestCombinedOrchestratorFlow:
         """Create sample Robot test results."""
         return TestResults(passed=4, failed=1, skipped=0)
 
+    @pytest.fixture
+    def mock_pyats_instance(self, pyats_results: PyATSResults) -> MagicMock:
+        """Shared mock for PyATSOrchestrator instance with default results."""
+        m = MagicMock()
+        m.run_tests.return_value = pyats_results
+        return m
+
+    @pytest.fixture
+    def mock_robot_instance(self, robot_results: TestResults) -> MagicMock:
+        """Shared mock for RobotOrchestrator instance with default results."""
+        m = MagicMock()
+        m.run_tests.return_value = robot_results
+        return m
+
+    @pytest.fixture
+    def mock_gen_instance(self) -> MagicMock:
+        """Shared mock for CombinedReportGenerator instance."""
+        m = MagicMock()
+        m.generate_combined_summary.return_value = Path("/tmp/combined_summary.html")
+        return m
+
 
 class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
     """Tests for flow control based on _discover_test_types() results."""
@@ -125,16 +146,10 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
     def test_only_pyats_discovered_runs_pyats_only(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: PyATSResults,
+        mock_pyats_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """When only PyATS tests are discovered, only PyATS orchestrator runs."""
-        mock_pyats_instance = MagicMock()
-        mock_pyats_instance.run_tests.return_value = pyats_results
-        mock_gen_instance = MagicMock()
-        mock_gen_instance.generate_combined_summary.return_value = Path(
-            "/tmp/combined_summary.html"
-        )
-
         with (
             patch.object(
                 orchestrator, "_discover_test_types", return_value=(True, False)
@@ -169,16 +184,12 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
         assert result.robot is None
 
     def test_only_robot_discovered_runs_robot_only(
-        self, orchestrator: CombinedOrchestrator, robot_results: TestResults
+        self,
+        orchestrator: CombinedOrchestrator,
+        mock_robot_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """When only Robot tests are discovered, only Robot orchestrator runs."""
-        mock_robot_instance = MagicMock()
-        mock_robot_instance.run_tests.return_value = robot_results
-        mock_gen_instance = MagicMock()
-        mock_gen_instance.generate_combined_summary.return_value = Path(
-            "/tmp/combined_summary.html"
-        )
-
         with (
             patch.object(
                 orchestrator, "_discover_test_types", return_value=(False, True)
@@ -214,19 +225,11 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
     def test_both_discovered_runs_both_orchestrators(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: PyATSResults,
-        robot_results: TestResults,
+        mock_pyats_instance: MagicMock,
+        mock_robot_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """When both test types are discovered, both orchestrators run."""
-        mock_pyats_instance = MagicMock()
-        mock_pyats_instance.run_tests.return_value = pyats_results
-        mock_robot_instance = MagicMock()
-        mock_robot_instance.run_tests.return_value = robot_results
-        mock_gen_instance = MagicMock()
-        mock_gen_instance.generate_combined_summary.return_value = Path(
-            "/tmp/combined_summary.html"
-        )
-
         with (
             patch.object(
                 orchestrator, "_discover_test_types", return_value=(True, True)
@@ -271,7 +274,8 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
         self,
         tmp_path: Path,
         monkeypatch: MonkeyPatch,
-        pyats_results: PyATSResults,
+        mock_pyats_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """dev_pyats_only flag should skip Robot even if Robot tests are discovered."""
         # Set up controller env
@@ -295,13 +299,6 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
         )
 
         # Discovery returns both test types
-        mock_pyats_instance = MagicMock()
-        mock_pyats_instance.run_tests.return_value = pyats_results
-        mock_gen_instance = MagicMock()
-        mock_gen_instance.generate_combined_summary.return_value = Path(
-            "/tmp/combined_summary.html"
-        )
-
         with (
             patch.object(
                 orchestrator, "_discover_test_types", return_value=(True, True)
@@ -331,7 +328,11 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
         assert result.total == 10
 
     def test_dev_robot_only_skips_pyats(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch, robot_results: TestResults
+        self,
+        tmp_path: Path,
+        monkeypatch: MonkeyPatch,
+        mock_robot_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """dev_robot_only flag should skip PyATS even if PyATS tests are discovered."""
         # Set up controller env
@@ -355,13 +356,6 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
         )
 
         # Discovery returns both test types
-        mock_robot_instance = MagicMock()
-        mock_robot_instance.run_tests.return_value = robot_results
-        mock_gen_instance = MagicMock()
-        mock_gen_instance.generate_combined_summary.return_value = Path(
-            "/tmp/combined_summary.html"
-        )
-
         with (
             patch.object(
                 orchestrator, "_discover_test_types", return_value=(True, True)
@@ -394,7 +388,8 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
         self,
         tmp_path: Path,
         monkeypatch: MonkeyPatch,
-        pyats_results: PyATSResults,
+        mock_pyats_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """dev_pyats_only mode should still generate the combined dashboard."""
         monkeypatch.setenv("ACI_URL", "https://apic.test.com")
@@ -414,13 +409,6 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
             output_dir=output_dir,
             merged_data_filename="merged.yaml",
             dev_pyats_only=True,
-        )
-
-        mock_pyats_instance = MagicMock()
-        mock_pyats_instance.run_tests.return_value = pyats_results
-        mock_gen_instance = MagicMock()
-        mock_gen_instance.generate_combined_summary.return_value = Path(
-            "/tmp/combined_summary.html"
         )
 
         with (
@@ -615,19 +603,11 @@ class TestDashboardGeneration(TestCombinedOrchestratorFlow):
     def test_dashboard_receives_by_framework_data(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: PyATSResults,
-        robot_results: TestResults,
+        mock_pyats_instance: MagicMock,
+        mock_robot_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """Dashboard generator should receive frameworks dict from combined results."""
-        mock_pyats_instance = MagicMock()
-        mock_pyats_instance.run_tests.return_value = pyats_results
-        mock_robot_instance = MagicMock()
-        mock_robot_instance.run_tests.return_value = robot_results
-        mock_gen_instance = MagicMock()
-        mock_gen_instance.generate_combined_summary.return_value = Path(
-            "/tmp/combined_summary.html"
-        )
-
         with (
             patch.object(
                 orchestrator, "_discover_test_types", return_value=(True, True)
@@ -700,16 +680,10 @@ class TestExecutionSummary(TestCombinedOrchestratorFlow):
     def test_print_execution_summary_called_when_not_render_only(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: PyATSResults,
+        mock_pyats_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """_print_execution_summary should be called when not in render_only mode."""
-        mock_pyats_instance = MagicMock()
-        mock_pyats_instance.run_tests.return_value = pyats_results
-        mock_gen_instance = MagicMock()
-        mock_gen_instance.generate_combined_summary.return_value = Path(
-            "/tmp/combined_summary.html"
-        )
-
         with (
             patch.object(
                 orchestrator, "_discover_test_types", return_value=(True, False)
