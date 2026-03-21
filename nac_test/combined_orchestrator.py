@@ -21,6 +21,7 @@ from nac_test.core.constants import (
     PYATS_SUPPORTED,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    XUNIT_XML,
 )
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
 from nac_test.core.types import (
@@ -417,7 +418,7 @@ class CombinedOrchestrator:
             if d2d_summary.exists():
                 typer.echo(f"PyATS D2D:  {d2d_summary.resolve()}")
         if results.has_any_results:
-            xunit_path = self.output_dir / "xunit.xml"
+            xunit_path = self.output_dir / XUNIT_XML
             if xunit_path.exists():
                 typer.echo(f"xUnit:      {xunit_path.resolve()}")
 
