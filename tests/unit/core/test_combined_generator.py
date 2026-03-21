@@ -433,8 +433,14 @@ class TestHasReportFlag:
         assert "PyATS API" in content
         assert "View Detailed Report" in content
 
-    def test_has_report_false_when_test_results_is_none(self, tmp_path: Path) -> None:
-        """has_report is False when TestResults is None."""
+    def test_has_report_absent_when_section_not_in_results(
+        self, tmp_path: Path
+    ) -> None:
+        """has_report section is absent when TestResults for that framework is None.
+
+        When api=None, the PyATS API section is never passed to the template,
+        so the has_report flag is not reached — the section simply doesn't exist.
+        """
         generator = CombinedReportGenerator(tmp_path)
 
         test_results = TestResults(passed=2, failed=0, skipped=0)
@@ -484,12 +490,12 @@ class TestHasReportFlag:
         assert "View Detailed Report →" not in content
 
     @pytest.mark.parametrize(
-        ("execution_state", "test_values"),
+        ("execution_state", "test_values", "expect_report_link"),
         [
-            (ExecutionState.SUCCESS, {"passed": 5, "failed": 0, "skipped": 0}),
-            (ExecutionState.EMPTY, {"passed": 0, "failed": 0, "skipped": 0}),
-            (ExecutionState.ERROR, {"passed": 0, "failed": 0, "skipped": 0}),
-            (ExecutionState.SKIPPED, {"passed": 0, "failed": 0, "skipped": 0}),
+            # total > 0 → has_report=True → "View Detailed Report →" present
+            (ExecutionState.SUCCESS, {"passed": 5, "failed": 0, "skipped": 0}, True),
+            # total == 0 → has_report=False → link absent (EMPTY/ERROR/SKIPPED all behave identically)
+            (ExecutionState.SKIPPED, {"passed": 0, "failed": 0, "skipped": 0}, False),
         ],
     )
     def test_has_report_respects_is_empty_across_all_states(
@@ -497,8 +503,9 @@ class TestHasReportFlag:
         tmp_path: Path,
         execution_state: ExecutionState,
         test_values: dict[str, int],
+        expect_report_link: bool,
     ) -> None:
-        """has_report depends on is_empty property across all ExecutionState values."""
+        """has_report depends solely on is_empty (total == 0), not on ExecutionState."""
         generator = CombinedReportGenerator(tmp_path)
 
         test_results = TestResults(
@@ -513,7 +520,7 @@ class TestHasReportFlag:
         assert report_path is not None
 
         content = report_path.read_text()
-        if test_results.total > 0:
+        if expect_report_link:
             assert "View Detailed Report →" in content
         else:
             assert "View Detailed Report →" not in content
