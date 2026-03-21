@@ -81,6 +81,7 @@ OUTPUT_XML: str = "output.xml"
 LOG_HTML: str = "log.html"
 REPORT_HTML: str = "report.html"
 XUNIT_XML: str = "xunit.xml"
+ORDERING_FILENAME: str = "ordering.txt"
 
 # HTTP status code range boundaries
 HTTP_STATUS_SUCCESS_MIN: int = 200
@@ -103,6 +104,10 @@ HTTP_SERVICE_UNAVAILABLE_CODES: tuple[int, ...] = (408, 429, 503, 504)
 
 # Platform detection
 IS_MACOS: bool = platform.system() == "Darwin"
+IS_WINDOWS: bool = platform.system() == "Windows"
 
 # macOS requires Python 3.12+.
 IS_UNSUPPORTED_MACOS_PYTHON: bool = IS_MACOS and sys.version_info < (3, 12)
+
+# PyATS platform support (PyATS wheels are not available for Windows)
+PYATS_SUPPORTED: bool = not IS_WINDOWS

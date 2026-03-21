@@ -15,10 +15,11 @@ import pytest
 from typer.testing import CliRunner
 
 import nac_test.cli.main
-from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
+from nac_test.core.constants import ORDERING_FILENAME, ROBOT_RESULTS_DIRNAME
 
 pytestmark = [
     pytest.mark.integration,
+    pytest.mark.windows,
     pytest.mark.usefixtures("setup_bogus_controller_env"),
 ]
 
@@ -77,7 +78,7 @@ def test_ordering_file_contains_concurrent_tests_and_non_concurrent_suites(
             f"Expected rendered robot file missing: {file_path}"
         )
 
-    content = (output_path / ROBOT_RESULTS_DIRNAME / "ordering.txt").read_text()
+    content = (output_path / ROBOT_RESULTS_DIRNAME / ORDERING_FILENAME).read_text()
 
     # Test cases with Test Concurrency enabled (should use --test mode)
     concurrent_tests = [
@@ -102,7 +103,7 @@ def test_ordering_file_contains_concurrent_tests_and_non_concurrent_suites(
     ]
 
     for test_path, description in concurrent_tests:
-        pattern = rf"^--test.*{re.escape(test_path)}$"
+        pattern = rf"^--test Robot Results\.{re.escape(test_path)}$"
         assert re.search(pattern, content, re.M), (
             f"Missing --test entry for '{test_path}' ({description}) in ordering.txt"
         )
@@ -114,7 +115,7 @@ def test_ordering_file_contains_concurrent_tests_and_non_concurrent_suites(
     ]
 
     for suite_path, description in non_concurrent_suites:
-        pattern = rf"^--suite.*{re.escape(suite_path)}$"
+        pattern = rf"^--suite Robot Results\.{re.escape(suite_path)}$"
         assert re.search(pattern, content, re.M), (
             f"Missing --suite entry for '{suite_path}' ({description}) in ordering.txt"
         )
@@ -138,7 +139,7 @@ def test_ordering_file_not_created_when_no_concurrent_suites_exist(
     # Create a leftover ordering.txt to verify it gets removed
     robot_results_dir = tmp_path / ROBOT_RESULTS_DIRNAME
     robot_results_dir.mkdir()
-    (robot_results_dir / "ordering.txt").touch()
+    (robot_results_dir / ORDERING_FILENAME).touch()
 
     result = runner.invoke(
         nac_test.cli.main.app,
@@ -156,7 +157,7 @@ def test_ordering_file_not_created_when_no_concurrent_suites_exist(
         f"Test execution should succeed without concurrent suites, got exit code "
         f"{result.exit_code}: {result.output}"
     )
-    assert not (robot_results_dir / "ordering.txt").exists(), (
+    assert not (robot_results_dir / ORDERING_FILENAME).exists(), (
         "ordering.txt file should not exist when no concurrent test suites are present"
     )
 
@@ -196,6 +197,6 @@ def test_ordering_file_not_created_when_testlevelsplit_disabled(
         f"{result.exit_code}: {result.output}"
     )
 
-    assert not (tmp_path / ROBOT_RESULTS_DIRNAME / "ordering.txt").exists(), (
+    assert not (tmp_path / ROBOT_RESULTS_DIRNAME / ORDERING_FILENAME).exists(), (
         "ordering.txt file should not exist when NAC_TEST_DISABLE_TESTLEVELSPLIT is set"
     )

@@ -14,6 +14,7 @@ import pytest
 
 from nac_test.core.constants import (
     LOG_HTML,
+    ORDERING_FILENAME,
     OUTPUT_XML,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
@@ -23,6 +24,7 @@ from nac_test.core.constants import (
 from nac_test.core.types import ErrorType, TestResults
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
+from tests.conftest import assert_is_link_to
 
 
 @pytest.fixture
@@ -72,7 +74,7 @@ class TestRobotOrchestrator:
         """Test orchestrator initialization."""
         assert orchestrator.base_output_dir == temp_output_dir
         assert orchestrator.output_dir == temp_output_dir / ROBOT_RESULTS_DIRNAME
-        assert orchestrator.ordering_file == orchestrator.output_dir / "ordering.txt"
+        assert orchestrator.ordering_file == orchestrator.output_dir / ORDERING_FILENAME
         assert orchestrator.data_paths == mock_data_paths
         assert orchestrator.templates_dir == mock_templates_dir
         assert orchestrator.merged_data_filename == "merged_data.yaml"
@@ -106,33 +108,32 @@ class TestRobotOrchestrator:
         assert orchestrator.extra_args == ["--exitonfailure"]
         assert orchestrator.loglevel == LogLevel.DEBUG
 
-    def test_create_backward_compat_symlinks(
-        self, orchestrator, temp_output_dir
-    ) -> None:
-        """Test _create_backward_compat_symlinks creates correct symlinks."""
+    def test_create_backward_compat_links(self, orchestrator, temp_output_dir) -> None:
+        """Test _create_backward_compat_links creates correct links (hard link or symlink)."""
         # Create robot_results directory with files
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
-        # xunit.xml is NOT symlinked (merged xunit is created separately)
+        # xunit.xml is NOT linked (merged xunit is created separately)
         files_to_create = [LOG_HTML, OUTPUT_XML, REPORT_HTML]
         for filename in files_to_create:
             (robot_results_dir / filename).write_text(f"Mock {filename}")
 
-        # Create symlinks
-        orchestrator._create_backward_compat_symlinks()
+        # Create links
+        orchestrator._create_backward_compat_links()
 
-        # Verify symlinks were created at root
+        # Verify links were created at root (either hard link or symlink)
         for filename in files_to_create:
-            symlink = temp_output_dir / filename
-            assert symlink.is_symlink()
-            assert symlink.resolve() == robot_results_dir / filename
-            assert symlink.read_text() == f"Mock {filename}"
+            link = temp_output_dir / filename
+            source = robot_results_dir / filename
+            assert link.exists(), f"Link not created for {filename}"
+            assert_is_link_to(link, source)
+            assert link.read_text() == f"Mock {filename}"
 
-    def test_create_backward_compat_symlinks_replaces_existing(
+    def test_create_backward_compat_links_replaces_existing(
         self, orchestrator, temp_output_dir
     ) -> None:
-        """Test _create_backward_compat_symlinks replaces existing symlinks/files."""
+        """Test _create_backward_compat_links replaces existing files."""
         # Create robot_results directory
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
@@ -141,27 +142,50 @@ class TestRobotOrchestrator:
         # Create existing file at root (should be replaced)
         (temp_output_dir / OUTPUT_XML).write_text("old content")
 
-        # Create symlinks
-        orchestrator._create_backward_compat_symlinks()
+        # Create links
+        orchestrator._create_backward_compat_links()
 
-        # Verify symlink was created and points to new content
-        symlink = temp_output_dir / OUTPUT_XML
-        assert symlink.is_symlink()
-        assert symlink.read_text() == "new content"
+        # Verify link was created and points to new content
+        link = temp_output_dir / OUTPUT_XML
+        assert link.exists()
+        assert link.read_text() == "new content"
 
-    def test_create_backward_compat_symlinks_handles_missing_source(
+    def test_create_backward_compat_links_handles_missing_source(
         self, orchestrator, temp_output_dir, caplog
     ) -> None:
-        """Test _create_backward_compat_symlinks handles missing source files."""
+        """Test _create_backward_compat_links handles missing source files."""
         # Create robot_results directory but no files
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
         # Should not raise an error
-        orchestrator._create_backward_compat_symlinks()
+        orchestrator._create_backward_compat_links()
 
         # Verify warning was logged
-        assert "Source file not found for symlink" in caplog.text
+        assert "Source file not found" in caplog.text
+
+    def test_create_backward_compat_links_falls_back_to_symlink(
+        self, orchestrator, temp_output_dir, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test link creation falls back to symlink when hard links fail on Unix."""
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+
+        source = robot_results_dir / OUTPUT_XML
+        source.write_text("<robot></robot>")
+
+        monkeypatch.setattr("nac_test.robot.orchestrator.IS_WINDOWS", False)
+
+        def fail_hardlink(self: Path, target: Path) -> None:
+            raise OSError("hard links not supported")
+
+        monkeypatch.setattr(Path, "hardlink_to", fail_hardlink)
+
+        orchestrator._create_backward_compat_links()
+
+        link = temp_output_dir / OUTPUT_XML
+        assert link.is_symlink()
+        assert link.resolve() == source
 
     @patch("nac_test.robot.orchestrator.run_pabot")
     def test_run_tests_render_only_mode(
@@ -282,10 +306,10 @@ class TestRobotOrchestrator:
         with pytest.raises(ValueError, match="Template error"):
             orchestrator.run_tests()
 
-    def test_create_backward_compat_symlinks_target_is_directory(
+    def test_create_backward_compat_links_target_is_directory(
         self, orchestrator, temp_output_dir, caplog
     ) -> None:
-        """Test symlink creation when target path exists as a directory."""
+        """Test link creation when target path exists as a directory."""
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
 
@@ -295,8 +319,8 @@ class TestRobotOrchestrator:
         target_dir = temp_output_dir / OUTPUT_XML
         target_dir.mkdir()
 
-        # Should not raise, but log a warning and skip that symlink
-        orchestrator._create_backward_compat_symlinks()
+        # Should not raise, but log a warning and skip that link
+        orchestrator._create_backward_compat_links()
 
         assert "is a directory" in caplog.text
 

@@ -3626,9 +3626,9 @@ nac_test/
 │   ├── report.html                       # Robot report
 │   ├── xunit.xml                         # Robot xUnit XML (source)
 │   └── summary_report.html               # Robot summary (PyATS style)
-├── output.xml → robot_results/output.xml  # Backward-compat symlink
-├── log.html → robot_results/log.html      # Backward-compat symlink
-├── report.html → robot_results/report.html # Backward-compat symlink
+├── output.xml → robot_results/output.xml  # Backward-compat link
+├── log.html → robot_results/log.html      # Backward-compat link
+├── report.html → robot_results/report.html # Backward-compat link
 └── pyats_results/                         # PyATS results
     ├── api/
     │   ├── xunit.xml                     # PyATS API xUnit XML (source)
@@ -3900,13 +3900,17 @@ print(f"Exit Code: {results.exit_code}")
 
 #### Backward Compatibility
 
-Robot results are output to `robot_results/` subdirectory, with symlinks at root for backward compatibility. Rendered Robot templates also live inside `robot_results/`, and top-level Robot suite names now start with `Robot Results` instead of the output directory name:
+Robot results are output to `robot_results/` subdirectory, with links at root for backward compatibility. Rendered Robot templates also live inside `robot_results/`, and top-level Robot suite names now start with `Robot Results` instead of the output directory name:
 
 - `output.xml` → `robot_results/output.xml`
 - `log.html` → `robot_results/log.html`
 - `report.html` → `robot_results/report.html`
 
-The root-level `xunit.xml` is a **merged file** (not a symlink) containing combined results from Robot Framework and PyATS. See [XUnit Merger](#xunit-merger) for details.
+**Implementation detail**: Links are created using hard links first (works on all platforms without elevated privileges). If hard link creation fails, the behavior depends on platform:
+- **Windows**: Log a warning and skip (symlinks require admin privileges)
+- **Unix/macOS**: Fall back to symlinks (relative paths)
+
+The root-level `xunit.xml` is a **merged file** (not a link) containing combined results from Robot Framework and PyATS. See [XUnit Merger](#xunit-merger) for details.
 
 This ensures existing tools and scripts that expect Robot files at root continue to work.
 

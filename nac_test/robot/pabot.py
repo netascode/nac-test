@@ -6,8 +6,12 @@ from pathlib import Path
 
 import pabot.pabot
 
-from nac_test.core.constants import XUNIT_XML
+from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
+    XUNIT_XML,
+)
 from nac_test.utils.strings import parse_cli_option_name
+
 
 logger = logging.getLogger(__name__)
 
