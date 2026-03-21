@@ -29,6 +29,7 @@ from nac_test.core.constants import (
     IS_WINDOWS,
     LOG_HTML,
     OUTPUT_XML,
+    PRE_FLIGHT_FAILURE_FILENAME,
     PYATS_RESULTS_DIRNAME,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
@@ -1363,4 +1364,100 @@ class TestE2EWindowsPyatsSkip(E2ECombinedTestBase):
             f"Missing Windows PyATS skip warning in stdout.\n"
             f"Expected: '{expected_warning}'\n"
             f"Stdout: {results.stdout[:500]}"
+        )
+
+
+# =============================================================================
+# PRE-FLIGHT AUTH FAILURE SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EPreflightAuthFailure(E2ECombinedTestBase):
+    """E2E: pre-flight auth failure (401) does not abort Robot execution.
+
+    Core behavioral contract of PR #636: a pre-flight failure must NOT prevent
+    Robot Framework tests from running. The mock ACI /api/aaaLogin.json endpoint
+    is overridden to return 401, triggering an AUTH pre-flight failure. PyATS is
+    skipped but Robot tests still run to completion.
+
+    Because Robot results are present, combined_summary.html uses the normal
+    combined dashboard template (with summary-item stats and a Robot link), so
+    most base class assertions apply unchanged.
+
+    Two base class tests need overrides because the pre-flight failure causes the
+    pyats_results/ directory to be created (for pre_flight_failure.html) even
+    though no PyATS tests ran:
+    - test_pyats_results_directory_state: pyats_results/ exists but has no api/ or d2d/
+
+    Three combined stats tests are overridden because the template suppresses the
+    success rate (shows '--') when pre_flight_failure is set, so the normal
+    extract_summary_stats_from_combined() regex finds no percentage to parse:
+    - test_combined_stats_correct
+    - test_combined_stats_internal_consistency
+    - test_combined_success_rate_matches_expectation
+    """
+
+    @pytest.fixture
+    def results(self, e2e_preflight_auth_failure_results: E2EResults) -> E2EResults:
+        return e2e_preflight_auth_failure_results
+
+    # -------------------------------------------------------------------------
+    # Overrides for tests affected by pyats_results/ being created for the
+    # pre-flight failure report (pyats_results/pre_flight_failure.html)
+    # -------------------------------------------------------------------------
+
+    def test_pyats_results_directory_state(self, results: E2EResults) -> None:
+        """pyats_results/ is created for pre_flight_failure.html even though no PyATS ran."""
+        pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
+        assert pyats_dir.exists(), (
+            f"Expected {PYATS_RESULTS_DIRNAME}/ to exist (for pre_flight_failure.html)"
+        )
+        assert pyats_dir.is_dir()
+
+    def test_combined_stats_correct(self, results: E2EResults) -> None:
+        """Pre-flight failure replaces the success rate with '--'; verify Robot counts instead."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        verify_html_structure(html)
+        assert 'class="summary-item rate"' in html
+        # Rate shows '--' (not a percentage) when pre_flight_failure is set in the template
+        assert "<strong>--</strong>" in html
+
+    def test_combined_stats_internal_consistency(self, results: E2EResults) -> None:
+        """Pre-flight failure suppresses success rate; HTML structure is still valid."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        verify_html_structure(html)
+
+    def test_combined_success_rate_matches_expectation(
+        self, results: E2EResults
+    ) -> None:
+        """Pre-flight failure replaces the success rate with '--' in the combined dashboard."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        assert "<strong>--</strong>" in html, (
+            "Expected '--' placeholder for success rate in pre-flight failure combined_summary"
+        )
+
+    # -------------------------------------------------------------------------
+    # Pre-flight failure specific tests
+    # -------------------------------------------------------------------------
+
+    def test_combined_dashboard_shows_preflight_failure_banner(
+        self, results: E2EResults
+    ) -> None:
+        """Combined dashboard shows a pre-flight failure banner alongside Robot results."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        assert "preflight-failure" in html, (
+            "Expected pre-flight failure banner CSS class in combined_summary.html"
+        )
+        assert "Pre-flight failure" in html, (
+            "Expected 'Pre-flight failure' text in combined_summary.html"
+        )
+
+    def test_preflight_failure_report_exists(self, results: E2EResults) -> None:
+        """Pre-flight failure detail report exists under pyats_results/."""
+        failure_report = (
+            results.output_dir / PYATS_RESULTS_DIRNAME / PRE_FLIGHT_FAILURE_FILENAME
+        )
+        assert failure_report.exists(), (
+            f"Expected pre-flight failure report at "
+            f"{PYATS_RESULTS_DIRNAME}/{PRE_FLIGHT_FAILURE_FILENAME}"
         )

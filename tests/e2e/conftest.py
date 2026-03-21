@@ -29,6 +29,7 @@ from tests.e2e.config import (
     DRY_RUN_ROBOT_FAIL_SCENARIO,
     DRY_RUN_SCENARIO,
     MIXED_SCENARIO,
+    PREFLIGHT_AUTH_FAILURE_SCENARIO,
     PYATS_API_ONLY_SCENARIO,
     PYATS_CC_SCENARIO,
     PYATS_D2D_ONLY_SCENARIO,
@@ -514,3 +515,43 @@ def e2e_windows_pyats_skip_results(
         tmp_path_factory,
         class_mocker,
     )
+
+
+@pytest.fixture(scope="class")
+def e2e_preflight_auth_failure_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> Generator[E2EResults, None, None]:
+    """Pre-flight auth failure (401): Robot still runs, combined_summary shows failure report.
+
+    Inserts a 401 response for the ACI /api/aaaLogin.json endpoint at position 0
+    so it takes priority over the YAML-loaded 200 response (first-match wins).
+    The insertion is undone after the class to preserve session-wide server state.
+    """
+    injected_endpoint = {
+        "name": "ACI login - force 401",
+        "path_pattern": "/api/aaaLogin.json",
+        "status_code": 401,
+        "response_data": {"error": "Unauthorized"},
+        "method": "POST",
+        "match_type": "exact",
+        "set_cookies": {},
+    }
+    mock_api_server.endpoint_configs.insert(0, injected_endpoint)
+    try:
+        yield _run_e2e_scenario(
+            PREFLIGHT_AUTH_FAILURE_SCENARIO,
+            mock_api_server,
+            None,
+            tmp_path_factory,
+            class_mocker,
+        )
+    finally:
+        # Remove the injected entry to restore the session-wide server state.
+        # We check identity first to guard against unexpected list mutations.
+        if (
+            mock_api_server.endpoint_configs
+            and mock_api_server.endpoint_configs[0] is injected_endpoint
+        ):
+            mock_api_server.endpoint_configs.pop(0)
