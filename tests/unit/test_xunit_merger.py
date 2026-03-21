@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from nac_test.core.constants import XUNIT_XML
+from nac_test.core.constants import (
+    PYATS_RESULTS_DIRNAME,
+    ROBOT_RESULTS_DIRNAME,
+    XUNIT_XML,
+)
 from nac_test.core.types import CombinedResults, ExecutionState, TestResults
 from nac_test.utils.xunit_merger import (
     XUnitStats,
@@ -295,7 +299,7 @@ class TestCollectXunitFiles:
     def test_collects_robot_xunit(
         self, tmp_path: Path, results_robot_only: CombinedResults
     ) -> None:
-        robot_dir = tmp_path / "robot_results"
+        robot_dir = tmp_path / ROBOT_RESULTS_DIRNAME
         robot_dir.mkdir()
         (robot_dir / XUNIT_XML).write_text("<testsuite/>")
 
@@ -307,7 +311,7 @@ class TestCollectXunitFiles:
     def test_collects_pyats_api_xunit(
         self, tmp_path: Path, results_api_only: CombinedResults
     ) -> None:
-        api_dir = tmp_path / "pyats_results" / "api"
+        api_dir = tmp_path / PYATS_RESULTS_DIRNAME / "api"
         api_dir.mkdir(parents=True)
         (api_dir / XUNIT_XML).write_text("<testsuite/>")
 
@@ -319,7 +323,7 @@ class TestCollectXunitFiles:
     def test_collects_pyats_d2d_xunit_per_device(
         self, tmp_path: Path, results_d2d_only: CombinedResults
     ) -> None:
-        d2d_dir = tmp_path / "pyats_results" / "d2d"
+        d2d_dir = tmp_path / PYATS_RESULTS_DIRNAME / "d2d"
         for device in ["router1", "router2"]:
             device_dir = d2d_dir / device
             device_dir.mkdir(parents=True)
@@ -339,14 +343,16 @@ class TestCollectXunitFiles:
     def test_collects_all_xunit_sources(
         self, tmp_path: Path, results_all_executed: CombinedResults
     ) -> None:
-        (tmp_path / "robot_results").mkdir()
-        (tmp_path / "robot_results" / XUNIT_XML).write_text("<testsuite/>")
+        (tmp_path / ROBOT_RESULTS_DIRNAME).mkdir()
+        (tmp_path / ROBOT_RESULTS_DIRNAME / XUNIT_XML).write_text("<testsuite/>")
 
-        (tmp_path / "pyats_results" / "api").mkdir(parents=True)
-        (tmp_path / "pyats_results" / "api" / XUNIT_XML).write_text("<testsuite/>")
+        (tmp_path / PYATS_RESULTS_DIRNAME / "api").mkdir(parents=True)
+        (tmp_path / PYATS_RESULTS_DIRNAME / "api" / XUNIT_XML).write_text(
+            "<testsuite/>"
+        )
 
-        (tmp_path / "pyats_results" / "d2d" / "device1").mkdir(parents=True)
-        (tmp_path / "pyats_results" / "d2d" / "device1" / XUNIT_XML).write_text(
+        (tmp_path / PYATS_RESULTS_DIRNAME / "d2d" / "device1").mkdir(parents=True)
+        (tmp_path / PYATS_RESULTS_DIRNAME / "d2d" / "device1" / XUNIT_XML).write_text(
             "<testsuite/>"
         )
 
@@ -367,11 +373,11 @@ class TestCollectXunitFiles:
     def test_skips_stale_robot_xunit_when_robot_not_run(
         self, tmp_path: Path, results_api_only: CombinedResults
     ) -> None:
-        robot_dir = tmp_path / "robot_results"
+        robot_dir = tmp_path / ROBOT_RESULTS_DIRNAME
         robot_dir.mkdir()
         (robot_dir / XUNIT_XML).write_text("<testsuite/>")
 
-        api_dir = tmp_path / "pyats_results" / "api"
+        api_dir = tmp_path / PYATS_RESULTS_DIRNAME / "api"
         api_dir.mkdir(parents=True)
         (api_dir / XUNIT_XML).write_text("<testsuite/>")
 
@@ -383,11 +389,11 @@ class TestCollectXunitFiles:
     def test_skips_stale_api_xunit_when_api_not_run(
         self, tmp_path: Path, results_robot_only: CombinedResults
     ) -> None:
-        robot_dir = tmp_path / "robot_results"
+        robot_dir = tmp_path / ROBOT_RESULTS_DIRNAME
         robot_dir.mkdir()
         (robot_dir / XUNIT_XML).write_text("<testsuite/>")
 
-        api_dir = tmp_path / "pyats_results" / "api"
+        api_dir = tmp_path / PYATS_RESULTS_DIRNAME / "api"
         api_dir.mkdir(parents=True)
         (api_dir / XUNIT_XML).write_text("<testsuite/>")
 
@@ -399,11 +405,11 @@ class TestCollectXunitFiles:
     def test_skips_stale_d2d_xunit_when_d2d_not_run(
         self, tmp_path: Path, results_robot_only: CombinedResults
     ) -> None:
-        robot_dir = tmp_path / "robot_results"
+        robot_dir = tmp_path / ROBOT_RESULTS_DIRNAME
         robot_dir.mkdir()
         (robot_dir / XUNIT_XML).write_text("<testsuite/>")
 
-        d2d_dir = tmp_path / "pyats_results" / "d2d" / "device1"
+        d2d_dir = tmp_path / PYATS_RESULTS_DIRNAME / "d2d" / "device1"
         d2d_dir.mkdir(parents=True)
         (d2d_dir / XUNIT_XML).write_text("<testsuite/>")
 
@@ -415,7 +421,7 @@ class TestCollectXunitFiles:
     def test_skips_empty_robot_results(
         self, tmp_path: Path, results_robot_empty: CombinedResults
     ) -> None:
-        robot_dir = tmp_path / "robot_results"
+        robot_dir = tmp_path / ROBOT_RESULTS_DIRNAME
         robot_dir.mkdir()
         (robot_dir / XUNIT_XML).write_text("<testsuite/>")
 
@@ -431,7 +437,7 @@ class TestMergeXunitResults:
             api=TestResults(failed=1, state=ExecutionState.SUCCESS),
         )
 
-        robot_dir = tmp_path / "robot_results"
+        robot_dir = tmp_path / ROBOT_RESULTS_DIRNAME
         robot_dir.mkdir()
         (robot_dir / XUNIT_XML).write_text(
             """<?xml version="1.0"?>
@@ -441,7 +447,7 @@ class TestMergeXunitResults:
 </testsuite>"""
         )
 
-        api_dir = tmp_path / "pyats_results" / "api"
+        api_dir = tmp_path / PYATS_RESULTS_DIRNAME / "api"
         api_dir.mkdir(parents=True)
         (api_dir / XUNIT_XML).write_text(
             """<?xml version="1.0"?>
