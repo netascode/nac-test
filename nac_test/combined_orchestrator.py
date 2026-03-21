@@ -192,57 +192,7 @@ class CombinedOrchestrator:
         # Dry-run mode skips auth — it validates test structure, not execution.
         preflight_failed = False
         if has_pyats and not self.render_only and not self.dry_run:
-            try:
-                self.controller_type = detect_controller_type()
-                logger.info(f"Controller type detected: {self.controller_type}")
-            except ValueError as e:
-                typer.secho(
-                    f"\n❌ Controller detection failed:\n{e}",
-                    fg=typer.colors.RED,
-                    err=True,
-                )
-                combined_results.pre_flight_failure = PreFlightFailure(
-                    failure_type=PreFlightFailureType.DETECTION,
-                    controller_type=None,
-                    controller_url=None,
-                    detail=str(e),
-                )
-                preflight_failed = True
-
-            if not preflight_failed:
-                # Type narrowing: controller_type is set by detect_controller_type() above
-                assert self.controller_type is not None
-                auth_result = preflight_auth_check(self.controller_type)
-                if not auth_result.success:
-                    typer.echo("")
-                    if auth_result.reason == AuthOutcome.UNREACHABLE:
-                        display_unreachable_banner(
-                            controller_type=auth_result.controller_type,
-                            controller_url=auth_result.controller_url,
-                            detail=auth_result.detail,
-                        )
-                    else:
-                        env_var_prefix = get_env_var_prefix(auth_result.controller_type)
-                        display_auth_failure_banner(
-                            controller_type=auth_result.controller_type,
-                            controller_url=auth_result.controller_url,
-                            detail=auth_result.detail,
-                            env_var_prefix=env_var_prefix,
-                        )
-                    typer.echo("")
-
-                    combined_results.pre_flight_failure = PreFlightFailure(
-                        failure_type=(
-                            PreFlightFailureType.UNREACHABLE
-                            if auth_result.reason == AuthOutcome.UNREACHABLE
-                            else PreFlightFailureType.AUTH
-                        ),
-                        controller_type=auth_result.controller_type,
-                        controller_url=auth_result.controller_url,
-                        detail=auth_result.detail,
-                        status_code=auth_result.status_code,
-                    )
-                    preflight_failed = True
+            preflight_failed = self._run_pre_flight_checks(combined_results)
 
         if has_pyats and not self.render_only and not preflight_failed:
             typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
@@ -368,6 +318,64 @@ class CombinedOrchestrator:
             logger.debug("Found Robot template files")
 
         return has_pyats, has_robot
+
+    def _run_pre_flight_checks(self, combined_results: CombinedResults) -> bool:
+        """Detect the controller type and validate credentials before PyATS runs.
+
+        Populates ``combined_results.pre_flight_failure`` on failure and emits a
+        user-facing banner.  Returns ``True`` when a failure was detected (caller
+        should skip PyATS execution), ``False`` when all checks passed.
+        """
+        try:
+            self.controller_type = detect_controller_type()
+            logger.info(f"Controller type detected: {self.controller_type}")
+        except ValueError as e:
+            typer.secho(
+                f"\n❌ Controller detection failed:\n{e}",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            combined_results.pre_flight_failure = PreFlightFailure(
+                failure_type=PreFlightFailureType.DETECTION,
+                controller_type=None,
+                controller_url=None,
+                detail=str(e),
+            )
+            return True
+
+        auth_result = preflight_auth_check(self.controller_type)
+        if not auth_result.success:
+            typer.echo("")
+            if auth_result.reason == AuthOutcome.UNREACHABLE:
+                display_unreachable_banner(
+                    controller_type=auth_result.controller_type,
+                    controller_url=auth_result.controller_url,
+                    detail=auth_result.detail,
+                )
+            else:
+                env_var_prefix = get_env_var_prefix(auth_result.controller_type)
+                display_auth_failure_banner(
+                    controller_type=auth_result.controller_type,
+                    controller_url=auth_result.controller_url,
+                    detail=auth_result.detail,
+                    env_var_prefix=env_var_prefix,
+                )
+            typer.echo("")
+
+            combined_results.pre_flight_failure = PreFlightFailure(
+                failure_type=(
+                    PreFlightFailureType.UNREACHABLE
+                    if auth_result.reason == AuthOutcome.UNREACHABLE
+                    else PreFlightFailureType.AUTH
+                ),
+                controller_type=auth_result.controller_type,
+                controller_url=auth_result.controller_url,
+                detail=auth_result.detail,
+                status_code=auth_result.status_code,
+            )
+            return True
+
+        return False
 
     def _print_execution_summary(self, results: CombinedResults) -> None:
         """Print execution summary with statistics."""
