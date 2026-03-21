@@ -50,20 +50,24 @@ class TestValidatedRobotArgs:
 class TestTestResultsFactoryMethods:
     """Tests for TestResults factory methods."""
 
-    def test_empty_creates_empty_state(self) -> None:
-        """empty() creates results with EMPTY state and zero counts."""
-        result = TestResults.empty()
-
-        assert result.state == ExecutionState.EMPTY
-        assert result.total == 0
-        assert result.reason is None
-
-    def test_not_run_creates_skipped_state(self) -> None:
-        """not_run() creates results with SKIPPED state."""
-        result = TestResults.not_run()
-
-        assert result.state == ExecutionState.SKIPPED
-        assert result.total == 0
+    @pytest.mark.parametrize(
+        ("result", "expected_state", "expected_total"),
+        [
+            (TestResults.empty(), ExecutionState.EMPTY, 0),
+            (TestResults.not_run(), ExecutionState.SKIPPED, 0),
+            (TestResults(), ExecutionState.SUCCESS, 0),
+        ],
+        ids=["empty", "not_run", "default_constructor"],
+    )
+    def test_factory_creates_correct_state_and_total(
+        self,
+        result: TestResults,
+        expected_state: ExecutionState,
+        expected_total: int,
+    ) -> None:
+        """Factory methods create the correct state and zero total."""
+        assert result.state == expected_state
+        assert result.total == expected_total
 
     def test_not_run_with_reason(self) -> None:
         """not_run() stores reason."""
@@ -95,13 +99,6 @@ class TestTestResultsFactoryMethods:
         assert result.state == ExecutionState.ERROR
         assert result.reason == "Execution was interrupted"
         assert result.error_type == ErrorType.INTERRUPTED
-
-    def test_default_constructor_creates_success_state(self) -> None:
-        """Default constructor creates SUCCESS state."""
-        result = TestResults()
-
-        assert result.state == ExecutionState.SUCCESS
-        assert result.total == 0
 
 
 class TestTestResultsTotal:
