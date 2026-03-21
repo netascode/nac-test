@@ -20,6 +20,7 @@ from nac_test.core.constants import (
     EXIT_INTERRUPTED,
     IS_WINDOWS,
     LOG_HTML,
+    ORDERING_FILENAME,
     OUTPUT_XML,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
@@ -98,7 +99,7 @@ class RobotOrchestrator:
 
         # Determine if ordering file should be used for test-level parallelization
         if not DISABLE_TESTLEVELSPLIT:
-            self.ordering_file: Path | None = self.output_dir / "ordering.txt"
+            self.ordering_file: Path | None = self.output_dir / ORDERING_FILENAME
         else:
             self.ordering_file = None
 
@@ -220,11 +221,10 @@ class RobotOrchestrator:
 
         This ensures existing tools/scripts that expect these files at root continue to work.
         """
-        robot_results_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
         files_to_link = [LOG_HTML, OUTPUT_XML, REPORT_HTML]
 
         for filename in files_to_link:
-            source = robot_results_dir / filename
+            source = self.output_dir / filename
             target = self.base_output_dir / filename
 
             # Skip if source doesn't exist (shouldn't happen, but be defensive)
