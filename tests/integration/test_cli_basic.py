@@ -23,7 +23,7 @@ pytestmark = [
 ]
 
 
-@pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_cwd_dir"])
+@pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_relative_output_dir"])
 def test_nac_test_basic_execution_succeeds(
     request: pytest.FixtureRequest, fixture_name: str
 ) -> None:

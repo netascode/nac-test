@@ -53,6 +53,7 @@ class CombinedOrchestrator:
         ├── combined_summary.html     # Unified dashboard (all frameworks)
         ├── xunit.xml                 # Merged xunit from Robot + PyATS (for CI/CD)
         ├── robot_results/            # Robot Framework artifacts
+        │   ├── <rendered templates>
         │   ├── output.xml, log.html, report.html, xunit.xml
         │   └── summary_report.html
         ├── output.xml, log.html...   # Symlinks to robot_results/ (backward compat)

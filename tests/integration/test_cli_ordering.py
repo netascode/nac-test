@@ -8,7 +8,6 @@ generation for Robot Framework test execution, including concurrent test
 handling and test-level splitting behavior.
 """
 
-import os
 import re
 from pathlib import Path
 
@@ -16,6 +15,7 @@ import pytest
 from typer.testing import CliRunner
 
 import nac_test.cli.main
+from nac_test.core.constants import ORDERING_FILENAME, ROBOT_RESULTS_DIRNAME
 
 pytestmark = [
     pytest.mark.integration,
@@ -24,7 +24,7 @@ pytestmark = [
 ]
 
 
-@pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_cwd_dir"])
+@pytest.mark.parametrize("fixture_name", ["tmp_path", "temp_relative_output_dir"])
 def test_ordering_file_contains_concurrent_tests_and_non_concurrent_suites(
     request: pytest.FixtureRequest, fixture_name: str
 ) -> None:
@@ -34,7 +34,7 @@ def test_ordering_file_contains_concurrent_tests_and_non_concurrent_suites(
     - Test cases with Test Concurrency metadata are listed with --test flag
     - Suites without Test Concurrency are listed with --suite flag
     - All expected robot files are rendered correctly
-    - Supports both tmp_path (system temp) and temp_cwd_dir (cwd) locations
+    - Supports both tmp_path (absolute system temp) and temp_relative_output_dir (relative cwd path)
 
     Args:
         request: Pytest fixture request for dynamic fixture access.
@@ -42,6 +42,7 @@ def test_ordering_file_contains_concurrent_tests_and_non_concurrent_suites(
     """
     # Get the fixture value dynamically based on the parameter
     output_dir = request.getfixturevalue(fixture_name)
+    output_path = Path(output_dir)
 
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_list/"
@@ -73,54 +74,51 @@ def test_ordering_file_contains_concurrent_tests_and_non_concurrent_suites(
         "keywords.resource",
     ]
     for file_path in expected_files:
-        assert os.path.exists(os.path.join(output_dir, file_path)), (
+        assert (output_path / ROBOT_RESULTS_DIRNAME / file_path).exists(), (
             f"Expected rendered robot file missing: {file_path}"
         )
 
-    with open(os.path.join(output_dir, "ordering.txt")) as fd:
-        content = fd.read()
+    content = (output_path / ROBOT_RESULTS_DIRNAME / ORDERING_FILENAME).read_text()
 
-        # Test cases with Test Concurrency enabled (should use --test mode)
-        concurrent_tests = [
-            ("Suite 1.Concurrent.Concurrent Test 1", "Test Concurrency = True"),
-            ("Suite 1.Concurrent.Concurrent Test 2", "Test Concurrency = True"),
-            (
-                "Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 1",
-                "test concurrency = True",
-            ),
-            (
-                "Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 2",
-                "test concurrency = True",
-            ),
-            (
-                "Suite 1.Mixedcase-Concurrent.Mixed Case Concurrent Test 1",
-                "TeSt CoNcUrReNcY = True",
-            ),
-            (
-                "Suite 1.Mixedcase-Concurrent.Mixed Case Concurrent Test 2",
-                "TeSt CoNcUrReNcY = True",
-            ),
-        ]
+    # Test cases with Test Concurrency enabled (should use --test mode)
+    concurrent_tests = [
+        ("Suite 1.Concurrent.Concurrent Test 1", "Test Concurrency = True"),
+        ("Suite 1.Concurrent.Concurrent Test 2", "Test Concurrency = True"),
+        (
+            "Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 1",
+            "test concurrency = True",
+        ),
+        (
+            "Suite 1.Lowercase-Concurrent.Lowercase Concurrent Test 2",
+            "test concurrency = True",
+        ),
+        (
+            "Suite 1.Mixedcase-Concurrent.Mixed Case Concurrent Test 1",
+            "TeSt CoNcUrReNcY = True",
+        ),
+        (
+            "Suite 1.Mixedcase-Concurrent.Mixed Case Concurrent Test 2",
+            "TeSt CoNcUrReNcY = True",
+        ),
+    ]
 
-        for test_path, description in concurrent_tests:
-            pattern = rf"^--test.*{re.escape(test_path)}$"
-            assert re.search(pattern, content, re.M), (
-                f"Missing --test entry for '{test_path}' ({description}) in "
-                f"ordering.txt"
-            )
+    for test_path, description in concurrent_tests:
+        pattern = rf"^--test Robot Results\.{re.escape(test_path)}$"
+        assert re.search(pattern, content, re.M), (
+            f"Missing --test entry for '{test_path}' ({description}) in ordering.txt"
+        )
 
-        # Suites without concurrency (should use --suite mode)
-        non_concurrent_suites = [
-            ("Suite 1.Non-Concurrent", "no Test Concurrency metadata"),
-            ("Suite 1.Disabled-Concurrent", "Test Concurrency = False"),
-        ]
+    # Suites without concurrency (should use --suite mode)
+    non_concurrent_suites = [
+        ("Suite 1.Non-Concurrent", "no Test Concurrency metadata"),
+        ("Suite 1.Disabled-Concurrent", "Test Concurrency = False"),
+    ]
 
-        for suite_path, description in non_concurrent_suites:
-            pattern = rf"^--suite.*{re.escape(suite_path)}$"
-            assert re.search(pattern, content, re.M), (
-                f"Missing --suite entry for '{suite_path}' ({description}) in "
-                f"ordering.txt"
-            )
+    for suite_path, description in non_concurrent_suites:
+        pattern = rf"^--suite Robot Results\.{re.escape(suite_path)}$"
+        assert re.search(pattern, content, re.M), (
+            f"Missing --suite entry for '{suite_path}' ({description}) in ordering.txt"
+        )
 
 
 def test_ordering_file_not_created_when_no_concurrent_suites_exist(
@@ -139,7 +137,9 @@ def test_ordering_file_not_created_when_no_concurrent_suites_exist(
     data_path = "tests/integration/fixtures/data/"
     templates_path = "tests/integration/fixtures/templates_ordering_2/"
     # Create a leftover ordering.txt to verify it gets removed
-    (tmp_path / "ordering.txt").touch()
+    robot_results_dir = tmp_path / ROBOT_RESULTS_DIRNAME
+    robot_results_dir.mkdir()
+    (robot_results_dir / ORDERING_FILENAME).touch()
 
     result = runner.invoke(
         nac_test.cli.main.app,
@@ -157,7 +157,7 @@ def test_ordering_file_not_created_when_no_concurrent_suites_exist(
         f"Test execution should succeed without concurrent suites, got exit code "
         f"{result.exit_code}: {result.output}"
     )
-    assert not (tmp_path / "ordering.txt").exists(), (
+    assert not (robot_results_dir / ORDERING_FILENAME).exists(), (
         "ordering.txt file should not exist when no concurrent test suites are present"
     )
 
@@ -197,6 +197,6 @@ def test_ordering_file_not_created_when_testlevelsplit_disabled(
         f"{result.exit_code}: {result.output}"
     )
 
-    assert not (tmp_path / "ordering.txt").exists(), (
+    assert not (tmp_path / ROBOT_RESULTS_DIRNAME / ORDERING_FILENAME).exists(), (
         "ordering.txt file should not exist when NAC_TEST_DISABLE_TESTLEVELSPLIT is set"
     )

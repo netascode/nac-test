@@ -81,6 +81,7 @@ OUTPUT_XML: str = "output.xml"
 LOG_HTML: str = "log.html"
 REPORT_HTML: str = "report.html"
 XUNIT_XML: str = "xunit.xml"
+ORDERING_FILENAME: str = "ordering.txt"
 
 # HTTP status code range boundaries
 HTTP_STATUS_SUCCESS_MIN: int = 200
