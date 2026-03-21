@@ -393,3 +393,60 @@ class TestRobotOrchestrator:
         call_kwargs = mock_pabot.call_args[1]
         assert call_kwargs["verbose"] is expected_verbose
         assert call_kwargs["default_robot_loglevel"] == expected_default_robot_loglevel
+
+    @pytest.mark.parametrize(
+        ("include_tags", "exclude_tags"),
+        [
+            (["smoke"], []),
+            ([], ["slow"]),
+            (["smoke"], ["slow"]),
+        ],
+        ids=[
+            "include_only",
+            "exclude_only",
+            "include_and_exclude",
+        ],
+    )
+    @patch("nac_test.robot.orchestrator.run_pabot")
+    @patch("nac_test.robot.orchestrator.RobotReportGenerator")
+    def test_include_exclude_tags_passed_to_pabot(
+        self,
+        mock_generator,
+        mock_pabot,
+        mock_data_paths,
+        mock_templates_dir,
+        temp_output_dir,
+        include_tags,
+        exclude_tags,
+    ) -> None:
+        """Test that include/exclude tags are correctly passed through to run_pabot."""
+        orchestrator = RobotOrchestrator(
+            data_paths=mock_data_paths,
+            templates_dir=mock_templates_dir,
+            output_dir=temp_output_dir,
+            merged_data_filename="merged.yaml",
+            include_tags=include_tags,
+            exclude_tags=exclude_tags,
+        )
+        orchestrator.robot_writer.write = MagicMock()
+        orchestrator.robot_writer.write_merged_data_model = MagicMock()
+        mock_pabot.return_value = 0
+
+        mock_generator_instance = MagicMock()
+        mock_generator_instance.generate_summary_report.return_value = (
+            None,
+            TestResults(),
+        )
+        mock_generator.return_value = mock_generator_instance
+
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
+            (robot_results_dir / filename).write_text(f"Mock {filename}")
+
+        orchestrator.run_tests()
+
+        mock_pabot.assert_called_once()
+        call_kwargs = mock_pabot.call_args[1]
+        assert call_kwargs["include"] == include_tags
+        assert call_kwargs["exclude"] == exclude_tags
