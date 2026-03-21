@@ -519,39 +519,20 @@ def e2e_windows_pyats_skip_results(
 
 @pytest.fixture(scope="class")
 def e2e_preflight_auth_failure_results(
-    mock_api_server: MockAPIServer,
+    mock_api_server_preflight_401: MockAPIServer,
     tmp_path_factory: pytest.TempPathFactory,
     class_mocker: pytest.MonkeyPatch,
-) -> Generator[E2EResults, None, None]:
+) -> E2EResults:
     """Pre-flight auth failure (401): Robot still runs, combined_summary shows failure report.
 
-    Inserts a 401 response for the ACI /api/aaaLogin.json endpoint at position 0
-    so it takes priority over the YAML-loaded 200 response (first-match wins).
-    The insertion is undone after the class to preserve session-wide server state.
+    Uses a dedicated mock server loaded from mock_api_config_preflight_401.yaml
+    that returns 401 for all auth endpoints. This keeps the shared mock_api_server
+    untouched and avoids any endpoint mutation.
     """
-    injected_endpoint = {
-        "name": "ACI login - force 401",
-        "path_pattern": "/api/aaaLogin.json",
-        "status_code": 401,
-        "response_data": {"error": "Unauthorized"},
-        "method": "POST",
-        "match_type": "exact",
-        "set_cookies": {},
-    }
-    mock_api_server.endpoint_configs.insert(0, injected_endpoint)
-    try:
-        yield _run_e2e_scenario(
-            PREFLIGHT_AUTH_FAILURE_SCENARIO,
-            mock_api_server,
-            None,
-            tmp_path_factory,
-            class_mocker,
-        )
-    finally:
-        # Remove the injected entry to restore the session-wide server state.
-        # We check identity first to guard against unexpected list mutations.
-        if (
-            mock_api_server.endpoint_configs
-            and mock_api_server.endpoint_configs[0] is injected_endpoint
-        ):
-            mock_api_server.endpoint_configs.pop(0)
+    return _run_e2e_scenario(
+        PREFLIGHT_AUTH_FAILURE_SCENARIO,
+        mock_api_server_preflight_401,
+        None,
+        tmp_path_factory,
+        class_mocker,
+    )
