@@ -1,0 +1,538 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+"""Pytest fixtures for E2E tests.
+
+This module provides E2E-specific fixtures:
+- E2EResults dataclass for capturing test run results
+- Scenario execution helper and individual scenario fixtures
+- SDWAN user testbed for D2D tests
+
+Common fixtures (mock_api_server, class_mocker, etc.) are inherited
+from the global tests/conftest.py.
+"""
+
+import os
+import tempfile
+from collections.abc import Generator
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import pytest
+from typer.testing import CliRunner
+
+import nac_test.cli.main
+from tests.e2e.config import (
+    ALL_FAIL_SCENARIO,
+    DRY_RUN_PYATS_ONLY_SCENARIO,
+    DRY_RUN_ROBOT_FAIL_SCENARIO,
+    DRY_RUN_SCENARIO,
+    MIXED_SCENARIO,
+    PREFLIGHT_AUTH_FAILURE_SCENARIO,
+    PYATS_API_ONLY_SCENARIO,
+    PYATS_CC_SCENARIO,
+    PYATS_D2D_ONLY_SCENARIO,
+    ROBOT_ONLY_SCENARIO,
+    SUCCESS_SCENARIO,
+    VERBOSE_SCENARIO,
+    VERBOSE_WITH_INFO_SCENARIO,
+    WINDOWS_PYATS_SKIP_SCENARIO,
+    E2EScenario,
+)
+from tests.e2e.mocks.mock_server import MockAPIServer
+
+
+@dataclass
+class E2EResults:
+    """Results from an E2E test run.
+
+    Attributes:
+        scenario: The E2E scenario that was executed.
+        output_dir: Path to the output directory containing all reports.
+        exit_code: CLI exit code.
+        stdout: CLI standard output.
+        stderr: CLI standard error.
+        filtered_stdout: Stdout with logger lines (INFO -, DEBUG -, etc.) removed.
+        cli_result: The full CliRunner result object.
+    """
+
+    scenario: E2EScenario
+    output_dir: Path
+    exit_code: int
+    stdout: str
+    stderr: str
+    filtered_stdout: str
+    cli_result: Any  # typer.testing.Result
+
+    @property
+    def has_robot_results(self) -> bool:
+        """Robot always produces output (even in dry-run mode)."""
+        return self.scenario.has_robot_tests
+
+    @property
+    def has_pyats_api_results(self) -> bool:
+        """PyATS API results exist only when not in dry-run mode."""
+        return self.scenario.has_pyats_api_tests and not self.scenario.is_dry_run
+
+    @property
+    def has_pyats_d2d_results(self) -> bool:
+        """PyATS D2D results exist only when not in dry-run mode."""
+        return self.scenario.has_pyats_d2d_tests and not self.scenario.is_dry_run
+
+    @property
+    def has_pyats_results(self) -> bool:
+        """Any PyATS results exist."""
+        return self.has_pyats_api_results or self.has_pyats_d2d_results
+
+
+# =============================================================================
+# Session-scoped fixtures
+# =============================================================================
+
+
+@pytest.fixture(scope="session")
+def sdwan_user_testbed() -> Generator[str, None, None]:
+    """Create a user testbed YAML with mock device connections for D2D tests.
+
+    This fixture creates a temporary testbed file that configures mock device
+    connections using the mock_unicon.py script. The testbed includes two
+    SDWAN edge devices (sd-dc-c8kv-01 and sd-dc-c8kv-02).
+
+    Returns:
+        Path string to the testbed YAML file.
+    """
+    project_root = Path(__file__).parent.parent.parent.absolute()
+    mock_script = project_root / "tests" / "e2e" / "mocks" / "mock_unicon.py"
+
+    testbed_content = f"""
+testbed:
+  name: e2e_test_testbed
+  credentials:
+    default:
+      username: admin
+      password: admin
+
+devices:
+  sd-dc-c8kv-01:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        command: python {mock_script} iosxe --hostname sd-dc-c8kv-01
+
+  sd-dc-c8kv-02:
+    os: iosxe
+    type: router
+    connections:
+      cli:
+        command: python {mock_script} iosxe --hostname sd-dc-c8kv-02
+"""
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix="_testbed.yaml", delete=False
+    ) as f:
+        f.write(testbed_content)
+        testbed_path = Path(f.name)
+
+    try:
+        yield str(testbed_path)
+    finally:
+        if testbed_path.exists():
+            testbed_path.unlink()
+
+
+# =============================================================================
+# E2E scenario execution
+# =============================================================================
+
+
+def _reset_pabot_writer() -> None:
+    """Reset the pabot writer singleton to ensure test isolation.
+
+    NOTE: This is a temporary workaround. Will be removed when E2E tests are
+    refactored to use subprocess instead of CliRunner. See #611.
+
+    The pabot writer module maintains a singleton MessageWriter that captures stdout
+    at creation time. When running multiple E2E scenarios sequentially, the first
+    scenario creates this singleton, and subsequent scenarios reuse it - but the
+    stdout reference becomes stale after pytest's CliRunner context changes.
+
+    This function stops the existing writer and resets the singleton so the next
+    scenario gets a fresh writer with the correct stdout reference.
+    """
+    try:
+        import pabot.writer as pabot_writer
+
+        if pabot_writer._writer_instance is not None:
+            pabot_writer._writer_instance.stop()
+            pabot_writer._writer_instance = None
+    except (ImportError, AttributeError):
+        # pabot not installed or writer module structure changed
+        pass
+
+
+def _run_e2e_scenario(
+    scenario: E2EScenario,
+    mock_api_server: MockAPIServer | None,
+    sdwan_user_testbed: str | None,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+    output_path_relative: bool = False,
+    extra_cli_args: list[str] | None = None,
+    extra_env_vars: dict[str, str] | None = None,
+) -> E2EResults:
+    """Execute an E2E scenario and return results.
+
+    This is the core execution logic shared by all scenarios.
+
+    Args:
+        scenario: The scenario configuration to execute.
+        mock_api_server: The mock API server instance (can be None, for example for dry-run scenarios).
+        sdwan_user_testbed: Path to the testbed YAML (None if not required).
+        tmp_path_factory: Pytest temp path factory.
+        class_mocker: Class-scoped monkeypatch.
+        output_path_relative: Whether to pass a cwd-relative output path to the CLI.
+        extra_cli_args: Additional CLI arguments to pass (e.g., ["--dry-run", "--verbose"]).
+        extra_env_vars: Additional environment variables to set (e.g., {"NAC_TEST_DEBUG": "true"}).
+
+    Returns:
+        E2EResults containing all execution results.
+
+    Raises:
+        ValueError: If scenario configuration is invalid (via scenario.validate()).
+    """
+    # Reset pabot writer singleton to ensure test isolation
+    # This prevents stdout capture issues when running multiple scenarios sequentially
+    _reset_pabot_writer()
+
+    # Validate scenario configuration before execution
+    scenario.validate()
+
+    # Create scenario-specific temp directory
+    output_dir = tmp_path_factory.mktemp(f"e2e_{scenario.name}")
+    output_arg = str(output_dir)
+
+    if output_path_relative:
+        # pathlib-only alternatives are more convoluted here, while relpath
+        # directly expresses the cross-directory relative path we need.
+        output_arg = os.path.relpath(output_dir, Path.cwd())
+
+    arch = scenario.architecture
+    if mock_api_server:
+        class_mocker.setenv(f"{arch}_URL", mock_api_server.url)
+    else:
+        class_mocker.setenv(f"{arch}_URL", "http://dry-run.invalid")
+    class_mocker.setenv(f"{arch}_USERNAME", "mock_user")
+    class_mocker.setenv(f"{arch}_PASSWORD", "mock_pass")
+    # IOSXE credentials needed for D2D tests (device access)
+    class_mocker.setenv("IOSXE_USERNAME", "mock_user")
+    class_mocker.setenv("IOSXE_PASSWORD", "mock_pass")
+
+    if extra_env_vars:
+        for key, value in extra_env_vars.items():
+            class_mocker.setenv(key, value)
+
+    cli_args = [
+        "-d",
+        scenario.data_path,
+        "-t",
+        scenario.templates_path,
+        "-o",
+        output_arg,
+    ]
+
+    if scenario.requires_testbed and sdwan_user_testbed:
+        cli_args.extend(["--testbed", sdwan_user_testbed])
+
+    # Add extra CLI arguments (e.g., --dry-run, --verbose)
+    if extra_cli_args:
+        cli_args.extend(extra_cli_args)
+
+    # Execute CLI
+    runner = CliRunner()
+    result = runner.invoke(nac_test.cli.main.app, cli_args)
+
+    # Compute filtered stdout (strips logger output lines)
+    filtered_stdout = "\n".join(
+        line
+        for line in result.stdout.split("\n")
+        if not line.startswith(("INFO -", "DEBUG -", "WARNING -", "ERROR -"))
+    )
+
+    return E2EResults(
+        scenario=scenario,
+        output_dir=output_dir,
+        exit_code=result.exit_code,
+        stdout=result.stdout,
+        stderr=result.stderr if hasattr(result, "stderr") else "",
+        filtered_stdout=filtered_stdout,
+        cli_result=result,
+    )
+
+
+# =============================================================================
+# Individual scenario fixtures (class-scoped for caching)
+# =============================================================================
+
+
+@pytest.fixture(scope="class")
+def e2e_success_results(
+    mock_api_server: MockAPIServer,
+    sdwan_user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the success scenario once and cache results for the class."""
+    return _run_e2e_scenario(
+        SUCCESS_SCENARIO,
+        mock_api_server,
+        sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_failure_results(
+    mock_api_server: MockAPIServer,
+    sdwan_user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the all-fail scenario once and cache results for the class."""
+    return _run_e2e_scenario(
+        ALL_FAIL_SCENARIO,
+        mock_api_server,
+        sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_mixed_results(
+    mock_api_server: MockAPIServer,
+    sdwan_user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the mixed scenario once and cache results for the class."""
+    return _run_e2e_scenario(
+        MIXED_SCENARIO,
+        mock_api_server,
+        sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_mixed_relative_output_results(
+    mock_api_server: MockAPIServer,
+    sdwan_user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the mixed scenario (same as above) with a relative output path."""
+    return _run_e2e_scenario(
+        MIXED_SCENARIO,
+        mock_api_server,
+        sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+        output_path_relative=True,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_robot_only_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the robot-only scenario once and cache results for the class.
+
+    Note: This scenario does not require a testbed (no D2D tests).
+    """
+    return _run_e2e_scenario(
+        ROBOT_ONLY_SCENARIO,
+        mock_api_server,
+        None,  # No testbed needed
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_pyats_api_only_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the PyATS API-only scenario once and cache results for the class.
+
+    Note: This scenario does not require a testbed (no D2D tests).
+    """
+    return _run_e2e_scenario(
+        PYATS_API_ONLY_SCENARIO,
+        mock_api_server,
+        None,  # No testbed needed
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_pyats_d2d_only_results(
+    mock_api_server: MockAPIServer,
+    sdwan_user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the PyATS D2D-only scenario once and cache results for the class."""
+    return _run_e2e_scenario(
+        PYATS_D2D_ONLY_SCENARIO,
+        mock_api_server,
+        sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_pyats_cc_results(
+    mock_api_server: MockAPIServer,
+    sdwan_user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the PyATS Catalyst Center (API + D2D) scenario once and cache results."""
+    return _run_e2e_scenario(
+        PYATS_CC_SCENARIO,
+        mock_api_server,
+        sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_verbose_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the verbose scenario with --verbose flag and cache results."""
+    return _run_e2e_scenario(
+        VERBOSE_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--verbose"],
+        extra_env_vars={"EXPECTED_ROBOT_LOG_LEVEL": "DEBUG"},
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_verbose_with_info_results(
+    mock_api_server: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the verbose scenario with --verbose --loglevel INFO flags."""
+    return _run_e2e_scenario(
+        VERBOSE_WITH_INFO_SCENARIO,
+        mock_api_server,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--verbose", "--loglevel", "INFO"],
+        extra_env_vars={"EXPECTED_ROBOT_LOG_LEVEL": "INFO"},
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_dry_run_results(
+    sdwan_user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the dry-run scenario (mixed fixtures with --dry-run flag)."""
+    return _run_e2e_scenario(
+        DRY_RUN_SCENARIO,
+        None,
+        sdwan_user_testbed,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--dry-run"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_dry_run_pyats_only_results(
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute dry-run with PyATS-only (no Robot tests)."""
+    return _run_e2e_scenario(
+        DRY_RUN_PYATS_ONLY_SCENARIO,
+        None,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--dry-run"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_dry_run_robot_fail_results(
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute dry-run with Robot test that has non-existent keyword (fails dryrun)."""
+    return _run_e2e_scenario(
+        DRY_RUN_ROBOT_FAIL_SCENARIO,
+        None,
+        None,
+        tmp_path_factory,
+        class_mocker,
+        extra_cli_args=["--dry-run"],
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_windows_pyats_skip_results(
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Execute the Windows PyATS skip scenario once and cache results."""
+    return _run_e2e_scenario(
+        WINDOWS_PYATS_SKIP_SCENARIO,
+        None,
+        None,
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_preflight_auth_failure_results(
+    mock_api_server_preflight_401: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Pre-flight auth failure (401): Robot still runs, combined_summary shows failure report.
+
+    Uses a dedicated mock server loaded from mock_api_config_preflight_401.yaml
+    that returns 401 for all auth endpoints. This keeps the shared mock_api_server
+    untouched and avoids any endpoint mutation.
+    """
+    return _run_e2e_scenario(
+        PREFLIGHT_AUTH_FAILURE_SCENARIO,
+        mock_api_server_preflight_401,
+        None,
+        tmp_path_factory,
+        class_mocker,
+    )
