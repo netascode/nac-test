@@ -42,6 +42,10 @@ from tests.e2e.config import (
 )
 from tests.e2e.mocks.mock_server import MockAPIServer
 
+# Sentinel value for credential exposure detection (#689)
+# All test passwords use this value so we can detect if credentials leak into artifacts
+TEST_CREDENTIAL_SENTINEL = "CRED_SENTINEL_MUST_NOT_APPEAR_IN_ARTIFACTS"
+
 
 @dataclass
 class E2EResults:
@@ -224,10 +228,10 @@ def _run_e2e_scenario(
     else:
         class_mocker.setenv(f"{arch}_URL", "http://dry-run.invalid")
     class_mocker.setenv(f"{arch}_USERNAME", "mock_user")
-    class_mocker.setenv(f"{arch}_PASSWORD", "mock_pass")
+    class_mocker.setenv(f"{arch}_PASSWORD", TEST_CREDENTIAL_SENTINEL)
     # IOSXE credentials needed for D2D tests (device access)
     class_mocker.setenv("IOSXE_USERNAME", "mock_user")
-    class_mocker.setenv("IOSXE_PASSWORD", "mock_pass")
+    class_mocker.setenv("IOSXE_PASSWORD", TEST_CREDENTIAL_SENTINEL)
 
     if extra_env_vars:
         for key, value in extra_env_vars.items():

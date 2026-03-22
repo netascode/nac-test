@@ -20,6 +20,7 @@ This approach:
 import logging
 import re
 import xml.etree.ElementTree as ET
+import zipfile
 
 import pytest
 
@@ -39,7 +40,7 @@ from nac_test.core.constants import (
 )
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 from tests.conftest import assert_is_link_to
-from tests.e2e.conftest import E2EResults
+from tests.e2e.conftest import TEST_CREDENTIAL_SENTINEL, E2EResults
 from tests.e2e.html_helpers import (
     assert_combined_stats,
     assert_report_stats,
@@ -987,6 +988,44 @@ class E2ECombinedTestBase:
         assert after_closing.startswith("\n\n\n"), (
             f"Missing two blank lines after Combined Summary block.\n"
             f"Content after separator starts with: {repr(after_closing[:20])}"
+        )
+
+    # -------------------------------------------------------------------------
+    # Security Tests (#689 - Credential Exposure Prevention)
+    # -------------------------------------------------------------------------
+
+    def test_no_credentials_in_output_artifacts(self, results: E2EResults) -> None:
+        """Verify that credentials don't appear in any output artifacts.
+
+        Regression test for #689 - EnvironmentDebugPlugin was exposing env vars
+        including passwords in env.txt files within PyATS archives.
+        """
+        offending_files: list[str] = []
+
+        for file_path in results.output_dir.rglob("*"):
+            if not file_path.is_file():
+                continue
+
+            if file_path.suffix.lower() == ".zip":
+                try:
+                    with zipfile.ZipFile(file_path, "r") as zf:
+                        for name in zf.namelist():
+                            content = zf.read(name).decode("utf-8", errors="ignore")
+                            if TEST_CREDENTIAL_SENTINEL in content:
+                                offending_files.append(f"{file_path}!{name}")
+                except zipfile.BadZipFile:
+                    pass  # Not a valid zip file, skip
+            else:
+                # Check all files as text - errors="ignore" safely handles binary
+                # files by dropping undecodable bytes while preserving readable text.
+                # No try/except needed: we control output_dir, files won't disappear.
+                content = file_path.read_text(errors="ignore")
+                if TEST_CREDENTIAL_SENTINEL in content:
+                    offending_files.append(str(file_path))
+
+        assert not offending_files, (
+            "Credential sentinel found in output artifacts:\n"
+            + "\n".join(f"  - {f}" for f in offending_files)
         )
 
 

@@ -141,6 +141,8 @@ class SubprocessRunner:
                     enabled: True
                     module: nac_test.pyats_core.progress.plugin
                     order: 1.0
+                EnvironmentDebugPlugin:
+                    enabled: False
             """)
 
             with tempfile.NamedTemporaryFile(
@@ -249,6 +251,8 @@ class SubprocessRunner:
                     enabled: True
                     module: nac_test.pyats_core.progress.plugin
                     order: 1.0
+                EnvironmentDebugPlugin:
+                    enabled: False
             """)
 
             with tempfile.NamedTemporaryFile(
