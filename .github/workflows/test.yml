@@ -3,8 +3,6 @@ on:
   workflow_dispatch:
   pull_request:
   push:
-    branches:
-      - main
 
 jobs:
   security:
@@ -24,7 +22,7 @@ jobs:
         run: uv tool install bandit[toml]
 
       - name: Run bandit security scan
-        run: bandit -r nac_test/ -ll -f json -o bandit-security-report.json
+        run: bandit -c pyproject.toml -r nac_test/ -ll -f json -o bandit-security-report.json
         
       - name: Upload security report
         uses: actions/upload-artifact@v7
@@ -77,7 +75,7 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       matrix:
         python:
@@ -100,18 +98,50 @@ jobs:
       - name: Test
         run: |
           uv sync --extra dev
-          uv run pytest
+          # Run tests in parallel (--dist loadscope keeps test classes together, this is critical for e2e tests)
+          uv run pytest -n auto --dist loadscope tests/
+
+  test-windows:
+    name: Tests (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        python:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
+
+      - name: Test
+        run: |
+          uv sync --extra dev
+          # Explicit file list: Windows shell doesn't expand globs, and other integration
+          # tests import pyats which isn't available on Windows
+          uv run pytest -m windows -n auto --dist loadscope tests/e2e tests/integration/test_cli_basic.py tests/integration/test_cli_rendering.py tests/integration/test_cli_ordering.py tests/integration/test_cli_extra_args.py
+          uv run nac-test --version
 
   notification:
     name: Notification
     if: always() && github.event_name != 'pull_request'
-    needs: [security, lint, test]
+    needs: [security, lint, test, test-windows]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check Job Success
         run: |
-          if [ ${{ needs.security.result }} == 'success' ] && [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test.result }} == 'success' ]; then
+          if [ ${{ needs.security.result }} == 'success' ] && [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test.result }} == 'success' ] && [ ${{ needs.test-windows.result }} == 'success' ]; then
             echo "All jobs succeeded"
             echo "jobSuccess=success" >> $GITHUB_ENV
           else

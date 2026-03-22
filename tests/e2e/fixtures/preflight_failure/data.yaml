@@ -1,0 +1,8 @@
+# ACI data for pre-flight failure e2e scenario.
+# No SDWAN/device data needed — the single Robot test does not reference
+# controller-specific variables; it just logs and passes.
+apic:
+  version: 6.0
+defaults:
+  apic:
+    version: 6.0

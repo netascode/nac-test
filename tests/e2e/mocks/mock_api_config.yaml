@@ -1,0 +1,745 @@
+# Mock API Server Configuration
+# Define your API endpoints using list format with pattern matching
+
+endpoints:
+  # Simple exact match example
+  - name: "Get devices"
+    path_pattern: "/api/devices"
+    match_type: "exact"
+    status_code: 200
+    response_data:
+      devices:
+        - id: 1
+          name: Router1
+          status: active
+          ip: 192.168.1.1
+        - id: 2
+          name: Switch1
+          status: active
+          ip: 192.168.1.2
+
+  # Simple exact match with config
+  - name: "Get config"
+    path_pattern: "/api/config"
+    match_type: "exact"
+    status_code: 200
+    response_data:
+      config:
+        timeout: 30
+        retry: 3
+        enable_logging: true
+
+  # APIC login
+  - name: "ACI APIC Login"
+    path_pattern: "/api/aaaLogin.json"
+    match_type: "exact"
+    method: "POST"
+    status_code: 200
+    response_data:
+      totalCount: "1"
+      imdata:
+        - aaaLogin:
+            attributes:
+              token: "eyJhbGciOiJSUzI1NiIsImtpZCI6InFidm5sdjBkZXJjcXlxODNoaHBhbHlqbGkzejlyaWZqIiwidHlwIjoiand0In0.eyJyYmFjIjpbeyJkb21haW4iOiJjb21tb24iLCJyb2xlc1IiOjE4MzUwMDQsInJvbGVzVyI6MH0seyJkb21haW4iOiJhbGwiLCJyb2xlc1IiOjAsInJvbGVzVyI6MX1dLCJpc3MiOiJBQ0kgQVBJQyIsInVzZXJuYW1lIjoianVjaG93YW4tb3NwMTYiLCJ1c2VyaWQiOjEyNzQxLCJ1c2VyZmxhZ3MiOjAsImF1dGhfdGltZSI6MTc2NTgwMzEyMywiaWF0IjoxNzY1ODAzMTIzLCJleHAiOjE3NjU4MTI3MjMsInNlc3Npb25pZCI6IkhkK2tKK2tVVGs2WmFSczRQdzdyRHc9PSJ9.fuRoo1oQyE6uGJTWKNESRvMjjvbkn4RVXzkzM76eLrcEN4ZCIq1tK7QhA2PpCNbYZGvIKfODtQnkVvValUkOy8DzcZ-u9yv7o2xllWntsu8EPbnQWY7YCBfqDPALxiXTaGHB3ot4AgnU8T9cWLM2ffWHVGnpGetKxmWU9o1eCrQKvvvMB_YX2-UyVQXTXUomjuZrR0rv9UME_spfhj7WmcwxWjhTVtgBvARa6-WMPJCeKbiHuO4x1jTR3-kxq5D5oD3g9VcdoFTWV1i4GaLxByh4vzDo8tLVJXpWOzdLXXl-TcSh054EGCbm0dRik6miXAkdicCi5u5lBGfrIQ-Upw"
+              siteFingerprint: "qbvnlv0dercqyq83hhpalyjli3z9rifj"
+              refreshTimeoutSeconds: "9600"
+              maximumLifetimeSeconds: "86400"
+              guiIdleTimeoutSeconds: "65525"
+              restTimeoutSeconds: "90"
+              creationTime: "1765803123"
+              firstLoginTime: "1765803123"
+              userName: "juchowan-osp16"
+              remoteUser: "false"
+              unixUserId: "12741"
+              sessionId: "Hd+kJ+kUTk6ZaRs4Pw7rDw=="
+              lastName: ""
+              firstName: ""
+              changePassword: "no"
+              version: "6.1(4h)"
+              buildTime: "Fri Aug 08 21:57:42 PDT 2025"
+              node: "topology/pod-1/node-1"
+            children:
+              - aaaUserDomain:
+                  attributes:
+                    name: "common"
+                    rolesR: "tenant-connectivity,tenant-protocol,vmm-policy,tenant-ext-connectivity,tenant-ext-protocol,tenant-qos,tenant-security,tenant-network-profile,tenant-epg,fabric-connectivity,fabric-protocol,fabric-equipment,access-connectivity,access-protocol,access-equipment,access-qos,ops,nw-svc-policy"
+                    rolesW: ""
+                  children:
+                    - aaaReadRoles:
+                        attributes: {}
+                        children:
+                          - role:
+                              attributes:
+                                name: "read-all"
+                    - aaaWriteRoles:
+                        attributes: {}
+              - aaaUserDomain:
+                  attributes:
+                    name: "all"
+                    rolesR: "admin"
+                    rolesW: "admin"
+                  children:
+                    - aaaReadRoles:
+                        attributes: {}
+                    - aaaWriteRoles:
+                        attributes: {}
+                        children:
+                          - role:
+                              attributes:
+                                name: "admin"
+              - DnDomainMapEntry:
+                  attributes:
+                    dn: "uni/tn-infra"
+                    readPrivileges: "admin"
+                    writePrivileges: "admin"
+              - DnDomainMapEntry:
+                  attributes:
+                    dn: "uni/l3dom-arsarkar_ABB_FW_L3DOM"
+                    readPrivileges: "admin"
+                    writePrivileges: "admin"
+              - DnDomainMapEntry:
+                  attributes:
+                    dn: "uni/vmmp-Nutanix/dom-test"
+                    readPrivileges: "admin"
+                    writePrivileges: "admin"
+              - DnDomainMapEntry:
+                  attributes:
+                    dn: "uni/tn-common"
+                    readPrivileges: "admin,tenant-connectivity,tenant-protocol,vmm-policy,tenant-ext-connectivity,tenant-ext-protocol,tenant-qos,tenant-security,tenant-network-profile,tenant-epg,fabric-connectivity,fabric-protocol,fabric-equipment,access-connectivity,access-protocol,access-equipment,access-qos,ops,nw-svc-policy"
+                    writePrivileges: "admin"
+              - DnDomainMapEntry:
+                  attributes:
+                    dn: "uni/tn-test-tenant"
+                    readPrivileges: "admin"
+                    writePrivileges: "admin"
+              - DnDomainMapEntry:
+                  attributes:
+                    dn: "uni/tn-ABC"
+                    readPrivileges: "admin"
+                    writePrivileges: "admin"
+              - DnDomainMapEntry:
+                  attributes:
+                    dn: "uni/tn-adstachu-s2t1"
+                    readPrivileges: "admin"
+                    writePrivileges: "admin"
+              - DnDomainMapEntry:
+                  attributes:
+                    dn: "comp/prov-Nutanix/dom-test"
+                    readPrivileges: "admin"
+                    writePrivileges: "admin"
+              - DnDomainMapEntry:
+                  attributes:
+                    dn: "uni/tn-mgmt"
+                    readPrivileges: "admin"
+                    writePrivileges: "admin"
+              - DnDomainMapEntry:
+                  attributes:
+                    dn: "comp/prov-Nutanix/ctrlr-[test]-test"
+                    readPrivileges: "admin"
+                    writePrivileges: "admin"
+              - ReadOnlySubtrees:
+                  attributes:
+                    count: "1"
+                    description: "List of subtree DNs derived from RBAC domains assigned to this user (domain 'all' privileges do not require RBAC rules to grant access and are not shown below)"
+                  children:
+                    - RbacRule:
+                        attributes:
+                          subtreeDn: "uni/tn-common"
+                          domain: "common"
+
+  # Complex URL with query parameters using 'contains' match
+  - name: "ACI infraWiNode query pod-1 node-1"
+    path_pattern: 'node/class/infraWiNode.json?query-target-filter=wcard(infraWiNode.dn,"topology/pod-1/node-1/")'
+    match_type: "contains"
+    method: "GET"
+    status_code: 200
+    response_data:
+      totalCount: "3"
+      imdata:
+        - infraWiNode:
+            attributes:
+              addr: "10.121.0.1"
+              adminSt: "in-service"
+              annotation: ""
+              apicMode: "active"
+              chassis: "e703fe86-60ca-11ef-a6f8-29739de72532"
+              childAction: ""
+              cntrlSbstState: "approved"
+              dn: "topology/pod-1/node-1/av/node-1"
+              extMngdBy: ""
+              failoverStatus: "idle"
+              force: "no"
+              health: "fully-fit"
+              id: "1"
+              lcOwn: "local"
+              mbSn: "WMP26180019"
+              modTs: "2025-06-29T14:39:40.778-05:00"
+              monPolDn: "uni/fabric/monfab-default"
+              mutnTs: "2025-06-29T13:28:58.022-05:00"
+              name: ""
+              nameAlias: ""
+              nodeName: "NET-FABRIC-1-M1-APIC-1"
+              operSt: "available"
+              podId: "1"
+              routableIpAddr: "0.0.0.0"
+              status: ""
+              targetMbSn: ""
+              uid: "0"
+              userdom: "all"
+        - infraWiNode:
+            attributes:
+              addr: "10.121.0.3"
+              adminSt: "in-service"
+              annotation: ""
+              apicMode: "active"
+              chassis: "855f1238-751f-11ef-989c-df29068b6309"
+              childAction: ""
+              cntrlSbstState: "approved"
+              dn: "topology/pod-1/node-1/av/node-3"
+              extMngdBy: ""
+              failoverStatus: "idle"
+              force: "no"
+              health: "fully-fit"
+              id: "3"
+              lcOwn: "local"
+              mbSn: "WMP2618001E"
+              modTs: "2025-06-29T14:39:40.598-05:00"
+              monPolDn: "uni/fabric/monfab-default"
+              mutnTs: "2024-09-17T13:29:21.709-05:00"
+              name: ""
+              nameAlias: ""
+              nodeName: "NET-FABRIC-1-M2-APIC3"
+              operSt: "available"
+              podId: "2"
+              routableIpAddr: "0.0.0.0"
+              status: ""
+              targetMbSn: ""
+              uid: "0"
+              userdom: "all"
+        - infraWiNode:
+            attributes:
+              addr: "10.121.0.2"
+              adminSt: "in-service"
+              annotation: ""
+              apicMode: "active"
+              chassis: "d92085fc-745f-11ef-bcdf-07caeb603b73"
+              childAction: ""
+              cntrlSbstState: "approved"
+              dn: "topology/pod-1/node-1/av/node-2"
+              extMngdBy: ""
+              failoverStatus: "idle"
+              force: "no"
+              health: "fully-fit"
+              id: "2"
+              lcOwn: "local"
+              mbSn: "WMP261800B0"
+              modTs: "2025-06-29T14:39:40.797-05:00"
+              monPolDn: "uni/fabric/monfab-default"
+              mutnTs: "2024-09-17T13:11:42.061-05:00"
+              name: ""
+              nameAlias: ""
+              nodeName: "NET-FABRIC-1-M1-APIC2"
+              operSt: "available"
+              podId: "1"
+              routableIpAddr: "0.0.0.0"
+              status: ""
+              targetMbSn: ""
+              uid: "0"
+              userdom: "all"
+
+  # Match any infraWiNode query using 'contains'
+  - name: "ACI infraWiNode query (generic)"
+    path_pattern: "node/class/infraWiNode.json"
+    match_type: "contains"
+    method: "GET"
+    status_code: 200
+    response_data:
+      totalCount: "3"
+      imdata:
+        - infraWiNode:
+            attributes:
+              addr: "10.121.0.1"
+              adminSt: "in-service"
+              dn: "topology/pod-1/node-1/av/node-1"
+              health: "fully-fit"
+              id: "1"
+              nodeName: "NET-FABRIC-1-M1-APIC-1"
+              operSt: "available"
+              podId: "1"
+        - infraWiNode:
+            attributes:
+              addr: "10.121.0.3"
+              adminSt: "in-service"
+              dn: "topology/pod-1/node-1/av/node-3"
+              health: "fully-fit"
+              id: "3"
+              nodeName: "NET-FABRIC-1-M2-APIC3"
+              operSt: "available"
+              podId: "2"
+        - infraWiNode:
+            attributes:
+              addr: "10.121.0.2"
+              adminSt: "in-service"
+              dn: "topology/pod-1/node-1/av/node-2"
+              health: "fully-fit"
+              id: "2"
+              nodeName: "NET-FABRIC-1-M1-APIC2"
+              operSt: "available"
+              podId: "1"
+
+  # Using regex for pattern matching
+  - name: "API versioned endpoints"
+    path_pattern: "^/api/v[0-9]+/.*"
+    match_type: "regex"
+    status_code: 200
+    response_data:
+      version: "1.0"
+      data: {}
+
+  # Using starts_with for path prefix matching
+  - name: "Admin endpoints"
+    path_pattern: "/admin/"
+    match_type: "starts_with"
+    status_code: 403
+    response_data:
+      error: "Forbidden"
+      message: "Access denied"
+
+  # Error endpoint
+  - name: "Error endpoint"
+    path_pattern: "/api/error"
+    match_type: "exact"
+    status_code: 500
+    response_data:
+      error: "Internal server error"
+      message: "Something went wrong"
+
+  # Not found endpoint
+  - name: "Missing resource"
+    path_pattern: "/api/missing"
+    match_type: "exact"
+    status_code: 404
+    response_data:
+      error: "Resource not found"
+
+  # Unauthorized endpoint
+  - name: "Protected resource"
+    path_pattern: "/api/protected"
+    match_type: "exact"
+    status_code: 401
+    response_data:
+      error: "Unauthorized"
+      message: "Authentication required"
+
+  # SD-WAN Manager Authentication endpoints
+  - name: "SD-WAN Manager Login"
+    path_pattern: "/j_security_check"
+    match_type: "exact"
+    method: "POST"
+    status_code: 200
+    set_cookies:
+      JSESSIONID: "mock-session-id-12345"
+    response_data: {}
+
+  - name: "SD-WAN Manager XSRF Token"
+    path_pattern: "/dataservice/client/token"
+    match_type: "exact"
+    method: "GET"
+    status_code: 200
+    response_data: "mock-xsrf-token-67890"
+
+  # SD-WAN Manager vEdges endpoint
+  - name: "SD-WAN Manager vEdges List"
+    path_pattern: "/dataservice/system/device/vedges"
+    match_type: "exact"
+    method: "GET"
+    status_code: 200
+    response_data:
+      data:
+        - "host-name": "sd-dc-c8kv-01"
+          configuredSystemIP: "10.0.0.1"
+          "managed-by": "vmanage"
+          configStatusMessage: "In Sync"
+          serialNumber: "ABC123DEF"
+          uuid: "uuid-device-1"
+          deviceModel: "vedge-C8000V"
+          personality: "vedge"
+        - "host-name": "sd-dc-c8kv-02"
+          configuredSystemIP: "10.0.0.2"
+          "managed-by": "vmanage"
+          configStatusMessage: "In Sync"
+          serialNumber: "ABC456GHI"
+          uuid: "uuid-device-2"
+          deviceModel: "vedge-C8000V"
+          personality: "vedge"
+
+  - name: "SD-WAN Manager vEdges List (numbered endpoints for scale testing)"
+    path_pattern: "^/dataservice/system/device/vedges[0-9]+$"
+    match_type: "regex"
+    method: "GET"
+    status_code: 200
+    response_data:
+      data:
+        - "host-name": "sd-dc-c8kv-01"
+          configuredSystemIP: "10.0.0.1"
+          "managed-by": "vmanage"
+          configStatusMessage: "In Sync"
+          serialNumber: "ABC123DEF"
+          uuid: "uuid-device-1"
+          deviceModel: "vedge-C8000V"
+          personality: "vedge"
+        - "host-name": "sd-dc-c8kv-02"
+          configuredSystemIP: "10.0.0.2"
+          "managed-by": "vmanage"
+          configStatusMessage: "In Sync"
+          serialNumber: "ABC456GHI"
+          uuid: "uuid-device-2"
+          deviceModel: "vedge-C8000V"
+          personality: "vedge"
+
+  # Catalyst Center Authentication
+  - name: "Catalyst Center Authentication"
+    path_pattern: "/dna/system/api/v1/auth/token"
+    match_type: "exact"
+    method: "POST"
+    status_code: 200
+    response_data:
+      Token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NzU2ZDJhYmEyZTg1NzNkMGY1ZTNhNjgiLCJhdXRoU291cmNlIjoiaW50ZXJuYWwiLCJ0ZW5hbnROYW1lIjoiVE5UMCIsInJvbGVzIjpbIjY3NTZkMmFiYTJlODU3M2QwZjVlM2E1MiJdLCJ0ZW5hbnRJZCI6IjY3NTZkMmFiYTJlODU3M2QwZjVlM2E0OSIsImV4cCI6MTczNzM4MzYwOSwidXNlcm5hbWUiOiJhZG1pbiJ9.KvRo3_XZ8yK1vH2Gm9Lp7Qn6rE5dN4cO8wT1sY0mU3jF9xW2hA6kB8vP5lN7qI4oR3eD1fJ0gS2tU9nM6pL8iV4rB7cZ5kW1xN0yH3qG6mD9vF2sE8jT4nL7oP1wR5bA"
+
+  # Catalyst Center System Health
+  - name: "Catalyst Center System Health"
+    path_pattern: "/dna/intent/api/v1/diagnostics/system/health"
+    match_type: "contains"
+    method: "GET"
+    status_code: 200
+    response_data:
+      healthEvents:
+        - severity: 2
+          hostname: "kdna-dnac-03-vm.cisco.com"
+          instance: "kdna-dnac-03-vm.cisco.com:Internet URL Access"
+          subDomain: "Internet Access"
+          domain: "System"
+          description: "The following URLs are not reachable directly: http://validation.identrust.com/crl/hydrantidcao1.crl, http://commercial.ocsp.identrust.com."
+          state: "NotOk"
+          timestamp: "1765977209566"
+          status: "Warning"
+      hostname: "kdna-dnac-03-vm.cisco.com"
+      version: "1"
+      cimcaddress:
+        - "Cimc is not configured, please configure it from Settings->System Health Page."
+
+  # SD-WAN Manager endpoints
+  - name: "SD-WAN Manager Device Health"
+    path_pattern: "/dataservice/health/devices"
+    match_type: "exact"
+    method: "GET"
+    status_code: 200
+    response_data:
+      header:
+        columns:
+        - title: Hostname
+          property: host_name
+          hideable: false
+          dataType: string
+        - title: Device Model
+          property: deviceModel
+          hideable: false
+          dataType: string
+        - title: Health
+          property: health
+          hideable: false
+          dataType: string
+        - title: Reachability
+          property: reachability
+          hideable: true
+          dataType: string
+        - title: CPU Load
+          property: cpuLoad
+          hideable: true
+          dataType: double
+        - title: Memory Utilization
+          property: memoryUtilization
+          hideable: true
+          dataType: double
+        - title: Control
+          property: controlConns
+          hideable: true
+          dataType: string
+        - title: vSmart Control
+          property: vsmartControlConns
+          hideable: true
+          dataType: string
+        - title: BFD
+          property: bfds
+          hideable: true
+          dataType: string
+        - title: TLOC
+          property: tlocs
+          hideable: true
+          dataType: string
+        - title: Site ID
+          property: siteId
+          hideable: true
+          dataType: string
+        - title: Site Name
+          property: site_name
+          hideable: true
+          dataType: string
+        - title: Serial Number
+          property: boardSerialNo
+          hideable: true
+          dataType: string
+        - title: System IP
+          property: localSystemIp
+          hideable: false
+          dataType: ipv4
+        - title: Location
+          property: location
+          hideable: true
+          dataType: string
+        - title: Version
+          property: softwareVersion
+          hideable: true
+          dataType: string
+        - title: Up Since
+          property: upSince
+          hideable: true
+          dataType: date
+        - title: Device Groups
+          property: deviceGroups
+          hideable: true
+          dataType: array
+        - title: Chassis Number/ID
+          property: chassisNo
+          hideable: false
+          dataType: string
+        - title: Connected Manager
+          property: connectedVManages
+          hideable: true
+          dataType: array
+        viewKeys:
+          uniqueKey: []
+          preferenceKey: grid-DeviceHealth
+        fields:
+        - property: host_name
+          dataType: string
+        - property: deviceModel
+          dataType: string
+        - property: health
+          dataType: string
+        - property: reachability
+          dataType: string
+        - property: cpuLoad
+          dataType: double
+        - property: memoryUtilization
+          dataType: double
+        - property: controlConns
+          dataType: string
+        - property: vsmartControlConns
+          dataType: string
+        - property: bfds
+          dataType: string
+        - property: tlocs
+          dataType: string
+        - property: siteId
+          dataType: string
+        - property: site_name
+          dataType: string
+        - property: boardSerialNo
+          dataType: string
+        - property: localSystemIp
+          dataType: ipv4
+        - property: location
+          dataType: string
+        - property: softwareVersion
+          dataType: string
+        - property: upSince
+          dataType: date
+        - property: deviceGroups
+          dataType: array
+        - property: chassisNo
+          dataType: string
+        - property: connectedVManages
+          dataType: array
+        modelNameMapping:
+          vAnalytics: Analytics
+          vSmart: Controller
+          vManage: Manager
+          Cloud OnRamp: Cloud onRamp
+          vBond: Validator
+      total_devices: 3
+      devices:
+      - name: sd-dc-c8kv-01
+        personality: vedge
+        uuid: C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B
+        reachability: reachable
+        longitude: '2.337255'
+        latitude: '48.847767'
+        health: yellow
+        qoe: 8
+        location: 'lat: 48.847767, long: 2.337255'
+        tags:
+        - tagId: ''
+          name: dc_primary
+          tagType: ''
+        configGroupId: f384f87b-15fd-4261-829c-69a8dc3890ad
+        configGroupName: dc_hub
+        policyGroupId: ''
+        policyGroupName: ''
+        cellularBit: '0'
+        cellularHealth: null
+        cellularRsrp: null
+        cellularRsrq: null
+        cloudOnRampSaaSDeviceRole: null
+        cloudOnRampSaaSApps: null
+        site_id: '100'
+        system_ip: 10.0.0.1
+        device_type: vedge
+        local_system_ip: 10.0.0.1
+        device_model: C8000v
+        software_version: 17.15.03a.0.176
+        cpu_load: 41.61
+        memory_utilization: 74.0
+        control_connections: 5
+        control_connections_up: 5
+        vsmart_control_connections: 4
+        expected_vsmart_connections: 4
+        has_geo_data: true
+        uptime_date: 1764686460000
+        device_groups:
+        - No groups
+        connected_vmanages:
+        - 100.0.0.1
+        bfd_sessions_up: 6
+        bfd_sessions: 8
+        total_tloc_num: 2
+        up_tloc_num: 2
+        omp_peers: 2
+        omp_peers_up: 2
+        board_serial_number: 2F5F03F9
+        chassis_number: C8K-40C0CCFD-9EA8-2B2E-E73B-32C5924EC79B
+        vpn_ids: null
+        configuration_device: false
+        sdra_ipsec_enabled: false
+        sdra_ipsec_anyconnect: 0
+        sdra_ipsec_soho: 0
+        sdra_ipsec_unknown: 0
+        sdra_sslvpn_enabled: false
+        sdra_sslvpn_anyconnect: 0
+        site_name: SITE_100
+        region_list: null
+      - name: sd-dc-c8kv-02
+        personality: vedge
+        uuid: C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B
+        reachability: reachable
+        longitude: '2.337255'
+        latitude: '48.847767'
+        health: yellow
+        qoe: 8
+        location: 'lat: 48.847767, long: 2.337255'
+        tags:
+        - tagId: ''
+          name: dc_secondary
+          tagType: ''
+        configGroupId: f384f87b-15fd-4261-829c-69a8dc3890ad
+        configGroupName: dc_hub
+        policyGroupId: ''
+        policyGroupName: ''
+        cellularBit: '0'
+        cellularHealth: null
+        cellularRsrp: null
+        cellularRsrq: null
+        cloudOnRampSaaSDeviceRole: null
+        cloudOnRampSaaSApps: null
+        site_id: '100'
+        system_ip: 10.0.0.2
+        device_type: vedge
+        local_system_ip: 10.0.0.2
+        device_model: C8000v
+        software_version: 17.15.03a.0.176
+        cpu_load: 42.45
+        memory_utilization: 73.0
+        control_connections: 5
+        control_connections_up: 5
+        vsmart_control_connections: 4
+        expected_vsmart_connections: 4
+        has_geo_data: true
+        uptime_date: 1764686460000
+        device_groups:
+        - No groups
+        connected_vmanages:
+        - 100.0.0.1
+        bfd_sessions_up: 6
+        bfd_sessions: 8
+        total_tloc_num: 2
+        up_tloc_num: 2
+        omp_peers: 2
+        omp_peers_up: 2
+        board_serial_number: B430E0DE
+        chassis_number: C8K-E94D7B88-4B9E-3323-C6C3-F29079FAAC3B
+        vpn_ids: null
+        configuration_device: false
+        sdra_ipsec_enabled: false
+        sdra_ipsec_anyconnect: 0
+        sdra_ipsec_soho: 0
+        sdra_ipsec_unknown: 0
+        sdra_sslvpn_enabled: false
+        sdra_sslvpn_anyconnect: 0
+        site_name: SITE_100
+        region_list: null
+      - name: sd-br01-c8kv-r1
+        personality: vedge
+        uuid: C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A
+        reachability: reachable
+        longitude: '19.912529'
+        latitude: '50.034502'
+        health: green
+        qoe: 9
+        location: 'lat: 50.034502, long: 19.912529'
+        tags: []
+        configGroupId: ed1f9dcc-70b8-4107-a272-e78e3b3e093a
+        configGroupName: branch_type1_primary
+        policyGroupId: ''
+        policyGroupName: ''
+        cellularBit: '0'
+        cellularHealth: null
+        cellularRsrp: null
+        cellularRsrq: null
+        cloudOnRampSaaSDeviceRole: null
+        cloudOnRampSaaSApps: null
+        site_id: '200'
+        system_ip: 10.0.0.3
+        device_type: vedge
+        local_system_ip: 10.0.0.3
+        device_model: C8000v
+        software_version: 17.15.03a.0.176
+        cpu_load: 41.16
+        memory_utilization: 73.0
+        control_connections: 3
+        control_connections_up: 3
+        vsmart_control_connections: 2
+        expected_vsmart_connections: 4
+        has_geo_data: true
+        uptime_date: 1764686460000
+        device_groups:
+        - No groups
+        connected_vmanages:
+        - 100.0.0.1
+        bfd_sessions_up: 4
+        bfd_sessions: 4
+        total_tloc_num: 2
+        up_tloc_num: 2
+        omp_peers: 2
+        omp_peers_up: 2
+        board_serial_number: 639BA65E
+        chassis_number: C8K-B5EE117E-1210-C396-EC41-D3DA64D6A51A
+        vpn_ids: null
+        configuration_device: false
+        sdra_ipsec_enabled: false
+        sdra_ipsec_anyconnect: 0
+        sdra_ipsec_soho: 0
+        sdra_ipsec_unknown: 0
+        sdra_sslvpn_enabled: false
+        sdra_sslvpn_anyconnect: 0
+        site_name: SITE_200
+        region_list: null
