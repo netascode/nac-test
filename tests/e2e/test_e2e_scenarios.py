@@ -20,6 +20,7 @@ This approach:
 import logging
 import re
 import xml.etree.ElementTree as ET
+import zipfile
 
 import pytest
 
@@ -39,7 +40,7 @@ from nac_test.core.constants import (
 )
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 from tests.conftest import assert_is_link_to
-from tests.e2e.conftest import E2EResults
+from tests.e2e.conftest import TEST_CREDENTIAL_SENTINEL, E2EResults
 from tests.e2e.html_helpers import (
     assert_combined_stats,
     assert_report_stats,
@@ -960,13 +961,6 @@ class E2ECombinedTestBase:
         Regression test for #689 - EnvironmentDebugPlugin was exposing env vars
         including passwords in env.txt files within PyATS archives.
         """
-        import zipfile
-
-        from tests.e2e.conftest import TEST_CREDENTIAL_SENTINEL
-
-        if not results.has_pyats_results:
-            pytest.skip("No PyATS results in this scenario")
-
         offending_files: list[str] = []
 
         for file_path in results.output_dir.rglob("*"):

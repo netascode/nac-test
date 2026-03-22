@@ -28,8 +28,6 @@ from nac_test.pyats_core.constants import (
     PYATS_PLUGIN_CONFIG_FILENAME,
 )
 from nac_test.pyats_core.execution.subprocess_runner import (
-    PLUGIN_CONFIG,
-    PYATS_CONFIG,
     ConfigFileCreationError,
     SubprocessRunner,
 )
@@ -327,35 +325,6 @@ def test_build_command_includes_config_files(
     assert cmd[pyats_config_idx + 1] == str(runner._pyats_config_file)
 
 
-# --- Config constants tests (security and configuration) ---
-
-
-def test_plugin_config_disables_environment_debug_plugin() -> None:
-    """Test that PLUGIN_CONFIG disables EnvironmentDebugPlugin to prevent credential exposure.
-
-    This is a security requirement (issue #689) - the EnvironmentDebugPlugin writes
-    all environment variables (including credentials) to env.txt files in archives.
-    """
-    assert "EnvironmentDebugPlugin:" in PLUGIN_CONFIG
-    assert "enabled: False" in PLUGIN_CONFIG
-
-
-def test_plugin_config_enables_progress_reporter_plugin() -> None:
-    """Test that PLUGIN_CONFIG enables ProgressReporterPlugin for real-time progress."""
-    assert "ProgressReporterPlugin:" in PLUGIN_CONFIG
-    assert "enabled: True" in PLUGIN_CONFIG
-    assert "module: nac_test.pyats_core.progress.plugin" in PLUGIN_CONFIG
-
-
-def test_pyats_config_disables_git_info() -> None:
-    """Test that PYATS_CONFIG disables git_info to prevent macOS fork() crashes.
-
-    This prevents CoreFoundation lock corruption in get_git_info() on macOS with
-    Python 3.12+.
-    """
-    assert "git_info = false" in PYATS_CONFIG
-
-
 def test_init_creates_config_files_in_output_dir(
     temp_output_dir: Path, mock_output_handler: Mock
 ) -> None:
@@ -371,9 +340,6 @@ def test_init_creates_config_files_in_output_dir(
     assert runner._pyats_config_file.parent == temp_output_dir
     assert runner._plugin_config_file.name == PYATS_PLUGIN_CONFIG_FILENAME
     assert runner._pyats_config_file.name == PYATS_CONFIG_FILENAME
-
-    assert runner._plugin_config_file.read_text() == PLUGIN_CONFIG
-    assert runner._pyats_config_file.read_text() == PYATS_CONFIG
 
 
 def test_init_raises_config_file_creation_error_on_write_failure(

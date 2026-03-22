@@ -6,9 +6,8 @@
 Tests the subprocess execution logic:
 1. Config file content verification (git_info = false for macOS fork() safety)
 2. Command construction includes all required PyATS flags
-3. Error handling when config file creation fails
-4. Return code interpretation (0 = success, 1 = test failures, >1 = error)
-5. Output processing and progress event parsing
+3. Return code interpretation (0 = success, 1 = test failures, >1 = error)
+4. Output processing and progress event parsing
 
 See tests/unit/pyats_core/execution/test_subprocess_runner.py for
 additional unit tests covering subprocess crash handling,
@@ -23,7 +22,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from nac_test.pyats_core.execution.subprocess_runner import (
-    ConfigFileCreationError,
     SubprocessRunner,
 )
 
@@ -221,32 +219,6 @@ class TestCommandConstruction:
         # Both config flags must be present (plugin YAML + PyATS INI)
         assert "--configuration" in cmd
         assert "--pyats-configuration" in cmd
-
-
-class TestConfigCreationFailure:
-    """Tests error handling when config file creation fails."""
-
-    def test_init_raises_config_file_creation_error_on_failure(
-        self, tmp_path: Path
-    ) -> None:
-        """Verify __init__ raises ConfigFileCreationError when config file write fails.
-
-        Config files are now created in __init__() rather than execute_job().
-        If creation fails, we raise immediately rather than proceeding with
-        execution that would use default PyATS settings (causing fork() crashes on macOS).
-        """
-        with (
-            patch("sysconfig.get_path", return_value=str(tmp_path)),
-            patch.object(Path, "exists", return_value=True),
-            patch.object(Path, "write_text", side_effect=OSError("disk full")),
-        ):
-            with pytest.raises(ConfigFileCreationError) as exc_info:
-                SubprocessRunner(
-                    output_dir=tmp_path,
-                    output_handler=lambda line: None,
-                )
-
-            assert "disk full" in str(exc_info.value)
 
 
 class TestReturnCodeHandling:

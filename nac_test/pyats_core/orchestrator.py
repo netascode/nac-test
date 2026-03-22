@@ -629,7 +629,11 @@ class PyATSOrchestrator:
             )
         except ConfigFileCreationError as e:
             error_msg = str(e)
-            print(terminal.error(f"PyATS initialization failed: {error_msg}"))
+            print(
+                terminal.error(
+                    f"Fatal error: PyATS config creation failed: {error_msg}"
+                )
+            )
             api_result = TestResults.from_error(error_msg) if api_tests else None
             d2d_result = TestResults.from_error(error_msg) if d2d_tests else None
             return PyATSResults(api=api_result, d2d=d2d_result)
