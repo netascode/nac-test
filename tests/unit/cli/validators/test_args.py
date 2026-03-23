@@ -160,10 +160,10 @@ class TestPabotApiShape:
         element types change (e.g. result[2] becomes a list), which would silently
         break validation without failing a keys-only check.
         """
-        from nac_test.cli.validators.args import _pabot_parse_args
+        from nac_test.cli.validators.args import _DUMMY_DATASOURCE, _pabot_parse_args
 
         assert _pabot_parse_args is not None
-        result = _pabot_parse_args(["__dummy__.robot"])
+        result = _pabot_parse_args([_DUMMY_DATASOURCE])
         assert len(result) == 4, f"Expected 4-tuple from parse_args, got {len(result)}"
 
         datasources = result[1]

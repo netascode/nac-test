@@ -8,6 +8,7 @@ valid Robot Framework options that don't conflict with nac-test's controlled opt
 
 import functools
 import logging
+import uuid
 from collections.abc import Callable
 from typing import Any
 
@@ -52,8 +53,9 @@ _CONTROLLED_OPTIONS_LOOKUP: dict[str, str] = {
     for k in ([long, short] if short else [long])
 }
 
-# pabot's parse_args requires at least one datasource argument
-_DUMMY_DATASOURCE = "__dummy__.robot"
+# pabot's parse_args requires at least one datasource argument. Using a UUID-based
+# name ensures this sentinel can never collide with a real user test file.
+_DUMMY_DATASOURCE = f"__nac_test_{uuid.uuid4().hex}__.robot"
 
 
 @functools.cache
