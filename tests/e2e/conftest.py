@@ -29,6 +29,7 @@ from tests.e2e.config import (
     DRY_RUN_ROBOT_FAIL_SCENARIO,
     DRY_RUN_SCENARIO,
     MIXED_SCENARIO,
+    PREFLIGHT_AUTH_FAILURE_SCENARIO,
     PYATS_API_ONLY_SCENARIO,
     PYATS_CC_SCENARIO,
     PYATS_D2D_ONLY_SCENARIO,
@@ -510,6 +511,27 @@ def e2e_windows_pyats_skip_results(
     return _run_e2e_scenario(
         WINDOWS_PYATS_SKIP_SCENARIO,
         None,
+        None,
+        tmp_path_factory,
+        class_mocker,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_preflight_auth_failure_results(
+    mock_api_server_preflight_401: MockAPIServer,
+    tmp_path_factory: pytest.TempPathFactory,
+    class_mocker: pytest.MonkeyPatch,
+) -> E2EResults:
+    """Pre-flight auth failure (401): Robot still runs, combined_summary shows failure report.
+
+    Uses a dedicated mock server loaded from mock_api_config_preflight_401.yaml
+    that returns 401 for all auth endpoints. This keeps the shared mock_api_server
+    untouched and avoids any endpoint mutation.
+    """
+    return _run_e2e_scenario(
+        PREFLIGHT_AUTH_FAILURE_SCENARIO,
+        mock_api_server_preflight_401,
         None,
         tmp_path_factory,
         class_mocker,
