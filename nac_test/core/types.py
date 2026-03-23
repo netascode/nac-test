@@ -110,7 +110,6 @@ class ErrorType(Enum):
     """
 
     GENERIC = "generic"
-    INVALID_ROBOT_ARGS = "invalid_robot_args"
     INTERRUPTED = "interrupted"
 
 
@@ -397,19 +396,25 @@ class CombinedResults:
             0: All tests passed, no errors OR all frameworks intentionally skipped
             1: Pre-flight failure (auth, unreachable, or controller detection failed)
             1-250: Number of test failures (capped at 250)
-            252: No tests found/executed across any framework OR Robot Framework invalid arguments
+            252: No tests found across any framework
+                 Note: invalid robot/pabot extra arguments are now caught in main() and
+                 no longer need to be inferred from test results
             253: Execution was interrupted (Ctrl+C, etc.)
             255: Execution errors occurred (has_errors is True)
 
         Note: Exit code 1 from pre-flight failure takes precedence over test failures.
         If pre-flight fails, exit code is 1 regardless of any subsequent test results.
 
-        Priority (highest to lowest): pre-flight > 253 (interrupted) > 252 (data error) > 255 (generic)
+        Priority (highest to lowest): pre-flight > 253 (interrupted) > 255 (generic) > failures > empty
 
         Why this priority? Pre-flight failures (1) indicate that testing could not even begin
         due to auth/connection issues — this is the most actionable signal. Interrupted (253)
-        is next because the user explicitly stopped execution. Data errors (252) indicate a
-        configuration problem. Generic errors (255) are lowest as they may be transient.
+        is next because the user explicitly stopped execution. Generic errors (255) indicate
+        infrastructure problems (framework crash, output.xml parse failure, etc.) that make
+        test results unreliable — any reported failures may be artifacts of the crash rather
+        than genuine test failures, so we surface the infrastructure error first. Test failures
+        (1-250) and empty results (252) are lowest priority as they represent normal execution
+        outcomes.
         """
         if self.pre_flight_failure is not None:
             return EXIT_PREFLIGHT_FAILURE
@@ -419,11 +424,11 @@ class CombinedResults:
             ]
             if ErrorType.INTERRUPTED in error_types:
                 return EXIT_INTERRUPTED
-            if ErrorType.INVALID_ROBOT_ARGS in error_types:
-                return EXIT_DATA_ERROR
             return EXIT_ERROR
         if self.has_failures:
             return min(self.failed, EXIT_FAILURE_CAP)
+        # was_not_run must precede is_empty: both evaluate to total==0,
+        # but SKIPPED (intentional) should return 0, not 252. See #645.
         if self.was_not_run:
             return 0
         if self.is_empty:

@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
     LOG_HTML,
     ORDERING_FILENAME,
     OUTPUT_XML,
@@ -21,7 +22,7 @@ from nac_test.core.constants import (
     SUMMARY_REPORT_FILENAME,
     XUNIT_XML,
 )
-from nac_test.core.types import ErrorType, TestResults, ValidatedRobotArgs
+from nac_test.core.types import ExecutionState, TestResults, ValidatedRobotArgs
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from tests.conftest import assert_is_link_to
@@ -258,23 +259,23 @@ class TestRobotOrchestrator:
         assert stats.skipped == 0
 
     @patch("nac_test.robot.orchestrator.run_pabot")
-    def test_run_tests_handles_pabot_error_252(
+    def test_run_tests_handles_pabot_exit_252_as_empty(
         self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
     ) -> None:
-        """Test run_tests returns TestResults.from_error on pabot exit code 252 (invalid arguments)."""
+        """Test run_tests returns TestResults.empty() on pabot exit code 252 (no tests matched filters)."""
         # Mock RobotWriter instance methods
         orchestrator.robot_writer.write = MagicMock()
         orchestrator.robot_writer.write_merged_data_model = MagicMock()
 
-        # Mock pabot failure with exit code 252
-        mock_pabot.return_value = 252
+        # Mock pabot exit code EXIT_DATA_ERROR (for example no tests matched --include/--exclude filters)
+        mock_pabot.return_value = EXIT_DATA_ERROR
 
-        # Should return TestResults with error state
+        # Should return empty TestResults (not error) - "no tests executed" warning
         result = orchestrator.run_tests()
         assert isinstance(result, TestResults)
-        assert result.has_error
-        assert result.reason is not None
-        assert result.error_type == ErrorType.INVALID_ROBOT_ARGS
+        assert result.is_empty
+        assert result.state == ExecutionState.EMPTY
+        assert not result.has_error
 
     def test_run_tests_return_type(self, orchestrator: RobotOrchestrator) -> None:
         """Test run_tests returns TestResults with correct attributes."""
@@ -392,3 +393,60 @@ class TestRobotOrchestrator:
         call_kwargs = mock_pabot.call_args[1]
         assert call_kwargs["verbose"] is expected_verbose
         assert call_kwargs["default_robot_loglevel"] == expected_default_robot_loglevel
+
+    @pytest.mark.parametrize(
+        ("include_tags", "exclude_tags"),
+        [
+            (["smoke"], []),
+            ([], ["slow"]),
+            (["smoke"], ["slow"]),
+        ],
+        ids=[
+            "include_only",
+            "exclude_only",
+            "include_and_exclude",
+        ],
+    )
+    @patch("nac_test.robot.orchestrator.run_pabot")
+    @patch("nac_test.robot.orchestrator.RobotReportGenerator")
+    def test_include_exclude_tags_passed_to_pabot(
+        self,
+        mock_generator,
+        mock_pabot,
+        mock_data_paths,
+        mock_templates_dir,
+        temp_output_dir,
+        include_tags,
+        exclude_tags,
+    ) -> None:
+        """Test that include/exclude tags are correctly passed through to run_pabot."""
+        orchestrator = RobotOrchestrator(
+            data_paths=mock_data_paths,
+            templates_dir=mock_templates_dir,
+            output_dir=temp_output_dir,
+            merged_data_filename="merged.yaml",
+            include_tags=include_tags,
+            exclude_tags=exclude_tags,
+        )
+        orchestrator.robot_writer.write = MagicMock()
+        orchestrator.robot_writer.write_merged_data_model = MagicMock()
+        mock_pabot.return_value = 0
+
+        mock_generator_instance = MagicMock()
+        mock_generator_instance.generate_summary_report.return_value = (
+            None,
+            TestResults(),
+        )
+        mock_generator.return_value = mock_generator_instance
+
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
+            (robot_results_dir / filename).write_text(f"Mock {filename}")
+
+        orchestrator.run_tests()
+
+        mock_pabot.assert_called_once()
+        call_kwargs = mock_pabot.call_args[1]
+        assert call_kwargs["include"] == include_tags
+        assert call_kwargs["exclude"] == exclude_tags

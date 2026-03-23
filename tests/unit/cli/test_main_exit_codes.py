@@ -17,7 +17,6 @@ from nac_test.core.constants import (
 )
 from nac_test.core.types import (
     CombinedResults,
-    ErrorType,
     PreFlightFailure,
     PreFlightFailureType,
     TestResults,
@@ -38,30 +37,14 @@ class TestMainExitCodes:
                 CombinedResults(robot=TestResults.from_error("Framework crashed")),
                 EXIT_ERROR,
             ),
-            (
-                CombinedResults(
-                    robot=TestResults.from_error(
-                        "Invalid args", ErrorType.INVALID_ROBOT_ARGS
-                    )
-                ),
-                EXIT_DATA_ERROR,
-            ),
             (CombinedResults(), EXIT_DATA_ERROR),
+            (CombinedResults(robot=TestResults.empty()), EXIT_DATA_ERROR),
             (
                 CombinedResults(
                     robot=TestResults.from_error("Framework crashed"),
                     api=TestResults(passed=0, failed=5, skipped=0),
                 ),
                 EXIT_ERROR,
-            ),
-            (
-                CombinedResults(
-                    robot=TestResults.from_error(
-                        "Invalid args", error_type=ErrorType.INVALID_ROBOT_ARGS
-                    ),
-                    api=TestResults.from_error("API execution failed"),
-                ),
-                EXIT_DATA_ERROR,
             ),
             (
                 CombinedResults(robot=TestResults(passed=0, failed=300, skipped=0)),
@@ -83,10 +66,9 @@ class TestMainExitCodes:
             "all_tests_passed",
             "exit_code_equals_failure_count",
             "execution_error_returns_255",
-            "robot_invalid_args_returns_252",
-            "empty_results_returns_252",
+            "empty_combined_results_returns_252",
+            "robot_no_tests_returns_252",
             "error_prioritized_over_failures",
-            "robot_invalid_args_prioritized_over_other_errors",
             "failure_count_capped_at_250",
             "preflight_failure_returns_1",
         ],
