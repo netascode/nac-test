@@ -32,6 +32,9 @@ class TestValidateExtraArgs:
             "--log",
             "--report",
             "--xunit",
+            # Mixed-case variants: Robot's parser is case-insensitive, so must we be
+            "--OutputDir",
+            "--INCLUDE",
         ],
     )
     @pytest.mark.parametrize("form", ["space", "equals"])
