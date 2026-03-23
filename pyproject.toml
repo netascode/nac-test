@@ -1,6 +1,6 @@
 [project]
 name = "nac-test"
-version = "2.0.0a1"
+version = "2.0.0b1"
 description = "A CLI tool to render to execute Robot Framework (RF) and PyATS tests for Network as Code (NAC)."
 license = { text = "MPL-2.0" }
 readme = "README.md"
