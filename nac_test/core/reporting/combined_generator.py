@@ -60,12 +60,14 @@ class FrameworkRenderData:
         stats: Test result counts, or None when pre-flight failed for this framework.
         report_path: Relative path to the framework's detail report.
         is_pre_flight_failure: True when the framework was skipped due to pre-flight failure.
+        has_report: True if a detailed report with test results exists for this framework.
     """
 
     title: str
     stats: object  # TestResults | None — kept as object to avoid circular imports
     report_path: str
     is_pre_flight_failure: bool
+    has_report: bool
 
 
 class _CurlTemplate(NamedTuple):
@@ -208,6 +210,7 @@ class CombinedReportGenerator:
                             stats=None,
                             report_path=relative_path,
                             is_pre_flight_failure=True,
+                            has_report=False,
                         )
 
                 # Map CombinedResults attributes to framework keys
@@ -229,6 +232,7 @@ class CombinedReportGenerator:
                         stats=test_results,
                         report_path=metadata.get("report_path", "#"),
                         is_pre_flight_failure=False,
+                        has_report=not test_results.is_empty,
                     )
 
             overall_stats = results if results is not None else CombinedResults()

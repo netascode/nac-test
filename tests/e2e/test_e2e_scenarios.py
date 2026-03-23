@@ -44,6 +44,7 @@ from tests.e2e.html_helpers import (
     assert_combined_stats,
     assert_report_stats,
     extract_summary_stats_from_combined,
+    extract_test_type_sections,
     load_html_file,
     verify_breadcrumb_link,
     verify_html_structure,
@@ -600,6 +601,44 @@ class E2ECombinedTestBase:
         assert abs(stats.success_rate - expected_rate) < 0.1, (
             f"Expected {expected_rate:.1f}% success rate, got {stats.success_rate}%"
         )
+
+    def test_combined_dashboard_section_links_resolve(
+        self, results: E2EResults
+    ) -> None:
+        """Verify section report links are present iff the section has tests.
+
+        Uses extract_test_type_sections() to parse per-framework sections and
+        asserts two invariants for each section:
+        - total_tests > 0  → report_path is set AND the file exists
+        - total_tests == 0 → report_path is empty (no dead link rendered)
+
+        The negative check (total==0 → no link) would have caught issue #644,
+        where the "View Detailed Report →" link was rendered unconditionally
+        even when a Robot run matched zero tests and no summary_report.html
+        was generated.
+        """
+        html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
+        html_content = load_html_file(html_path)
+        sections = extract_test_type_sections(html_content)
+
+        for section in sections:
+            if section.total_tests > 0:
+                # Positive: link must exist and resolve to a real file
+                assert section.report_path, (
+                    f"Dashboard section '{section.test_type}' has {section.total_tests} "
+                    f"tests but no report link"
+                )
+                resolved = (results.output_dir / section.report_path).resolve()
+                assert resolved.exists(), (
+                    f"Dashboard section '{section.test_type}' links to "
+                    f"'{section.report_path}' which does not exist"
+                )
+            else:
+                # Negative: no tests → no link (guards against #644 regression)
+                assert not section.report_path, (
+                    f"Dashboard section '{section.test_type}' has 0 tests but "
+                    f"still renders a report link: '{section.report_path}'"
+                )
 
     # -------------------------------------------------------------------------
     # Hostname Display Tests (for D2D scenarios)
