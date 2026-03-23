@@ -367,9 +367,10 @@ def main(
         raise typer.Exit(EXIT_INVALID_ARGS)
 
     # Validate extra Robot Framework arguments early (fail fast before expensive operations)
+    validated_robot_args = None
     if ctx.args:
         try:
-            validate_extra_args(ctx.args)
+            validated_robot_args = validate_extra_args(ctx.args)
         except ValueError as e:
             # CLI misuse: controlled option, pabot option, or datasource in extra args
             _print_cli_error(str(e))
@@ -419,7 +420,7 @@ def main(
         render_only=render_only,
         dry_run=dry_run,
         processes=processes,
-        extra_args=ctx.args,
+        extra_args=validated_robot_args,
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
         loglevel=effective_loglevel,

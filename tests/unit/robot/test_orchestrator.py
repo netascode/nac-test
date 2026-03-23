@@ -21,7 +21,7 @@ from nac_test.core.constants import (
     SUMMARY_REPORT_FILENAME,
     XUNIT_XML,
 )
-from nac_test.core.types import ErrorType, TestResults
+from nac_test.core.types import ErrorType, TestResults, ValidatedRobotArgs
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from tests.conftest import assert_is_link_to
@@ -82,6 +82,8 @@ class TestRobotOrchestrator:
         assert orchestrator.dry_run is False
         assert orchestrator.loglevel == DEFAULT_LOGLEVEL
 
+    # TODO(#699): remove this test — it only asserts that __init__ assigns attributes,
+    # not any application logic. Replace with tests for actual orchestrator behaviour.
     def test_initialization_with_optional_params(
         self, mock_data_paths, mock_templates_dir, temp_output_dir
     ) -> None:
@@ -96,7 +98,7 @@ class TestRobotOrchestrator:
             render_only=True,
             dry_run=True,
             processes=4,
-            extra_args=["--exitonfailure"],
+            extra_args=ValidatedRobotArgs(args=["--exitonfailure"], robot_opts={}),
             loglevel=LogLevel.DEBUG,
         )
 
@@ -105,7 +107,9 @@ class TestRobotOrchestrator:
         assert orchestrator.render_only is True
         assert orchestrator.dry_run is True
         assert orchestrator.processes == 4
-        assert orchestrator.extra_args == ["--exitonfailure"]
+        assert orchestrator.extra_args == ValidatedRobotArgs(
+            args=["--exitonfailure"], robot_opts={}
+        )
         assert orchestrator.loglevel == LogLevel.DEBUG
 
     def test_create_backward_compat_links(self, orchestrator, temp_output_dir) -> None:

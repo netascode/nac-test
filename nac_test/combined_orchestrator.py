@@ -29,6 +29,7 @@ from nac_test.core.types import (
     ControllerTypeKey,
     PreFlightFailure,
     TestResults,
+    ValidatedRobotArgs,
 )
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
@@ -81,7 +82,7 @@ class CombinedOrchestrator:
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
         processes: int | None = None,
-        extra_args: list[str] | None = None,
+        extra_args: ValidatedRobotArgs | None = None,
         verbose: bool = False,
     ):
         """Initialize the combined orchestrator.
@@ -120,7 +121,7 @@ class CombinedOrchestrator:
         self.render_only = render_only
         self.dry_run = dry_run
         self.processes = processes
-        self.extra_args = extra_args or []
+        self.extra_args = extra_args
 
         # PyATS-specific parameters
         self.max_parallel_devices = max_parallel_devices

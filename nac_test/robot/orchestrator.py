@@ -25,7 +25,7 @@ from nac_test.core.constants import (
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
 )
-from nac_test.core.types import ErrorType, TestResults
+from nac_test.core.types import ErrorType, TestResults, ValidatedRobotArgs
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
@@ -57,7 +57,7 @@ class RobotOrchestrator:
         render_only: bool = False,
         dry_run: bool = False,
         processes: int | None = None,
-        extra_args: list[str] | None = None,
+        extra_args: ValidatedRobotArgs | None = None,
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
         verbose: bool = False,
     ):
@@ -93,7 +93,7 @@ class RobotOrchestrator:
         self.render_only = render_only
         self.dry_run = dry_run
         self.processes = processes
-        self.extra_args = extra_args or []
+        self.extra_args = extra_args
         self.loglevel = loglevel
         self.verbose = verbose
 

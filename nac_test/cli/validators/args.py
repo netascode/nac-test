@@ -13,6 +13,7 @@ from typing import Any
 
 from robot.errors import DataError
 
+from nac_test.core.types import ValidatedRobotArgs
 from nac_test.utils.strings import parse_cli_option_name
 
 logger = logging.getLogger(__name__)
@@ -136,8 +137,14 @@ def _raise_if_datasources(datasources: list[str]) -> None:
         raise ValueError(error_msg)
 
 
-def validate_extra_args(extra_args: list[str]) -> None:
+def validate_extra_args(extra_args: list[str]) -> ValidatedRobotArgs:
     """Validate extra Robot Framework arguments passed after the -- separator.
+
+    Returns a ValidatedRobotArgs with the raw arg list and the parsed Robot opts
+    dict from pabot's parser. Callers should pass this object through the
+    orchestration chain instead of the raw string list, so that downstream
+    consumers (e.g. run_pabot) can inspect parsed option values without
+    re-parsing.
 
     Raises:
         ValueError: If extra_args contain datasources/files, pabot options, or
@@ -145,22 +152,25 @@ def validate_extra_args(extra_args: list[str]) -> None:
         DataError: If extra_args contain invalid Robot Framework arguments.
     """
     if not extra_args:
-        return
+        return ValidatedRobotArgs(args=[], robot_opts={})
 
     _raise_if_controlled_robot_options(extra_args)
     _raise_if_pabot_options(extra_args)
 
     if _pabot_parse_args is None:
-        return
+        return ValidatedRobotArgs(args=extra_args, robot_opts={})
 
     # Use pabot's parse_args as the authoritative Robot argument validator.
     try:
-        _, datasources, _, _ = _pabot_parse_args(extra_args + [_DUMMY_DATASOURCE])
+        robot_opts, datasources, _, _ = _pabot_parse_args(
+            extra_args + [_DUMMY_DATASOURCE]
+        )
     except DataError:
         # Unknown robotframework arguments
         raise
     except (IndexError, TypeError) as e:
         logger.warning(f"pabot API may have changed, skipping validation: {e}")
-        return
+        return ValidatedRobotArgs(args=extra_args, robot_opts={})
 
     _raise_if_datasources(datasources)
+    return ValidatedRobotArgs(args=extra_args, robot_opts=robot_opts)

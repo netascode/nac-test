@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from nac_test.core.types import ValidatedRobotArgs
 from nac_test.robot.pabot import run_pabot
 from tests.unit.conftest import is_sublist
 
@@ -47,7 +48,7 @@ class TestRunPabotLoglevel:
             assert actual_loglevel == expected_loglevel
 
     @pytest.mark.parametrize(
-        "extra_args",
+        "extra_args_strings",
         [
             ["--loglevel", "TRACE"],
             ["--loglevel=TRACE"],
@@ -64,11 +65,16 @@ class TestRunPabotLoglevel:
         mock_main_program: MagicMock,
         tmp_path: Path,
         default_robot_loglevel: str | None,
-        extra_args: list[str],
+        extra_args_strings: list[str],
     ) -> None:
-        """Test that any loglevel form in extra_args is passed through as the sole loglevel."""
+        """Test that an explicit loglevel in extra_args suppresses the default."""
         mock_main_program.return_value = 0
 
+        # robot_opts reflects what pabot's parser would produce: loglevel is set
+        extra_args = ValidatedRobotArgs(
+            args=extra_args_strings,
+            robot_opts={"loglevel": "TRACE"},
+        )
         run_pabot(
             tmp_path,
             default_robot_loglevel=default_robot_loglevel,
@@ -78,9 +84,9 @@ class TestRunPabotLoglevel:
         mock_main_program.assert_called_once()
         call_args = mock_main_program.call_args[0][0]
 
-        # extra_args passed through verbatim and in order
-        assert is_sublist(extra_args, call_args), (
-            f"extra_args {extra_args} not found as contiguous sequence in {call_args}"
+        # extra_args.args passed through verbatim and in order
+        assert is_sublist(extra_args_strings, call_args), (
+            f"extra_args {extra_args_strings} not found as contiguous sequence in {call_args}"
         )
 
         # default loglevel must not be appended when extra_args already contains one
