@@ -20,6 +20,7 @@ _Note: This changelog covers all 2.0.0 alpha and beta releases._
 - **Robot artifacts moved**: Output files (`log.html`, `report.html`, etc.) now created in `robot_results/` subdirectory; links in root directory for backward compatibility
 - **Robot suite names changed**: Top-level Robot suite names now start with `Robot Results` instead of the output directory name. Use Robot's `--name MyProject` argument to override the top-level suite name when needed.
 - **RESTinstance removed from core dependencies**: The `RESTinstance` Robot library has been removed. Users who still need RESTinstance can install it separately alongside nac-test.
+- **Robot Framework arguments require `--` separator**: Additional Robot Framework arguments must now be passed after the `--` separator (e.g., `nac-test ... -- --variable X:Y`). Arguments passed directly without the separator are no longer accepted. Certain Robot options (like `--include`, `--exclude`, `--outputdir`) are controlled by nac-test and cannot be passed via `--`; use the corresponding nac-test options instead (e.g., `-i`/`--include`, `-e`/`--exclude`, `-o`/`--output`).
 
 ## CLI Changes
 
