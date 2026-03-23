@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from nac_test.core.constants import DEFAULT_MERGED_DATA_FILENAME
 from nac_test.pyats_core.execution.job_generator import JobGenerator
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
 
@@ -104,8 +105,7 @@ class DeviceExecutor:
                         "HOSTNAME": hostname,
                         "DEVICE_INFO": json.dumps(device),
                         "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
-                            self.base_output_dir
-                            / "merged_data_model_test_variables.yaml"
+                            self.base_output_dir / DEFAULT_MERGED_DATA_FILENAME
                         ),
                         "NAC_TEST_TYPE": "d2d",
                     }

@@ -36,7 +36,7 @@ class DataMerger:
     def write_merged_data_model(
         data: dict[str, Any],
         output_directory: Path,
-        filename: str = "merged_data_model_test_variables.yaml",
+        filename: str,
     ) -> None:
         """Write merged data model to YAML file.
 

@@ -1,0 +1,230 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2025 Daniel Schmidt
+
+"""Unit tests for CleanupManager."""
+
+from __future__ import annotations
+
+import signal
+import threading
+from collections.abc import Generator
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+from nac_test.core.constants import IS_WINDOWS
+from nac_test.utils.cleanup import CleanupManager, get_cleanup_manager
+
+
+@pytest.fixture
+def fresh_cleanup_manager() -> Generator[CleanupManager, None, None]:
+    """Create a fresh CleanupManager instance isolated from the global singleton."""
+    with (
+        patch.object(CleanupManager, "_instance", None),
+        patch.object(CleanupManager, "_initialized", False),
+        patch("atexit.register"),
+    ):
+        cm = CleanupManager()
+        cm._files.clear()
+        cm._cleanup_done = False
+        yield cm
+
+
+class TestCleanupManagerSingleton:
+    """Tests for CleanupManager singleton behavior."""
+
+    def test_multiple_calls_return_same_instance(
+        self, fresh_cleanup_manager: CleanupManager
+    ) -> None:
+        cm2 = CleanupManager()
+        assert fresh_cleanup_manager is cm2
+
+    def test_get_cleanup_manager_returns_singleton(
+        self, fresh_cleanup_manager: CleanupManager
+    ) -> None:
+        assert get_cleanup_manager() is fresh_cleanup_manager
+
+
+class TestCleanupManagerRegistration:
+    """Tests for file registration and unregistration."""
+
+    def test_register_adds_path(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+
+        fresh_cleanup_manager.register(test_file)
+
+        assert test_file.resolve() in fresh_cleanup_manager._files
+
+    def test_register_multiple_files(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        file1 = tmp_path / "file1.txt"
+        file2 = tmp_path / "file2.txt"
+        file1.touch()
+        file2.touch()
+
+        fresh_cleanup_manager.register(file1)
+        fresh_cleanup_manager.register(file2)
+
+        assert len(fresh_cleanup_manager._files) == 2
+
+    def test_unregister_removes_path(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+
+        fresh_cleanup_manager.register(test_file)
+        fresh_cleanup_manager.unregister(test_file)
+
+        assert test_file.resolve() not in fresh_cleanup_manager._files
+
+    def test_unregister_nonexistent_path_is_safe(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        nonexistent = tmp_path / "nonexistent.txt"
+        fresh_cleanup_manager.unregister(nonexistent)  # Should not raise
+
+
+class TestCleanupManagerCleanup:
+    """Tests for cleanup behavior."""
+
+    def test_cleanup_removes_registered_files(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        test_file = tmp_path / "sensitive_data.yaml"
+        test_file.write_text("secret: password123")
+
+        fresh_cleanup_manager.register(test_file)
+        fresh_cleanup_manager.cleanup_now()
+
+        assert not test_file.exists()
+
+    def test_cleanup_is_idempotent(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+
+        fresh_cleanup_manager.register(test_file)
+        fresh_cleanup_manager.cleanup_now()
+        fresh_cleanup_manager.cleanup_now()  # Second call should be safe
+
+        assert fresh_cleanup_manager._cleanup_done
+
+    def test_cleanup_handles_already_deleted_file(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+
+        fresh_cleanup_manager.register(test_file)
+        test_file.unlink()  # Delete before cleanup
+
+        fresh_cleanup_manager.cleanup_now()  # Should not raise
+
+    def test_cleanup_continues_after_single_file_error(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        file1 = tmp_path / "file1.txt"
+        file2 = tmp_path / "file2.txt"
+        file1.touch()
+        file2.touch()
+
+        fresh_cleanup_manager.register(file1)
+        fresh_cleanup_manager.register(file2)
+
+        # Make file1 a directory so unlink fails
+        file1.unlink()
+        file1.mkdir()
+
+        fresh_cleanup_manager.cleanup_now()
+
+        # file2 should still be cleaned up despite file1 error
+        assert not file2.exists()
+        # Cleanup completed
+        assert fresh_cleanup_manager._cleanup_done
+
+
+class TestCleanupManagerThreadSafety:
+    """Tests for thread-safe behavior."""
+
+    def test_concurrent_registration(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        num_threads = 10
+        files_per_thread = 10
+
+        def register_files(thread_id: int) -> None:
+            for i in range(files_per_thread):
+                f = tmp_path / f"thread{thread_id}_file{i}.txt"
+                f.touch()
+                fresh_cleanup_manager.register(f)
+
+        threads = [
+            threading.Thread(target=register_files, args=(i,))
+            for i in range(num_threads)
+        ]
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert len(fresh_cleanup_manager._files) == num_threads * files_per_thread
+
+
+@pytest.mark.skipif(IS_WINDOWS, reason="Signal tests not supported on Windows")
+class TestCleanupManagerSignalHandlers:
+    """Tests for signal handler behavior (Unix only)."""
+
+    def test_sigint_cleans_up_and_raises_keyboard_interrupt(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+        fresh_cleanup_manager.register(test_file)
+
+        with patch("signal.signal"), pytest.raises(KeyboardInterrupt):
+            fresh_cleanup_manager._signal_handler(signal.SIGINT, None)
+
+        assert not test_file.exists()
+
+    def test_sigterm_cleans_up_and_reraises_signal(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+        fresh_cleanup_manager.register(test_file)
+
+        with patch("signal.signal"), patch("signal.raise_signal") as mock_raise:
+            fresh_cleanup_manager._signal_handler(signal.SIGTERM, None)
+            mock_raise.assert_called_once_with(signal.SIGTERM)
+
+        assert not test_file.exists()
+
+
+class TestCleanupManagerIntegration:
+    """Integration tests using the real singleton."""
+
+    def test_multiple_registrations_share_state(self, tmp_path: Path) -> None:
+        cm = get_cleanup_manager()
+        initial_count = len(cm._files)
+
+        file1 = tmp_path / "module_a.txt"
+        file2 = tmp_path / "module_b.txt"
+        file1.touch()
+        file2.touch()
+
+        cm.register(file1)
+        cm.register(file2)
+
+        assert len(cm._files) == initial_count + 2
+
+        # Clean up test files from singleton
+        cm.unregister(file1)
+        cm.unregister(file2)

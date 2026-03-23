@@ -842,20 +842,6 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
   nac-test -d config/ -t templates/ --tests custom_tests/ -o output/
   ```
 
-**`-m, --merged-data-filename`** (OPTIONAL)
-- **Type**: `str`
-- **Default**: `"merged_data_model_test_variables.yaml"`
-- **Environment Variable**: None (CLI only)
-- **Purpose**: Custom filename for merged data model YAML (SOT shared across frameworks)
-- **Behavior**:
-  - Written to `{output_dir}/{merged_data_filename}`
-  - Passed to CombinedOrchestrator constructor
-  - Both PyATS and Robot read from this shared file
-- **Example**:
-  ```bash
-  nac-test -d config/ -t templates/ -o output/ -m merged_data_prod.yaml
-  ```
-
 ##### Execution Control Flags
 
 **`-i, --include`** (OPTIONAL)
@@ -1296,7 +1282,7 @@ exit()  # Checks error_handler.fired for exit code
 
 #### Environment Variable Support
 
-Every CLI flag (except `--version` and `--merged-data-filename`) supports environment variable configuration for CI/CD and containerized environments.
+Every CLI flag (except `--version`) supports environment variable configuration for CI/CD and containerized environments.
 
 **Environment Variable Mapping Table**:
 

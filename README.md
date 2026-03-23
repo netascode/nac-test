@@ -58,8 +58,6 @@ $ nac-test --help
 │    --verbose                            Enables verbose output for nac-test, │
 │                                         Robot and PyATS execution.           |
 │                                         [env var: NAC_TEST_VERBOSE]          │
-│    --merged-data-file… -m   TEXT        Filename for merged data model.      │
-│                                         [default: merged_data_model_test...] │
 │    --loglevel          -l   [DEBUG|...] Log level. [default: WARNING]        │
 │    --version                            Display version number.              │
 │    --help                               Show this message and exit.          │
@@ -372,16 +370,8 @@ Before test execution, `nac-test` merges all YAML data files into a single data 
 
 1. All files from `--data` paths are recursively loaded
 2. YAML structures are deep-merged (later files override earlier ones)
-3. The merged result is written to the output directory
+3. The merged result is written to the output directory as `merged_data_model_test_variables.yaml`
 4. Both Robot and PyATS tests reference this merged data
-
-### Custom Filename
-
-By default, the merged file is named `merged_data_model_test_variables.yaml`. You can customize this:
-
-```bash
-nac-test -d ./data -t ./tests -o ./output -m my_custom_data.yaml
-```
 
 ### Accessing the Merged Data
 

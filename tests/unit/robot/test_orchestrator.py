@@ -2,8 +2,6 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 # mypy: disable-error-code="no-untyped-def,method-assign"
-# SPDX-License-Identifier: MPL-2.0
-# Copyright (c) 2025 Daniel Schmidt
 
 """Unit tests for Robot Framework orchestrator."""
 
@@ -13,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nac_test.core.constants import (
+    DEFAULT_MERGED_DATA_FILENAME,
     LOG_HTML,
     ORDERING_FILENAME,
     OUTPUT_XML,
@@ -29,18 +28,13 @@ from tests.conftest import assert_is_link_to
 
 @pytest.fixture
 def temp_output_dir(tmp_path: Path) -> Path:
-    """Create a temporary output directory for tests."""
+    """Create a temporary output directory with merged data file for tests."""
     output_dir = tmp_path / "output"
     output_dir.mkdir()
+    # Create merged data file that RobotWriter expects to read
+    merged_data_file = output_dir / DEFAULT_MERGED_DATA_FILENAME
+    merged_data_file.write_text("test: data")
     return output_dir
-
-
-@pytest.fixture
-def mock_data_paths(tmp_path: Path) -> list[Path]:
-    """Create mock data paths."""
-    data_file = tmp_path / "data.yaml"
-    data_file.write_text("test: data")
-    return [data_file]
 
 
 @pytest.fixture
@@ -52,15 +46,11 @@ def mock_templates_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def orchestrator(
-    mock_data_paths, mock_templates_dir, temp_output_dir
-) -> RobotOrchestrator:
+def orchestrator(mock_templates_dir, temp_output_dir) -> RobotOrchestrator:
     """Create a RobotOrchestrator instance for testing."""
     return RobotOrchestrator(
-        data_paths=mock_data_paths,
         templates_dir=mock_templates_dir,
         output_dir=temp_output_dir,
-        merged_data_filename="merged_data.yaml",
         loglevel=DEFAULT_LOGLEVEL,
     )
 
@@ -69,28 +59,28 @@ class TestRobotOrchestrator:
     """Test suite for RobotOrchestrator."""
 
     def test_initialization(
-        self, orchestrator, temp_output_dir, mock_data_paths, mock_templates_dir
+        self, orchestrator, temp_output_dir, mock_templates_dir
     ) -> None:
         """Test orchestrator initialization."""
         assert orchestrator.base_output_dir == temp_output_dir
         assert orchestrator.output_dir == temp_output_dir / ROBOT_RESULTS_DIRNAME
         assert orchestrator.ordering_file == orchestrator.output_dir / ORDERING_FILENAME
-        assert orchestrator.data_paths == mock_data_paths
         assert orchestrator.templates_dir == mock_templates_dir
-        assert orchestrator.merged_data_filename == "merged_data.yaml"
+        assert (
+            orchestrator.merged_data_path
+            == temp_output_dir / DEFAULT_MERGED_DATA_FILENAME
+        )
         assert orchestrator.render_only is False
         assert orchestrator.dry_run is False
         assert orchestrator.loglevel == DEFAULT_LOGLEVEL
 
     def test_initialization_with_optional_params(
-        self, mock_data_paths, mock_templates_dir, temp_output_dir
+        self, mock_templates_dir, temp_output_dir
     ) -> None:
         """Test orchestrator initialization with optional parameters."""
         orchestrator = RobotOrchestrator(
-            data_paths=mock_data_paths,
             templates_dir=mock_templates_dir,
             output_dir=temp_output_dir,
-            merged_data_filename="merged.yaml",
             include_tags=["smoke", "regression"],
             exclude_tags=["wip"],
             render_only=True,
@@ -194,20 +184,13 @@ class TestRobotOrchestrator:
         """Test run_tests in render-only mode."""
         orchestrator.render_only = True
 
-        # Mock RobotWriter instance methods directly on the orchestrator's writer
         orchestrator.robot_writer.write = MagicMock()
-        orchestrator.robot_writer.write_merged_data_model = MagicMock()
 
         stats = orchestrator.run_tests()
 
-        # Verify template rendering was called
         orchestrator.robot_writer.write.assert_called_once()
-        orchestrator.robot_writer.write_merged_data_model.assert_called_once()
-
-        # Verify pabot was NOT called
         mock_pabot.assert_not_called()
 
-        # Verify render-only mode returns not_run() result with SKIPPED state
         assert stats.was_not_run is True
         assert stats.reason == "render-only mode"
 
@@ -217,14 +200,10 @@ class TestRobotOrchestrator:
         self, mock_generator, mock_pabot, orchestrator, temp_output_dir
     ) -> None:
         """Test run_tests executes full test lifecycle."""
-        # Mock RobotWriter instance methods directly
         orchestrator.robot_writer.write = MagicMock()
-        orchestrator.robot_writer.write_merged_data_model = MagicMock()
 
-        # Mock pabot success
         mock_pabot.return_value = 0
 
-        # Mock report generator - now returns tuple (path, stats)
         mock_generator_instance = MagicMock()
         mock_stats = TestResults(passed=1, failed=0, skipped=0)
         mock_generator_instance.generate_summary_report.return_value = (
@@ -233,7 +212,6 @@ class TestRobotOrchestrator:
         )
         mock_generator.return_value = mock_generator_instance
 
-        # Create mock Robot output files in robot_results/ (pabot 5.2+ writes directly there)
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
         for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
@@ -241,13 +219,10 @@ class TestRobotOrchestrator:
 
         stats = orchestrator.run_tests()
 
-        # Verify all phases executed
         orchestrator.robot_writer.write.assert_called_once()
-        orchestrator.robot_writer.write_merged_data_model.assert_called_once()
         mock_pabot.assert_called_once()
         mock_generator_instance.generate_summary_report.assert_called_once()
 
-        # Verify statistics returned
         assert stats.total == 1
         assert stats.passed == 1
         assert stats.failed == 0
@@ -258,14 +233,10 @@ class TestRobotOrchestrator:
         self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
     ) -> None:
         """Test run_tests returns TestResults.from_error on pabot exit code 252 (invalid arguments)."""
-        # Mock RobotWriter instance methods
         orchestrator.robot_writer.write = MagicMock()
-        orchestrator.robot_writer.write_merged_data_model = MagicMock()
 
-        # Mock pabot failure with exit code 252
         mock_pabot.return_value = 252
 
-        # Should return TestResults with error state
         result = orchestrator.run_tests()
         assert isinstance(result, TestResults)
         assert result.has_error
@@ -349,7 +320,6 @@ class TestRobotOrchestrator:
         self,
         mock_generator,
         mock_pabot,
-        mock_data_paths,
         mock_templates_dir,
         temp_output_dir,
         verbose,
@@ -359,15 +329,12 @@ class TestRobotOrchestrator:
     ) -> None:
         """Test that verbose and loglevel are correctly passed to run_pabot."""
         orchestrator = RobotOrchestrator(
-            data_paths=mock_data_paths,
             templates_dir=mock_templates_dir,
             output_dir=temp_output_dir,
-            merged_data_filename="merged.yaml",
             verbose=verbose,
             loglevel=loglevel,
         )
         orchestrator.robot_writer.write = MagicMock()
-        orchestrator.robot_writer.write_merged_data_model = MagicMock()
         mock_pabot.return_value = 0
 
         mock_generator_instance = MagicMock()

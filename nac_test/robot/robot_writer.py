@@ -61,13 +61,13 @@ class TestCollector(SuiteVisitor):  # type: ignore[misc]
 class RobotWriter:
     def __init__(
         self,
-        data_paths: list[Path],
+        merged_data_path: Path,
         filters_path: Path | None,
         tests_path: Path | None,
         include_tags: list[str] | None = None,
         exclude_tags: list[str] | None = None,
     ) -> None:
-        self.data = DataMerger.merge_data_files(data_paths)
+        self.data = DataMerger.load_yaml_file(merged_data_path)
         # Convert OrderedDict to dict once during initialization instead of per-template
         # This eliminates expensive JSON round-trip serialization for each template render
         self.template_data = self._convert_data_model_for_templates(self.data)
@@ -543,19 +543,3 @@ class RobotWriter:
         else:
             # ensure we clean out a leftover ordering file if we don't want testlevelsplit
             ordering_file.unlink(missing_ok=True)
-
-    def write_merged_data_model(
-        self,
-        output_directory: Path,
-        filename: str = "merged_data_model_test_variables.yaml",
-    ) -> None:
-        """Writes the merged data model to a specified YAML file.
-
-        This method takes the internal, merged data dictionary (`self.data`)
-        and writes it to a YAML file in the specified output directory.
-
-        Args:
-            output_directory: The directory where the YAML file will be saved.
-            filename: The name of the output YAML file.
-        """
-        DataMerger.write_merged_data_model(self.data, output_directory, filename)

@@ -32,7 +32,6 @@ class TestOrchestratorDryRun:
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
             dry_run=True,
         )
 
@@ -80,7 +79,6 @@ class TestOrchestratorDryRun:
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
             dry_run=True,
         )
 
@@ -114,7 +112,6 @@ class TestOrchestratorDryRun:
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
             dry_run=True,
         )
 
@@ -145,7 +142,6 @@ class TestOrchestratorDryRun:
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
             dry_run=True,
         )
 

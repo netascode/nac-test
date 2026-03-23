@@ -15,6 +15,7 @@ from typing import Any
 
 from nac_test.core.constants import (
     DEBUG_MODE,
+    DEFAULT_MERGED_DATA_FILENAME,
     DRY_RUN_REASON,
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
@@ -66,7 +67,6 @@ class PyATSOrchestrator:
         data_paths: list[Path],
         test_dir: Path,
         output_dir: Path,
-        merged_data_filename: str,
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
@@ -80,7 +80,6 @@ class PyATSOrchestrator:
             data_paths: List of paths to data model YAML files
             test_dir: Directory containing PyATS test files
             output_dir: Base output directory (orchestrator creates pyats_results subdirectory)
-            merged_data_filename: Name of the merged data model file
             minimal_reports: Only include command outputs for failed/errored tests in reports
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
@@ -97,7 +96,7 @@ class PyATSOrchestrator:
         self.output_dir = (
             self.base_output_dir / PYATS_RESULTS_DIRNAME
         )  # PyATS works in its own subdirectory
-        self.merged_data_filename = merged_data_filename
+        self.merged_data_filename = DEFAULT_MERGED_DATA_FILENAME
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
         self.dry_run = dry_run

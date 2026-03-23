@@ -69,7 +69,6 @@ class CombinedOrchestrator:
         data_paths: list[Path],
         templates_dir: Path,
         output_dir: Path,
-        merged_data_filename: str,
         filters_path: Path | None = None,
         tests_path: Path | None = None,
         include_tags: list[str] | None = None,
@@ -92,7 +91,6 @@ class CombinedOrchestrator:
             data_paths: List of paths to data model YAML files
             templates_dir: Directory containing test templates and PyATS test files
             output_dir: Base directory for test output
-            merged_data_filename: Name of the merged data model file
             filters_path: Path to Jinja filters (Robot only)
             tests_path: Path to Jinja tests (Robot only)
             include_tags: Tags to include (Robot only)
@@ -112,7 +110,6 @@ class CombinedOrchestrator:
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
         self.output_dir = Path(output_dir)
-        self.merged_data_filename = merged_data_filename
 
         # Robot-specific parameters
         self.filters_path = filters_path
@@ -205,7 +202,6 @@ class CombinedOrchestrator:
                 data_paths=self.data_paths,
                 test_dir=self.templates_dir,
                 output_dir=self.output_dir,
-                merged_data_filename=self.merged_data_filename,
                 minimal_reports=self.minimal_reports,
                 custom_testbed_path=self.custom_testbed_path,
                 controller_type=self.controller_type,
@@ -225,10 +221,8 @@ class CombinedOrchestrator:
             typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")
 
             robot_orchestrator = RobotOrchestrator(
-                data_paths=self.data_paths,
                 templates_dir=self.templates_dir,
                 output_dir=self.output_dir,
-                merged_data_filename=self.merged_data_filename,
                 filters_path=self.filters_path,
                 tests_path=self.tests_path,
                 include_tags=self.include_tags,

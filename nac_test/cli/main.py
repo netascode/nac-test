@@ -4,9 +4,11 @@
 """CLI entry point for nac-test."""
 
 import logging
+import os
+import stat
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, NoReturn
 
 import typer
 
@@ -17,11 +19,13 @@ from nac_test.cli.validators import validate_aci_defaults
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import (
     DEBUG_MODE,
+    DEFAULT_MERGED_DATA_FILENAME,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
     EXIT_INVALID_ARGS,
 )
 from nac_test.data_merger import DataMerger
+from nac_test.utils.cleanup import get_cleanup_manager
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import (
     DEFAULT_LOGLEVEL,
@@ -154,16 +158,6 @@ Exclude = Annotated[
         "--exclude",
         help="Selects the test cases by tag (exclude).",
         envvar="NAC_TEST_EXCLUDE",
-    ),
-]
-
-
-MergedDataFilename = Annotated[
-    str,
-    typer.Option(
-        "-m",
-        "--merged-data-filename",
-        help="Filename for the merged data model YAML file.",
     ),
 ]
 
@@ -310,7 +304,6 @@ def main(
     version: Version = False,  # noqa: ARG001
     diagnostic: Diagnostic = False,  # noqa: ARG001
     verbose: Verbose = False,
-    merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
 
@@ -372,10 +365,24 @@ def main(
     typer.echo("\n\n📄 Merging data model files...")
 
     merged_data = DataMerger.merge_data_files(data)
-    DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
+    DataMerger.write_merged_data_model(
+        merged_data, output, DEFAULT_MERGED_DATA_FILENAME
+    )
+
+    merged_data_path = output / DEFAULT_MERGED_DATA_FILENAME
+    if os.name != "nt":
+        os.chmod(merged_data_path, stat.S_IRUSR | stat.S_IWUSR)
+
+    # Register merged data file for cleanup on exit/signal (SIGTERM/SIGINT)
+    cleanup_manager = get_cleanup_manager()
+    cleanup_manager.register(merged_data_path)
 
     duration = (datetime.now() - start_time).total_seconds()
     typer.echo(f"✅ Data model merging completed ({format_duration(duration)})")
+
+    def exit_with_cleanup(code: int) -> NoReturn:
+        cleanup_manager.cleanup_now()
+        raise typer.Exit(code)
 
     # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
     orchestrator = CombinedOrchestrator(
@@ -383,7 +390,6 @@ def main(
         templates_dir=templates,
         custom_testbed_path=testbed,
         output_dir=output,
-        merged_data_filename=merged_data_filename,
         filters_path=filters,
         tests_path=tests,
         include_tags=include,
@@ -406,22 +412,19 @@ def main(
     try:
         stats = orchestrator.run_tests()
     except KeyboardInterrupt:
-        # Handle Ctrl+C interruption gracefully
         typer.echo(
             typer.style(
                 "\n⚠️  Test execution was interrupted by user (Ctrl+C)",
                 fg=typer.colors.YELLOW,
             )
         )
-        # Exit with code 253 following Robot Framework convention
-        raise typer.Exit(EXIT_INTERRUPTED) from None
+        exit_with_cleanup(EXIT_INTERRUPTED)
     except Exception as e:
-        # Infrastructure errors (template rendering, controller detection, etc.)
         typer.echo(f"Error during execution: {e}")
-        # Progressive disclosure: clean output for customers, full context for developers
         if DEBUG_MODE:
-            raise typer.Exit(EXIT_ERROR) from e  # Developer: full exception context
-        raise typer.Exit(EXIT_ERROR) from None  # Customer: clean output
+            cleanup_manager.cleanup_now()
+            raise typer.Exit(EXIT_ERROR) from e
+        exit_with_cleanup(EXIT_ERROR)
 
     # Display total runtime before exit
     runtime_end = datetime.now()
@@ -436,9 +439,9 @@ def main(
                 typer.echo(f"\n❌ Template rendering failed: {reason}", err=True)
             else:
                 typer.echo("\n❌ Template rendering failed", err=True)
-            raise typer.Exit(stats.exit_code)
+            exit_with_cleanup(stats.exit_code)
         typer.echo("\n✅ Templates rendered successfully (render-only mode)")
-        raise typer.Exit(0)
+        exit_with_cleanup(0)
 
     if stats.pre_flight_failure is not None:
         pf = stats.pre_flight_failure
@@ -446,22 +449,22 @@ def main(
             f"\n❌ Pre-flight failure ({pf.failure_type.display_name})",
             err=True,
         )
-        raise typer.Exit(stats.exit_code)
+        exit_with_cleanup(stats.exit_code)
 
     if stats.has_errors:
         error_list = "; ".join(stats.errors)
         typer.echo(f"\n❌ Execution errors: {error_list}", err=True)
-        raise typer.Exit(stats.exit_code)
+        exit_with_cleanup(stats.exit_code)
 
     if stats.has_failures:
         typer.echo(
             f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests", err=True
         )
-        raise typer.Exit(stats.exit_code)
+        exit_with_cleanup(stats.exit_code)
 
     if stats.is_empty:
         typer.echo("\n⚠️  No tests were executed", err=True)
-        raise typer.Exit(stats.exit_code)
+        exit_with_cleanup(stats.exit_code)
 
     typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
-    raise typer.Exit(0)
+    exit_with_cleanup(0)

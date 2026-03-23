@@ -3,14 +3,164 @@
 
 """Cleanup utilities for nac-test framework."""
 
+import atexit
 import logging
 import shutil
+import signal
+import sys
+import threading
 import time
 from pathlib import Path
+from types import FrameType
+from typing import Any
 
 from nac_test.pyats_core.discovery.test_type_resolver import VALID_TEST_TYPES
 
 logger = logging.getLogger(__name__)
+
+
+class CleanupManager:
+    """Thread-safe manager for registering files to be cleaned up on exit.
+
+    Ensures registered files are removed on:
+    - Normal program exit (atexit)
+    - SIGTERM signal (e.g., docker stop, kill)
+    - SIGINT signal (Ctrl+C / KeyboardInterrupt)
+
+    Note: SIGKILL cannot be caught - files may remain if process is killed with -9.
+
+    Usage:
+        cleanup_manager = CleanupManager()
+        cleanup_manager.register(Path("/tmp/sensitive_file.yaml"))
+        # File will be automatically removed on exit
+
+    Thread Safety:
+        All operations are thread-safe via internal locking.
+    """
+
+    _instance: "CleanupManager | None" = None
+    _instance_lock = threading.Lock()
+    _initialized: bool = False
+
+    def __new__(cls) -> "CleanupManager":
+        """Singleton pattern - only one cleanup manager per process."""
+        with cls._instance_lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
+
+    def __init__(self) -> None:
+        """Initialize the cleanup manager (only runs once due to singleton)."""
+        if self._initialized:
+            return
+
+        self._files: set[Path] = set()
+        self._lock = threading.Lock()
+        self._original_sigterm: Any = None
+        self._original_sigint: Any = None
+        self._cleanup_done = False
+
+        # Register atexit handler
+        atexit.register(self._cleanup)
+
+        # Install signal handlers (Unix only - Windows doesn't support SIGTERM properly)
+        if sys.platform != "win32":
+            self._install_signal_handlers()
+
+        self._initialized = True
+        logger.debug("CleanupManager initialized")
+
+    def _install_signal_handlers(self) -> None:
+        """Install signal handlers for SIGTERM and SIGINT."""
+        try:
+            self._original_sigterm = signal.signal(signal.SIGTERM, self._signal_handler)
+            self._original_sigint = signal.signal(signal.SIGINT, self._signal_handler)
+            logger.debug("Signal handlers installed for SIGTERM and SIGINT")
+        except (ValueError, OSError) as e:
+            # Can fail if not in main thread or signal not supported
+            logger.debug(f"Could not install signal handlers: {e}")
+
+    def _signal_handler(self, signum: int, frame: FrameType | None) -> None:
+        """Handle SIGTERM/SIGINT by cleaning up and re-raising."""
+        sig_name = signal.Signals(signum).name
+        logger.debug(f"Received {sig_name}, performing cleanup")
+
+        # Perform cleanup
+        self._cleanup()
+
+        # Re-raise the signal with original handler or default behavior
+        if signum == signal.SIGTERM:
+            original = self._original_sigterm
+        else:
+            original = self._original_sigint
+
+        # Restore original handler and re-raise
+        signal.signal(signum, original if original else signal.SIG_DFL)
+
+        # For SIGINT, raise KeyboardInterrupt to allow normal exception handling
+        if signum == signal.SIGINT:
+            raise KeyboardInterrupt
+
+        # For SIGTERM, re-send the signal
+        signal.raise_signal(signum)
+
+    def register(self, path: Path) -> None:
+        """Register a file path for cleanup on exit.
+
+        Args:
+            path: Path to file that should be removed on exit.
+                  Directories are not supported (use shutil.rmtree directly).
+        """
+        with self._lock:
+            resolved = path.resolve()
+            self._files.add(resolved)
+            logger.debug(f"Registered for cleanup: {resolved}")
+
+    def unregister(self, path: Path) -> None:
+        """Unregister a file path from cleanup.
+
+        Args:
+            path: Path to file that should no longer be cleaned up.
+        """
+        with self._lock:
+            resolved = path.resolve()
+            self._files.discard(resolved)
+            logger.debug(f"Unregistered from cleanup: {resolved}")
+
+    def _cleanup(self) -> None:
+        """Remove all registered files. Safe to call multiple times."""
+        with self._lock:
+            if self._cleanup_done:
+                return
+            self._cleanup_done = True
+
+            for path in self._files:
+                try:
+                    if path.exists():
+                        path.unlink()
+                        logger.debug(f"Cleaned up: {path}")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up {path}: {e}")
+
+            self._files.clear()
+
+    def cleanup_now(self) -> None:
+        """Manually trigger cleanup (e.g., before explicit exit).
+
+        After calling this, registered files are cleared and won't be
+        cleaned up again on exit.
+        """
+        self._cleanup()
+
+
+def get_cleanup_manager() -> CleanupManager:
+    """Get the singleton CleanupManager instance.
+
+    Returns:
+        The global CleanupManager instance.
+    """
+    return CleanupManager()
 
 
 def cleanup_pyats_runtime(workspace_path: Path | None = None) -> None:

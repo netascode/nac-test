@@ -26,7 +26,6 @@ class TestOrchestratorEnvVarProcesses:
             data_paths=[pyats_test_dirs.test_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
             controller_type="ACI",
         )
 
