@@ -4036,6 +4036,17 @@ class PabotRunner:
 pabot --processes {n} --outputdir {dir} {robot_files}
 ```
 
+**Extra Arguments Validation:**
+
+Additional Robot Framework arguments passed via the `--` separator are validated before execution:
+
+1. **Controlled Options Check**: Options controlled by nac-test (e.g., `--include`, `--exclude`, `--outputdir`, `--output`, `--log`, `--report`, `--xunit`, `--dryrun`) are rejected with guidance to use nac-test equivalents
+2. **Pabot Options Check**: Pabot-specific options (e.g., `--testlevelsplit`, `--pabotlib`) are rejected
+3. **Datasource Check**: Test file paths in extra arguments are rejected
+4. **Robot Validation**: Invalid Robot Framework options raise `DataError`
+
+The `CONTROLLED_ROBOT_OPTIONS` dict maps long options to their short forms and nac-test equivalents for user-friendly error messages.
+
 ---
 
 ## Test Execution Modes

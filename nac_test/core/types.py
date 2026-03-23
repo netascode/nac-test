@@ -5,7 +5,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal
 
 from nac_test.core.constants import (
     EXIT_DATA_ERROR,
@@ -18,6 +18,34 @@ from nac_test.core.constants import (
 # Type alias for supported controller type keys.
 # Matches the keys of CONTROLLER_REGISTRY in nac_test.utils.controller.
 ControllerTypeKey = Literal["ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"]
+
+
+@dataclass(frozen=True)
+class ValidatedRobotArgs:
+    """Pre-parsed, validated Robot Framework extra arguments.
+
+    Produced once at the CLI boundary by validate_extra_args() and threaded
+    through the orchestration chain. Consumers use .args to extend pabot's
+    command line and .robot_opts to inspect parsed option values without
+    re-parsing the raw string list.
+
+    Attributes:
+        args: Validated raw argument strings, ready to append to pabot's argv.
+        robot_opts: Robot Framework options dict from pabot's parser (result[0]
+            of pabot.arguments.parse_args). Keys are option names (e.g.
+            "loglevel", "variable"); values are parsed values.
+    """
+
+    args: list[str]
+    robot_opts: dict[str, Any]
+
+    def __len__(self) -> int:
+        """Number of validated argument strings.
+
+        Drives bool() via Python's standard protocol: truthy when args are
+        present, falsy when empty — robot_opts does not influence truthiness.
+        """
+        return len(self.args)
 
 
 class PreFlightFailureType(str, Enum):

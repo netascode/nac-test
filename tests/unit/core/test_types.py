@@ -25,7 +25,26 @@ from nac_test.core.types import (
     PreFlightFailureType,
     PyATSResults,
     TestResults,
+    ValidatedRobotArgs,
 )
+
+
+class TestValidatedRobotArgs:
+    """Tests for ValidatedRobotArgs __len__ and derived __bool__."""
+
+    def test_len_reflects_number_of_args(self) -> None:
+        """len() counts args strings, not robot_opts entries."""
+        v = ValidatedRobotArgs(
+            args=["--loglevel", "DEBUG"], robot_opts={"loglevel": "DEBUG"}
+        )
+        assert len(v) == 2
+
+    def test_len_ignores_robot_opts(self) -> None:
+        """robot_opts does not contribute to len(): only args is counted."""
+        v = ValidatedRobotArgs(
+            args=[], robot_opts={"loglevel": "DEBUG", "variable": ["X:1"]}
+        )
+        assert len(v) == 0
 
 
 class TestTestResultsFactoryMethods:
