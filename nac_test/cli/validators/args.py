@@ -10,7 +10,7 @@ import functools
 import logging
 import uuid
 from collections.abc import Callable
-from typing import Any
+from typing import Any, NamedTuple
 
 from robot.errors import DataError
 
@@ -32,17 +32,24 @@ except ImportError:
         "pabot.arguments.parse_args not available, skipping pabot argument validation"
     )
 
-# Robot Framework options controlled by nac-test: (long_option, short_option, hint)
-# Each tuple is the single source of truth — the lookup below is derived from this.
-_CONTROLLED_ROBOT_OPTIONS: list[tuple[str, str | None, str]] = [
-    ("include", "i", "nac-test -i/--include"),
-    ("exclude", "e", "nac-test -e/--exclude"),
-    ("outputdir", "d", "nac-test -o/--output"),
-    ("output", "o", "controlled internally by nac-test"),
-    ("log", "l", "controlled internally by nac-test"),
-    ("report", "r", "controlled internally by nac-test"),
-    ("xunit", "x", "controlled internally by nac-test"),
-    ("dryrun", None, "nac-test --dry-run"),
+
+# Robot Framework options controlled by nac-test.
+# Each entry is the single source of truth — the lookup below is derived from this.
+class _ControlledOption(NamedTuple):
+    long: str
+    short: str | None
+    hint: str
+
+
+_CONTROLLED_ROBOT_OPTIONS: list[_ControlledOption] = [
+    _ControlledOption("include", "i", "nac-test -i/--include"),
+    _ControlledOption("exclude", "e", "nac-test -e/--exclude"),
+    _ControlledOption("outputdir", "d", "nac-test -o/--output"),
+    _ControlledOption("output", "o", "controlled internally by nac-test"),
+    _ControlledOption("log", "l", "controlled internally by nac-test"),
+    _ControlledOption("report", "r", "controlled internally by nac-test"),
+    _ControlledOption("xunit", "x", "controlled internally by nac-test"),
+    _ControlledOption("dryrun", None, "nac-test --dry-run"),
     # --loglevel / -L is intentionally absent: users may override it via extra_args
     # (e.g. "-- --loglevel TRACE"). nac-test sets a default but does not own the option.
 ]
