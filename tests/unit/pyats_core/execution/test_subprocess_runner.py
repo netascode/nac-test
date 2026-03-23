@@ -28,7 +28,6 @@ from nac_test.pyats_core.constants import (
     PYATS_PLUGIN_CONFIG_FILENAME,
 )
 from nac_test.pyats_core.execution.subprocess_runner import (
-    ConfigFileCreationError,
     SubprocessRunner,
 )
 from nac_test.utils.logging import LogLevel
@@ -342,12 +341,12 @@ def test_init_creates_config_files_in_output_dir(
     assert runner._pyats_config_file.name == PYATS_CONFIG_FILENAME
 
 
-def test_init_raises_config_file_creation_error_on_write_failure(
+def test_init_raises_runtime_error_on_write_failure(
     temp_output_dir: Path, mock_output_handler: Mock
 ) -> None:
-    """Test that ConfigFileCreationError is raised when config file write fails."""
+    """Test that RuntimeError is raised when config file write fails."""
     with patch.object(Path, "write_text", side_effect=OSError("disk full")):
-        with pytest.raises(ConfigFileCreationError, match="disk full"):
+        with pytest.raises(RuntimeError, match="disk full"):
             SubprocessRunner(temp_output_dir, mock_output_handler)
 
 
@@ -361,7 +360,7 @@ def test_write_failure_leaves_attributes_none_and_cleanup_is_safe(
     runner._pyats_config_file = None
 
     with patch.object(Path, "write_text", side_effect=OSError("disk full")):
-        with pytest.raises(ConfigFileCreationError):
+        with pytest.raises(RuntimeError):
             runner._create_config_files()
 
     assert runner._plugin_config_file is None

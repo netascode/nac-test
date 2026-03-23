@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Tests for PyATSOrchestrator handling of ConfigFileCreationError."""
+"""Tests for PyATSOrchestrator handling of SubprocessRunner init failures."""
 
 from pathlib import Path
 from unittest.mock import patch
@@ -13,8 +13,8 @@ from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from .conftest import PyATSTestDirs
 
 
-class TestOrchestratorConfigFileCreationError:
-    """Tests for ConfigFileCreationError handling in PyATSOrchestrator."""
+class TestOrchestratorSubprocessRunnerInitError:
+    """Tests for RuntimeError handling in PyATSOrchestrator when SubprocessRunner cannot initialize."""
 
     @pytest.mark.parametrize(
         ("has_api", "has_d2d"),
@@ -24,14 +24,14 @@ class TestOrchestratorConfigFileCreationError:
             (True, True),
         ],
     )
-    def test_config_file_creation_error_returns_from_error_results(
+    def test_subprocess_runner_init_error_returns_from_error_results(
         self,
         aci_controller_env: None,
         pyats_test_dirs: PyATSTestDirs,
         has_api: bool,
         has_d2d: bool,
     ) -> None:
-        """OSError in SubprocessRunner._create_config_files returns from_error results."""
+        """OSError in SubprocessRunner._create_config_files raises RuntimeError, returns from_error results."""
         api_tests = [Path("/fake/tests/api/test_one.py")] if has_api else []
         d2d_tests = [Path("/fake/tests/d2d/test_two.py")] if has_d2d else []
 

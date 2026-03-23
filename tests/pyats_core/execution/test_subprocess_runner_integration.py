@@ -15,6 +15,7 @@ malformed data recovery, resource limit handling, initialization and more
 """
 
 import asyncio
+import re
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -124,12 +125,9 @@ class TestConfigFileContent:
         config_idx = cmd.index("--pyats-configuration")
         config_path = Path(cmd[config_idx + 1])
 
-        try:
-            content = config_path.read_text()
-            assert "[report]" in content
-            assert "git_info = false" in content
-        finally:
-            config_path.unlink(missing_ok=True)
+        content = config_path.read_text()
+        assert re.search(r"\[report\]", content)
+        assert re.search(r"git_info\s*=\s*false", content)
 
     def test_execute_job_with_testbed_writes_git_info_false_to_pyats_config(
         self, runner: SubprocessRunner
@@ -149,12 +147,9 @@ class TestConfigFileContent:
         config_idx = cmd.index("--pyats-configuration")
         config_path = Path(cmd[config_idx + 1])
 
-        try:
-            content = config_path.read_text()
-            assert "[report]" in content
-            assert "git_info = false" in content
-        finally:
-            config_path.unlink(missing_ok=True)
+        content = config_path.read_text()
+        assert re.search(r"\[report\]", content)
+        assert re.search(r"git_info\s*=\s*false", content)
 
     def test_execute_job_writes_plugin_config_with_progress_reporter(
         self, runner: SubprocessRunner
@@ -167,12 +162,9 @@ class TestConfigFileContent:
         config_idx = cmd.index("--configuration")
         config_path = Path(cmd[config_idx + 1])
 
-        try:
-            content = config_path.read_text()
-            assert "ProgressReporterPlugin" in content
-            assert "enabled: True" in content
-        finally:
-            config_path.unlink(missing_ok=True)
+        content = config_path.read_text()
+        assert re.search(r"ProgressReporterPlugin:\s+enabled:\s+True", content)
+        assert re.search(r"EnvironmentDebugPlugin:\s+enabled:\s+False", content)
 
 
 class TestCommandConstruction:

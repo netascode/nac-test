@@ -36,7 +36,6 @@ from nac_test.pyats_core.execution import (
 )
 from nac_test.pyats_core.execution.device import DeviceExecutor
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
-from nac_test.pyats_core.execution.subprocess_runner import ConfigFileCreationError
 from nac_test.pyats_core.progress import ProgressReporter
 from nac_test.pyats_core.reporting.multi_archive_generator import (
     MultiArchiveReportGenerator,
@@ -622,13 +621,9 @@ class PyATSOrchestrator:
                 output_handler=self.output_processor.process_line,
                 loglevel=self.loglevel,
             )
-        except ConfigFileCreationError as e:
+        except RuntimeError as e:
+            # pyats entrypoint not found or configfile creation failed
             error_msg = str(e)
-            print(
-                terminal.error(
-                    f"Fatal error: PyATS config creation failed: {error_msg}"
-                )
-            )
             api_result = TestResults.from_error(error_msg) if api_tests else None
             d2d_result = TestResults.from_error(error_msg) if d2d_tests else None
             return PyATSResults(api=api_result, d2d=d2d_result)
@@ -758,6 +753,9 @@ class PyATSOrchestrator:
         )
         result = await generator.generate_reports_from_archives(archive_paths)
 
+        # Determine whether to keep artifacts (debug mode or explicit env var)
+        keep_artifacts = DEBUG_MODE or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")
+
         if result["status"] in ["success", "partial"]:
             # Log report generation timing (procedural info)
             duration_str = format_duration(result["duration"])
@@ -786,9 +784,6 @@ class PyATSOrchestrator:
 
             # Clean up archives after successful extraction and report generation
             # (unless in debug mode or user wants to keep data)
-            keep_artifacts = DEBUG_MODE or os.environ.get(
-                "NAC_TEST_PYATS_KEEP_REPORT_DATA"
-            )
             if not keep_artifacts:
                 for archive_path in archive_paths:
                     try:
@@ -831,4 +826,7 @@ class PyATSOrchestrator:
             print(f"\n{terminal.error('Failed to generate reports')}")
             if result.get("error"):
                 print(f"Error: {result['error']}")
+            # Clean up PyATS config files; report generation failed so no stats to return
+            if self.subprocess_runner and not keep_artifacts:
+                self.subprocess_runner.cleanup()
             return PyATSResults()

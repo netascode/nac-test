@@ -27,12 +27,6 @@ from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 logger = logging.getLogger(__name__)
 
 
-class ConfigFileCreationError(Exception):
-    """Raised when PyATS config files cannot be created."""
-
-    pass
-
-
 PLUGIN_CONFIG = textwrap.dedent("""\
     plugins:
         ProgressReporterPlugin:
@@ -82,7 +76,7 @@ class SubprocessRunner:
         """Create config files for PyATS execution in the output directory.
 
         Raises:
-            ConfigFileCreationError: If file creation fails
+            RuntimeError: If file creation fails
         """
         plugin_config_file = self.output_dir / PYATS_PLUGIN_CONFIG_FILENAME
         pyats_config_file = self.output_dir / PYATS_CONFIG_FILENAME
@@ -91,9 +85,7 @@ class SubprocessRunner:
             plugin_config_file.write_text(PLUGIN_CONFIG)
             pyats_config_file.write_text(PYATS_CONFIG)
         except OSError as e:
-            raise ConfigFileCreationError(
-                f"Failed to create PyATS config files: {e}"
-            ) from e
+            raise RuntimeError(f"Failed to create PyATS config files: {e}") from e
 
         self._plugin_config_file = plugin_config_file
         self._pyats_config_file = pyats_config_file
