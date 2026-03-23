@@ -6,19 +6,12 @@ from pathlib import Path
 
 import pabot.pabot
 
-from nac_test.core.constants import XUNIT_XML
-from nac_test.utils.strings import parse_cli_option_name
+from nac_test.core.constants import (
+    XUNIT_XML,
+)
+from nac_test.core.types import ValidatedRobotArgs
 
 logger = logging.getLogger(__name__)
-
-
-def _has_loglevel_arg(args: list[str]) -> bool:
-    """Return True if args contains an explicit loglevel flag (-L / --loglevel[=value])."""
-    return any(
-        parse_cli_option_name(arg).lower() in ("loglevel", "l")
-        for arg in args
-        if arg.startswith("-")
-    )
 
 
 def run_pabot(
@@ -30,7 +23,7 @@ def run_pabot(
     verbose: bool = False,
     default_robot_loglevel: str | None = None,
     ordering_file: Path | None = None,
-    extra_args: list[str] | None = None,
+    extra_args: ValidatedRobotArgs | None = None,
 ) -> int:
     """Run pabot against rendered Robot suites in the output directory.
 
@@ -43,7 +36,9 @@ def run_pabot(
         verbose: Whether to enable pabot verbose output.
         default_robot_loglevel: Default Robot Framework log level, can be overridden via extra_args.
         ordering_file: Optional pabot ordering file for test-level splitting.
-        extra_args: Additional validated Robot Framework arguments.
+        extra_args: Pre-parsed, validated Robot Framework arguments. Uses .args to
+            extend pabot's command line and .robot_opts to check for a loglevel
+            override without re-parsing the raw string list.
 
     Returns:
         int: Pabot exit code.
@@ -88,11 +83,13 @@ def run_pabot(
         ]
     )
 
-    extra_args = extra_args or []
-    robot_args.extend(extra_args)
+    if extra_args:
+        robot_args.extend(extra_args.args)
 
     # Respect explicit --loglevel in extra_args; default only applies if absent
-    if default_robot_loglevel and not _has_loglevel_arg(extra_args):
+    if default_robot_loglevel and not (
+        extra_args and extra_args.robot_opts.get("loglevel")
+    ):
         robot_args.extend(["--loglevel", default_robot_loglevel])
 
     args = pabot_args + robot_args + [str(abs_path)]

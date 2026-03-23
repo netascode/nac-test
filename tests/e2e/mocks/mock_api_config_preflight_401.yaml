@@ -1,0 +1,17 @@
+# Mock API config for pre-flight auth failure scenarios.
+#
+# Returns 401 for all auth endpoints so the pre-flight check fails while
+# leaving Robot Framework free to run its tests normally.
+
+endpoints:
+  - name: "ACI login - force 401"
+    path_pattern: "/api/aaaLogin.json"
+    method: "POST"
+    match_type: "exact"
+    status_code: 401
+    response_data:
+      imdata:
+        - error:
+            attributes:
+              code: "599"
+              text: "LDAP authentication error for user mock_user"

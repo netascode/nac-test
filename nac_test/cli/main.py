@@ -19,7 +19,6 @@ from nac_test.cli.ui import display_aci_defaults_banner
 from nac_test.cli.validators import validate_aci_defaults, validate_extra_args
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import (
-    CONSOLE_TIME_FORMAT,
     DEBUG_MODE,
     EXIT_DATA_ERROR,
     EXIT_ERROR,
@@ -367,9 +366,10 @@ def main(
         raise typer.Exit(EXIT_INVALID_ARGS)
 
     # Validate extra Robot Framework arguments early (fail fast before expensive operations)
+    validated_robot_args = None
     if ctx.args:
         try:
-            validate_extra_args(ctx.args)
+            validated_robot_args = validate_extra_args(ctx.args)
         except ValueError as e:
             # CLI misuse: controlled option, pabot option, or datasource in extra args
             _print_cli_error(str(e))
@@ -391,18 +391,13 @@ def main(
 
     # Merge data files with timing
     start_time = datetime.now()
-    start_timestamp = start_time.strftime(CONSOLE_TIME_FORMAT)
-    typer.echo(f"\n\n[{start_timestamp}] 📄 Merging data model files...")
+    typer.echo("\n\n📄 Merging data model files...")
 
     merged_data = DataMerger.merge_data_files(data)
     DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
 
-    end_time = datetime.now()
-    end_timestamp = end_time.strftime(CONSOLE_TIME_FORMAT)
-    duration = (end_time - start_time).total_seconds()
-    typer.echo(
-        f"[{end_timestamp}] ✅ Data model merging completed ({format_duration(duration)})"
-    )
+    duration = (datetime.now() - start_time).total_seconds()
+    typer.echo(f"✅ Data model merging completed ({format_duration(duration)})")
 
     # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
     orchestrator = CombinedOrchestrator(
@@ -418,7 +413,7 @@ def main(
         render_only=render_only,
         dry_run=dry_run,
         processes=processes,
-        extra_args=ctx.args,
+        extra_args=validated_robot_args,
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
         loglevel=effective_loglevel,
@@ -468,6 +463,11 @@ def main(
         raise typer.Exit(0)
 
     if stats.pre_flight_failure is not None:
+        pf = stats.pre_flight_failure
+        typer.echo(
+            f"\n❌ Pre-flight failure ({pf.failure_type.display_name})",
+            err=True,
+        )
         raise typer.Exit(stats.exit_code)
 
     if stats.has_errors:

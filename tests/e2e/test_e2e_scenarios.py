@@ -26,15 +26,19 @@ import pytest
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     HTML_REPORTS_DIRNAME,
+    IS_WINDOWS,
     LOG_HTML,
     OUTPUT_XML,
+    PRE_FLIGHT_FAILURE_FILENAME,
     PYATS_RESULTS_DIRNAME,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    SUMMARY_SEPARATOR_WIDTH,
     XUNIT_XML,
 )
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
+from tests.conftest import assert_is_link_to
 from tests.e2e.conftest import E2EResults
 from tests.e2e.html_helpers import (
     assert_combined_stats,
@@ -156,7 +160,7 @@ class E2ECombinedTestBase:
         expected_dirs = set()
         if results.has_robot_results:
             expected_dirs.add(ROBOT_RESULTS_DIRNAME)
-        if results.has_pyats_results:
+        if results.has_pyats_results or results.scenario.expected_preflight_failure:
             expected_dirs.add(PYATS_RESULTS_DIRNAME)
 
         expected_files = {
@@ -251,29 +255,25 @@ class E2ECombinedTestBase:
         )
 
     # -------------------------------------------------------------------------
-    # Robot Backward Compatibility Tests (symlinks)
+    # Robot Backward Compatibility Tests (hard links preferred, symlinks as fallback)
     # -------------------------------------------------------------------------
 
-    def test_robot_output_xml_symlink_exists(self, results: E2EResults) -> None:
-        """Verify output.xml symlink exists at root."""
+    def test_robot_output_xml_link_exists(self, results: E2EResults) -> None:
+        """Verify output.xml link exists at root."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        symlink = results.output_dir / OUTPUT_XML
-        assert symlink.exists(), "Missing output.xml symlink at root"
-        assert symlink.is_symlink(), "output.xml is not a symlink"
+        link = results.output_dir / OUTPUT_XML
+        source = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
+        assert link.exists(), "Missing output.xml link at root"
+        assert_is_link_to(link, source)
 
-    def test_robot_symlinks_point_correctly(self, results: E2EResults) -> None:
-        """Verify symlinks correctly point to robot_results/ subdirectory."""
+    def test_robot_links_point_correctly(self, results: E2EResults) -> None:
+        """Verify links correctly point to robot_results/ subdirectory."""
         if not results.has_robot_results:
             pytest.skip("No Robot results in this scenario")
-        symlink = results.output_dir / OUTPUT_XML
-        target = symlink.resolve()
-        expected = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
-        assert target == expected, (
-            f"Symlink points to wrong location:\n"
-            f"  Expected: {expected}\n"
-            f"  Got: {target}"
-        )
+        link = results.output_dir / OUTPUT_XML
+        source = results.output_dir / ROBOT_RESULTS_DIRNAME / OUTPUT_XML
+        assert_is_link_to(link, source)
 
     # -------------------------------------------------------------------------
     # Robot Summary Report Tests
@@ -966,7 +966,7 @@ class E2ECombinedTestBase:
         """
         stdout = results.filtered_stdout
         summary_header = "Combined Test Execution Summary"
-        separator = "=" * 70
+        separator = "=" * SUMMARY_SEPARATOR_WIDTH
 
         summary_pos = stdout.find(summary_header)
         assert summary_pos != -1, "Combined Summary section not found"
@@ -1103,6 +1103,7 @@ class TestE2EMixedRelativeOutput(E2ECombinedTestBase):
 # =============================================================================
 
 
+@pytest.mark.windows
 class TestE2ERobotOnly(E2ECombinedTestBase):
     """E2E tests for the robot-only scenario.
 
@@ -1396,3 +1397,135 @@ class TestE2EDryRunRobotFail(E2ECombinedTestBase):
     @pytest.fixture
     def results(self, e2e_dry_run_robot_fail_results: E2EResults) -> E2EResults:
         return e2e_dry_run_robot_fail_results
+
+
+# =============================================================================
+# WINDOWS PYATS SKIP SCENARIO TESTS
+# =============================================================================
+
+
+@pytest.mark.skipif(not IS_WINDOWS, reason="Windows-only test scenario")
+@pytest.mark.windows
+class TestE2EWindowsPyatsSkip(E2ECombinedTestBase):
+    """E2E tests for the Windows PyATS skip scenario.
+
+    Scenario: Windows platform with PyATS tests in templates but PyATS not supported.
+    Robot (1 pass), PyATS tests discovered but skipped.
+    Expected: CLI exits with code 0, warning message in stdout.
+
+    This test class validates that on Windows:
+    - Robot Framework tests execute normally
+    - PyATS tests are discovered but skipped (not executed)
+    - A warning is displayed about PyATS being unsupported on Windows
+    """
+
+    @pytest.fixture
+    def results(self, e2e_windows_pyats_skip_results: E2EResults) -> E2EResults:
+        return e2e_windows_pyats_skip_results
+
+    def test_pyats_skip_warning_in_stdout(self, results: E2EResults) -> None:
+        """Verify the PyATS skip warning message appears in stdout."""
+        expected_warning = (
+            "PyATS tests found but skipped — PyATS is not supported on Windows"
+        )
+        assert expected_warning in results.stdout, (
+            f"Missing Windows PyATS skip warning in stdout.\n"
+            f"Expected: '{expected_warning}'\n"
+            f"Stdout: {results.stdout[:500]}"
+        )
+
+
+# =============================================================================
+# PRE-FLIGHT AUTH FAILURE SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EPreflightAuthFailure(E2ECombinedTestBase):
+    """E2E: pre-flight auth failure (401) does not abort Robot execution.
+
+    Core behavioral contract of PR #636: a pre-flight failure must NOT prevent
+    Robot Framework tests from running. The mock ACI /api/aaaLogin.json endpoint
+    is overridden to return 401, triggering an AUTH pre-flight failure. PyATS is
+    skipped but Robot tests still run to completion.
+
+    Because Robot results are present, combined_summary.html uses the normal
+    combined dashboard template (with summary-item stats and a Robot link), so
+    most base class assertions apply unchanged.
+
+    Two base class tests need overrides because the pre-flight failure causes the
+    pyats_results/ directory to be created (for pre_flight_failure.html) even
+    though no PyATS tests ran:
+    - test_pyats_results_directory_state: pyats_results/ exists but has no api/ or d2d/
+
+    Three combined stats tests are overridden because the template suppresses the
+    success rate (shows '--') when pre_flight_failure is set, so the normal
+    extract_summary_stats_from_combined() regex finds no percentage to parse:
+    - test_combined_stats_correct
+    - test_combined_stats_internal_consistency
+    - test_combined_success_rate_matches_expectation
+    """
+
+    @pytest.fixture
+    def results(self, e2e_preflight_auth_failure_results: E2EResults) -> E2EResults:
+        return e2e_preflight_auth_failure_results
+
+    # -------------------------------------------------------------------------
+    # Overrides for tests affected by pyats_results/ being created for the
+    # pre-flight failure report (pyats_results/pre_flight_failure.html)
+    # -------------------------------------------------------------------------
+
+    def test_pyats_results_directory_state(self, results: E2EResults) -> None:
+        """pyats_results/ is created for pre_flight_failure.html even though no PyATS ran."""
+        pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
+        assert pyats_dir.exists(), (
+            f"Expected {PYATS_RESULTS_DIRNAME}/ to exist (for pre_flight_failure.html)"
+        )
+        assert pyats_dir.is_dir()
+
+    def test_combined_stats_correct(self, results: E2EResults) -> None:
+        """Pre-flight failure replaces the success rate with '--'; verify Robot counts instead."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        verify_html_structure(html)
+        assert 'class="summary-item rate"' in html
+        # Rate shows '--' (not a percentage) when pre_flight_failure is set in the template
+        assert "<strong>--</strong>" in html
+
+    def test_combined_stats_internal_consistency(self, results: E2EResults) -> None:
+        """Pre-flight failure suppresses success rate; HTML structure is still valid."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        verify_html_structure(html)
+
+    def test_combined_success_rate_matches_expectation(
+        self, results: E2EResults
+    ) -> None:
+        """Pre-flight failure replaces the success rate with '--' in the combined dashboard."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        assert "<strong>--</strong>" in html, (
+            "Expected '--' placeholder for success rate in pre-flight failure combined_summary"
+        )
+
+    # -------------------------------------------------------------------------
+    # Pre-flight failure specific tests
+    # -------------------------------------------------------------------------
+
+    def test_combined_dashboard_shows_preflight_failure_banner(
+        self, results: E2EResults
+    ) -> None:
+        """Combined dashboard shows a pre-flight failure banner alongside Robot results."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        assert "preflight-failure" in html, (
+            "Expected pre-flight failure banner CSS class in combined_summary.html"
+        )
+        assert "Pre-flight failure" in html, (
+            "Expected 'Pre-flight failure' text in combined_summary.html"
+        )
+
+    def test_preflight_failure_report_exists(self, results: E2EResults) -> None:
+        """Pre-flight failure detail report exists under pyats_results/."""
+        failure_report = (
+            results.output_dir / PYATS_RESULTS_DIRNAME / PRE_FLIGHT_FAILURE_FILENAME
+        )
+        assert failure_report.exists(), (
+            f"Expected pre-flight failure report at "
+            f"{PYATS_RESULTS_DIRNAME}/{PRE_FLIGHT_FAILURE_FILENAME}"
+        )

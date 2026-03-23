@@ -141,4 +141,4 @@ The base class includes tests for:
 - **PyATS API**: Summary reports, statistics, breadcrumb navigation
 - **PyATS D2D**: Summary reports, statistics, breadcrumb navigation
 - **Combined Dashboard**: Aggregated statistics, links to sub-reports
-- **Backward Compatibility**: Symlinks for legacy file locations
+- **Backward Compatibility**: Links for legacy file locations

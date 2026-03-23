@@ -5,19 +5,85 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from functools import cached_property
-from typing import Literal
+from typing import Any, Literal
 
 from nac_test.core.constants import (
     EXIT_DATA_ERROR,
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
+    EXIT_PREFLIGHT_FAILURE,
 )
 
 # Type alias for supported controller type keys.
 # Matches the keys of CONTROLLER_REGISTRY in nac_test.utils.controller.
 ControllerTypeKey = Literal["ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"]
+
+
+@dataclass(frozen=True)
+class ValidatedRobotArgs:
+    """Pre-parsed, validated Robot Framework extra arguments.
+
+    Produced once at the CLI boundary by validate_extra_args() and threaded
+    through the orchestration chain. Consumers use .args to extend pabot's
+    command line and .robot_opts to inspect parsed option values without
+    re-parsing the raw string list.
+
+    Attributes:
+        args: Validated raw argument strings, ready to append to pabot's argv.
+        robot_opts: Robot Framework options dict from pabot's parser (result[0]
+            of pabot.arguments.parse_args). Keys are option names (e.g.
+            "loglevel", "variable"); values are parsed values.
+    """
+
+    args: list[str]
+    robot_opts: dict[str, Any]
+
+    def __len__(self) -> int:
+        """Number of validated argument strings.
+
+        Drives bool() via Python's standard protocol: truthy when args are
+        present, falsy when empty — robot_opts does not influence truthiness.
+        """
+        return len(self.args)
+
+
+class PreFlightFailureType(str, Enum):
+    """Type of pre-flight failure that prevented PyATS execution.
+
+    Attributes:
+        AUTH: Authentication failed (invalid credentials, 401/403).
+        UNREACHABLE: Controller unreachable (network error, timeout, 5xx).
+        DETECTION: Controller type could not be detected (no credentials set).
+    """
+
+    AUTH = "auth"
+    UNREACHABLE = "unreachable"
+    DETECTION = "detection"
+
+    @property
+    def display_name(self) -> str:
+        """User-friendly display name for CLI output and reports."""
+        return _PREFLIGHT_DISPLAY_NAMES[self]
+
+    @property
+    def is_auth(self) -> bool:
+        return self == PreFlightFailureType.AUTH
+
+    @property
+    def is_unreachable(self) -> bool:
+        return self == PreFlightFailureType.UNREACHABLE
+
+    @property
+    def is_detection(self) -> bool:
+        return self == PreFlightFailureType.DETECTION
+
+
+_PREFLIGHT_DISPLAY_NAMES: dict[PreFlightFailureType, str] = {
+    PreFlightFailureType.AUTH: "Controller Authentication Failed",
+    PreFlightFailureType.UNREACHABLE: "Controller Unreachable",
+    PreFlightFailureType.DETECTION: "Controller Detection Failed",
+}
 
 
 class ExecutionState(str, Enum):
@@ -206,17 +272,17 @@ class PreFlightFailure:
     all test counts will be zero.
 
     Attributes:
-        failure_type: Category of failure - constrained to "auth" or "unreachable".
-        controller_type: Controller identifier ("ACI", "SDWAN", "CC").
-        controller_url: URL that was tested.
+        failure_type: Category of failure.
+        controller_type: Controller identifier, or None for detection failures.
+        controller_url: URL that was tested, or None for detection failures.
         detail: Human-readable error description.
         status_code: HTTP status code from the failed request, or None for
             non-HTTP failures (e.g., connection timeout, DNS failure).
     """
 
-    failure_type: Literal["auth", "unreachable"]
-    controller_type: ControllerTypeKey
-    controller_url: str
+    failure_type: PreFlightFailureType
+    controller_type: ControllerTypeKey | None
+    controller_url: str | None
     detail: str
     status_code: int | None = None
 
@@ -254,13 +320,9 @@ class CombinedResults:
             parts.append(f"Robot: {self.robot}")
         return f"CombinedResults({', '.join(parts) if parts else 'empty'})"
 
-    @cached_property
+    @property
     def _results(self) -> list["TestResults"]:
-        """Cached list of non-None results for aggregation.
-
-        Note: Safe to cache because CombinedResults fields are set at construction
-        and not mutated. Do not mutate api/d2d/robot after creation.
-        """
+        """List of non-None results for aggregation."""
         return [r for r in (self.api, self.d2d, self.robot) if r is not None]
 
     @property
@@ -299,6 +361,11 @@ class CombinedResults:
         return bool(self._results) and all(r.was_not_run for r in self._results)
 
     @property
+    def has_any_results(self) -> bool:
+        """Check if any test framework produced results (tests actually ran)."""
+        return bool(self._results)
+
+    @property
     def success_rate(self) -> float:
         """Combined success rate excluding skipped tests (0.0-100.0)."""
         tests_with_results = self.total - self.skipped
@@ -327,13 +394,16 @@ class CombinedResults:
 
         Exit codes:
             0: All tests passed, no errors OR all frameworks intentionally skipped
-            1: Pre-flight failure (auth or controller detection failed)
+            1: Pre-flight failure (auth, unreachable, or controller detection failed)
             1-250: Number of test failures (capped at 250)
             252: No tests found across any framework
                  Note: invalid robot/pabot extra arguments are now caught in main() and
                  no longer need to be inferred from test results
             253: Execution was interrupted (Ctrl+C, etc.)
             255: Execution errors occurred (has_errors is True)
+
+        Note: Exit code 1 from pre-flight failure takes precedence over test failures.
+        If pre-flight fails, exit code is 1 regardless of any subsequent test results.
 
         Priority (highest to lowest): pre-flight > 253 (interrupted) > 255 (generic) > failures > empty
 
@@ -347,7 +417,7 @@ class CombinedResults:
         outcomes.
         """
         if self.pre_flight_failure is not None:
-            return 1
+            return EXIT_PREFLIGHT_FAILURE
         if self.has_errors:
             error_types = [
                 r.error_type for r in self._results if r.error_type is not None

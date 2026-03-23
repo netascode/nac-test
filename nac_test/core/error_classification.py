@@ -24,6 +24,7 @@ class AuthOutcome(Enum):
     """Outcome classification for a pre-flight controller authentication check."""
 
     SUCCESS = "success"
+    SKIPPED = "skipped"
     BAD_CREDENTIALS = "bad_credentials"
     UNREACHABLE = "unreachable"
     UNEXPECTED_ERROR = "unexpected_error"
@@ -82,7 +83,7 @@ def _classify_http_status(status_code: int) -> tuple[AuthOutcome, str]:
     return AuthOutcome.UNEXPECTED_ERROR, f"HTTP {status_code}: Unknown status"
 
 
-def _classify_auth_error(error: Exception) -> tuple[AuthOutcome, str]:
+def classify_auth_error(error: Exception) -> tuple[AuthOutcome, str]:
     """Classify an authentication error into an outcome.
 
     Uses a two-tier strategy:
@@ -118,7 +119,7 @@ def _classify_auth_error(error: Exception) -> tuple[AuthOutcome, str]:
 def extract_http_status_code(error: Exception) -> int | None:
     """Extract the HTTP status code from an exception message, if present.
 
-    Uses the same regex pattern as ``_classify_auth_error`` to reliably
+    Uses the same regex pattern as ``classify_auth_error`` to reliably
     extract 3-digit HTTP status codes from error messages.
 
     Args:

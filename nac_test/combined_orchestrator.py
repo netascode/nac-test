@@ -16,14 +16,15 @@ from nac_test.cli.ui import (
 from nac_test.cli.validators import AuthOutcome, preflight_auth_check
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
-    EXIT_ERROR,
     HTML_REPORTS_DIRNAME,
     LOG_HTML,
     OUTPUT_XML,
     PYATS_RESULTS_DIRNAME,
+    PYATS_SUPPORTED,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    SUMMARY_SEPARATOR_WIDTH,
     XUNIT_XML,
 )
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
@@ -31,7 +32,9 @@ from nac_test.core.types import (
     CombinedResults,
     ControllerTypeKey,
     PreFlightFailure,
+    PreFlightFailureType,
     TestResults,
+    ValidatedRobotArgs,
 )
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
@@ -85,7 +88,7 @@ class CombinedOrchestrator:
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
         processes: int | None = None,
-        extra_args: list[str] | None = None,
+        extra_args: ValidatedRobotArgs | None = None,
         verbose: bool = False,
     ):
         """Initialize the combined orchestrator.
@@ -124,7 +127,7 @@ class CombinedOrchestrator:
         self.render_only = render_only
         self.dry_run = dry_run
         self.processes = processes
-        self.extra_args = extra_args or []
+        self.extra_args = extra_args
 
         # PyATS-specific parameters
         self.max_parallel_devices = max_parallel_devices
@@ -175,6 +178,14 @@ class CombinedOrchestrator:
         if self.dev_robot_only:
             has_pyats = False
 
+        # Skip PyATS on Windows (PyATS wheels are not available for this platform)
+        if has_pyats and not PYATS_SUPPORTED:
+            typer.secho(
+                "\n⚠️  PyATS tests found but skipped — PyATS is not supported on Windows.",
+                fg=typer.colors.YELLOW,
+            )
+            has_pyats = False
+
         # Handle empty scenarios
         if not has_pyats and not has_robot:
             typer.echo("No test files found (no *.py PyATS tests or *.robot templates)")
@@ -190,57 +201,11 @@ class CombinedOrchestrator:
         # Pre-flight: detect controller and validate credentials for PyATS path only.
         # Robot path stays generic — it may not need controller access at all.
         # Dry-run mode skips auth — it validates test structure, not execution.
+        preflight_failed = False
         if has_pyats and not self.render_only and not self.dry_run:
-            try:
-                self.controller_type = detect_controller_type()
-                logger.info(f"Controller type detected: {self.controller_type}")
-            except ValueError as e:
-                typer.secho(
-                    f"\n❌ Controller detection failed:\n{e}",
-                    fg=typer.colors.RED,
-                    err=True,
-                )
-                raise typer.Exit(EXIT_ERROR) from None
+            preflight_failed = self._run_pre_flight_checks(combined_results)
 
-            auth_result = preflight_auth_check(self.controller_type)
-            if not auth_result.success:
-                typer.echo("")
-                if auth_result.reason == AuthOutcome.UNREACHABLE:
-                    display_unreachable_banner(
-                        controller_type=auth_result.controller_type,
-                        controller_url=auth_result.controller_url,
-                        detail=auth_result.detail,
-                    )
-                else:
-                    env_var_prefix = get_env_var_prefix(auth_result.controller_type)
-                    display_auth_failure_banner(
-                        controller_type=auth_result.controller_type,
-                        controller_url=auth_result.controller_url,
-                        detail=auth_result.detail,
-                        env_var_prefix=env_var_prefix,
-                    )
-                typer.echo("")
-
-                combined_results.pre_flight_failure = PreFlightFailure(
-                    failure_type=(
-                        "unreachable"
-                        if auth_result.reason == AuthOutcome.UNREACHABLE
-                        else "auth"
-                    ),
-                    controller_type=auth_result.controller_type,
-                    controller_url=auth_result.controller_url,
-                    detail=auth_result.detail,
-                    status_code=auth_result.status_code,
-                )
-
-                # Generate report and bail — no PyATS execution possible
-                generator = CombinedReportGenerator(self.output_dir)
-                report_path = generator.generate_combined_summary(combined_results)
-                if report_path is not None:
-                    typer.echo(f"Report: {report_path}")
-                return combined_results
-
-        if has_pyats and not self.render_only:
+        if has_pyats and not self.render_only and not preflight_failed:
             typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
             self._check_python_version()
 
@@ -364,17 +329,76 @@ class CombinedOrchestrator:
 
         return has_pyats, has_robot
 
+    def _run_pre_flight_checks(self, combined_results: CombinedResults) -> bool:
+        """Detect the controller type and validate credentials before PyATS runs.
+
+        Populates ``combined_results.pre_flight_failure`` on failure and emits a
+        user-facing banner.  Returns ``True`` when a failure was detected (caller
+        should skip PyATS execution), ``False`` when all checks passed.
+        """
+        try:
+            self.controller_type = detect_controller_type()
+            logger.info(f"Controller type detected: {self.controller_type}")
+        except ValueError as e:
+            typer.secho(
+                f"\n❌ Controller detection failed:\n{e}",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            combined_results.pre_flight_failure = PreFlightFailure(
+                failure_type=PreFlightFailureType.DETECTION,
+                controller_type=None,
+                controller_url=None,
+                detail=str(e),
+            )
+            return True
+
+        auth_result = preflight_auth_check(self.controller_type)
+        if not auth_result.success:
+            typer.echo("")
+            if auth_result.reason == AuthOutcome.UNREACHABLE:
+                display_unreachable_banner(
+                    controller_type=auth_result.controller_type,
+                    controller_url=auth_result.controller_url,
+                    detail=auth_result.detail,
+                )
+            else:
+                env_var_prefix = get_env_var_prefix(auth_result.controller_type)
+                display_auth_failure_banner(
+                    controller_type=auth_result.controller_type,
+                    controller_url=auth_result.controller_url,
+                    detail=auth_result.detail,
+                    env_var_prefix=env_var_prefix,
+                )
+            typer.echo("")
+
+            combined_results.pre_flight_failure = PreFlightFailure(
+                failure_type=(
+                    PreFlightFailureType.UNREACHABLE
+                    if auth_result.reason == AuthOutcome.UNREACHABLE
+                    else PreFlightFailureType.AUTH
+                ),
+                controller_type=auth_result.controller_type,
+                controller_url=auth_result.controller_url,
+                detail=auth_result.detail,
+                status_code=auth_result.status_code,
+            )
+            return True
+
+        return False
+
     def _print_execution_summary(
         self, results: CombinedResults, merged_xunit_path: Path | None = None
     ) -> None:
         """Print execution summary with statistics."""
         # typer.echo("\n") prints two newlines for visual separation
         typer.echo("\n")
-        typer.echo("=" * 70)
+        typer.echo("=" * SUMMARY_SEPARATOR_WIDTH)
         typer.echo("Combined Test Execution Summary")
-        typer.echo("-" * 70)
-        typer.echo(terminal.format_test_summary(results))
-        typer.echo("-" * 70)
+        typer.echo("-" * SUMMARY_SEPARATOR_WIDTH)
+        if results.has_any_results:
+            typer.echo(terminal.format_test_summary(results))
+            typer.echo("-" * SUMMARY_SEPARATOR_WIDTH)
 
         # print absolute filenames in our summary to align with robot/rebot output
         combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME
@@ -407,7 +431,7 @@ class CombinedOrchestrator:
         if merged_xunit_path is not None:
             typer.echo(f"xUnit:      {merged_xunit_path.resolve()}")
 
-        typer.echo("=" * 70)
+        typer.echo("=" * SUMMARY_SEPARATOR_WIDTH)
 
         stale_files = self._detect_stale_artifacts(results, merged_xunit_path)
         if stale_files:

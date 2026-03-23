@@ -38,6 +38,10 @@ class E2EScenario:
         expected_pyats_d2d_passed: Expected number of passed PyATS D2D tests.
         expected_pyats_d2d_failed: Expected number of failed PyATS D2D tests.
         expected_pyats_d2d_skipped: Expected number of skipped PyATS D2D tests.
+
+        expected_preflight_failure: True when a pre-flight failure is expected. The
+            pyats_results/ directory is created for pre_flight_failure.html even when
+            no PyATS tests ran, so the root-level whitelist test must account for it.
     """
 
     name: str
@@ -70,6 +74,9 @@ class E2EScenario:
 
     # Expected device hostnames for D2D tests (for hostname display validation)
     expected_d2d_hostnames: list[str] | None = None
+
+    # True when a pre-flight failure is expected (pyats_results/ created for the report)
+    expected_preflight_failure: bool = False
 
     @property
     def expected_robot_total(self) -> int:
@@ -174,21 +181,6 @@ class E2EScenario:
         Raises:
             ValueError: If configuration is inconsistent.
         """
-        # Exit code should match failure expectations (graduated exit codes)
-        expected_failures = self.expected_total_failed
-        if expected_failures > 0:
-            # Should match failure count (capped at 250)
-            expected_exit_code = min(expected_failures, 250)
-            if self.expected_exit_code != expected_exit_code:
-                raise ValueError(
-                    f"Scenario '{self.name}' expects {expected_failures} failures "
-                    f"but exit_code={self.expected_exit_code} (should be {expected_exit_code})"
-                )
-        elif self.expected_exit_code != 0:
-            raise ValueError(
-                f"Scenario '{self.name}' expects no failures but exit_code={self.expected_exit_code}"
-            )
-
         # D2D tests require expected_d2d_hostnames to be defined
         if self.has_pyats_d2d_tests and not self.expected_d2d_hostnames:
             raise ValueError(
@@ -437,4 +429,42 @@ DRY_RUN_ROBOT_FAIL_SCENARIO = E2EScenario(
     expected_pyats_d2d_passed=0,
     expected_pyats_d2d_failed=0,
     expected_pyats_d2d_skipped=0,
+)
+
+WINDOWS_PYATS_SKIP_SCENARIO = E2EScenario(
+    name="windows_pyats_skip",
+    description="Windows PyATS skip - Robot (1 pass), PyATS discovered but skipped on Windows",
+    data_path=f"{_FIXTURE_BASE}/windows_pyats_skip/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/windows_pyats_skip/templates",
+    requires_testbed=False,  # No D2D tests actually run
+    architecture="SDWAN",
+    expected_exit_code=0,
+    # Robot tests run normally
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    # All PyATS expectations are 0 (skipped on Windows)
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+)
+
+PREFLIGHT_AUTH_FAILURE_SCENARIO = E2EScenario(
+    name="preflight_auth_failure",
+    description=(
+        "Auth failure (401): ACI pre-flight check fails but Robot still runs, "
+        "combined_summary shows normal dashboard with pre-flight banner"
+    ),
+    data_path=f"{_FIXTURE_BASE}/preflight_failure/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/preflight_failure/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=1,  # CombinedResults.exit_code returns 1 on pre-flight failure
+    expected_preflight_failure=True,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
 )

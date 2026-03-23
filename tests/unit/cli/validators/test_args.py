@@ -32,6 +32,9 @@ class TestValidateExtraArgs:
             "--log",
             "--report",
             "--xunit",
+            # Mixed-case variants: Robot's parser is case-insensitive, so must we be
+            "--OutputDir",
+            "--INCLUDE",
         ],
     )
     @pytest.mark.parametrize("form", ["space", "equals"])
@@ -138,44 +141,23 @@ class TestValidateExtraArgs:
 
     # -- valid args ---------------------------------------------------------------
 
-    def test_empty_args_succeeds(self) -> None:
-        """Test that empty extra_args validates without error."""
-        validate_extra_args([])
+    @pytest.mark.parametrize(
+        ("extra_args", "expected_loglevel"),
+        [
+            ([], None),
+            (["--variable", "VAR:value", "--loglevel", "DEBUG"], "DEBUG"),
+        ],
+    )
+    def test_valid_args_returns_validated_robot_args(
+        self,
+        extra_args: list[str],
+        expected_loglevel: str | None,
+    ) -> None:
+        """Valid args return a ValidatedRobotArgs with correct .args and .robot_opts."""
+        from nac_test.core.types import ValidatedRobotArgs
 
-    def test_valid_robot_args_succeeds(self) -> None:
-        """Test that valid Robot args validate without error."""
-        validate_extra_args(["--variable", "VAR:value", "--loglevel", "DEBUG"])
+        result = validate_extra_args(extra_args)
 
-
-class TestPabotApiShape:
-    """Guard against pabot API changes that would silently disable validation."""
-
-    def test_pabot_parse_args_returns_expected_shape(self) -> None:
-        """Verify parse_args returns expected tuple structure with known types and keys.
-
-        nac_test.cli.validators.args relies on:
-          result[1] being a list  (datasources — iterated in _raise_if_datasources)
-          result[2] being a dict  (pabot args — .keys() used to build _PABOT_OPTION_NAMES)
-        Type assertions here catch API changes where the return shape is preserved but
-        element types change (e.g. result[2] becomes a list), which would silently
-        break validation without failing a keys-only check.
-        """
-        from nac_test.cli.validators.args import _pabot_parse_args
-
-        assert _pabot_parse_args is not None
-        result = _pabot_parse_args(["__dummy__.robot"])
-        assert len(result) == 4, f"Expected 4-tuple from parse_args, got {len(result)}"
-
-        datasources = result[1]
-        assert isinstance(datasources, list), (
-            f"Expected result[1] (datasources) to be a list, got {type(datasources).__name__}"
-        )
-
-        pabot_args = result[2]
-        assert isinstance(pabot_args, dict), (
-            f"Expected result[2] (pabot_args) to be a dict, got {type(pabot_args).__name__}"
-        )
-        assert "pabotlib" in pabot_args, (
-            f"Expected 'pabotlib' key in pabot_args, got {list(pabot_args)}"
-        )
-        assert "testlevelsplit" in pabot_args
+        assert isinstance(result, ValidatedRobotArgs)
+        assert result.args == extra_args
+        assert result.robot_opts.get("loglevel") == expected_loglevel

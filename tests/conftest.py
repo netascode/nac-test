@@ -18,8 +18,27 @@ import pytest
 
 from tests.e2e.mocks.mock_server import MockAPIServer
 
-# Path to the mock API configuration file
+# Path to the mock API configuration files
 MOCK_API_CONFIG_PATH = Path(__file__).parent / "e2e" / "mocks" / "mock_api_config.yaml"
+MOCK_API_CONFIG_PREFLIGHT_401_PATH = (
+    Path(__file__).parent / "e2e" / "mocks" / "mock_api_config_preflight_401.yaml"
+)
+
+
+def assert_is_link_to(link: Path, source: Path) -> None:
+    """Assert that link points to source as either a hard link or symlink."""
+    if link.is_symlink():
+        assert link.resolve() == source, (
+            f"Symlink points to wrong location:\n"
+            f"  Expected: {source}\n"
+            f"  Got: {link.resolve()}"
+        )
+    else:
+        assert link.stat().st_ino == source.stat().st_ino, (
+            f"Hard link mismatch:\n"
+            f"  Link inode: {link.stat().st_ino}\n"
+            f"  Source inode: {source.stat().st_ino}"
+        )
 
 
 # =============================================================================
@@ -79,6 +98,25 @@ def bypass_proxy_for_localhost() -> Generator[None, None, None]:
         del os.environ["NO_PROXY"]
 
 
+def _start_mock_server(config_path: Path) -> Generator[MockAPIServer, None, None]:
+    """Start a MockAPIServer loaded from config_path and stop it after use.
+
+    Shared factory used by scenario-specific server fixtures so each gets
+    an isolated server instance with its own endpoint configuration.
+
+    Args:
+        config_path: Path to the YAML config file to load.
+
+    Yields:
+        A running MockAPIServer instance.
+    """
+    server = MockAPIServer()
+    server.load_from_yaml(config_path)
+    server.start()
+    yield server
+    server.stop()
+
+
 @pytest.fixture(scope="session")
 def mock_api_server() -> Generator[MockAPIServer, None, None]:
     """Provide a mock API server for integration and E2E tests.
@@ -86,37 +124,23 @@ def mock_api_server() -> Generator[MockAPIServer, None, None]:
     The server starts automatically once per test session and loads
     configuration from tests/e2e/mocks/mock_api_config.yaml.
 
-    You can override the config file by setting the MOCK_API_CONFIG
-    environment variable.
-
-    The server is accessible at http://127.0.0.1:5555 by default.
-
     Example usage in tests:
         def test_api_call(mock_api_server):
             response = requests.get(f"{mock_api_server.url}/api/devices")
             assert response.status_code == 200
-
-            # You can also add endpoints dynamically
-            mock_api_server.add_endpoint(
-                name='Custom',
-                path_pattern='/api/custom',
-                status_code=200,
-                response_data={'custom': 'data'},
-                match_type='exact'
-            )
     """
-    server = MockAPIServer()
+    yield from _start_mock_server(MOCK_API_CONFIG_PATH)
 
-    config_path = os.environ.get("MOCK_API_CONFIG", str(MOCK_API_CONFIG_PATH))
-    config_file = Path(config_path)
 
-    if config_file.exists():
-        server.load_from_yaml(config_file)
+@pytest.fixture(scope="session")
+def mock_api_server_preflight_401() -> Generator[MockAPIServer, None, None]:
+    """Provide an isolated mock API server that returns 401 for all auth endpoints.
 
-    server.start()
-    yield server
-    server.reset_endpoints()
-    server.stop()
+    Used by pre-flight failure scenarios where the auth check must fail while
+    Robot Framework tests continue running. Kept separate from the shared
+    mock_api_server so no mutation of the session-wide server is needed.
+    """
+    yield from _start_mock_server(MOCK_API_CONFIG_PREFLIGHT_401_PATH)
 
 
 # =============================================================================

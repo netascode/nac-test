@@ -13,14 +13,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from nac_test.core.constants import (
     DEBUG_MODE,
     DRY_RUN_REASON,
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    SUMMARY_SEPARATOR_WIDTH,
 )
 from nac_test.core.types import PyATSResults, TestResults
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
@@ -53,6 +52,7 @@ from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
+from nac_test.utils.yaml import dump_to_stream
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ class PyATSOrchestrator:
         reporter_config = self._build_reporter_config()
         config_path = temp_dir / "plugin_config.yaml"
         with open(config_path, "w") as f:
-            yaml.dump(reporter_config, f)
+            dump_to_stream(reporter_config, f)
         return config_path
 
     def _populate_test_status_from_archive(self, archive_path: Path) -> None:
@@ -550,9 +550,9 @@ class PyATSOrchestrator:
             api_tests: List of discovered API test files
             d2d_tests: List of discovered D2D test files
         """
-        print("\n" + "=" * 70)
+        print("\n" + "=" * SUMMARY_SEPARATOR_WIDTH)
         print("🔍 DRY-RUN MODE: Showing tests that would be executed")
-        print("=" * 70)
+        print("=" * SUMMARY_SEPARATOR_WIDTH)
 
         if api_tests:
             print(f"\n📋 API Tests ({len(api_tests)}):")
@@ -566,9 +566,9 @@ class PyATSOrchestrator:
                 rel_path = test_file.relative_to(self.test_dir)
                 print(f"   • {rel_path}")
 
-        print("\n" + "=" * 70)
+        print("\n" + "=" * SUMMARY_SEPARATOR_WIDTH)
         print("✅ PyATS dry-run complete (no tests executed)")
-        print("=" * 70 + "\n")
+        print("=" * SUMMARY_SEPARATOR_WIDTH + "\n")
 
     def run_tests(self) -> PyATSResults:
         """Main entry point - triggers the async execution flow.

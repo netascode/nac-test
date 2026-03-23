@@ -8,11 +8,13 @@ valid Robot Framework options that don't conflict with nac-test's controlled opt
 
 import functools
 import logging
+import uuid
 from collections.abc import Callable
-from typing import Any
+from typing import Any, NamedTuple
 
 from robot.errors import DataError
 
+from nac_test.core.types import ValidatedRobotArgs
 from nac_test.utils.strings import parse_cli_option_name
 
 logger = logging.getLogger(__name__)
@@ -31,17 +33,24 @@ except ImportError:
         "Invalid extra args will not be caught until runtime."
     )
 
-# Robot Framework options controlled by nac-test: (long_option, short_option, hint)
-# Each tuple is the single source of truth — the lookup below is derived from this.
-_CONTROLLED_ROBOT_OPTIONS: list[tuple[str, str | None, str]] = [
-    ("include", "i", "nac-test -i/--include"),
-    ("exclude", "e", "nac-test -e/--exclude"),
-    ("outputdir", "d", "nac-test -o/--output"),
-    ("output", "o", "controlled internally by nac-test"),
-    ("log", "l", "controlled internally by nac-test"),
-    ("report", "r", "controlled internally by nac-test"),
-    ("xunit", "x", "controlled internally by nac-test"),
-    ("dryrun", None, "nac-test --dry-run"),
+
+# Robot Framework options controlled by nac-test.
+# Each entry is the single source of truth — the lookup below is derived from this.
+class _ControlledOption(NamedTuple):
+    long: str
+    short: str | None
+    hint: str
+
+
+_CONTROLLED_ROBOT_OPTIONS: list[_ControlledOption] = [
+    _ControlledOption("include", "i", "nac-test -i/--include"),
+    _ControlledOption("exclude", "e", "nac-test -e/--exclude"),
+    _ControlledOption("outputdir", "d", "nac-test -o/--output"),
+    _ControlledOption("output", "o", "controlled internally by nac-test"),
+    _ControlledOption("log", "l", "controlled internally by nac-test"),
+    _ControlledOption("report", "r", "controlled internally by nac-test"),
+    _ControlledOption("xunit", "x", "controlled internally by nac-test"),
+    _ControlledOption("dryrun", None, "nac-test --dry-run"),
     # --loglevel / -L is intentionally absent: users may override it via extra_args
     # (e.g. "-- --loglevel TRACE"). nac-test sets a default but does not own the option.
 ]
@@ -52,8 +61,9 @@ _CONTROLLED_OPTIONS_LOOKUP: dict[str, str] = {
     for k in ([long, short] if short else [long])
 }
 
-# pabot's parse_args requires at least one datasource argument
-_DUMMY_DATASOURCE = "__dummy__.robot"
+# pabot's parse_args requires at least one datasource argument. Using a UUID-based
+# name ensures this sentinel can never collide with a real user test file.
+_DUMMY_DATASOURCE = f"__nac_test_{uuid.uuid4().hex}__.robot"
 
 
 @functools.cache
@@ -137,8 +147,14 @@ def _raise_if_datasources(datasources: list[str]) -> None:
         raise ValueError(error_msg)
 
 
-def validate_extra_args(extra_args: list[str]) -> None:
+def validate_extra_args(extra_args: list[str]) -> ValidatedRobotArgs:
     """Validate extra Robot Framework arguments passed after the -- separator.
+
+    Returns a ValidatedRobotArgs with the raw arg list and the parsed Robot opts
+    dict from pabot's parser. Callers should pass this object through the
+    orchestration chain instead of the raw string list, so that downstream
+    consumers (e.g. run_pabot) can inspect parsed option values without
+    re-parsing.
 
     Raises:
         ValueError: If extra_args contain datasources/files, pabot options, or
@@ -146,22 +162,25 @@ def validate_extra_args(extra_args: list[str]) -> None:
         DataError: If extra_args contain invalid Robot Framework arguments.
     """
     if not extra_args:
-        return
+        return ValidatedRobotArgs(args=[], robot_opts={})
 
     _raise_if_controlled_robot_options(extra_args)
     _raise_if_pabot_options(extra_args)
 
     if _pabot_parse_args is None:
-        return
+        return ValidatedRobotArgs(args=extra_args, robot_opts={})
 
     # Use pabot's parse_args as the authoritative Robot argument validator.
     try:
-        _, datasources, _, _ = _pabot_parse_args(extra_args + [_DUMMY_DATASOURCE])
+        robot_opts, datasources, _, _ = _pabot_parse_args(
+            extra_args + [_DUMMY_DATASOURCE]
+        )
     except DataError:
         # Unknown robotframework arguments
         raise
     except (IndexError, TypeError) as e:
         logger.warning(f"pabot API may have changed, skipping validation: {e}")
-        return
+        return ValidatedRobotArgs(args=extra_args, robot_opts={})
 
     _raise_if_datasources(datasources)
+    return ValidatedRobotArgs(args=extra_args, robot_opts=robot_opts)
