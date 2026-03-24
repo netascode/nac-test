@@ -13,6 +13,8 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from nac_test.utils.path_utils import derive_test_name
+
 logger = logging.getLogger(__name__)
 
 
@@ -152,9 +154,13 @@ class ArchiveInspector:
             # to generate test names like "nrfu.foo", but results.json only stores
             # the task name (e.g., "foo"). Using testscript ensures key consistency
             # between progress events and archive fallback.
-            test_key = ArchiveInspector._derive_test_name_from_path(
-                task.get("testscript", ""), task_name, test_dir
-            )
+            testscript = task.get("testscript", "")
+            if testscript:
+                test_key = derive_test_name(
+                    Path(testscript), test_dir, fallback=task_name
+                )
+            else:
+                test_key = task_name
 
             # Extract result from results.json
             result_value = task.get("result", {}).get("value", "unknown")
@@ -181,33 +187,6 @@ class ArchiveInspector:
             logger.debug(f"Extracted test result: {test_key} = {status}")
 
         return results
-
-    @staticmethod
-    def _derive_test_name_from_path(
-        testscript: str, fallback_name: str, test_dir: Path
-    ) -> str:
-        """Derive a test name from the testscript path.
-
-        This mirrors the logic in the PyATS progress plugin's _get_test_name()
-        method to ensure consistent key generation between progress events
-        and archive-extracted results.
-
-        Args:
-            testscript: Full path to the test script file
-            fallback_name: Fallback name if path cannot be parsed
-            test_dir: Test directory for computing relative paths
-
-        Returns:
-            Dot-notation test name (e.g., "nrfu.verify_device_status")
-        """
-        if not testscript:
-            return fallback_name
-
-        try:
-            relative_path = Path(testscript).absolute().relative_to(test_dir.absolute())
-            return ".".join((*relative_path.parts[:-1], relative_path.stem))
-        except ValueError:
-            return fallback_name
 
     @staticmethod
     def find_archives(output_dir: Path) -> dict[str, list[Path]]:

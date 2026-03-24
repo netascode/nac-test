@@ -28,6 +28,7 @@ from typing import Any
 from pyats.easypy.plugins.bases import BasePlugin
 
 from nac_test.pyats_core.constants import ENV_TEST_DIR
+from nac_test.utils.path_utils import derive_test_name
 
 # Event schema version for future compatibility
 EVENT_SCHEMA_VERSION = "1.0"
@@ -309,15 +310,6 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
         path = Path(testscript).absolute()
 
         if self.test_dir_path:
-            try:
-                relative_path = path.relative_to(self.test_dir_path)
-                parts = relative_path.parts
-                name_parts = list(parts[:-1]) + [relative_path.stem]
-                return ".".join(name_parts)
-            except ValueError:
-                logger.warning(
-                    f"Test script {testscript} (absolute: {path}) is not under test_dir "
-                    f"{self.test_dir_path}, using filename only"
-                )
+            return derive_test_name(path, self.test_dir_path, fallback=path.stem)
 
         return path.stem

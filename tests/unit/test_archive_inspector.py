@@ -245,69 +245,6 @@ class TestExtractTestResults:
         )
 
 
-class TestDeriveTestNameFromPath:
-    """Tests for ArchiveInspector._derive_test_name_from_path() helper."""
-
-    def test_derives_name_from_testscript_path(self) -> None:
-        """Test that test name is correctly derived from testscript path."""
-        testscript = "/path/to/templates/nrfu/verify_device_status.py"
-        test_dir = Path("/path/to/templates")
-        result = ArchiveInspector._derive_test_name_from_path(
-            testscript, "fallback", test_dir
-        )
-        assert result == "nrfu.verify_device_status"
-
-    def test_handles_nested_test_directories(self) -> None:
-        """Test derivation from nested paths like templates/api/tenants/verify.py."""
-        testscript = "/path/to/templates/api/tenants/verify_tenant.py"
-        test_dir = Path("/path/to/templates")
-        result = ArchiveInspector._derive_test_name_from_path(
-            testscript, "fallback", test_dir
-        )
-        assert result == "api.tenants.verify_tenant"
-
-    def test_falls_back_when_testscript_empty(self) -> None:
-        """Test that fallback name is used when testscript is empty."""
-        test_dir = Path("/path/to/templates")
-        result = ArchiveInspector._derive_test_name_from_path(
-            "", "my_fallback_name", test_dir
-        )
-        assert result == "my_fallback_name"
-
-    def test_falls_back_when_path_not_under_test_dir(self) -> None:
-        """Test that fallback is used when path is not under test_dir."""
-        testscript = "/completely/different/path/verify.py"
-        test_dir = Path("/path/to/templates")
-        result = ArchiveInspector._derive_test_name_from_path(
-            testscript, "fallback", test_dir
-        )
-        assert result == "fallback"
-
-    def test_handles_d2d_test_paths(self) -> None:
-        """Test derivation from d2d test paths."""
-        testscript = "/path/to/templates/d2d/operational/verify_bgp.py"
-        test_dir = Path("/path/to/templates")
-        result = ArchiveInspector._derive_test_name_from_path(
-            testscript, "fallback", test_dir
-        )
-        assert result == "d2d.operational.verify_bgp"
-
-    def test_handles_real_world_sdwan_path(self) -> None:
-        """Test with a real-world SD-WAN test path."""
-        test_dir = Path(
-            "/Users/atestini/Desktop/Automation/testing-for-nac/"
-            "nac-sdwan-terraform/pyats"
-        )
-        testscript = (
-            "/Users/atestini/Desktop/Automation/testing-for-nac/"
-            "nac-sdwan-terraform/pyats/nrfu/verify_sdwanmanager_device_status.py"
-        )
-        result = ArchiveInspector._derive_test_name_from_path(
-            testscript, "fallback", test_dir
-        )
-        assert result == "nrfu.verify_sdwanmanager_device_status"
-
-
 class TestZipSlipProtection:
     """Tests for Zip Slip vulnerability protection in archive extraction."""
 
