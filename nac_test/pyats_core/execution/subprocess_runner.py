@@ -27,6 +27,8 @@ from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 logger = logging.getLogger(__name__)
 
 
+# disable EnvironmentDebugPlugin to prevent sensitive environment vars
+# from being logged by PyATS
 PLUGIN_CONFIG = textwrap.dedent("""\
     plugins:
         ProgressReporterPlugin:
