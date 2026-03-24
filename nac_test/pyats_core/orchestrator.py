@@ -311,7 +311,7 @@ class PyATSOrchestrator:
             # The merged data file is created by main.py at the base output level.
             # Pass absolute path so the child process (with cwd set) can locate it.
             env["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = str(
-                (self.base_output_dir / self.merged_data_filename).resolve()
+                (self.base_output_dir / self.merged_data_filename).absolute()
             )
             # Set NAC_TEST_TYPE to differentiate API vs D2D test types for separate temp directories
             # This prevents race conditions where both test types write JSONL files to the same location
