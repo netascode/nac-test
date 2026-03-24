@@ -3,6 +3,7 @@
 
 """Unit tests for nac_test.utils.path_utils."""
 
+import os
 from pathlib import Path
 
 from nac_test.utils.path_utils import derive_test_name
@@ -70,3 +71,35 @@ class TestDeriveTestName:
             fallback="fallback",
         )
         assert result == "nrfu.verify_sdwanmanager_device_status"
+
+
+class TestDeriveTestNameSymlinks:
+    """Tests for derive_test_name() with a symlinked test_dir.
+
+    derive_test_name uses absolute() rather than resolve(). When test_dir is a
+    symlink, resolve() would follow it (potentially breaking the relative_to
+    comparison), while absolute() preserves the symlink and keeps both sides
+    comparable. These tests verify that behaviour.
+    """
+
+    def test_symlinked_test_dir_still_derives_correct_name(
+        self, tmp_path: Path
+    ) -> None:
+        """When test_dir itself is a symlink, paths under it still derive correctly.
+
+        absolute() on both testscript_path and test_dir keeps them comparable,
+        whereas resolve() would follow the symlink and could break relative_to.
+        """
+        real_dir = tmp_path / "real_tests"
+        real_dir.mkdir()
+        (real_dir / "nrfu").mkdir()
+        script = real_dir / "nrfu" / "verify_bgp.py"
+        script.touch()
+
+        linked_dir = tmp_path / "tests"
+        os.symlink(real_dir, linked_dir)
+
+        result = derive_test_name(
+            linked_dir / "nrfu" / "verify_bgp.py", linked_dir, fallback="fallback"
+        )
+        assert result == "nrfu.verify_bgp"
