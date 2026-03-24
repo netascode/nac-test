@@ -440,6 +440,27 @@ def test_cleanup_is_idempotent(
 ) -> None:
     """Test that cleanup() can be called multiple times safely."""
     runner = SubprocessRunner(temp_output_dir, mock_output_handler)
+    assert runner._plugin_config_file is not None
+    assert runner._pyats_config_file is not None
 
     runner.cleanup()
-    runner.cleanup()
+    assert not runner._plugin_config_file.exists()
+    assert not runner._pyats_config_file.exists()
+
+    runner.cleanup()  # Second call must not raise
+    assert not runner._plugin_config_file.exists()
+    assert not runner._pyats_config_file.exists()
+
+
+def test_del_calls_cleanup(temp_output_dir: Path, mock_output_handler: Mock) -> None:
+    """Test that __del__ triggers opportunistic cleanup of config files."""
+    runner = SubprocessRunner(temp_output_dir, mock_output_handler)
+    assert runner._plugin_config_file is not None
+    assert runner._pyats_config_file is not None
+    assert runner._plugin_config_file.exists()
+    assert runner._pyats_config_file.exists()
+
+    runner.__del__()
+
+    assert not runner._plugin_config_file.exists()
+    assert not runner._pyats_config_file.exists()

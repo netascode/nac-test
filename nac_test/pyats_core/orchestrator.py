@@ -623,9 +623,6 @@ class PyATSOrchestrator:
             )
         except RuntimeError as e:
             # pyats entrypoint not found or config file creation failed.
-            # No cleanup needed: SubprocessRunner._create_config_files() only sets
-            # file path attributes AFTER successful writes, so partial failures
-            # leave attributes as None and cleanup() would be a no-op.
             error_msg = str(e)
             api_result = TestResults.from_error(error_msg) if api_tests else None
             d2d_result = TestResults.from_error(error_msg) if d2d_tests else None
@@ -718,6 +715,16 @@ class PyATSOrchestrator:
 
         return pyats_results
 
+    def _cleanup_subprocess_runner(self, keep_artifacts: bool) -> None:
+        """Explicitly clean up config files created by SubprocessRunner.
+
+        Called after report generation completes (success or failure paths).
+        Unexpected exit paths are handled opportunistically via SubprocessRunner.__del__
+        until a more robust mechanism is implemented as part of #677.
+        """
+        if self.subprocess_runner and not keep_artifacts:
+            self.subprocess_runner.cleanup()
+
     async def _generate_html_reports_async(
         self,
     ) -> PyATSResults:
@@ -757,7 +764,9 @@ class PyATSOrchestrator:
         result = await generator.generate_reports_from_archives(archive_paths)
 
         # Determine whether to keep artifacts (debug mode or explicit env var)
-        keep_artifacts = DEBUG_MODE or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")
+        keep_artifacts: bool = bool(
+            DEBUG_MODE or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")
+        )
 
         if result["status"] in ["success", "partial"]:
             # Log report generation timing (procedural info)
@@ -816,8 +825,7 @@ class PyATSOrchestrator:
                         logger.debug(f"Could not remove directory {type_dir}: {e}")
 
             # Clean up PyATS config files created by SubprocessRunner
-            if self.subprocess_runner and not keep_artifacts:
-                self.subprocess_runner.cleanup()
+            self._cleanup_subprocess_runner(keep_artifacts)
 
             # Extract and return test statistics
             if result.get("pyats_stats"):
@@ -830,6 +838,5 @@ class PyATSOrchestrator:
             if result.get("error"):
                 print(f"Error: {result['error']}")
             # Clean up PyATS config files; report generation failed so no stats to return
-            if self.subprocess_runner and not keep_artifacts:
-                self.subprocess_runner.cleanup()
+            self._cleanup_subprocess_runner(keep_artifacts)
             return PyATSResults()

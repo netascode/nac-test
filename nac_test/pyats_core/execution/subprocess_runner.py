@@ -103,14 +103,27 @@ class SubprocessRunner:
     def cleanup(self) -> None:
         """Remove config files created during initialization.
 
-        Note: A more robust, nac-test-wide cleanup mechanism is planned that would
-        handle cleanup on unexpected exits. For now, cleanup is best-effort hygiene
-        since the config file contents are not sensitive.
+        Called explicitly by the orchestrator after normal execution. Also called
+        opportunistically from __del__ for unexpected exits (best-effort only).
         """
         for config_file in [self._plugin_config_file, self._pyats_config_file]:
             if config_file is not None:
                 config_file.unlink(missing_ok=True)
                 logger.debug(f"Cleaned up config file: {config_file}")
+
+    def __del__(self) -> None:
+        """Opportunistic cleanup on garbage collection.
+
+        Not guaranteed: CPython-specific, not called on SIGKILL or interpreter shutdown.
+        Handles unexpected exits without complicating call sites in the orchestrator.
+        A more robust cleanup mechanism will be implemented as part of #677 (which
+        primarily targets a different file, but config file cleanup will be included) —
+        until then, leaked config files are acceptable (contents not sensitive, files small).
+        """
+        try:
+            self.cleanup()
+        except Exception:
+            pass  # Best-effort: never raise from __del__
 
     def _build_command(
         self,
@@ -138,9 +151,13 @@ class SubprocessRunner:
         if testbed_file_path is not None:
             cmd.extend(["--testbed-file", str(testbed_file_path)])
 
-        if self._plugin_config_file is None or self._pyats_config_file is None:
+        # Unreachable in practice: _create_config_files() always sets these in __init__,
+        # or raises before __init__ completes. Guard exists for mypy type narrowing only.
+        if (
+            self._plugin_config_file is None or self._pyats_config_file is None
+        ):  # pragma: no cover
             raise RuntimeError(
-                "Config files not initialized. This indicates a bug in SubprocessRunner."
+                "Config files not initialized — this is a bug in SubprocessRunner."
             )
         cmd.extend(
             [
