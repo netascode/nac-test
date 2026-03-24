@@ -3,7 +3,10 @@
 
 """Path utilities for PyATS test name computation."""
 
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def derive_test_name(testscript_path: Path, test_dir: Path, fallback: str) -> str:
@@ -25,4 +28,8 @@ def derive_test_name(testscript_path: Path, test_dir: Path, fallback: str) -> st
         relative_path = testscript_path.absolute().relative_to(test_dir.absolute())
         return ".".join((*relative_path.parts[:-1], relative_path.stem))
     except ValueError:
+        logger.debug(
+            f"Test script {testscript_path} is not under test_dir {test_dir}, "
+            f"using fallback {fallback!r}"
+        )
         return fallback
