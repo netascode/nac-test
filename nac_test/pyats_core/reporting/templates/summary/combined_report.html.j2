@@ -456,7 +456,7 @@
                     <span class="test-type-badge {{ test_type.lower() }}-badge">{{ test_type }}</span>
                     <h2>{{ framework_data.title }} Test Results</h2>
                 </div>
-                {% if not framework_data.is_pre_flight_failure %}
+                {% if framework_data.has_report %}
                 <a href="{{ framework_data.report_path }}" class="view-report-btn">
                     View Detailed Report →
                 </a>

@@ -3956,9 +3956,12 @@ Called by `CombinedOrchestrator` after test execution completes:
 
 ```python
 from nac_test.utils.xunit_merger import merge_xunit_results
+from nac_test.core.types import CombinedResults
 
 # After PyATS and Robot execution
-merge_xunit_results(output_dir)  # Creates {output_dir}/xunit.xml
+combined_results = CombinedResults(robot=robot_results, api=api_results, d2d=d2d_results)
+merged_xunit_path = merge_xunit_results(output_dir, combined_results)
+# Returns Path to {output_dir}/xunit.xml if files were merged, None otherwise
 ```
 
 ---
@@ -4021,6 +4024,17 @@ class PabotRunner:
 ```bash
 pabot --processes {n} --outputdir {dir} {robot_files}
 ```
+
+**Extra Arguments Validation:**
+
+Additional Robot Framework arguments passed via the `--` separator are validated before execution:
+
+1. **Controlled Options Check**: Options controlled by nac-test (e.g., `--include`, `--exclude`, `--outputdir`, `--output`, `--log`, `--report`, `--xunit`, `--dryrun`) are rejected with guidance to use nac-test equivalents
+2. **Pabot Options Check**: Pabot-specific options (e.g., `--testlevelsplit`, `--pabotlib`) are rejected
+3. **Datasource Check**: Test file paths in extra arguments are rejected
+4. **Robot Validation**: Invalid Robot Framework options raise `DataError`
+
+The `CONTROLLED_ROBOT_OPTIONS` dict maps long options to their short forms and nac-test equivalents for user-friendly error messages.
 
 ---
 

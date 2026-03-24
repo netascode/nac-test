@@ -19,6 +19,7 @@ from nac_test.core.reporting.combined_generator import (
 )
 from nac_test.core.types import (
     CombinedResults,
+    ExecutionState,
     PreFlightFailure,
     PreFlightFailureType,
     TestResults,
@@ -445,3 +446,112 @@ class TestPreFlightFailureReport:
         report_path = generator.generate_combined_summary(results)
 
         assert report_path is None
+
+
+class TestHasReportFlag:
+    """Tests for has_report flag in framework_data dictionary."""
+
+    def test_has_report_true_when_test_results_has_tests(self, tmp_path: Path) -> None:
+        """has_report is True when TestResults exists with total > 0."""
+        generator = CombinedReportGenerator(tmp_path)
+
+        test_results = TestResults(passed=5, failed=0, skipped=0)
+        results = CombinedResults(api=test_results)
+
+        report_path = generator.generate_combined_summary(results)
+        assert report_path is not None
+        content = report_path.read_text()
+        assert "PyATS API" in content
+        assert "View Detailed Report" in content
+
+    def test_has_report_absent_when_section_not_in_results(
+        self, tmp_path: Path
+    ) -> None:
+        """has_report section is absent when TestResults for that framework is None.
+
+        When api=None, the PyATS API section is never passed to the template,
+        so the has_report flag is not reached — the section simply doesn't exist.
+        """
+        generator = CombinedReportGenerator(tmp_path)
+
+        test_results = TestResults(passed=2, failed=0, skipped=0)
+        results = CombinedResults(robot=test_results)
+
+        report_path = generator.generate_combined_summary(results)
+        assert report_path is not None
+        content = report_path.read_text()
+        assert "PyATS API" not in content
+
+    def test_has_report_false_when_test_results_is_empty(self, tmp_path: Path) -> None:
+        """has_report is False when TestResults.is_empty (total=0)."""
+        generator = CombinedReportGenerator(tmp_path)
+
+        empty_results = TestResults.empty()
+        results = CombinedResults(api=empty_results)
+
+        report_path = generator.generate_combined_summary(results)
+        assert report_path is not None
+        content = report_path.read_text()
+        assert "PyATS API Test Results" in content
+        assert "View Detailed Report →" not in content
+
+    @pytest.mark.parametrize(
+        "execution_state",
+        [
+            ExecutionState.SUCCESS,
+            ExecutionState.EMPTY,
+            ExecutionState.ERROR,
+            ExecutionState.SKIPPED,
+        ],
+    )
+    def test_has_report_false_for_all_execution_states_with_zero_tests(
+        self, tmp_path: Path, execution_state: ExecutionState
+    ) -> None:
+        """has_report is False for all ExecutionState values when total=0."""
+        generator = CombinedReportGenerator(tmp_path)
+
+        test_results = TestResults(state=execution_state)
+        assert test_results.is_empty
+        results = CombinedResults(api=test_results)
+
+        report_path = generator.generate_combined_summary(results)
+        assert report_path is not None
+        content = report_path.read_text()
+        assert "PyATS API Test Results" in content
+        assert "View Detailed Report →" not in content
+
+    @pytest.mark.parametrize(
+        ("execution_state", "test_values", "expect_report_link"),
+        [
+            # total > 0 → has_report=True → "View Detailed Report →" present
+            (ExecutionState.SUCCESS, {"passed": 5, "failed": 0, "skipped": 0}, True),
+            # total == 0 → has_report=False → link absent (EMPTY/ERROR/SKIPPED all behave identically)
+            (ExecutionState.SKIPPED, {"passed": 0, "failed": 0, "skipped": 0}, False),
+        ],
+    )
+    def test_has_report_respects_is_empty_across_all_states(
+        self,
+        tmp_path: Path,
+        execution_state: ExecutionState,
+        test_values: dict[str, int],
+        expect_report_link: bool,
+    ) -> None:
+        """has_report depends solely on is_empty (total == 0), not on ExecutionState."""
+        generator = CombinedReportGenerator(tmp_path)
+
+        test_results = TestResults(
+            state=execution_state,
+            passed=test_values["passed"],
+            failed=test_values["failed"],
+            skipped=test_values["skipped"],
+        )
+        results = CombinedResults(api=test_results)
+
+        report_path = generator.generate_combined_summary(results)
+        assert report_path is not None
+
+        content = report_path.read_text()
+        if expect_report_link:
+            assert "View Detailed Report →" in content
+        else:
+            assert "View Detailed Report →" not in content

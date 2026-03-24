@@ -89,6 +89,27 @@ class TestCombinedOrchestratorFlow:
         """Create sample Robot test results."""
         return TestResults(passed=4, failed=1, skipped=0)
 
+    @pytest.fixture
+    def mock_pyats_instance(self, pyats_results: PyATSResults) -> MagicMock:
+        """Shared mock for PyATSOrchestrator instance with default results."""
+        m = MagicMock()
+        m.run_tests.return_value = pyats_results
+        return m
+
+    @pytest.fixture
+    def mock_robot_instance(self, robot_results: TestResults) -> MagicMock:
+        """Shared mock for RobotOrchestrator instance with default results."""
+        m = MagicMock()
+        m.run_tests.return_value = robot_results
+        return m
+
+    @pytest.fixture
+    def mock_gen_instance(self) -> MagicMock:
+        """Shared mock for CombinedReportGenerator instance."""
+        m = MagicMock()
+        m.generate_combined_summary.return_value = Path("/tmp/combined_summary.html")
+        return m
+
 
 class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
     """Tests for flow control based on _discover_test_types() results."""
@@ -97,20 +118,18 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
         self, orchestrator: CombinedOrchestrator
     ) -> None:
         """When no tests are discovered, return empty CombinedResults without calling orchestrators."""
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(False, False)
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(False, False)
+            ),
+            patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats,
+            patch("nac_test.combined_orchestrator.RobotOrchestrator") as mock_robot,
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator"
+            ) as mock_generator,
+            patch("typer.echo"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.PyATSOrchestrator"
-            ) as mock_pyats:
-                with patch(
-                    "nac_test.combined_orchestrator.RobotOrchestrator"
-                ) as mock_robot:
-                    with patch(
-                        "nac_test.combined_orchestrator.CombinedReportGenerator"
-                    ) as mock_generator:
-                        with patch("typer.echo"):
-                            result = orchestrator.run_tests()
+            result = orchestrator.run_tests()
 
         # No orchestrators should be called
         mock_pyats.assert_not_called()
@@ -126,33 +145,26 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
     def test_only_pyats_discovered_runs_pyats_only(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: PyATSResults,
+        mock_pyats_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """When only PyATS tests are discovered, only PyATS orchestrator runs."""
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(True, False)
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator",
+                return_value=mock_pyats_instance,
+            ) as mock_pyats,
+            patch("nac_test.combined_orchestrator.RobotOrchestrator") as mock_robot,
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ) as mock_generator,
+            patch("typer.echo"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.PyATSOrchestrator"
-            ) as mock_pyats:
-                mock_pyats_instance = MagicMock()
-                mock_pyats_instance.run_tests.return_value = pyats_results
-                mock_pyats.return_value = mock_pyats_instance
-
-                with patch(
-                    "nac_test.combined_orchestrator.RobotOrchestrator"
-                ) as mock_robot:
-                    with patch(
-                        "nac_test.combined_orchestrator.CombinedReportGenerator"
-                    ) as mock_generator:
-                        mock_gen_instance = MagicMock()
-                        mock_gen_instance.generate_combined_summary.return_value = Path(
-                            "/tmp/combined_summary.html"
-                        )
-                        mock_generator.return_value = mock_gen_instance
-
-                        with patch("typer.echo"):
-                            result = orchestrator.run_tests()
+            result = orchestrator.run_tests()
 
         # Only PyATS should be called
         mock_pyats.assert_called_once()
@@ -171,33 +183,28 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
         assert result.robot is None
 
     def test_only_robot_discovered_runs_robot_only(
-        self, orchestrator: CombinedOrchestrator, robot_results: TestResults
+        self,
+        orchestrator: CombinedOrchestrator,
+        mock_robot_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """When only Robot tests are discovered, only Robot orchestrator runs."""
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(False, True)
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(False, True)
+            ),
+            patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats,
+            patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator",
+                return_value=mock_robot_instance,
+            ) as mock_robot,
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ) as mock_generator,
+            patch("typer.echo"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.PyATSOrchestrator"
-            ) as mock_pyats:
-                with patch(
-                    "nac_test.combined_orchestrator.RobotOrchestrator"
-                ) as mock_robot:
-                    mock_robot_instance = MagicMock()
-                    mock_robot_instance.run_tests.return_value = robot_results
-                    mock_robot.return_value = mock_robot_instance
-
-                    with patch(
-                        "nac_test.combined_orchestrator.CombinedReportGenerator"
-                    ) as mock_generator:
-                        mock_gen_instance = MagicMock()
-                        mock_gen_instance.generate_combined_summary.return_value = Path(
-                            "/tmp/combined_summary.html"
-                        )
-                        mock_generator.return_value = mock_gen_instance
-
-                        with patch("typer.echo"):
-                            result = orchestrator.run_tests()
+            result = orchestrator.run_tests()
 
         # Only Robot should be called
         mock_pyats.assert_not_called()
@@ -217,38 +224,30 @@ class TestDiscoveryBasedFlow(TestCombinedOrchestratorFlow):
     def test_both_discovered_runs_both_orchestrators(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: PyATSResults,
-        robot_results: TestResults,
+        mock_pyats_instance: MagicMock,
+        mock_robot_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """When both test types are discovered, both orchestrators run."""
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(True, True)
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, True)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator",
+                return_value=mock_pyats_instance,
+            ) as mock_pyats,
+            patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator",
+                return_value=mock_robot_instance,
+            ) as mock_robot,
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ) as mock_generator,
+            patch("typer.echo"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.PyATSOrchestrator"
-            ) as mock_pyats:
-                mock_pyats_instance = MagicMock()
-                mock_pyats_instance.run_tests.return_value = pyats_results
-                mock_pyats.return_value = mock_pyats_instance
-
-                with patch(
-                    "nac_test.combined_orchestrator.RobotOrchestrator"
-                ) as mock_robot:
-                    mock_robot_instance = MagicMock()
-                    mock_robot_instance.run_tests.return_value = robot_results
-                    mock_robot.return_value = mock_robot_instance
-
-                    with patch(
-                        "nac_test.combined_orchestrator.CombinedReportGenerator"
-                    ) as mock_generator:
-                        mock_gen_instance = MagicMock()
-                        mock_gen_instance.generate_combined_summary.return_value = Path(
-                            "/tmp/combined_summary.html"
-                        )
-                        mock_generator.return_value = mock_gen_instance
-
-                        with patch("typer.echo"):
-                            result = orchestrator.run_tests()
+            result = orchestrator.run_tests()
 
         # Both should be called
         mock_pyats.assert_called_once()
@@ -274,7 +273,8 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
         self,
         tmp_path: Path,
         monkeypatch: MonkeyPatch,
-        pyats_results: PyATSResults,
+        mock_pyats_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """dev_pyats_only flag should skip Robot even if Robot tests are discovered."""
         # Set up controller env
@@ -296,31 +296,24 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
             dev_pyats_only=True,
         )
 
-        # Discovery returns both test types present
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(True, True)
+        # Discovery returns both test types
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, True)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator",
+                return_value=mock_pyats_instance,
+            ) as mock_pyats,
+            patch("nac_test.combined_orchestrator.RobotOrchestrator") as mock_robot,
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ) as mock_generator,
+            patch("typer.echo"),
+            patch("typer.secho"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.PyATSOrchestrator"
-            ) as mock_pyats:
-                mock_pyats_instance = MagicMock()
-                mock_pyats_instance.run_tests.return_value = pyats_results
-                mock_pyats.return_value = mock_pyats_instance
-
-                with patch(
-                    "nac_test.combined_orchestrator.RobotOrchestrator"
-                ) as mock_robot:
-                    with patch(
-                        "nac_test.combined_orchestrator.CombinedReportGenerator"
-                    ) as mock_generator:
-                        mock_gen_instance = MagicMock()
-                        mock_gen_instance.generate_combined_summary.return_value = Path(
-                            "/tmp/combined_summary.html"
-                        )
-                        mock_generator.return_value = mock_gen_instance
-
-                        with patch("typer.echo"), patch("typer.secho"):
-                            result = orchestrator.run_tests()
+            result = orchestrator.run_tests()
 
         # PyATS should run, Robot should NOT
         mock_pyats.assert_called_once()
@@ -333,7 +326,11 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
         assert result.total == 10
 
     def test_dev_robot_only_skips_pyats(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch, robot_results: TestResults
+        self,
+        tmp_path: Path,
+        monkeypatch: MonkeyPatch,
+        mock_robot_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """dev_robot_only flag should skip PyATS even if PyATS tests are discovered."""
         # Set up controller env
@@ -355,31 +352,24 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
             dev_robot_only=True,
         )
 
-        # Discovery returns both test types present
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(True, True)
+        # Discovery returns both test types
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, True)
+            ),
+            patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats,
+            patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator",
+                return_value=mock_robot_instance,
+            ) as mock_robot,
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ) as mock_generator,
+            patch("typer.echo"),
+            patch("typer.secho"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.PyATSOrchestrator"
-            ) as mock_pyats:
-                with patch(
-                    "nac_test.combined_orchestrator.RobotOrchestrator"
-                ) as mock_robot:
-                    mock_robot_instance = MagicMock()
-                    mock_robot_instance.run_tests.return_value = robot_results
-                    mock_robot.return_value = mock_robot_instance
-
-                    with patch(
-                        "nac_test.combined_orchestrator.CombinedReportGenerator"
-                    ) as mock_generator:
-                        mock_gen_instance = MagicMock()
-                        mock_gen_instance.generate_combined_summary.return_value = Path(
-                            "/tmp/combined_summary.html"
-                        )
-                        mock_generator.return_value = mock_gen_instance
-
-                        with patch("typer.echo"), patch("typer.secho"):
-                            result = orchestrator.run_tests()
+            result = orchestrator.run_tests()
 
         # Robot should run, PyATS should NOT
         mock_pyats.assert_not_called()
@@ -395,7 +385,8 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
         self,
         tmp_path: Path,
         monkeypatch: MonkeyPatch,
-        pyats_results: PyATSResults,
+        mock_pyats_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """dev_pyats_only mode should still generate the combined dashboard."""
         monkeypatch.setenv("ACI_URL", "https://apic.test.com")
@@ -416,27 +407,22 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
             dev_pyats_only=True,
         )
 
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(True, False)
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator",
+                return_value=mock_pyats_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ) as mock_generator,
+            patch("typer.echo"),
+            patch("typer.secho"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.PyATSOrchestrator"
-            ) as mock_pyats:
-                mock_pyats_instance = MagicMock()
-                mock_pyats_instance.run_tests.return_value = pyats_results
-                mock_pyats.return_value = mock_pyats_instance
-
-                with patch(
-                    "nac_test.combined_orchestrator.CombinedReportGenerator"
-                ) as mock_generator:
-                    mock_gen_instance = MagicMock()
-                    mock_gen_instance.generate_combined_summary.return_value = Path(
-                        "/tmp/combined_summary.html"
-                    )
-                    mock_generator.return_value = mock_gen_instance
-
-                    with patch("typer.echo"), patch("typer.secho"):
-                        orchestrator.run_tests()
+            orchestrator.run_tests()
 
         # Dashboard should be generated
         mock_generator.assert_called_once_with(output_dir)
@@ -476,21 +462,23 @@ class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
             render_only=True,
         )
 
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(False, True)
-        ):
-            with patch(
-                "nac_test.combined_orchestrator.RobotOrchestrator"
-            ) as mock_robot:
-                mock_robot_instance = MagicMock()
-                mock_robot_instance.run_tests.return_value = robot_results
-                mock_robot.return_value = mock_robot_instance
+        mock_robot_instance = MagicMock()
+        mock_robot_instance.run_tests.return_value = robot_results
 
-                with patch(
-                    "nac_test.combined_orchestrator.CombinedReportGenerator"
-                ) as mock_generator:
-                    with patch("typer.echo"):
-                        orchestrator.run_tests()
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(False, True)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator",
+                return_value=mock_robot_instance,
+            ) as mock_robot,
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator"
+            ) as mock_generator,
+            patch("typer.echo"),
+        ):
+            orchestrator.run_tests()
 
         # Robot orchestrator should be called
         mock_robot.assert_called_once()
@@ -520,25 +508,27 @@ class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
             render_only=True,
         )
 
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(False, True)
+        mock_robot_instance = MagicMock()
+        mock_robot_instance.run_tests.side_effect = ValueError("Template error")
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(False, True)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator",
+                return_value=mock_robot_instance,
+            ),
+            patch("typer.echo"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.RobotOrchestrator"
-            ) as mock_robot:
-                mock_robot_instance = MagicMock()
-                mock_robot_instance.run_tests.side_effect = ValueError("Template error")
-                mock_robot.return_value = mock_robot_instance
+            # Should not raise exception - should convert to TestResults.from_error()
+            results = orchestrator.run_tests()
 
-                with patch("typer.echo"):
-                    # Should not raise exception - should convert to TestResults.from_error()
-                    results = orchestrator.run_tests()
-
-                    # Verify that the error was properly converted to TestResults
-                    assert results.robot is not None
-                    assert results.robot.has_error
-                    assert results.robot.reason is not None
-                    assert "Template error" in results.robot.reason
+            # Verify that the error was properly converted to TestResults
+            assert results.robot is not None
+            assert results.robot.has_error
+            assert results.robot.reason is not None
+            assert "Template error" in results.robot.reason
 
     def test_non_render_only_catches_robot_exception(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
@@ -562,30 +552,30 @@ class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
             render_only=False,  # Not render-only
         )
 
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(False, True)
+        mock_robot_instance = MagicMock()
+        mock_robot_instance.run_tests.side_effect = ValueError("Execution error")
+        mock_gen_instance = MagicMock()
+        mock_gen_instance.generate_combined_summary.return_value = Path(
+            "/tmp/combined_summary.html"
+        )
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(False, True)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator",
+                return_value=mock_robot_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ) as mock_generator,
+            patch("typer.echo"),
+            patch("typer.style"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.RobotOrchestrator"
-            ) as mock_robot:
-                mock_robot_instance = MagicMock()
-                mock_robot_instance.run_tests.side_effect = ValueError(
-                    "Execution error"
-                )
-                mock_robot.return_value = mock_robot_instance
-
-                with patch(
-                    "nac_test.combined_orchestrator.CombinedReportGenerator"
-                ) as mock_generator:
-                    mock_gen_instance = MagicMock()
-                    mock_gen_instance.generate_combined_summary.return_value = Path(
-                        "/tmp/combined_summary.html"
-                    )
-                    mock_generator.return_value = mock_gen_instance
-
-                    with patch("typer.echo"), patch("typer.style"):
-                        # Should NOT raise - exception is caught
-                        result = orchestrator.run_tests()
+            # Should NOT raise - exception is caught
+            result = orchestrator.run_tests()
 
         # Results should have zero tests but record the error
         assert result.total == 0
@@ -606,38 +596,30 @@ class TestDashboardGeneration(TestCombinedOrchestratorFlow):
     def test_dashboard_receives_by_framework_data(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: PyATSResults,
-        robot_results: TestResults,
+        mock_pyats_instance: MagicMock,
+        mock_robot_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """Dashboard generator should receive frameworks dict from combined results."""
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(True, True)
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, True)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator",
+                return_value=mock_pyats_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator",
+                return_value=mock_robot_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ),
+            patch("typer.echo"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.PyATSOrchestrator"
-            ) as mock_pyats:
-                mock_pyats_instance = MagicMock()
-                mock_pyats_instance.run_tests.return_value = pyats_results
-                mock_pyats.return_value = mock_pyats_instance
-
-                with patch(
-                    "nac_test.combined_orchestrator.RobotOrchestrator"
-                ) as mock_robot:
-                    mock_robot_instance = MagicMock()
-                    mock_robot_instance.run_tests.return_value = robot_results
-                    mock_robot.return_value = mock_robot_instance
-
-                    with patch(
-                        "nac_test.combined_orchestrator.CombinedReportGenerator"
-                    ) as mock_generator:
-                        mock_gen_instance = MagicMock()
-                        mock_gen_instance.generate_combined_summary.return_value = Path(
-                            "/tmp/combined_summary.html"
-                        )
-                        mock_generator.return_value = mock_gen_instance
-
-                        with patch("typer.echo"):
-                            orchestrator.run_tests()
+            orchestrator.run_tests()
 
         # Verify generate_combined_summary was called with CombinedResults
         mock_gen_instance.generate_combined_summary.assert_called_once()
@@ -657,28 +639,28 @@ class TestDashboardGeneration(TestCombinedOrchestratorFlow):
         """Dashboard should be generated even when orchestrators return empty results."""
         # PyATS returns PyATSResults with None attributes when no tests found
         empty_pyats_results = PyATSResults()
+        mock_pyats_instance = MagicMock()
+        mock_pyats_instance.run_tests.return_value = empty_pyats_results
+        mock_gen_instance = MagicMock()
+        mock_gen_instance.generate_combined_summary.return_value = Path(
+            "/tmp/combined_summary.html"
+        )
 
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(True, False)
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator",
+                return_value=mock_pyats_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ) as mock_generator,
+            patch("typer.echo"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.PyATSOrchestrator"
-            ) as mock_pyats:
-                mock_pyats_instance = MagicMock()
-                mock_pyats_instance.run_tests.return_value = empty_pyats_results
-                mock_pyats.return_value = mock_pyats_instance
-
-                with patch(
-                    "nac_test.combined_orchestrator.CombinedReportGenerator"
-                ) as mock_generator:
-                    mock_gen_instance = MagicMock()
-                    mock_gen_instance.generate_combined_summary.return_value = Path(
-                        "/tmp/combined_summary.html"
-                    )
-                    mock_generator.return_value = mock_gen_instance
-
-                    with patch("typer.echo"):
-                        orchestrator.run_tests()
+            orchestrator.run_tests()
 
         # Dashboard should still be generated
         mock_generator.assert_called_once()
@@ -691,33 +673,26 @@ class TestExecutionSummary(TestCombinedOrchestratorFlow):
     def test_print_execution_summary_called_when_not_render_only(
         self,
         orchestrator: CombinedOrchestrator,
-        pyats_results: PyATSResults,
+        mock_pyats_instance: MagicMock,
+        mock_gen_instance: MagicMock,
     ) -> None:
         """_print_execution_summary should be called when not in render_only mode."""
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(True, False)
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator",
+                return_value=mock_pyats_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ),
+            patch.object(orchestrator, "_print_execution_summary") as mock_print,
+            patch("typer.echo"),
         ):
-            with patch(
-                "nac_test.combined_orchestrator.PyATSOrchestrator"
-            ) as mock_pyats:
-                mock_pyats_instance = MagicMock()
-                mock_pyats_instance.run_tests.return_value = pyats_results
-                mock_pyats.return_value = mock_pyats_instance
-
-                with patch(
-                    "nac_test.combined_orchestrator.CombinedReportGenerator"
-                ) as mock_generator:
-                    mock_gen_instance = MagicMock()
-                    mock_gen_instance.generate_combined_summary.return_value = Path(
-                        "/tmp/combined_summary.html"
-                    )
-                    mock_generator.return_value = mock_gen_instance
-
-                    with patch.object(
-                        orchestrator, "_print_execution_summary"
-                    ) as mock_print:
-                        with patch("typer.echo"):
-                            orchestrator.run_tests()
+            orchestrator.run_tests()
 
         # Summary should be printed
         mock_print.assert_called_once()
@@ -749,24 +724,227 @@ class TestExecutionSummary(TestCombinedOrchestratorFlow):
             render_only=True,
         )
 
-        with patch.object(
-            orchestrator, "_discover_test_types", return_value=(False, True)
-        ):
-            with patch(
-                "nac_test.combined_orchestrator.RobotOrchestrator"
-            ) as mock_robot:
-                mock_robot_instance = MagicMock()
-                mock_robot_instance.run_tests.return_value = robot_results
-                mock_robot.return_value = mock_robot_instance
+        mock_robot_instance = MagicMock()
+        mock_robot_instance.run_tests.return_value = robot_results
 
-                with patch.object(
-                    orchestrator, "_print_execution_summary"
-                ) as mock_print:
-                    with patch("typer.echo"):
-                        orchestrator.run_tests()
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(False, True)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator",
+                return_value=mock_robot_instance,
+            ),
+            patch.object(orchestrator, "_print_execution_summary") as mock_print,
+            patch("typer.echo"),
+        ):
+            orchestrator.run_tests()
 
         # Summary should NOT be printed in render_only mode
         mock_print.assert_not_called()
+
+
+class TestStaleArtifactWarnings(TestCombinedOrchestratorFlow):
+    """Tests for stale artifact warning functionality."""
+
+    def test_warning_fires_when_stale_robot_files_present(
+        self, orchestrator: CombinedOrchestrator
+    ) -> None:
+        """Warning fires when stale Robot files present and Robot framework didn't run."""
+        # Create stale Robot artifacts in output directory
+        (orchestrator.output_dir / "log.html").touch()
+        (orchestrator.output_dir / "output.xml").touch()
+        (orchestrator.output_dir / "report.html").touch()
+
+        # Only PyATS tests discovered, Robot didn't run
+        empty_pyats_results = PyATSResults()
+        mock_pyats_instance = MagicMock()
+        mock_pyats_instance.run_tests.return_value = empty_pyats_results
+        mock_gen_instance = MagicMock()
+        mock_gen_instance.generate_combined_summary.return_value = None
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator",
+                return_value=mock_pyats_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ),
+            patch("typer.echo"),
+            patch("typer.secho") as mock_secho,
+        ):
+            orchestrator.run_tests()
+
+        assert mock_secho.call_count == 2
+
+        first_call = mock_secho.call_args_list[0]
+        warning_message = first_call[0][0]
+        assert "Stale artifacts from a previous run" in warning_message
+        assert first_call[1]["fg"] == typer.colors.YELLOW
+        assert first_call[1]["err"] is True
+
+        second_call = mock_secho.call_args_list[1]
+        files_message = second_call[0][0]
+        assert "log.html" in files_message
+        assert "output.xml" in files_message
+        assert "report.html" in files_message
+        assert second_call[1]["fg"] == typer.colors.YELLOW
+        assert second_call[1]["err"] is True
+
+    def test_warning_does_not_fire_when_run_was_clean(
+        self, orchestrator: CombinedOrchestrator, robot_results: TestResults
+    ) -> None:
+        """Warning does NOT fire when Robot framework ran and produced artifacts."""
+        # Create Robot artifacts in output directory
+        (orchestrator.output_dir / "log.html").touch()
+        (orchestrator.output_dir / "output.xml").touch()
+        (orchestrator.output_dir / "report.html").touch()
+
+        # Robot tests ran and produced results
+        mock_robot_instance = MagicMock()
+        mock_robot_instance.run_tests.return_value = robot_results
+        mock_gen_instance = MagicMock()
+        mock_gen_instance.generate_combined_summary.return_value = None
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(False, True)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator",
+                return_value=mock_robot_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ),
+            patch("typer.echo"),
+            patch("typer.secho") as mock_secho,
+        ):
+            orchestrator.run_tests()
+
+        # Warning should NOT have been called (Robot framework ran)
+        mock_secho.assert_not_called()
+
+    def test_warning_fires_when_robot_ran_but_empty(
+        self, orchestrator: CombinedOrchestrator
+    ) -> None:
+        """Warning fires when Robot ran but produced empty results (e.g., all tests filtered out)."""
+        # Create Robot artifacts in output directory
+        (orchestrator.output_dir / "log.html").touch()
+        (orchestrator.output_dir / "output.xml").touch()
+        (orchestrator.output_dir / "report.html").touch()
+
+        # Robot tests ran but produced empty results (total=0)
+        empty_robot_results = TestResults()
+        mock_robot_instance = MagicMock()
+        mock_robot_instance.run_tests.return_value = empty_robot_results
+        mock_gen_instance = MagicMock()
+        mock_gen_instance.generate_combined_summary.return_value = None
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(False, True)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.RobotOrchestrator",
+                return_value=mock_robot_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ),
+            patch("typer.echo"),
+            patch("typer.secho") as mock_secho,
+        ):
+            orchestrator.run_tests()
+
+        # Warning SHOULD fire because robot results are empty
+        assert mock_secho.call_count == 2
+
+        first_call = mock_secho.call_args_list[0]
+        warning_message = first_call[0][0]
+        assert "Stale artifacts from a previous run" in warning_message
+        assert first_call[1]["fg"] == typer.colors.YELLOW
+
+    def test_warning_includes_correct_filenames(
+        self, orchestrator: CombinedOrchestrator
+    ) -> None:
+        """Warning includes correct file names when stale artifacts present."""
+        # Create only some stale Robot artifacts
+        (orchestrator.output_dir / "log.html").touch()
+        (orchestrator.output_dir / "xunit.xml").touch()
+        # Don't create output.xml and report.html
+
+        # Only PyATS tests discovered, Robot didn't run
+        empty_pyats_results = PyATSResults()
+        mock_pyats_instance = MagicMock()
+        mock_pyats_instance.run_tests.return_value = empty_pyats_results
+        mock_gen_instance = MagicMock()
+        mock_gen_instance.generate_combined_summary.return_value = None
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator",
+                return_value=mock_pyats_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ),
+            patch("typer.echo"),
+            patch("typer.secho") as mock_secho,
+        ):
+            orchestrator.run_tests()
+
+        assert mock_secho.call_count == 2
+        second_call = mock_secho.call_args_list[1]
+        files_message = second_call[0][0]
+        assert "log.html" in files_message
+        assert "xunit.xml" in files_message
+        assert "output.xml" not in files_message
+        assert "report.html" not in files_message
+
+    def test_no_warning_when_no_stale_files(
+        self, orchestrator: CombinedOrchestrator
+    ) -> None:
+        """No warning when no stale files present."""
+        # Don't create any stale artifacts
+
+        # Only PyATS tests discovered, Robot didn't run
+        empty_pyats_results = PyATSResults()
+        mock_pyats_instance = MagicMock()
+        mock_pyats_instance.run_tests.return_value = empty_pyats_results
+        mock_gen_instance = MagicMock()
+        mock_gen_instance.generate_combined_summary.return_value = None
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.PyATSOrchestrator",
+                return_value=mock_pyats_instance,
+            ),
+            patch(
+                "nac_test.combined_orchestrator.CombinedReportGenerator",
+                return_value=mock_gen_instance,
+            ),
+            patch("typer.echo"),
+            patch("typer.secho") as mock_secho,
+        ):
+            orchestrator.run_tests()
+
+        # Warning should NOT have been called (no stale files)
+        mock_secho.assert_not_called()
 
 
 class TestWindowsPlatformBehavior(TestCombinedOrchestratorFlow):

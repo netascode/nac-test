@@ -244,12 +244,12 @@ def cleanup_stale_test_artifacts(output_dir: Path) -> None:
     for dir_name in dirs_to_clean:
         dir_path = output_dir / dir_name
         if dir_path.exists():
-            try:
-                shutil.rmtree(dir_path, ignore_errors=True)
+            shutil.rmtree(dir_path, ignore_errors=True)
+            if not dir_path.exists():
                 dirs_removed += 1
                 logger.debug(f"Removed stale test directory: {dir_path}")
-            except Exception as e:
-                logger.warning(f"Failed to clean directory {dir_path}: {e}")
+            else:
+                logger.warning(f"Failed to remove stale directory: {dir_path}")
 
     if dirs_removed > 0:
         logger.info(

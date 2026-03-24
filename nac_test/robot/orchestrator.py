@@ -26,7 +26,7 @@ from nac_test.core.constants import (
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
 )
-from nac_test.core.types import ErrorType, TestResults
+from nac_test.core.types import ErrorType, TestResults, ValidatedRobotArgs
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
@@ -56,7 +56,7 @@ class RobotOrchestrator:
         render_only: bool = False,
         dry_run: bool = False,
         processes: int | None = None,
-        extra_args: list[str] | None = None,
+        extra_args: ValidatedRobotArgs | None = None,
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
         verbose: bool = False,
     ):
@@ -89,7 +89,7 @@ class RobotOrchestrator:
         self.render_only = render_only
         self.dry_run = dry_run
         self.processes = processes
-        self.extra_args = extra_args or []
+        self.extra_args = extra_args
         self.loglevel = loglevel
         self.verbose = verbose
 
@@ -122,10 +122,8 @@ class RobotOrchestrator:
         Follows the same pattern as PyATSOrchestrator.run_tests().
 
         Returns:
-            TestResults with test execution results.
-
-        Raises:
-            RuntimeError: If pabot returns exit code 252 (invalid arguments).
+            TestResults with test execution results. Returns TestResults.empty()
+            if no tests matched the --include/--exclude filters (exit code 252).
         """
         # Create Robot Framework output directory (orchestrator owns its structure)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -144,7 +142,9 @@ class RobotOrchestrator:
         # Phase 2: Test execution (unless render-only mode)
         if not self.render_only:
             typer.echo("🤖 Executing Robot Framework tests...\n\n")
-            robot_loglevel = "DEBUG" if self.loglevel == LogLevel.DEBUG else None
+            default_robot_loglevel = (
+                "DEBUG" if self.loglevel == LogLevel.DEBUG else None
+            )
             exit_code = run_pabot(
                 path=self.output_dir,
                 include=self.include_tags,
@@ -152,16 +152,18 @@ class RobotOrchestrator:
                 processes=self.processes,
                 dry_run=self.dry_run,
                 verbose=self.verbose,
-                robot_loglevel=robot_loglevel,
+                default_robot_loglevel=default_robot_loglevel,
                 ordering_file=self.ordering_file,
                 extra_args=self.extra_args,
             )
             # Handle special exit codes - just log and return appropriate TestResults
             # User-facing error messages are handled centrally in main.py
             if exit_code == EXIT_DATA_ERROR:
-                error_msg = "Invalid Robot Framework arguments passed to nac-test"
-                logger.error(error_msg)
-                return TestResults.from_error(error_msg, ErrorType.INVALID_ROBOT_ARGS)
+                # Note: invalid Robot args are caught pre-flight by validate_extra_args.
+                # In the unlikely event the pabot parse_args API change goes unnoticed by CI,
+                # a genuine invalid-arg EXIT_DATA_ERROR may appear here as "no tests", which is a known limitation.
+                logger.info("No Robot Framework tests were executed")
+                return TestResults.empty()
             elif exit_code == EXIT_INTERRUPTED:
                 error_msg = "Robot Framework execution was interrupted"
                 logger.error(error_msg)
