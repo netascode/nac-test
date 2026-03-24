@@ -27,6 +27,8 @@ from typing import Any
 
 from pyats.easypy.plugins.bases import BasePlugin
 
+from nac_test.pyats_core.constants import ENV_TEST_DIR
+
 # Event schema version for future compatibility
 EVENT_SCHEMA_VERSION = "1.0"
 
@@ -287,7 +289,7 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
         """
         path = Path(testscript).absolute()
 
-        test_dir = os.environ.get("NAC_TEST_TEST_DIR")
+        test_dir = os.environ.get(ENV_TEST_DIR)
         if test_dir:
             test_dir_path = Path(test_dir).absolute()
             try:
@@ -303,6 +305,6 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
                 return path.stem
 
         logger.warning(
-            "NAC_TEST_TEST_DIR environment variable not set, using filename only"
+            f"{ENV_TEST_DIR} environment variable not set, using filename only"
         )
         return path.stem

@@ -26,6 +26,7 @@ from nac_test.core.types import PyATSResults, TestResults
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
     DEFAULT_CPU_MULTIPLIER,
+    ENV_TEST_DIR,
     MAX_WORKERS_HARD_LIMIT,
     MEMORY_PER_WORKER_GB,
 )
@@ -316,7 +317,7 @@ class PyATSOrchestrator:
             # This prevents race conditions where both test types write JSONL files to the same location
             env["NAC_TEST_TYPE"] = "api"
             # Pass test_dir so plugin can compute relative test names
-            env["NAC_TEST_TEST_DIR"] = str(self.test_dir)
+            env[ENV_TEST_DIR] = str(self.test_dir)
 
             # Execute and return the archive path
             assert self.subprocess_runner is not None  # Should be initialized by now

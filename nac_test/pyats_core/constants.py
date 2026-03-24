@@ -109,6 +109,11 @@ OVERFLOW_MEMORY_LIMIT_MB: int = get_positive_numeric_env(
 # Default: system temp directory (tempfile.gettempdir()/nac_test_overflow)
 OVERFLOW_DIR_OVERRIDE: str | None = os.environ.get("NAC_TEST_PYATS_OVERFLOW_DIR")
 
+# Environment variable name used to pass the test directory to PyATS subprocesses.
+# Set by the orchestrator and device_executor; read by the progress plugin to compute
+# relative (dot-notation) test names.
+ENV_TEST_DIR: str = "NAC_TEST_TEST_DIR"
+
 # Re-export all constants for backward compatibility
 __all__ = [
     # From core
