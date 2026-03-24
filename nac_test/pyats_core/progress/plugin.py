@@ -55,6 +55,15 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
         self.task_start_times: dict[str, float] = {}
         # Track total emitted events for stream_complete sentinel
         self.event_count: int = 0
+        # Cache test_dir_path once at startup — env var is static during job execution
+        test_dir = os.environ.get(ENV_TEST_DIR)
+        if test_dir:
+            self.test_dir_path: Path | None = Path(test_dir).absolute()
+        else:
+            self.test_dir_path = None
+            logger.warning(
+                f"{ENV_TEST_DIR} environment variable not set, using filename only"
+            )
 
     def _emit_event(self, event: dict[str, Any]) -> None:
         """Emit a progress event in the standard format."""
@@ -284,27 +293,21 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
     def _get_test_name(self, testscript: str) -> str:
         """Extract a clean test name from the test file path.
 
-        Uses NAC_TEST_TEST_DIR environment variable to compute relative paths.
-        This env var is set by the orchestrator/device_executor.
+        Uses the cached test_dir_path (resolved from NAC_TEST_TEST_DIR at
+        plugin initialisation) to compute a relative dot-notation name.
         """
         path = Path(testscript).absolute()
 
-        test_dir = os.environ.get(ENV_TEST_DIR)
-        if test_dir:
-            test_dir_path = Path(test_dir).absolute()
+        if self.test_dir_path:
             try:
-                relative_path = path.relative_to(test_dir_path)
+                relative_path = path.relative_to(self.test_dir_path)
                 parts = relative_path.parts
                 name_parts = list(parts[:-1]) + [relative_path.stem]
                 return ".".join(name_parts)
             except ValueError:
                 logger.warning(
                     f"Test script {testscript} (absolute: {path}) is not under test_dir "
-                    f"{test_dir}, using filename only"
+                    f"{self.test_dir_path}, using filename only"
                 )
-                return path.stem
 
-        logger.warning(
-            f"{ENV_TEST_DIR} environment variable not set, using filename only"
-        )
         return path.stem
