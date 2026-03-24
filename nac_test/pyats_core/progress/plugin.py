@@ -55,12 +55,22 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
         self.task_start_times: dict[str, float] = {}
         # Track total emitted events for stream_complete sentinel
         self.event_count: int = 0
-        # Cache test_dir_path once at startup — env var is static during job execution
+        # These checks guard against internal bugs only: test_dir is derived from
+        # the user-supplied template_dir (validated by Typer) and ENV_TEST_DIR is
+        # set exclusively by our orchestrator/device_executor. Neither condition
+        # should ever fire in production.
+        self.test_dir_path: Path | None = None
         test_dir = os.environ.get(ENV_TEST_DIR)
         if test_dir:
-            self.test_dir_path: Path | None = Path(test_dir).absolute()
+            candidate = Path(test_dir).absolute()
+            if not candidate.exists() or not candidate.is_dir():
+                logger.warning(
+                    f"{ENV_TEST_DIR}={test_dir!r} is not a valid directory, "
+                    "using filename only"
+                )
+            else:
+                self.test_dir_path = candidate
         else:
-            self.test_dir_path = None
             logger.warning(
                 f"{ENV_TEST_DIR} environment variable not set, using filename only"
             )
