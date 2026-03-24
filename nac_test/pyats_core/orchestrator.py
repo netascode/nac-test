@@ -622,7 +622,10 @@ class PyATSOrchestrator:
                 loglevel=self.loglevel,
             )
         except RuntimeError as e:
-            # pyats entrypoint not found or configfile creation failed
+            # pyats entrypoint not found or config file creation failed.
+            # No cleanup needed: SubprocessRunner._create_config_files() only sets
+            # file path attributes AFTER successful writes, so partial failures
+            # leave attributes as None and cleanup() would be a no-op.
             error_msg = str(e)
             api_result = TestResults.from_error(error_msg) if api_tests else None
             d2d_result = TestResults.from_error(error_msg) if d2d_tests else None

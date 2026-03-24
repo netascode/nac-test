@@ -19,6 +19,7 @@ Note:
 import asyncio
 import logging
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -369,6 +370,49 @@ def test_write_failure_leaves_attributes_none_and_cleanup_is_safe(
     with patch.object(Path, "unlink") as mock_unlink:
         runner.cleanup()
         mock_unlink.assert_not_called()
+
+
+def test_partial_write_failure_cleans_up_first_file(
+    temp_output_dir: Path,
+) -> None:
+    """Test that partial write failure cleans up successfully written files.
+
+    If the first config file is written successfully but the second fails,
+    the first file should be cleaned up to avoid orphaned files.
+    """
+    runner = object.__new__(SubprocessRunner)
+    runner.output_dir = temp_output_dir
+    runner._plugin_config_file = None
+    runner._pyats_config_file = None
+
+    # Track which file is being written
+    write_count = {"count": 0}
+    original_write_text = Path.write_text
+
+    def write_text_fail_on_second(
+        self: Path, content: str, *args: Any, **kwargs: Any
+    ) -> None:
+        write_count["count"] += 1
+        if write_count["count"] == 1:
+            # First write succeeds
+            original_write_text(self, content, *args, **kwargs)
+        else:
+            # Second write fails
+            raise OSError("disk full on second file")
+
+    with patch.object(Path, "write_text", write_text_fail_on_second):
+        with pytest.raises(RuntimeError, match="disk full"):
+            runner._create_config_files()
+
+    # Attributes should still be None (not set until both writes succeed)
+    assert runner._plugin_config_file is None
+    assert runner._pyats_config_file is None
+
+    # The first file that was successfully written should have been cleaned up
+    plugin_config_path = temp_output_dir / PYATS_PLUGIN_CONFIG_FILENAME
+    assert not plugin_config_path.exists(), (
+        "First config file should be cleaned up after second write fails"
+    )
 
 
 # --- Cleanup tests ---

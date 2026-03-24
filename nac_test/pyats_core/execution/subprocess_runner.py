@@ -90,6 +90,9 @@ class SubprocessRunner:
             plugin_config_file.write_text(PLUGIN_CONFIG)
             pyats_config_file.write_text(PYATS_CONFIG)
         except OSError as e:
+            # Clean up any successfully written files before raising
+            plugin_config_file.unlink(missing_ok=True)
+            pyats_config_file.unlink(missing_ok=True)
             raise RuntimeError(f"Failed to create PyATS config files: {e}") from e
 
         self._plugin_config_file = plugin_config_file
@@ -98,7 +101,12 @@ class SubprocessRunner:
         logger.debug(f"Created pyats_config {self._pyats_config_file}")
 
     def cleanup(self) -> None:
-        """Remove config files created during initialization."""
+        """Remove config files created during initialization.
+
+        Note: A more robust, nac-test-wide cleanup mechanism is planned that would
+        handle cleanup on unexpected exits. For now, cleanup is best-effort hygiene
+        since the config file contents are not sensitive.
+        """
         for config_file in [self._plugin_config_file, self._pyats_config_file]:
             if config_file is not None:
                 config_file.unlink(missing_ok=True)
@@ -130,8 +138,10 @@ class SubprocessRunner:
         if testbed_file_path is not None:
             cmd.extend(["--testbed-file", str(testbed_file_path)])
 
-        assert self._plugin_config_file is not None
-        assert self._pyats_config_file is not None
+        if self._plugin_config_file is None or self._pyats_config_file is None:
+            raise RuntimeError(
+                "Config files not initialized. This indicates a bug in SubprocessRunner."
+            )
         cmd.extend(
             [
                 "--configuration",
