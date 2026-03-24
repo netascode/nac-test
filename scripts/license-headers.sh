@@ -167,10 +167,13 @@ fi
 
 # Process each file
 for file in "${file_list[@]}"; do
-    # Validate file first (use || true to prevent set -e from exiting on non-zero return)
-    validate_file "$file" || validate_result=$?
-    validate_result=${validate_result:-0}
-    
+    # Validate file first; capture exit code without triggering set -e
+    if validate_file "$file"; then
+        validate_result=0
+    else
+        validate_result=$?
+    fi
+
     if [[ $validate_result -eq 2 ]]; then
         # Symlink - skip silently (target file will be checked independently)
         echo -e "${YELLOW}⊘${NC} $file (symlink, skipped)"
