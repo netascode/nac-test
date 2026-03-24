@@ -37,7 +37,10 @@ PLUGIN_CONFIG = textwrap.dedent("""\
             enabled: False
     """)
 
-PYATS_CONFIG = "[report]\ngit_info = false\n"
+PYATS_CONFIG = textwrap.dedent("""\
+    [report]
+    git_info = false
+    """)
 
 
 class SubprocessRunner:
