@@ -161,7 +161,7 @@ class E2ECombinedTestBase:
     ) -> None:
         """Verify the output root contains only whitelisted entries."""
         expected_dirs = set()
-        if results.has_robot_results:
+        if results.robot_dir_exists:
             expected_dirs.add(ROBOT_RESULTS_DIRNAME)
         if results.has_pyats_results or results.scenario.expected_preflight_failure:
             expected_dirs.add(PYATS_RESULTS_DIRNAME)
@@ -191,7 +191,7 @@ class E2ECombinedTestBase:
     def test_robot_results_directory_state(self, results: E2EResults) -> None:
         """Verify robot_results/ exists when expected, doesn't exist otherwise."""
         robot_dir = results.output_dir / ROBOT_RESULTS_DIRNAME
-        if results.has_robot_results:
+        if results.robot_dir_exists:
             assert robot_dir.exists(), f"Expected {ROBOT_RESULTS_DIRNAME}/ to exist"
             assert robot_dir.is_dir()
         else:

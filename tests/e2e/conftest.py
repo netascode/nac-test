@@ -71,8 +71,17 @@ class E2EResults:
 
     @property
     def has_robot_results(self) -> bool:
-        """Robot always produces output (even in dry-run mode)."""
+        """Robot ran and produced output files (output.xml, log.html, etc.)."""
         return self.scenario.has_robot_tests
+
+    @property
+    def robot_dir_exists(self) -> bool:
+        """Pabot was invoked; robot_results/ directory exists on disk.
+
+        True whenever the fixture contains .robot files, even if tag filters
+        matched zero tests and no output files were produced inside the directory.
+        """
+        return self.scenario.robot_invoked
 
     @property
     def has_pyats_api_results(self) -> bool:
