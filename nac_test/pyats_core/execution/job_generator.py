@@ -53,9 +53,10 @@ class JobGenerator:
         Returns:
             Job file content as a string
         """
-        # Convert all paths to absolute to be cwd-agnostic in the job process
+        # Use absolute() rather than resolve() to preserve symlinks — resolve() would
+        # follow symlinks and produce paths inconsistent with test_dir in the plugin.
         test_files_str = ",\n        ".join(
-            [f'"{str(Path(tf).resolve())}"' for tf in test_files]
+            [f'"{str(Path(tf).absolute())}"' for tf in test_files]
         )
 
         job_content = textwrap.dedent(f'''

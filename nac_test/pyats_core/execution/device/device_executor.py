@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from nac_test.pyats_core.constants import ENV_TEST_DIR
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
 from nac_test.pyats_core.execution.job_generator import JobGenerator
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
@@ -107,6 +108,7 @@ class DeviceExecutor:
                             / "merged_data_model_test_variables.yaml"
                         ),
                         "NAC_TEST_TYPE": "d2d",
+                        ENV_TEST_DIR: str(self.test_dir),
                     }
                 )
 

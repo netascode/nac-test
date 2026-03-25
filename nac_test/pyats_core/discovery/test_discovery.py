@@ -51,11 +51,13 @@ class TestDiscovery:
             exclude_paths: Directories to exclude from discovery (e.g., filters, jinja tests)
         """
         self.test_dir = Path(test_dir)
-        self.exclude_paths = [Path(p).resolve() for p in (exclude_paths or [])]
+        # Use absolute() rather than resolve() to preserve symlinks — resolve() would
+        # follow symlinks and break relative_to() comparisons for symlinked test files.
+        self.exclude_paths = [Path(p).absolute() for p in (exclude_paths or [])]
 
     def _is_excluded(self, path: Path) -> bool:
         """Check if path is within any excluded directory."""
-        resolved = path.resolve()
+        resolved = path.absolute()
         for excluded in self.exclude_paths:
             try:
                 resolved.relative_to(excluded)

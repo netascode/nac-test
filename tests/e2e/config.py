@@ -304,7 +304,10 @@ PYATS_API_ONLY_SCENARIO = E2EScenario(
     # No Robot tests
     expected_robot_passed=0,
     expected_robot_failed=0,
-    # PyATS API: verify_aci_apic_appliance_operational_status.py (APICTestBase) - 1 pass
+    # PyATS API: 1 test — the file is a symlink pointing outside templates/ to
+    # verify_aci_apic_appliance_operational_status.py in the fixture root.
+    # The symlink exists specifically to verify that test name computation uses
+    # absolute() not resolve() — see issue #656.
     expected_pyats_api_passed=1,
     expected_pyats_api_failed=0,
     # No D2D tests
