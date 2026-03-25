@@ -22,7 +22,6 @@ Usage:
 """
 
 import logging
-from collections.abc import Sequence
 
 from robot.model import TagPatterns
 
@@ -40,8 +39,8 @@ class TagMatcher:
 
     def __init__(
         self,
-        include: Sequence[str] | None = None,
-        exclude: Sequence[str] | None = None,
+        include: list[str] | None = None,
+        exclude: list[str] | None = None,
     ) -> None:
         """Initialize the TagMatcher with include and exclude patterns.
 
@@ -52,8 +51,8 @@ class TagMatcher:
             exclude: Tag patterns to exclude. Tests matching any pattern are excluded,
                      regardless of include patterns.
         """
-        self._include_list = list(include) if include else []
-        self._exclude_list = list(exclude) if exclude else []
+        self._include_list = include or []
+        self._exclude_list = exclude or []
 
         # Create TagPatterns objects - these handle the Robot Framework pattern syntax
         self._include_patterns = (
@@ -63,7 +62,7 @@ class TagMatcher:
             TagPatterns(self._exclude_list) if self._exclude_list else None
         )
 
-    def should_include(self, tags: Sequence[str] | None) -> bool:
+    def should_include(self, tags: list[str] | None) -> bool:
         """Determine if a test with the given tags should be included.
 
         The matching logic follows Robot Framework semantics:
@@ -77,7 +76,7 @@ class TagMatcher:
         Returns:
             True if the test should be included, False if it should be filtered out.
         """
-        tags_list = list(tags) if tags else []
+        tags_list = tags or []
 
         # Check exclusions first - if any exclude pattern matches, filter out
         if self._exclude_patterns and self._exclude_patterns.match(tags_list):
