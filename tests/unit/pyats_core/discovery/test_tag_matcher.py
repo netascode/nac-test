@@ -38,26 +38,6 @@ class TestBasicMatching:
         assert matcher.should_include([])
         assert matcher.should_include(None)
 
-    @pytest.mark.parametrize(
-        ("include", "exclude", "expected"),
-        [
-            (None, None, False),
-            ([], [], False),
-            (["health"], None, True),
-            (None, ["nrfu"], True),
-            (["health"], ["nrfu"], True),
-        ],
-    )
-    def test_has_filters(
-        self,
-        include: list[str] | None,
-        exclude: list[str] | None,
-        expected: bool,
-    ) -> None:
-        """Test has_filters property with various configurations."""
-        matcher = TagMatcher(include=include, exclude=exclude)
-        assert matcher.has_filters is expected
-
     def test_repr(self) -> None:
         """Test string representation of TagMatcher."""
         matcher = TagMatcher(include=["health"], exclude=["nrfu"])
@@ -230,25 +210,23 @@ class TestEdgeCases:
     """Test edge cases and special scenarios (parametrized)."""
 
     @pytest.mark.parametrize(
-        ("include", "exclude", "has_filters", "tags", "expected"),
+        ("include", "exclude", "tags", "expected"),
         [
             # None values
-            (None, None, False, ["any"], True),
+            (None, None, ["any"], True),
             # Empty lists
-            ([], [], False, ["any"], True),
+            ([], [], ["any"], True),
         ],
     )
     def test_initialization_edge_cases(
         self,
         include: list[str] | None,
         exclude: list[str] | None,
-        has_filters: bool,
         tags: list[str],
         expected: bool,
     ) -> None:
         """Test initialization with None and empty list values."""
         matcher = TagMatcher(include=include, exclude=exclude)
-        assert matcher.has_filters is has_filters
         assert matcher.should_include(tags) is expected
 
     @pytest.mark.parametrize(

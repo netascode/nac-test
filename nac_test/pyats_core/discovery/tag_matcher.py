@@ -36,9 +36,6 @@ class TagMatcher:
     behavior for pyATS tests. Tests are included if they match any include pattern
     (or if no include patterns are specified) AND don't match any exclude pattern.
 
-    Attributes:
-        include_patterns: TagPatterns object for include matching.
-        exclude_patterns: TagPatterns object for exclude matching.
     """
 
     def __init__(
@@ -59,21 +56,12 @@ class TagMatcher:
         self._exclude_list = list(exclude) if exclude else []
 
         # Create TagPatterns objects - these handle the Robot Framework pattern syntax
-        self.include_patterns = (
+        self._include_patterns = (
             TagPatterns(self._include_list) if self._include_list else None
         )
-        self.exclude_patterns = (
+        self._exclude_patterns = (
             TagPatterns(self._exclude_list) if self._exclude_list else None
         )
-
-    @property
-    def has_filters(self) -> bool:
-        """Check if any tag filters are configured.
-
-        Returns:
-            True if either include or exclude patterns are specified.
-        """
-        return bool(self._include_list or self._exclude_list)
 
     def should_include(self, tags: Sequence[str] | None) -> bool:
         """Determine if a test with the given tags should be included.
@@ -92,24 +80,24 @@ class TagMatcher:
         tags_list = list(tags) if tags else []
 
         # Check exclusions first - if any exclude pattern matches, filter out
-        if self.exclude_patterns and self.exclude_patterns.match(tags_list):
+        if self._exclude_patterns and self._exclude_patterns.match(tags_list):
             return False
 
         # If no include patterns specified, include the test
-        if not self.include_patterns:
+        if not self._include_patterns:
             return True
 
         # Check if tags match any include pattern
-        return bool(self.include_patterns.match(tags_list))
+        return bool(self._include_patterns.match(tags_list))
 
     def __str__(self) -> str:
         """Return human-readable filter description using Robot's pattern formatting."""
         parts = []
-        if self.include_patterns:
-            include_str = ", ".join(f"'{p}'" for p in self.include_patterns)
+        if self._include_patterns:
+            include_str = ", ".join(f"'{p}'" for p in self._include_patterns)
             parts.append(f"include: {include_str}")
-        if self.exclude_patterns:
-            exclude_str = ", ".join(f"'{p}'" for p in self.exclude_patterns)
+        if self._exclude_patterns:
+            exclude_str = ", ".join(f"'{p}'" for p in self._exclude_patterns)
             parts.append(f"exclude: {exclude_str}")
         return ", ".join(parts)
 

@@ -176,13 +176,12 @@ class TestDiscovery:
                 resolved_path = test_path.resolve()
                 metadata = resolver.resolve(resolved_path)
 
-                if tag_matcher.has_filters:
-                    if not tag_matcher.should_include(metadata.groups):
-                        logger.debug(
-                            f"Filtered out {test_path.name} (groups={metadata.groups})"
-                        )
-                        filtered_count += 1
-                        continue
+                if not tag_matcher.should_include(metadata.groups):
+                    logger.debug(
+                        f"Filtered out {test_path.name} (groups={metadata.groups})"
+                    )
+                    filtered_count += 1
+                    continue
 
                 test_type_by_path[resolved_path] = metadata.test_type
                 if metadata.test_type == "d2d":
