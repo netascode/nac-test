@@ -25,7 +25,7 @@ class TestExtractTestResults:
                 "tasks": [
                     {
                         "name": "verify_tenant",
-                        "testscript": "/path/to/tests/api/tenants/verify_tenant.py",
+                        "testscript": "/path/to/templates/api/tenants/verify_tenant.py",
                         "result": {"value": "passed"},
                         "runtime": 1.234,
                         "sections": [
@@ -34,7 +34,7 @@ class TestExtractTestResults:
                     },
                     {
                         "name": "verify_fabric",
-                        "testscript": "/path/to/tests/api/fabrics/verify_fabric.py",
+                        "testscript": "/path/to/templates/api/fabrics/verify_fabric.py",
                         "result": {"value": "failed"},
                         "runtime": 2.567,
                         "sections": [{"description": "Verify Fabric Settings"}],
@@ -49,7 +49,8 @@ class TestExtractTestResults:
             zf.writestr("results.json", json.dumps(results_data))
 
         # Extract results
-        results = ArchiveInspector.extract_test_results(archive_path)
+        test_dir = Path("/path/to/templates")
+        results = ArchiveInspector.extract_test_results(archive_path, test_dir)
 
         # Verify results - keys should be derived from testscript path
         assert len(results) == 2
@@ -59,9 +60,7 @@ class TestExtractTestResults:
         tenant_result = results["api.tenants.verify_tenant"]
         assert tenant_result["status"] == "passed"
         assert tenant_result["duration"] == 1.234
-        assert (
-            tenant_result["title"] == "Verify Tenant Configuration"
-        )  # First line only
+        assert tenant_result["title"] == "Verify Tenant Configuration"
         assert tenant_result["test_id"] == 0
 
         # Key should be derived from testscript: "api.fabrics.verify_fabric"
@@ -78,7 +77,7 @@ class TestExtractTestResults:
         archive_path.write_text("not a valid zip file")
 
         with pytest.raises(zipfile.BadZipFile):
-            ArchiveInspector.extract_test_results(archive_path)
+            ArchiveInspector.extract_test_results(archive_path, tmp_path)
 
     def test_extract_test_results_missing_results_json(self, tmp_path: Path) -> None:
         """Test that empty dict is returned when results.json is missing."""
@@ -87,7 +86,7 @@ class TestExtractTestResults:
         with zipfile.ZipFile(archive_path, "w") as zf:
             zf.writestr("some_other_file.txt", "content")
 
-        results = ArchiveInspector.extract_test_results(archive_path)
+        results = ArchiveInspector.extract_test_results(archive_path, tmp_path)
 
         assert results == {}
 
@@ -96,7 +95,7 @@ class TestExtractTestResults:
         archive_path = tmp_path / "nonexistent.zip"
 
         with pytest.raises(FileNotFoundError):
-            ArchiveInspector.extract_test_results(archive_path)
+            ArchiveInspector.extract_test_results(archive_path, tmp_path)
 
     @pytest.mark.parametrize(
         "pyats_status,expected_status",
@@ -134,7 +133,7 @@ class TestExtractTestResults:
         with zipfile.ZipFile(archive_path, "w") as zf:
             zf.writestr("results.json", json.dumps(results_data))
 
-        results = ArchiveInspector.extract_test_results(archive_path)
+        results = ArchiveInspector.extract_test_results(archive_path, tmp_path)
 
         assert results["test.case"]["status"] == expected_status
 
@@ -159,7 +158,7 @@ class TestExtractTestResults:
         with zipfile.ZipFile(archive_path, "w") as zf:
             zf.writestr("results.json", json.dumps(results_data))
 
-        results = ArchiveInspector.extract_test_results(archive_path)
+        results = ArchiveInspector.extract_test_results(archive_path, tmp_path)
 
         assert results["test.case"]["status"] == "custom_status"
 
@@ -182,7 +181,7 @@ class TestExtractTestResults:
         with zipfile.ZipFile(archive_path, "w") as zf:
             zf.writestr("subdir/results.json", json.dumps(results_data))
 
-        results = ArchiveInspector.extract_test_results(archive_path)
+        results = ArchiveInspector.extract_test_results(archive_path, tmp_path)
 
         assert "nested.test" in results
         assert results["nested.test"]["status"] == "passed"
@@ -212,7 +211,7 @@ class TestExtractTestResults:
         with zipfile.ZipFile(archive_path, "w") as zf:
             zf.writestr("results.json", json.dumps(results_data))
 
-        results = ArchiveInspector.extract_test_results(archive_path)
+        results = ArchiveInspector.extract_test_results(archive_path, tmp_path)
 
         assert len(results) == 1
         assert "valid.test" in results
@@ -239,55 +238,11 @@ class TestExtractTestResults:
         with zipfile.ZipFile(archive_path, "w") as zf:
             zf.writestr("results.json", json.dumps(results_data))
 
-        results = ArchiveInspector.extract_test_results(archive_path)
+        results = ArchiveInspector.extract_test_results(archive_path, tmp_path)
 
         assert (
             results["test.without.description"]["title"] == "test.without.description"
         )
-
-
-class TestDeriveTestNameFromPath:
-    """Tests for ArchiveInspector._derive_test_name_from_path() helper."""
-
-    def test_derives_name_from_testscript_path(self) -> None:
-        """Test that test name is correctly derived from testscript path."""
-        testscript = "/path/to/tests/nrfu/verify_device_status.py"
-        result = ArchiveInspector._derive_test_name_from_path(testscript, "fallback")
-        assert result == "nrfu.verify_device_status"
-
-    def test_handles_nested_test_directories(self) -> None:
-        """Test derivation from nested paths like tests/api/tenants/verify.py."""
-        testscript = "/path/to/tests/api/tenants/verify_tenant.py"
-        result = ArchiveInspector._derive_test_name_from_path(testscript, "fallback")
-        assert result == "api.tenants.verify_tenant"
-
-    def test_falls_back_when_testscript_empty(self) -> None:
-        """Test that fallback name is used when testscript is empty."""
-        result = ArchiveInspector._derive_test_name_from_path("", "my_fallback_name")
-        assert result == "my_fallback_name"
-
-    def test_falls_back_when_no_tests_dir_in_path(self) -> None:
-        """Test derivation when path doesn't contain 'tests' directory."""
-        # When no 'tests' dir, uses whole path parts
-        testscript = "/some/other/path/verify.py"
-        result = ArchiveInspector._derive_test_name_from_path(testscript, "fallback")
-        # Should include all parts: some.other.path.verify
-        assert "verify" in result
-
-    def test_handles_d2d_test_paths(self) -> None:
-        """Test derivation from d2d test paths."""
-        testscript = "/path/to/tests/d2d/operational/verify_bgp.py"
-        result = ArchiveInspector._derive_test_name_from_path(testscript, "fallback")
-        assert result == "d2d.operational.verify_bgp"
-
-    def test_handles_real_world_sdwan_path(self) -> None:
-        """Test with a real-world SD-WAN test path."""
-        testscript = (
-            "/Users/atestini/Desktop/Automation/testing-for-nac/"
-            "nac-sdwan-terraform/tests/nrfu/verify_sdwanmanager_device_status.py"
-        )
-        result = ArchiveInspector._derive_test_name_from_path(testscript, "fallback")
-        assert result == "nrfu.verify_sdwanmanager_device_status"
 
 
 class TestZipSlipProtection:
