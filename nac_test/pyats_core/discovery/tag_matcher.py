@@ -104,11 +104,3 @@ class TagMatcher:
     def __repr__(self) -> str:
         """Return a string representation of the TagMatcher."""
         return f"TagMatcher(include={self._include_list}, exclude={self._exclude_list})"
-
-
-def format_filter_description(
-    include: Sequence[str] | None = None,
-    exclude: Sequence[str] | None = None,
-) -> str:
-    """Format tag filter patterns into a human-readable description."""
-    return str(TagMatcher(include=include, exclude=exclude))

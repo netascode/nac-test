@@ -13,17 +13,14 @@ Test Structure:
     - TestCombinedPatterns: Tests combined include and exclude filtering
     - TestRobotPatternSemantics: Tests Robot Framework pattern syntax (parametrized)
     - TestEdgeCases: Tests edge cases like empty tags, None values, etc. (parametrized)
-    - TestFormatFilterDescription: Tests format_filter_description helper (parametrized)
+    - TestStrFormatting: Tests TagMatcher.__str__ formatting (parametrized)
 """
 
 from collections.abc import Sequence
 
 import pytest
 
-from nac_test.pyats_core.discovery.tag_matcher import (
-    TagMatcher,
-    format_filter_description,
-)
+from nac_test.pyats_core.discovery.tag_matcher import TagMatcher
 
 
 class TestBasicMatching:
@@ -276,8 +273,8 @@ class TestEdgeCases:
         assert matcher.should_include(tags) is expected
 
 
-class TestFormatFilterDescription:
-    """Test format_filter_description helper and TagMatcher.__str__ (parametrized)."""
+class TestStrFormatting:
+    """Test TagMatcher.__str__ formatting (parametrized)."""
 
     @pytest.mark.parametrize(
         ("include", "exclude", "expected"),
@@ -300,29 +297,5 @@ class TestFormatFilterDescription:
     def test_basic_formatting(
         self, include: list[str] | None, exclude: list[str] | None, expected: str
     ) -> None:
-        """Test basic format_filter_description output."""
-        result = format_filter_description(include=include, exclude=exclude)
-        assert result == expected
-
-    @pytest.mark.parametrize(
-        ("include", "exclude", "expected"),
-        [
-            # OR pattern formatting
-            (None, ["bgpORospf"], "exclude: 'bgp OR ospf'"),
-            # AND pattern formatting
-            (["healthANDbgp"], None, "include: 'health AND bgp'"),
-        ],
-    )
-    def test_pattern_formatting(
-        self, include: list[str] | None, exclude: list[str] | None, expected: str
-    ) -> None:
-        """Test pattern expansion in format_filter_description."""
-        result = format_filter_description(include=include, exclude=exclude)
-        assert result == expected
-
-    def test_str_matches_format_filter_description(self) -> None:
-        """Test TagMatcher.__str__ matches format_filter_description."""
-        matcher = TagMatcher(include=["bgpORospf"], exclude=["health"])
-        assert str(matcher) == format_filter_description(
-            include=["bgpORospf"], exclude=["health"]
-        )
+        """Test basic __str__ output."""
+        assert str(TagMatcher(include=include, exclude=exclude)) == expected

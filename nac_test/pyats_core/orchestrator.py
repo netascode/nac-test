@@ -29,7 +29,7 @@ from nac_test.pyats_core.constants import (
     MEMORY_PER_WORKER_GB,
 )
 from nac_test.pyats_core.discovery import DeviceInventoryDiscovery, TestDiscovery
-from nac_test.pyats_core.discovery.tag_matcher import format_filter_description
+from nac_test.pyats_core.discovery.tag_matcher import TagMatcher
 from nac_test.pyats_core.execution import (
     JobGenerator,
     OutputProcessor,
@@ -622,8 +622,8 @@ class PyATSOrchestrator:
 
         if not discovery_result.total_count:
             if discovery_result.filtered_by_tags:
-                filter_desc = format_filter_description(
-                    include=self.include_tags, exclude=self.exclude_tags
+                filter_desc = str(
+                    TagMatcher(include=self.include_tags, exclude=self.exclude_tags)
                 )
                 print(f"No pyATS tests matching tag filter ({filter_desc})")
             else:
