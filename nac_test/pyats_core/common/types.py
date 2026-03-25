@@ -10,6 +10,7 @@ throughout the NAC test automation framework.
 
 import sys
 from dataclasses import dataclass, field
+from functools import cached_property
 from pathlib import Path
 from typing import (
     Any,
@@ -27,7 +28,7 @@ else:
 
 from nac_test.pyats_core.reporting.types import ResultStatus
 
-DEFAULT_TEST_TYPE = "api"
+DEFAULT_TEST_TYPE: str = "api"
 
 
 @dataclass(slots=True)
@@ -65,11 +66,16 @@ class PyatsDiscoveryResult:
     d2d_tests: list[TestFileMetadata]
     filtered_by_tags: int
 
-    def __post_init__(self) -> None:
-        """Build the path-to-type lookup from the categorized test lists."""
-        self.test_type_by_path: dict[Path, str] = {
-            m.path: m.test_type for m in self.api_tests + self.d2d_tests
-        }
+    @cached_property
+    def test_type_by_path(self) -> dict[Path, str]:
+        """Path-to-type lookup table, built on first access (O(1) reads thereafter).
+
+        Note: mutating api_tests or d2d_tests after this property has been accessed
+        would leave the cached dict stale. In practice this object is constructed
+        once in TestDiscovery.discover_pyats_tests() and never mutated afterwards,
+        so this is not a real risk.
+        """
+        return {m.path: m.test_type for m in self.api_tests + self.d2d_tests}
 
     @property
     def all_tests(self) -> list[TestFileMetadata]:

@@ -17,11 +17,11 @@ from nac_test.pyats_core.discovery.test_discovery import TestDiscovery
 class TestDiscoveryPerformance:
     """Performance tests for the discovery mechanism."""
 
-    def test_categorization_performance(self, tmp_path: Path) -> None:
-        """Test that categorization completes quickly even with many files.
+    def test_discovery_performance(self, tmp_path: Path) -> None:
+        """Test that discovery completes quickly even with many files.
 
-        Creates 50 test files and verifies categorization completes in
-        reasonable time (<5 seconds for all files).
+        Creates 50 test files and verifies discovery & categorization
+        completes in reasonable time (<5 seconds for all files).
         """
         # Create 50 test files (25 API, 25 D2D)
         test_dir = tmp_path / "test" / "performance"

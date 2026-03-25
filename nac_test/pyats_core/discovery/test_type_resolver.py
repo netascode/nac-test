@@ -86,6 +86,7 @@ from pathlib import Path
 from typing import Final
 
 from nac_test.pyats_core.common.types import (
+    DEFAULT_TEST_TYPE,
     TestFileMetadata,
 )
 
@@ -363,6 +364,6 @@ class TestMetadataResolver:
         # Default to 'api' with warning
         logger.warning(
             f"{test_file}: Could not detect test type from base class or directory. "
-            f"Assuming 'api'. To fix: inherit from a known base class or place in /d2d/ directory."
+            f"Assuming '{DEFAULT_TEST_TYPE}'. To fix: inherit from a known base class or place in /d2d/ directory."
         )
-        return "api"
+        return DEFAULT_TEST_TYPE

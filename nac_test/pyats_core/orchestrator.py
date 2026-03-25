@@ -636,7 +636,10 @@ class PyATSOrchestrator:
                 print("No PyATS test files (*.py) found in test directory")
             return PyATSResults()
 
-        print(f"Discovered {discovery_result.total_count} PyATS test files")
+        print(
+            f"Discovered {discovery_result.total_count} PyATS test files"
+            f" ({len(discovery_result.api_tests)} api, {len(discovery_result.d2d_tests)} d2d)"
+        )
 
         api_tests = discovery_result.api_paths
         d2d_tests = discovery_result.d2d_paths

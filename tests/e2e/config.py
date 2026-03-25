@@ -188,7 +188,7 @@ class E2EScenario:
 
     def validate(self) -> None:
         """Validate scenario configuration consistency.
-        Only check for basic conistency which is relevant to test execution,
+        Only check for basic consistency which is relevant to test execution,
         not the expected results (which are scenario-specific).
 
         Raises:
@@ -527,7 +527,7 @@ TAG_FILTER_EXCLUDE_SCENARIO = E2EScenario(
 
 TAG_FILTER_COMBINED_SCENARIO = E2EScenario(
     name="tag_filter_combined",
-    description="--include api-only: 0 Robot (no match, exit 252) + 1 PyATS (verify_ospf_api.py)",
+    description="--include api-only: 0 Robot (no match) + 1 PyATS (verify_ospf_api.py) → exit 0",
     data_path=f"{_FIXTURE_BASE}/tag_filtering/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/tag_filtering/templates",
     requires_testbed=False,
@@ -547,7 +547,7 @@ TAG_FILTER_COMBINED_SCENARIO = E2EScenario(
 
 TAG_FILTER_NO_MATCH_SCENARIO = E2EScenario(
     name="tag_filter_no_match",
-    description="--exclude bgpORospf filters out all tests: 0 Robot + 0 PyATS, exit 252",
+    description="--exclude bgpORospf filters out all tests: 0 Robot + 0 PyATS → exit 252",
     data_path=f"{_FIXTURE_BASE}/tag_filtering/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/tag_filtering/templates",
     requires_testbed=False,
