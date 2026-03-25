@@ -666,12 +666,22 @@ class PyATSOrchestrator:
         # Set the test_status reference in progress reporter
         self.progress_reporter.test_status = self.test_status
 
+        # Build a path→type lookup so OutputProcessor can stamp test_type into each
+        # test_info entry as results arrive, avoiding a post-hoc path lookup after
+        # execution. The deeper fix would be to run separate OutputProcessor/test_status
+        # instances per execution type (api/d2d), eliminating the need for this map
+        # and the split loop below entirely.
+        test_type_by_path = {
+            str(m.path.absolute()): m.test_type for m in discovery_result.all_tests
+        }
+
         # Initialize execution components now that progress reporter is ready
         self.output_processor = OutputProcessor(
             self.progress_reporter,
             self.test_status,
             verbose=self.verbose,
             loglevel=self.loglevel,
+            test_type_by_path=test_type_by_path,
         )
         # Archives should be stored at base level, not in pyats_results subdirectory
         self.subprocess_runner = SubprocessRunner(
@@ -726,12 +736,11 @@ class PyATSOrchestrator:
             if tasks:
                 await asyncio.gather(*tasks)
             else:
-                print("No tests to execute after categorization")
+                print("No tests to execute after device inventory check")
 
         # Split test_status into api_test_status and d2d_test_status based on test type.
-        # OutputProcessor correctly parses results for ALL tests into test_status.
-        # We split them here based on path patterns (.api. vs .d2d.) for accurate
-        # per-type summaries.
+        # test_type was stamped into each test_info entry by OutputProcessor at task_start
+        # time, so no post-hoc path lookup is needed here.
         #
         # IMPORTANT: We must clear d2d_test_status before populating it from test_status.
         # DeviceExecutor also populates d2d_test_status with its own (buggy) entries that
@@ -744,17 +753,15 @@ class PyATSOrchestrator:
         # NOTE: We do NOT remove DeviceExecutor's status tracking entirely because it
         # handles an edge case: if the PyATS subprocess fails to start (e.g., job file
         # generation error), OutputProcessor never sees the test. DeviceExecutor's error
-        # handling (lines 175-179) captures these failures. By clearing here, we discard
-        # DeviceExecutor's buggy success tracking while the error case is still logged.
+        # handling in run_device_job_with_semaphore() captures these failures. By clearing
+        # here, we discard DeviceExecutor's buggy success tracking while the error case
+        # is still logged.
         if self.test_status is not None and self.test_status:
             self.api_test_status.clear()
             self.d2d_test_status.clear()
 
             for test_name, test_info in self.test_status.items():
-                test_file = test_info.get("test_file")
-                test_type = discovery_result.get_test_type(test_file)
-
-                if test_type == "d2d":
+                if test_info.get("test_type") == "d2d":
                     self.d2d_test_status[test_name] = test_info
                 else:
                     self.api_test_status[test_name] = test_info

@@ -10,7 +10,6 @@ throughout the NAC test automation framework.
 
 import sys
 from dataclasses import dataclass, field
-from functools import cached_property
 from pathlib import Path
 from typing import (
     Any,
@@ -66,17 +65,6 @@ class PyatsDiscoveryResult:
     d2d_tests: list[TestFileMetadata]
     filtered_by_tags: int
 
-    @cached_property
-    def test_type_by_path(self) -> dict[Path, str]:
-        """Path-to-type lookup table, built on first access (O(1) reads thereafter).
-
-        Note: mutating api_tests or d2d_tests after this property has been accessed
-        would leave the cached dict stale. In practice this object is constructed
-        once in TestDiscovery.discover_pyats_tests() and never mutated afterwards,
-        so this is not a real risk.
-        """
-        return {m.path: m.test_type for m in self.api_tests + self.d2d_tests}
-
     @property
     def all_tests(self) -> list[TestFileMetadata]:
         """All discovered tests (API + D2D combined)."""
@@ -96,17 +84,6 @@ class PyatsDiscoveryResult:
     def d2d_paths(self) -> list[Path]:
         """D2D test paths for execution."""
         return [t.path for t in self.d2d_tests]
-
-    def get_test_type(self, test_file: Path | str | None) -> str:
-        """Get test type for a file path. Used post-execution for status splitting."""
-        if test_file is None:
-            return DEFAULT_TEST_TYPE
-        path = (
-            Path(test_file).absolute()
-            if isinstance(test_file, str)
-            else test_file.absolute()
-        )
-        return self.test_type_by_path.get(path, DEFAULT_TEST_TYPE)
 
 
 class ApiDetails(TypedDict, total=False):

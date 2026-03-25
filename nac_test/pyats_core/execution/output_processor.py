@@ -9,6 +9,7 @@ import re
 import time
 from typing import Any
 
+from nac_test.pyats_core.common.types import DEFAULT_TEST_TYPE
 from nac_test.pyats_core.progress import ProgressReporter
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.terminal import terminal
@@ -48,6 +49,7 @@ class OutputProcessor:
         test_status: dict[str, Any] | None = None,
         verbose: bool = False,
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
+        test_type_by_path: dict[str, str] | None = None,
     ):
         """Initialize output processor.
 
@@ -56,11 +58,15 @@ class OutputProcessor:
             test_status: Dictionary reference for tracking test status
             verbose: Enable verbose output (section progress, verbose errors)
             loglevel: Log level for filtering PyATS log output
+            test_type_by_path: Mapping of absolute path string → test type ("api"/"d2d"),
+                used to stamp test_type into each test_info entry at task_start time so
+                the orchestrator can split results without a post-hoc path lookup.
         """
         self.progress_reporter = progress_reporter
         self.test_status = test_status or {}
         self.verbose = verbose
         self.loglevel = loglevel
+        self.test_type_by_path = test_type_by_path or {}
 
     def process_line(self, line: str) -> None:
         """Process output line, looking for our progress events.
@@ -112,6 +118,7 @@ class OutputProcessor:
 
             # Track status with assigned test ID and title
             # Use taskid as key, test_name is not unique across devices for d2d tests
+            test_file = event.get("test_file")
             self.test_status[event["taskid"]] = {
                 "start_time": event["timestamp"],
                 "status": "EXECUTING",
@@ -121,9 +128,10 @@ class OutputProcessor:
                 "title": event.get(
                     "test_title", event["test_name"]
                 ),  # Use test_name as final fallback
-                "test_file": event.get(
-                    "test_file"
-                ),  # Store for test type categorization
+                "test_file": test_file,
+                "test_type": self.test_type_by_path.get(
+                    test_file or "", DEFAULT_TEST_TYPE
+                ),
                 "hostname": event.get(
                     "hostname"
                 ),  # Device name for D2D tests, None for API tests
