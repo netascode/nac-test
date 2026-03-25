@@ -27,6 +27,9 @@ from typing import Any
 
 from pyats.easypy.plugins.bases import BasePlugin
 
+from nac_test.pyats_core.constants import ENV_TEST_DIR
+from nac_test.utils.path_utils import derive_test_name
+
 # Event schema version for future compatibility
 EVENT_SCHEMA_VERSION = "1.0"
 
@@ -53,6 +56,25 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
         self.task_start_times: dict[str, float] = {}
         # Track total emitted events for stream_complete sentinel
         self.event_count: int = 0
+        # These checks guard against internal bugs only: test_dir is derived from
+        # the user-supplied template_dir (validated by Typer) and ENV_TEST_DIR is
+        # set exclusively by our orchestrator/device_executor. Neither condition
+        # should ever fire in production.
+        self.test_dir_path: Path | None = None
+        test_dir = os.environ.get(ENV_TEST_DIR)
+        if test_dir:
+            candidate = Path(test_dir).absolute()
+            if not candidate.exists() or not candidate.is_dir():
+                logger.warning(
+                    f"{ENV_TEST_DIR}={test_dir!r} is not a valid directory, "
+                    "using filename only"
+                )
+            else:
+                self.test_dir_path = candidate
+        else:
+            logger.warning(
+                f"{ENV_TEST_DIR} environment variable not set, using filename only"
+            )
 
     def _emit_event(self, event: dict[str, Any]) -> None:
         """Emit a progress event in the standard format."""
@@ -158,20 +180,10 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
                 # If AST parsing fails, title will remain None
                 pass
 
-            # If no TITLE found, create a descriptive name from the path
+            # If no TITLE found, use test_name as display title (relative dot-name,
+            # or bare stem if NAC_TEST_TEST_DIR is unset)
             if not title:
-                # Convert path like "templates/apic/test/operational/tenants/l3out.py"
-                # to "apic.test.operational.tenants.l3out"
-                test_path = Path(task.testscript)
-
-                # Start from after 'templates' if it exists
-                if "templates" in test_path.parts:
-                    start_idx = test_path.parts.index("templates") + 1
-                    title = ".".join(test_path.parts[start_idx:])
-                    if title.endswith(".py"):
-                        title = title[:-3]
-                else:
-                    title = test_name  # Fall back to existing test_name
+                title = test_name
 
             # Get actual worker ID from task runtime
             worker_id = self._get_task_worker_id(task)
@@ -290,25 +302,14 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
         return self.worker_id
 
     def _get_test_name(self, testscript: str) -> str:
-        """Extract a clean test name from the test file path."""
-        try:
-            # Convert path to dot notation like Robot does
-            # /path/to/tests/operational/tenants/l3out.py -> operational.tenants.l3out
-            path = Path(testscript)
-            parts = path.parts
+        """Extract a clean test name from the test file path.
 
-            # Find where 'tests' directory starts
-            try:
-                test_idx = parts.index("tests")
-                relevant_parts = parts[test_idx + 1 :]
-            except ValueError:
-                # If no 'tests' dir, use the whole path
-                relevant_parts = parts
+        Uses the cached test_dir_path (resolved from NAC_TEST_TEST_DIR at
+        plugin initialisation) to compute a relative dot-notation name.
+        """
+        path = Path(testscript).absolute()
 
-            # Remove .py extension and join with dots
-            name_parts = list(relevant_parts[:-1]) + [path.stem]
-            return ".".join(name_parts)
-        except Exception as e:
-            logger.error(f"Failed to extract test name from {testscript}: {e}")
-            # Fallback to just the filename
-            return Path(testscript).stem
+        if self.test_dir_path:
+            return derive_test_name(path, self.test_dir_path, fallback=path.stem)
+
+        return path.stem

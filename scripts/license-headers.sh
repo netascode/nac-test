@@ -85,9 +85,14 @@ declare -a failed_files
 # Validate file before processing
 validate_file() {
     local file="$1"
+    
+    # Skip symlinks silently (they point to files that will be checked independently)
+    if [[ -L "$file" ]]; then
+        return 2  # Special return code for symlinks (to be handled by caller)
+    fi
+    
     [[ -f "$file" ]] || { echo "ERROR: Not a regular file: $file" >&2; return 1; }
     [[ -r "$file" ]] || { echo "ERROR: File not readable: $file" >&2; return 1; }
-    [[ ! -L "$file" ]] || { echo "ERROR: Refusing symlink: $file" >&2; return 1; }
     [[ -w "$file" ]] || { echo "ERROR: File not writable: $file" >&2; return 1; }
     return 0
 }
@@ -162,8 +167,20 @@ fi
 
 # Process each file
 for file in "${file_list[@]}"; do
-    # Validate file first
-    if ! validate_file "$file"; then
+    # Validate file first; capture exit code without triggering set -e
+    if validate_file "$file"; then
+        validate_result=0
+    else
+        validate_result=$?
+    fi
+
+    if [[ $validate_result -eq 2 ]]; then
+        # Symlink - skip silently (target file will be checked independently)
+        echo -e "${YELLOW}⊘${NC} $file (symlink, skipped)"
+        files_skipped=$((files_skipped + 1))
+        continue
+    elif [[ $validate_result -ne 0 ]]; then
+        # Other validation error
         files_failed=$((files_failed + 1))
         failed_files+=("$file")
         continue

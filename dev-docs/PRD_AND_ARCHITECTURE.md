@@ -1855,7 +1855,7 @@ class PyATSOrchestrator:
         minimal_reports: bool = False,
     ):
         # Output directory structure
-        self.base_output_dir = Path(output_dir).resolve()  # Base dir (where merged data lives)
+        self.base_output_dir = Path(output_dir).absolute()  # Base dir (where merged data lives)
         self.output_dir = self.base_output_dir / "pyats_results"  # PyATS subdirectory
 
         # Calculate workers dynamically
@@ -2456,6 +2456,7 @@ Set by PyATSOrchestrator and read by PyATS test subprocesses:
 | Variable | Purpose | Example Value |
 |----------|---------|---------------|
 | `MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH` | Absolute path to merged data model | `/path/to/output/merged_data_model_test_variables.yaml` |
+| `NAC_TEST_TEST_DIR` | Absolute path to `test_dir` (templates root); used by the progress plugin and archive inspector to compute dot-notation test names relative to this directory | `/path/to/project/templates` |
 | `PYTHONPATH` | Python path for test discovery | `/path/to/nac-test:/path/to/templates` |
 | `PYATS_LOG_LEVEL` | PyATS logging level | `ERROR` |
 | `HTTPX_LOG_LEVEL` | HTTP client logging level | `ERROR` |
@@ -2470,6 +2471,7 @@ Set by DeviceExecutor for per-device D2D test subprocesses:
 |----------|---------|---------------|
 | `HOSTNAME` | Device hostname for archive naming | `leaf-101` |
 | `DEVICE_INFO` | JSON-serialized device dictionary | `{"hostname": "leaf-101", "ip": "10.0.0.1", ...}` |
+| `NAC_TEST_TEST_DIR` | Absolute path to `test_dir`; used by the progress plugin to compute dot-notation test names (same as section 2, set here for D2D jobs) | `/path/to/project/templates` |
 | `NAC_TEST_BROKER_SOCKET` | Connection Broker Unix socket path | `/tmp/nac_test_broker_XXXXX.sock` |
 
 ##### 4. System and Performance Environment Variables
@@ -7945,7 +7947,7 @@ def _detect_from_directory(self, file_path: Path) -> str | None:
     Returns 'd2d' if path contains '/d2d/', 'api' if path contains '/api/',
     or None if neither pattern matches.
     """
-    path_str = file_path.resolve().as_posix()
+    path_str = file_path.absolute().as_posix()  # absolute() preserves symlinks
 
     if "/d2d/" in path_str:
         return "d2d"
@@ -7973,7 +7975,7 @@ def resolve(self, file_path: Path) -> str:
     3. Default to 'api' with warning
     """
     # Check cache first
-    abs_path = file_path.resolve()
+    abs_path = file_path.absolute()  # absolute() preserves symlinks for relative_to() comparisons
     if abs_path in self._cache:
         return self._cache[abs_path]
 
@@ -8101,6 +8103,30 @@ classDiagram
 - **Caching**: Results cached by absolute path for performance
 - **Logging**: Debug logging for cache hits/misses and detection results
 - **Error Handling**: Graceful fallback on syntax errors or file read failures
+
+---
+
+#### Symlink-Safe Path Handling: `absolute()` vs `resolve()`
+
+Throughout the PyATS stack, `Path.absolute()` is used instead of `Path.resolve()` wherever paths are normalised for comparison or stored for later use in `relative_to()` calls.
+
+**Why `absolute()` and not `resolve()`?**
+
+`resolve()` follows symlinks all the way to their real filesystem target. If a test file inside `test_dir` is a symlink whose *target* lives outside `test_dir`, `resolve()` returns the target path. A subsequent `relative_to(test_dir)` then raises `ValueError` — and the test name falls back to a bare stem or a full absolute path instead of the intended dot-notation name.
+
+`absolute()` makes the path absolute (prepends `cwd` if needed) without dereferencing symlinks, so the logical path under `test_dir` is preserved.
+
+```python
+# WRONG — breaks when test files are symlinks pointing outside test_dir
+path = Path(testscript).resolve()          # follows symlink -> /real/target/outside/test_dir/...
+path.relative_to(test_dir)                 # raises ValueError
+
+# CORRECT — symlink stays within test_dir logically
+path = Path(testscript).absolute()         # /test_dir/subdir/symlink.py (symlink intact)
+path.relative_to(test_dir)                 # -> subdir/symlink.py  (works)
+```
+
+This convention applies consistently to: `orchestrator.py`, `job_generator.py`, `test_discovery.py`, `test_type_resolver.py`, `plugin.py`, and `archive_inspector.py`.
 
 ---
 
@@ -10799,7 +10825,7 @@ Understanding the lifecycle of files helps explain why certain directories exist
 
 ```python
 # orchestrator.py:67-72
-self.base_output_dir = Path(output_dir).resolve()  # User-specified directory
+self.base_output_dir = Path(output_dir).absolute()  # User-specified directory (absolute() preserves symlinks)
 self.output_dir = self.base_output_dir / "pyats_results"  # PyATS workspace
 
 # orchestrator.py:444
@@ -11459,7 +11485,7 @@ A PyATS job file is a Python script with a `main(runtime)` function that:
 def generate_job_file_content(self, test_files: List[Path]) -> str:
     """Generate the content for a PyATS job file."""
     test_files_str = ",\n        ".join(
-        [f'"{str(Path(tf).resolve())}"' for tf in test_files]
+        [f'"{str(Path(tf).absolute())}"' for tf in test_files]  # absolute() preserves symlinks
     )
 
     job_content = textwrap.dedent(f'''
@@ -11560,9 +11586,15 @@ env["PYATS_LOG_LEVEL"] = "ERROR"
 env["HTTPX_LOG_LEVEL"] = "ERROR"
 
 # Critical: Absolute path to merged data model
+# resolve() is intentional here — this is a regular file, not a symlink,
+# and we want the canonical path for the subprocess.
 env["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = str(
     (self.base_output_dir / self.merged_data_filename).resolve()
 )
+
+# Pass test_dir so the plugin subprocess can compute relative test names
+# (absolute() is used throughout — see "Symlink-Safe Path Handling" section)
+env["NAC_TEST_TEST_DIR"] = str(self.test_dir)
 
 # Ensure tests can import from test_dir and nac-test modules
 nac_test_dir = str(Path(__file__).parent.parent.parent)
@@ -11668,6 +11700,8 @@ env.update({
         self.subprocess_runner.output_dir / "merged_data_model_test_variables.yaml"
     ),
     "PYTHONPATH": get_pythonpath_for_tests(self.test_dir, [nac_test_dir]),
+    # Pass test_dir so the plugin subprocess can compute relative test names
+    "NAC_TEST_TEST_DIR": str(self.test_dir),
     # NOTE: NAC_TEST_BROKER_SOCKET set by orchestrator at broker level
 })
 ```
@@ -16931,9 +16965,11 @@ This is why stdout-based IPC is used rather than shared memory or queues.
 
 For Direct-to-Device (D2D) tests, the `task_start` event includes a `hostname` field identifying which device the test targets. This allows proper identification when the same test runs against multiple devices in parallel.
 
-**TITLE Extraction:**
+**TITLE Extraction and Test Name Generation:**
 
-The plugin extracts the `TITLE` variable from test files using AST parsing (no code execution). If no TITLE exists, a descriptive name is generated from the file path (e.g., `apic.test.operational.tenants.l3out`).
+The plugin extracts the `TITLE` variable from test files using AST parsing (no code execution). If no TITLE exists, the test name itself is used as the display title.
+
+Test names are computed as dot-notation relative paths (e.g., `operational.tenants.l3out`) using the `NAC_TEST_TEST_DIR` environment variable set by the orchestrator. `Path.absolute()` is used — not `resolve()` — so that symlinked test files whose targets live outside `test_dir` still resolve correctly via `relative_to()`. If `NAC_TEST_TEST_DIR` is unset, only the bare file stem is used.
 
 **PyATS Result Statuses:**
 

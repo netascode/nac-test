@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from nac_test.core.constants import DEFAULT_MERGED_DATA_FILENAME
+from nac_test.pyats_core.constants import ENV_TEST_DIR
 from nac_test.pyats_core.execution.job_generator import JobGenerator
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
 
@@ -108,6 +109,7 @@ class DeviceExecutor:
                             self.base_output_dir / DEFAULT_MERGED_DATA_FILENAME
                         ),
                         "NAC_TEST_TYPE": "d2d",
+                        ENV_TEST_DIR: str(self.test_dir),
                     }
                 )
 
