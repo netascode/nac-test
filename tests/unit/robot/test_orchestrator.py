@@ -13,14 +13,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nac_test.core.constants import (
+    EXIT_DATA_ERROR,
     LOG_HTML,
+    ORDERING_FILENAME,
     OUTPUT_XML,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
     XUNIT_XML,
 )
-from nac_test.core.types import ErrorType, TestResults
+from nac_test.core.types import ExecutionState, TestResults, ValidatedRobotArgs
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from tests.conftest import assert_is_link_to
@@ -72,7 +74,8 @@ class TestRobotOrchestrator:
     ) -> None:
         """Test orchestrator initialization."""
         assert orchestrator.base_output_dir == temp_output_dir
-        assert orchestrator.output_dir == temp_output_dir  # At root for backward compat
+        assert orchestrator.output_dir == temp_output_dir / ROBOT_RESULTS_DIRNAME
+        assert orchestrator.ordering_file == orchestrator.output_dir / ORDERING_FILENAME
         assert orchestrator.data_paths == mock_data_paths
         assert orchestrator.templates_dir == mock_templates_dir
         assert orchestrator.merged_data_filename == "merged_data.yaml"
@@ -80,6 +83,8 @@ class TestRobotOrchestrator:
         assert orchestrator.dry_run is False
         assert orchestrator.loglevel == DEFAULT_LOGLEVEL
 
+    # TODO(#699): remove this test — it only asserts that __init__ assigns attributes,
+    # not any application logic. Replace with tests for actual orchestrator behaviour.
     def test_initialization_with_optional_params(
         self, mock_data_paths, mock_templates_dir, temp_output_dir
     ) -> None:
@@ -94,7 +99,7 @@ class TestRobotOrchestrator:
             render_only=True,
             dry_run=True,
             processes=4,
-            extra_args=["--exitonfailure"],
+            extra_args=ValidatedRobotArgs(args=["--exitonfailure"], robot_opts={}),
             loglevel=LogLevel.DEBUG,
         )
 
@@ -103,7 +108,9 @@ class TestRobotOrchestrator:
         assert orchestrator.render_only is True
         assert orchestrator.dry_run is True
         assert orchestrator.processes == 4
-        assert orchestrator.extra_args == ["--exitonfailure"]
+        assert orchestrator.extra_args == ValidatedRobotArgs(
+            args=["--exitonfailure"], robot_opts={}
+        )
         assert orchestrator.loglevel == LogLevel.DEBUG
 
     def test_create_backward_compat_links(self, orchestrator, temp_output_dir) -> None:
@@ -252,23 +259,23 @@ class TestRobotOrchestrator:
         assert stats.skipped == 0
 
     @patch("nac_test.robot.orchestrator.run_pabot")
-    def test_run_tests_handles_pabot_error_252(
+    def test_run_tests_handles_pabot_exit_252_as_empty(
         self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
     ) -> None:
-        """Test run_tests returns TestResults.from_error on pabot exit code 252 (invalid arguments)."""
+        """Test run_tests returns TestResults.empty() on pabot exit code 252 (no tests matched filters)."""
         # Mock RobotWriter instance methods
         orchestrator.robot_writer.write = MagicMock()
         orchestrator.robot_writer.write_merged_data_model = MagicMock()
 
-        # Mock pabot failure with exit code 252
-        mock_pabot.return_value = 252
+        # Mock pabot exit code EXIT_DATA_ERROR (for example no tests matched --include/--exclude filters)
+        mock_pabot.return_value = EXIT_DATA_ERROR
 
-        # Should return TestResults with error state
+        # Should return empty TestResults (not error) - "no tests executed" warning
         result = orchestrator.run_tests()
         assert isinstance(result, TestResults)
-        assert result.has_error
-        assert result.reason is not None
-        assert result.error_type == ErrorType.INVALID_ROBOT_ARGS
+        assert result.is_empty
+        assert result.state == ExecutionState.EMPTY
+        assert not result.has_error
 
     def test_run_tests_return_type(self, orchestrator: RobotOrchestrator) -> None:
         """Test run_tests returns TestResults with correct attributes."""
@@ -327,7 +334,7 @@ class TestRobotOrchestrator:
         assert orchestrator.verbose is False
 
     @pytest.mark.parametrize(
-        ("verbose", "loglevel", "expected_verbose", "expected_robot_loglevel"),
+        ("verbose", "loglevel", "expected_verbose", "expected_default_robot_loglevel"),
         [
             (True, LogLevel.WARNING, True, None),
             (True, LogLevel.DEBUG, True, "DEBUG"),
@@ -353,7 +360,7 @@ class TestRobotOrchestrator:
         verbose,
         loglevel,
         expected_verbose,
-        expected_robot_loglevel,
+        expected_default_robot_loglevel,
     ) -> None:
         """Test that verbose and loglevel are correctly passed to run_pabot."""
         orchestrator = RobotOrchestrator(
@@ -385,4 +392,61 @@ class TestRobotOrchestrator:
         mock_pabot.assert_called_once()
         call_kwargs = mock_pabot.call_args[1]
         assert call_kwargs["verbose"] is expected_verbose
-        assert call_kwargs["robot_loglevel"] == expected_robot_loglevel
+        assert call_kwargs["default_robot_loglevel"] == expected_default_robot_loglevel
+
+    @pytest.mark.parametrize(
+        ("include_tags", "exclude_tags"),
+        [
+            (["smoke"], []),
+            ([], ["slow"]),
+            (["smoke"], ["slow"]),
+        ],
+        ids=[
+            "include_only",
+            "exclude_only",
+            "include_and_exclude",
+        ],
+    )
+    @patch("nac_test.robot.orchestrator.run_pabot")
+    @patch("nac_test.robot.orchestrator.RobotReportGenerator")
+    def test_include_exclude_tags_passed_to_pabot(
+        self,
+        mock_generator,
+        mock_pabot,
+        mock_data_paths,
+        mock_templates_dir,
+        temp_output_dir,
+        include_tags,
+        exclude_tags,
+    ) -> None:
+        """Test that include/exclude tags are correctly passed through to run_pabot."""
+        orchestrator = RobotOrchestrator(
+            data_paths=mock_data_paths,
+            templates_dir=mock_templates_dir,
+            output_dir=temp_output_dir,
+            merged_data_filename="merged.yaml",
+            include_tags=include_tags,
+            exclude_tags=exclude_tags,
+        )
+        orchestrator.robot_writer.write = MagicMock()
+        orchestrator.robot_writer.write_merged_data_model = MagicMock()
+        mock_pabot.return_value = 0
+
+        mock_generator_instance = MagicMock()
+        mock_generator_instance.generate_summary_report.return_value = (
+            None,
+            TestResults(),
+        )
+        mock_generator.return_value = mock_generator_instance
+
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir()
+        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
+            (robot_results_dir / filename).write_text(f"Mock {filename}")
+
+        orchestrator.run_tests()
+
+        mock_pabot.assert_called_once()
+        call_kwargs = mock_pabot.call_args[1]
+        assert call_kwargs["include"] == include_tags
+        assert call_kwargs["exclude"] == exclude_tags

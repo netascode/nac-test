@@ -7,12 +7,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-import typer
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.core.constants import EXIT_ERROR
 from nac_test.core.types import PyATSResults
 from nac_test.utils.logging import DEFAULT_LOGLEVEL
 from tests.unit.conftest import AUTH_SUCCESS
@@ -110,8 +108,10 @@ class TestCombinedOrchestratorController:
         # Controller should now be detected
         assert orchestrator.controller_type == "ACI"
 
-    def test_detection_failure_exits_during_run_tests(self, tmp_path: Path) -> None:
-        """Detection failure should raise typer.Exit during run_tests(), not __init__."""
+    def test_detection_failure_continues_with_preflight_failure(
+        self, tmp_path: Path
+    ) -> None:
+        """Detection failure sets pre_flight_failure and continues (does not exit)."""
         # No controller credentials set (already cleaned by fixture)
         data_dir = tmp_path / "data"
         data_dir.mkdir()
@@ -129,17 +129,28 @@ class TestCombinedOrchestratorController:
             dev_pyats_only=True,
         )
 
-        # run_tests() should fail when PyATS tests found but no credentials
+        # run_tests() should set pre_flight_failure when PyATS tests found but no credentials
         with (
             patch.object(
                 orchestrator, "_discover_test_types", return_value=(True, False)
             ),
             patch("typer.secho"),
+            patch("nac_test.combined_orchestrator.CombinedReportGenerator") as mock_gen,
         ):
-            with pytest.raises(typer.Exit) as exc_info:
-                orchestrator.run_tests()
+            mock_gen_instance = MagicMock()
+            mock_gen_instance.generate_combined_summary.return_value = (
+                output_dir / "combined_summary.html"
+            )
+            mock_gen.return_value = mock_gen_instance
 
-            assert exc_info.value.exit_code == EXIT_ERROR
+            # Should NOT raise - instead returns results with pre_flight_failure
+            results = orchestrator.run_tests()
+
+            # Pre-flight failure should be set with detection type
+            assert results.pre_flight_failure is not None
+            assert results.pre_flight_failure.failure_type.value == "detection"
+            assert results.pre_flight_failure.controller_type is None
+            assert results.pre_flight_failure.controller_url is None
 
     def test_combined_orchestrator_passes_controller_to_pyats(
         self, tmp_path: Path, monkeypatch: MonkeyPatch

@@ -28,3 +28,17 @@ def sanitize_hostname(hostname: str) -> str:
         'device_name'
     """
     return re.sub(r"[^a-zA-Z0-9_]", "_", hostname).lower()
+
+
+def parse_cli_option_name(arg: str) -> str:
+    """Extract the option name from a CLI flag.
+
+    Strips all leading dashes and any ``=value`` suffix.
+
+    Examples::
+
+        parse_cli_option_name("--loglevel")       -> "loglevel"
+        parse_cli_option_name("--loglevel=DEBUG") -> "loglevel"
+        parse_cli_option_name("-L")               -> "L"
+    """
+    return arg.lstrip("-").split("=")[0]

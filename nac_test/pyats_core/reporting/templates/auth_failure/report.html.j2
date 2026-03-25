@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Network as Code Test Results — {% if failure_type == 'unreachable' %}Controller Unreachable{% else %}Authentication Failed{% endif %}</title>
+    <title>Network as Code Test Results — {{ failure_type.display_name }}</title>
     <style>
         :root {
             --primary: #2c3e50;
@@ -65,7 +65,7 @@
         }
 
         .failure-card .card-header {
-            background: linear-gradient(135deg, {% if failure_type == 'unreachable' %}#b03a2e{% else %}#c0392b{% endif %}, var(--danger));
+            background: linear-gradient(135deg, {% if failure_type.is_unreachable %}#b03a2e{% else %}#c0392b{% endif %}, var(--danger));
             color: white;
             padding: 1.25rem 1.5rem;
             display: flex;
@@ -116,6 +116,7 @@
         .detail-value .error-text {
             color: var(--danger);
             font-weight: 600;
+            white-space: pre-wrap;
         }
 
         .summary-bar {
@@ -308,24 +309,30 @@
         <div class="failure-card">
             <div class="card-header">
                 <span class="icon">&#9940;</span>
-                <h2>{% if failure_type == 'unreachable' %}Controller Unreachable{% else %}Controller Authentication Failed{% endif %}</h2>
+                <h2>{{ failure_type.display_name }}</h2>
             </div>
             <div class="card-body">
                 <div class="detail-grid">
                     <div class="detail-label">Status</div>
                     <div class="detail-value">
-                        {% if failure_type == 'unreachable' %}
+                        {% if failure_type.is_detection %}
+                        <span class="status-badge badge-unreachable">Detection Failed</span>
+                        {% elif failure_type.is_unreachable %}
                         <span class="status-badge badge-unreachable">Unreachable</span>
                         {% else %}
                         <span class="status-badge badge-failed">Auth Failed</span>
                         {% endif %}
                     </div>
 
+                    {% if display_name %}
                     <div class="detail-label">Controller Type</div>
                     <div class="detail-value">{{ display_name }}</div>
+                    {% endif %}
 
+                    {% if controller_url %}
                     <div class="detail-label">Controller URL</div>
                     <div class="detail-value"><code>{{ controller_url }}</code></div>
+                    {% endif %}
 
                     <div class="detail-label">Error</div>
                     <div class="detail-value"><span class="error-text">{{ detail }}</span></div>
@@ -337,7 +344,13 @@
                     <div class="detail-value">0 — aborted before test execution</div>
                 </div>
 
-                {% if failure_type == 'unreachable' %}
+                {% if failure_type.is_detection %}
+                <p style="font-size: 0.9rem; color: var(--secondary);">
+                    No controller credentials were found. PyATS tests require controller environment
+                    variables to be set (e.g., ACI_URL, SDWAN_URL, CC_URL). Without these, the
+                    controller type cannot be detected and PyATS tests cannot run.
+                </p>
+                {% elif failure_type.is_unreachable %}
                 <div class="network-diagram">
                     nac-test &nbsp; <span class="arrow-fail">──── ✕ ────</span> &nbsp; {{ display_name }} ({{ host }})
                     <br>
@@ -375,7 +388,33 @@
             </div>
             <div class="card-body">
                 <ol>
-                    {% if failure_type == 'unreachable' %}
+                    {% if failure_type.is_detection %}
+                    <li>
+                        <strong>Set controller environment variables for your architecture:</strong>
+                        <div class="terminal-block">
+                            <span class="comment"># For ACI (APIC):</span><br>
+                            <span class="prompt">$</span> export ACI_URL=https://apic.example.com<br>
+                            <span class="prompt">$</span> export ACI_USERNAME=admin<br>
+                            <span class="prompt">$</span> export ACI_PASSWORD=your-password<br>
+                            <br>
+                            <span class="comment"># For SD-WAN Manager:</span><br>
+                            <span class="prompt">$</span> export SDWAN_URL=https://sdwan.example.com<br>
+                            <span class="prompt">$</span> export SDWAN_USERNAME=admin<br>
+                            <span class="prompt">$</span> export SDWAN_PASSWORD=your-password<br>
+                            <br>
+                            <span class="comment"># For Catalyst Center:</span><br>
+                            <span class="prompt">$</span> export CC_URL=https://catalyst.example.com<br>
+                            <span class="prompt">$</span> export CC_USERNAME=admin<br>
+                            <span class="prompt">$</span> export CC_PASSWORD=your-password
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Verify environment variables are exported</strong> — use <code>env | grep -E "^(ACI|SDWAN|CC)_"</code> to check.
+                    </li>
+                    <li>
+                        <strong>Check shell context</strong> — if running via CI/CD, ensure variables are passed to the job environment.
+                    </li>
+                    {% elif failure_type.is_unreachable %}
                     <li>
                         <strong>Verify the controller URL is correct:</strong>
                         <div class="terminal-block">
@@ -442,12 +481,19 @@
         <div class="info-card">
             <h3>What Happened</h3>
             <p>
+                {% if failure_type.is_detection %}
+                Before launching any test suites, <code>nac-test</code> attempts to detect the controller
+                type by checking for environment variables (ACI_URL, SDWAN_URL, CC_URL, etc.).
+                No controller credentials were found, so PyATS tests cannot execute. Robot Framework
+                tests may still run if they don't require controller access.
+                {% elif failure_type.is_unreachable %}
                 Before launching any test suites, <code>nac-test</code> performs a pre-flight authentication
                 check against the configured controller.
-                {% if failure_type == 'unreachable' %}
                 The connection to <code>{{ controller_url }}</code> failed, indicating the
                 controller is not reachable from this host. No tests were executed.
                 {% else %}
+                Before launching any test suites, <code>nac-test</code> performs a pre-flight authentication
+                check against the configured controller.
                 This catches credential and connectivity problems
                 immediately rather than letting hundreds of test cases fail individually — saving significant
                 time in CI/CD pipelines.

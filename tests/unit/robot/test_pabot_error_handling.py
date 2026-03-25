@@ -13,7 +13,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from robot.errors import DataError
 
-from nac_test.robot.pabot import parse_and_validate_extra_args, run_pabot
+from nac_test.cli.validators import validate_extra_args
+from nac_test.robot.pabot import run_pabot
 
 
 class TestRunPabotUnexpectedException:
@@ -37,14 +38,14 @@ class TestRunPabotUnexpectedException:
             run_pabot(output_path)
 
 
-class TestParseAndValidateExtraArgsDataError:
-    """Test DataError handling in parse_and_validate_extra_args."""
+class TestValidateExtraArgsDataError:
+    """Test DataError handling in validate_extra_args."""
 
-    def test_parse_and_validate_extra_args_data_error(self) -> None:
+    def test_validate_extra_args_data_error(self) -> None:
         """Test that DataError is raised for invalid Robot Framework arguments.
 
         When parse_args encounters invalid Robot Framework syntax,
-        it raises DataError. This should propagate through parse_and_validate_extra_args
+        it raises DataError. This should propagate through validate_extra_args
         to indicate that the robot arguments are malformed.
         """
         # Use invalid Robot Framework argument that will cause DataError
@@ -52,4 +53,4 @@ class TestParseAndValidateExtraArgsDataError:
 
         # Should raise DataError from robot.errors
         with pytest.raises(DataError):
-            parse_and_validate_extra_args(extra_args)
+            validate_extra_args(extra_args)

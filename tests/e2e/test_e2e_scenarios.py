@@ -20,6 +20,7 @@ This approach:
 import logging
 import re
 import xml.etree.ElementTree as ET
+import zipfile
 
 import pytest
 
@@ -29,19 +30,22 @@ from nac_test.core.constants import (
     IS_WINDOWS,
     LOG_HTML,
     OUTPUT_XML,
+    PRE_FLIGHT_FAILURE_FILENAME,
     PYATS_RESULTS_DIRNAME,
     REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    SUMMARY_SEPARATOR_WIDTH,
     XUNIT_XML,
 )
 from nac_test.robot.reporting.robot_output_parser import RobotResultParser
 from tests.conftest import assert_is_link_to
-from tests.e2e.conftest import E2EResults
+from tests.e2e.conftest import TEST_CREDENTIAL_SENTINEL, E2EResults
 from tests.e2e.html_helpers import (
     assert_combined_stats,
     assert_report_stats,
     extract_summary_stats_from_combined,
+    extract_test_type_sections,
     load_html_file,
     verify_breadcrumb_link,
     verify_html_structure,
@@ -151,6 +155,34 @@ class E2ECombinedTestBase:
         combined = results.output_dir / COMBINED_SUMMARY_FILENAME
         assert combined.exists(), f"Missing {COMBINED_SUMMARY_FILENAME} at root"
         assert combined.is_file()
+
+    def test_output_root_contains_only_expected_entries(
+        self, results: E2EResults
+    ) -> None:
+        """Verify the output root contains only whitelisted entries."""
+        expected_dirs = set()
+        if results.has_robot_results:
+            expected_dirs.add(ROBOT_RESULTS_DIRNAME)
+        if results.has_pyats_results or results.scenario.expected_preflight_failure:
+            expected_dirs.add(PYATS_RESULTS_DIRNAME)
+
+        expected_files = {
+            COMBINED_SUMMARY_FILENAME,
+            "merged_data_model_test_variables.yaml",
+        }
+        if results.has_robot_results or results.has_pyats_results:
+            expected_files.add(XUNIT_XML)
+        if results.has_robot_results:
+            expected_files.update({OUTPUT_XML, LOG_HTML, REPORT_HTML})
+
+        allowed = expected_dirs | expected_files
+        actual = {path.name for path in results.output_dir.iterdir()}
+        unexpected = actual - allowed
+
+        assert not unexpected, (
+            f"Unexpected entries in output root: {sorted(unexpected)}\n"
+            f"Expected only: {sorted(allowed)}"
+        )
 
     # -------------------------------------------------------------------------
     # Robot Framework Output Tests
@@ -581,6 +613,44 @@ class E2ECombinedTestBase:
             f"Expected {expected_rate:.1f}% success rate, got {stats.success_rate}%"
         )
 
+    def test_combined_dashboard_section_links_resolve(
+        self, results: E2EResults
+    ) -> None:
+        """Verify section report links are present iff the section has tests.
+
+        Uses extract_test_type_sections() to parse per-framework sections and
+        asserts two invariants for each section:
+        - total_tests > 0  → report_path is set AND the file exists
+        - total_tests == 0 → report_path is empty (no dead link rendered)
+
+        The negative check (total==0 → no link) would have caught issue #644,
+        where the "View Detailed Report →" link was rendered unconditionally
+        even when a Robot run matched zero tests and no summary_report.html
+        was generated.
+        """
+        html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
+        html_content = load_html_file(html_path)
+        sections = extract_test_type_sections(html_content)
+
+        for section in sections:
+            if section.total_tests > 0:
+                # Positive: link must exist and resolve to a real file
+                assert section.report_path, (
+                    f"Dashboard section '{section.test_type}' has {section.total_tests} "
+                    f"tests but no report link"
+                )
+                resolved = (results.output_dir / section.report_path).resolve()
+                assert resolved.exists(), (
+                    f"Dashboard section '{section.test_type}' links to "
+                    f"'{section.report_path}' which does not exist"
+                )
+            else:
+                # Negative: no tests → no link (guards against #644 regression)
+                assert not section.report_path, (
+                    f"Dashboard section '{section.test_type}' has 0 tests but "
+                    f"still renders a report link: '{section.report_path}'"
+                )
+
     # -------------------------------------------------------------------------
     # Hostname Display Tests (for D2D scenarios)
     # -------------------------------------------------------------------------
@@ -907,7 +977,7 @@ class E2ECombinedTestBase:
         """
         stdout = results.filtered_stdout
         summary_header = "Combined Test Execution Summary"
-        separator = "=" * 70
+        separator = "=" * SUMMARY_SEPARATOR_WIDTH
 
         summary_pos = stdout.find(summary_header)
         assert summary_pos != -1, "Combined Summary section not found"
@@ -928,6 +998,44 @@ class E2ECombinedTestBase:
         assert after_closing.startswith("\n\n\n"), (
             f"Missing two blank lines after Combined Summary block.\n"
             f"Content after separator starts with: {repr(after_closing[:20])}"
+        )
+
+    # -------------------------------------------------------------------------
+    # Security Tests (#689 - Credential Exposure Prevention)
+    # -------------------------------------------------------------------------
+
+    def test_no_credentials_in_output_artifacts(self, results: E2EResults) -> None:
+        """Verify that credentials don't appear in any output artifacts.
+
+        Regression test for #689 - EnvironmentDebugPlugin was exposing env vars
+        including passwords in env.txt files within PyATS archives.
+        """
+        offending_files: list[str] = []
+
+        for file_path in results.output_dir.rglob("*"):
+            if not file_path.is_file():
+                continue
+
+            if file_path.suffix.lower() == ".zip":
+                try:
+                    with zipfile.ZipFile(file_path, "r") as zf:
+                        for name in zf.namelist():
+                            content = zf.read(name).decode("utf-8", errors="ignore")
+                            if TEST_CREDENTIAL_SENTINEL in content:
+                                offending_files.append(f"{file_path}!{name}")
+                except zipfile.BadZipFile:
+                    pass  # Not a valid zip file, skip
+            else:
+                # Check all files as text - errors="ignore" safely handles binary
+                # files by dropping undecodable bytes while preserving readable text.
+                # No try/except needed: we control output_dir, files won't disappear.
+                content = file_path.read_text(errors="ignore")
+                if TEST_CREDENTIAL_SENTINEL in content:
+                    offending_files.append(str(file_path))
+
+        assert not offending_files, (
+            "Credential sentinel found in output artifacts:\n"
+            + "\n".join(f"  - {f}" for f in offending_files)
         )
 
 
@@ -1373,6 +1481,102 @@ class TestE2EWindowsPyatsSkip(E2ECombinedTestBase):
             f"Missing Windows PyATS skip warning in stdout.\n"
             f"Expected: '{expected_warning}'\n"
             f"Stdout: {results.stdout[:500]}"
+        )
+
+
+# =============================================================================
+# PRE-FLIGHT AUTH FAILURE SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EPreflightAuthFailure(E2ECombinedTestBase):
+    """E2E: pre-flight auth failure (401) does not abort Robot execution.
+
+    Core behavioral contract of PR #636: a pre-flight failure must NOT prevent
+    Robot Framework tests from running. The mock ACI /api/aaaLogin.json endpoint
+    is overridden to return 401, triggering an AUTH pre-flight failure. PyATS is
+    skipped but Robot tests still run to completion.
+
+    Because Robot results are present, combined_summary.html uses the normal
+    combined dashboard template (with summary-item stats and a Robot link), so
+    most base class assertions apply unchanged.
+
+    Two base class tests need overrides because the pre-flight failure causes the
+    pyats_results/ directory to be created (for pre_flight_failure.html) even
+    though no PyATS tests ran:
+    - test_pyats_results_directory_state: pyats_results/ exists but has no api/ or d2d/
+
+    Three combined stats tests are overridden because the template suppresses the
+    success rate (shows '--') when pre_flight_failure is set, so the normal
+    extract_summary_stats_from_combined() regex finds no percentage to parse:
+    - test_combined_stats_correct
+    - test_combined_stats_internal_consistency
+    - test_combined_success_rate_matches_expectation
+    """
+
+    @pytest.fixture
+    def results(self, e2e_preflight_auth_failure_results: E2EResults) -> E2EResults:
+        return e2e_preflight_auth_failure_results
+
+    # -------------------------------------------------------------------------
+    # Overrides for tests affected by pyats_results/ being created for the
+    # pre-flight failure report (pyats_results/pre_flight_failure.html)
+    # -------------------------------------------------------------------------
+
+    def test_pyats_results_directory_state(self, results: E2EResults) -> None:
+        """pyats_results/ is created for pre_flight_failure.html even though no PyATS ran."""
+        pyats_dir = results.output_dir / PYATS_RESULTS_DIRNAME
+        assert pyats_dir.exists(), (
+            f"Expected {PYATS_RESULTS_DIRNAME}/ to exist (for pre_flight_failure.html)"
+        )
+        assert pyats_dir.is_dir()
+
+    def test_combined_stats_correct(self, results: E2EResults) -> None:
+        """Pre-flight failure replaces the success rate with '--'; verify Robot counts instead."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        verify_html_structure(html)
+        assert 'class="summary-item rate"' in html
+        # Rate shows '--' (not a percentage) when pre_flight_failure is set in the template
+        assert "<strong>--</strong>" in html
+
+    def test_combined_stats_internal_consistency(self, results: E2EResults) -> None:
+        """Pre-flight failure suppresses success rate; HTML structure is still valid."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        verify_html_structure(html)
+
+    def test_combined_success_rate_matches_expectation(
+        self, results: E2EResults
+    ) -> None:
+        """Pre-flight failure replaces the success rate with '--' in the combined dashboard."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        assert "<strong>--</strong>" in html, (
+            "Expected '--' placeholder for success rate in pre-flight failure combined_summary"
+        )
+
+    # -------------------------------------------------------------------------
+    # Pre-flight failure specific tests
+    # -------------------------------------------------------------------------
+
+    def test_combined_dashboard_shows_preflight_failure_banner(
+        self, results: E2EResults
+    ) -> None:
+        """Combined dashboard shows a pre-flight failure banner alongside Robot results."""
+        html = load_html_file(results.output_dir / COMBINED_SUMMARY_FILENAME)
+        assert "preflight-failure" in html, (
+            "Expected pre-flight failure banner CSS class in combined_summary.html"
+        )
+        assert "Pre-flight failure" in html, (
+            "Expected 'Pre-flight failure' text in combined_summary.html"
+        )
+
+    def test_preflight_failure_report_exists(self, results: E2EResults) -> None:
+        """Pre-flight failure detail report exists under pyats_results/."""
+        failure_report = (
+            results.output_dir / PYATS_RESULTS_DIRNAME / PRE_FLIGHT_FAILURE_FILENAME
+        )
+        assert failure_report.exists(), (
+            f"Expected pre-flight failure report at "
+            f"{PYATS_RESULTS_DIRNAME}/{PRE_FLIGHT_FAILURE_FILENAME}"
         )
 
 

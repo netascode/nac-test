@@ -59,7 +59,10 @@ ROBOT_TIMESTAMP_FORMAT_NO_MS: str = "%Y%m%d %H:%M:%S"
 # Exit codes
 # Note: EXIT_SUCCESS (0) is intentionally not defined here - zero is a universal
 # POSIX convention that never changes, so a named constant adds no clarity.
-EXIT_INVALID_ARGS: int = 2  # Invalid nac-test arguments
+EXIT_PREFLIGHT_FAILURE: int = 1  # Pre-flight failure (auth, unreachable, detection)
+EXIT_INVALID_ARGS: int = (
+    2  # Invalid nac-test arguments (aligns with POSIX/Typer convention)
+)
 EXIT_FAILURE_CAP: int = 250  # Maximum failure count reported (1-250)
 EXIT_DATA_ERROR: int = 252  # Invalid Robot Framework arguments OR no tests found (matches Robot Framework naming)
 EXIT_INTERRUPTED: int = 253  # Execution was interrupted (Ctrl+C, etc.)
@@ -75,10 +78,13 @@ ROBOT_RESULTS_DIRNAME: str = "robot_results"
 HTML_REPORTS_DIRNAME: str = "html_reports"
 SUMMARY_REPORT_FILENAME: str = "summary_report.html"
 COMBINED_SUMMARY_FILENAME: str = "combined_summary.html"
+PRE_FLIGHT_FAILURE_FILENAME: str = "pre_flight_failure.html"
 OUTPUT_XML: str = "output.xml"
 LOG_HTML: str = "log.html"
 REPORT_HTML: str = "report.html"
 XUNIT_XML: str = "xunit.xml"
+ORDERING_FILENAME: str = "ordering.txt"
+SUMMARY_SEPARATOR_WIDTH: int = 70
 
 # HTTP status code range boundaries
 HTTP_STATUS_SUCCESS_MIN: int = 200

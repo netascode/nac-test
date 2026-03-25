@@ -16,23 +16,30 @@ from nac_test.cli.ui import (
 from nac_test.cli.validators import AuthOutcome, preflight_auth_check
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
-    EXIT_ERROR,
     HTML_REPORTS_DIRNAME,
+    LOG_HTML,
+    OUTPUT_XML,
     PYATS_RESULTS_DIRNAME,
     PYATS_SUPPORTED,
+    REPORT_HTML,
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    SUMMARY_SEPARATOR_WIDTH,
+    XUNIT_XML,
 )
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
 from nac_test.core.types import (
     CombinedResults,
     ControllerTypeKey,
     PreFlightFailure,
+    PreFlightFailureType,
     TestResults,
+    ValidatedRobotArgs,
 )
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
+from nac_test.utils.cleanup import cleanup_stale_test_artifacts
 from nac_test.utils.controller import detect_controller_type, get_env_var_prefix
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
@@ -53,6 +60,7 @@ class CombinedOrchestrator:
         ├── combined_summary.html     # Unified dashboard (all frameworks)
         ├── xunit.xml                 # Merged xunit from Robot + PyATS (for CI/CD)
         ├── robot_results/            # Robot Framework artifacts
+        │   ├── <rendered templates>
         │   ├── output.xml, log.html, report.html, xunit.xml
         │   └── summary_report.html
         ├── output.xml, log.html...   # Symlinks to robot_results/ (backward compat)
@@ -80,7 +88,7 @@ class CombinedOrchestrator:
         dev_pyats_only: bool = False,
         dev_robot_only: bool = False,
         processes: int | None = None,
-        extra_args: list[str] | None = None,
+        extra_args: ValidatedRobotArgs | None = None,
         verbose: bool = False,
     ):
         """Initialize the combined orchestrator.
@@ -119,7 +127,7 @@ class CombinedOrchestrator:
         self.render_only = render_only
         self.dry_run = dry_run
         self.processes = processes
-        self.extra_args = extra_args or []
+        self.extra_args = extra_args
 
         # PyATS-specific parameters
         self.max_parallel_devices = max_parallel_devices
@@ -187,60 +195,17 @@ class CombinedOrchestrator:
         combined_results = CombinedResults()
         mode_suffix = " (dry-run)" if self.dry_run else ""
 
+        # Clean up stale JSONL temp directories from prior runs
+        cleanup_stale_test_artifacts(self.output_dir)
+
         # Pre-flight: detect controller and validate credentials for PyATS path only.
         # Robot path stays generic — it may not need controller access at all.
         # Dry-run mode skips auth — it validates test structure, not execution.
+        preflight_failed = False
         if has_pyats and not self.render_only and not self.dry_run:
-            try:
-                self.controller_type = detect_controller_type()
-                logger.info(f"Controller type detected: {self.controller_type}")
-            except ValueError as e:
-                typer.secho(
-                    f"\n❌ Controller detection failed:\n{e}",
-                    fg=typer.colors.RED,
-                    err=True,
-                )
-                raise typer.Exit(EXIT_ERROR) from None
+            preflight_failed = self._run_pre_flight_checks(combined_results)
 
-            auth_result = preflight_auth_check(self.controller_type)
-            if not auth_result.success:
-                typer.echo("")
-                if auth_result.reason == AuthOutcome.UNREACHABLE:
-                    display_unreachable_banner(
-                        controller_type=auth_result.controller_type,
-                        controller_url=auth_result.controller_url,
-                        detail=auth_result.detail,
-                    )
-                else:
-                    env_var_prefix = get_env_var_prefix(auth_result.controller_type)
-                    display_auth_failure_banner(
-                        controller_type=auth_result.controller_type,
-                        controller_url=auth_result.controller_url,
-                        detail=auth_result.detail,
-                        env_var_prefix=env_var_prefix,
-                    )
-                typer.echo("")
-
-                combined_results.pre_flight_failure = PreFlightFailure(
-                    failure_type=(
-                        "unreachable"
-                        if auth_result.reason == AuthOutcome.UNREACHABLE
-                        else "auth"
-                    ),
-                    controller_type=auth_result.controller_type,
-                    controller_url=auth_result.controller_url,
-                    detail=auth_result.detail,
-                    status_code=auth_result.status_code,
-                )
-
-                # Generate report and bail — no PyATS execution possible
-                generator = CombinedReportGenerator(self.output_dir)
-                report_path = generator.generate_combined_summary(combined_results)
-                if report_path is not None:
-                    typer.echo(f"Report: {report_path}")
-                return combined_results
-
-        if has_pyats and not self.render_only:
+        if has_pyats and not self.render_only and not preflight_failed:
             typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
             self._check_python_version()
 
@@ -308,15 +273,15 @@ class CombinedOrchestrator:
 
             merged_xunit = None
             try:
-                merged_xunit = merge_xunit_results(self.output_dir)
+                merged_xunit = merge_xunit_results(self.output_dir, combined_results)
             except Exception as e:
                 logger.warning(f"Failed to merge xunit files: {e}")
             if merged_xunit:
                 logger.info(f"Merged xunit.xml: {merged_xunit}")
-            else:
+            elif not combined_results.is_empty:
                 logger.warning("No xunit files found to merge")
 
-            self._print_execution_summary(combined_results)
+            self._print_execution_summary(combined_results, merged_xunit)
 
         return combined_results
 
@@ -366,25 +331,86 @@ class CombinedOrchestrator:
 
         return has_pyats, has_robot
 
-    def _print_execution_summary(self, results: CombinedResults) -> None:
+    def _run_pre_flight_checks(self, combined_results: CombinedResults) -> bool:
+        """Detect the controller type and validate credentials before PyATS runs.
+
+        Populates ``combined_results.pre_flight_failure`` on failure and emits a
+        user-facing banner.  Returns ``True`` when a failure was detected (caller
+        should skip PyATS execution), ``False`` when all checks passed.
+        """
+        try:
+            self.controller_type = detect_controller_type()
+            logger.info(f"Controller type detected: {self.controller_type}")
+        except ValueError as e:
+            typer.secho(
+                f"\n❌ Controller detection failed:\n{e}",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            combined_results.pre_flight_failure = PreFlightFailure(
+                failure_type=PreFlightFailureType.DETECTION,
+                controller_type=None,
+                controller_url=None,
+                detail=str(e),
+            )
+            return True
+
+        auth_result = preflight_auth_check(self.controller_type)
+        if not auth_result.success:
+            typer.echo("")
+            if auth_result.reason == AuthOutcome.UNREACHABLE:
+                display_unreachable_banner(
+                    controller_type=auth_result.controller_type,
+                    controller_url=auth_result.controller_url,
+                    detail=auth_result.detail,
+                )
+            else:
+                env_var_prefix = get_env_var_prefix(auth_result.controller_type)
+                display_auth_failure_banner(
+                    controller_type=auth_result.controller_type,
+                    controller_url=auth_result.controller_url,
+                    detail=auth_result.detail,
+                    env_var_prefix=env_var_prefix,
+                )
+            typer.echo("")
+
+            combined_results.pre_flight_failure = PreFlightFailure(
+                failure_type=(
+                    PreFlightFailureType.UNREACHABLE
+                    if auth_result.reason == AuthOutcome.UNREACHABLE
+                    else PreFlightFailureType.AUTH
+                ),
+                controller_type=auth_result.controller_type,
+                controller_url=auth_result.controller_url,
+                detail=auth_result.detail,
+                status_code=auth_result.status_code,
+            )
+            return True
+
+        return False
+
+    def _print_execution_summary(
+        self, results: CombinedResults, merged_xunit_path: Path | None = None
+    ) -> None:
         """Print execution summary with statistics."""
         # typer.echo("\n") prints two newlines for visual separation
         typer.echo("\n")
-        typer.echo("=" * 70)
+        typer.echo("=" * SUMMARY_SEPARATOR_WIDTH)
         typer.echo("Combined Test Execution Summary")
-        typer.echo("-" * 70)
-        typer.echo(terminal.format_test_summary(results))
-        typer.echo("-" * 70)
+        typer.echo("-" * SUMMARY_SEPARATOR_WIDTH)
+        if results.has_any_results:
+            typer.echo(terminal.format_test_summary(results))
+            typer.echo("-" * SUMMARY_SEPARATOR_WIDTH)
 
         # print absolute filenames in our summary to align with robot/rebot output
         combined_dashboard = self.output_dir / COMBINED_SUMMARY_FILENAME
         if combined_dashboard.exists():
             typer.echo(f"Dashboard:  {combined_dashboard.resolve()}")
-        if results.robot is not None:
+        if results.robot is not None and not results.robot.is_empty:
             robot_log = self.output_dir / ROBOT_RESULTS_DIRNAME / "log.html"
             if robot_log.exists():
                 typer.echo(f"Robot:      {robot_log.resolve()}")
-        if results.api is not None:
+        if results.api is not None and not results.api.is_empty:
             api_summary = (
                 self.output_dir
                 / PYATS_RESULTS_DIRNAME
@@ -394,7 +420,7 @@ class CombinedOrchestrator:
             )
             if api_summary.exists():
                 typer.echo(f"PyATS API:  {api_summary.resolve()}")
-        if results.d2d is not None:
+        if results.d2d is not None and not results.d2d.is_empty:
             d2d_summary = (
                 self.output_dir
                 / PYATS_RESULTS_DIRNAME
@@ -404,9 +430,57 @@ class CombinedOrchestrator:
             )
             if d2d_summary.exists():
                 typer.echo(f"PyATS D2D:  {d2d_summary.resolve()}")
-        xunit_path = self.output_dir / "xunit.xml"
-        if xunit_path.exists():
-            typer.echo(f"xUnit:      {xunit_path.resolve()}")
+        if merged_xunit_path is not None:
+            typer.echo(f"xUnit:      {merged_xunit_path.resolve()}")
 
-        typer.echo("=" * 70)
+        typer.echo("=" * SUMMARY_SEPARATOR_WIDTH)
+
+        stale_files = self._detect_stale_artifacts(results, merged_xunit_path)
+        if stale_files:
+            self._warn_stale_artifacts(stale_files)
+
         typer.echo()
+
+    def _detect_stale_artifacts(
+        self, results: CombinedResults, merged_xunit_path: Path | None
+    ) -> list[str]:
+        """Return filenames of stale artifacts left over from a prior run.
+
+        Checks root-level Robot Framework artifacts (log.html, output.xml,
+        report.html) and the merged xunit.xml. PyATS artifacts under
+        pyats_results/ are intentionally excluded because
+        multi_archive_generator.py unconditionally recreates that directory
+        each run.
+        """
+        stale_files = []
+        stale_artifacts = [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]
+        for artifact in stale_artifacts:
+            artifact_path = self.output_dir / artifact
+            if not artifact_path.exists():
+                continue
+
+            # XUNIT_XML at root is written exclusively by merge_xunit_results.
+            # If merged_xunit_path is None (merge skipped or failed), any existing
+            # root xunit.xml is a stale artifact from a prior run.
+            if artifact == XUNIT_XML and merged_xunit_path is not None:
+                continue
+            if artifact in (LOG_HTML, OUTPUT_XML, REPORT_HTML):
+                if results.robot is not None and not results.robot.is_empty:
+                    continue
+
+            stale_files.append(artifact)
+        return stale_files
+
+    def _warn_stale_artifacts(self, stale_files: list[str]) -> None:
+        """Print a YELLOW warning listing stale artifacts from a prior run."""
+        typer.secho(
+            "\n\n⚠️  Note: Stale artifacts from a previous run detected, delete the\n"
+            f"   output directory {self.output_dir} to clear them.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        typer.secho(
+            f"    Files: {', '.join(stale_files)}",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )

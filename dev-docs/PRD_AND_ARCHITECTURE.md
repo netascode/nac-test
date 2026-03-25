@@ -807,6 +807,7 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
   - Created automatically via `output.mkdir(parents=True, exist_ok=True)`
   - Contains merged data model (SOT for both frameworks)
   - Subdirectories created by orchestrators: `pyats_results/`, `robot_results/`, `html_report_data_temp/`
+  - Rendered Robot templates and Robot execution artifacts are stored under `robot_results/`
 - **Example**:
   ```bash
   nac-test -d config/ -t templates/ -o output/run-2025-01-15/
@@ -923,7 +924,7 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 - **Purpose**: Render Robot templates without executing tests (template debugging mode)
 - **Behavior**:
   - Data model merging: RUNS
-  - Robot template rendering: RUNS (templates written to output dir)
+  - Robot template rendering: RUNS (templates written to the `robot_results/` subdirectory)
   - Test execution: SKIPPED (neither PyATS nor Robot execution)
   - Use case: Verify template rendering logic without expensive test execution
 - **Example**:
@@ -3623,7 +3624,10 @@ nac_test/
 {output_dir}/
 ├── combined_summary.html                  # Root-level combined dashboard ✨
 ├── xunit.xml                              # Merged xUnit XML (Robot + PyATS) ✨
+├── merged_data_model_test_variables.yaml  # Merged data model (debugging)
 ├── robot_results/                         # Robot Framework results
+│   ├── <rendered templates>               # Rendered .robot files (from -t)
+│   ├── ordering.txt                       # Pabot test-level ordering (if applicable)
 │   ├── output.xml                        # Robot results XML
 │   ├── log.html                          # Robot log
 │   ├── report.html                       # Robot report
@@ -3903,7 +3907,7 @@ print(f"Exit Code: {results.exit_code}")
 
 #### Backward Compatibility
 
-Robot results are output to `robot_results/` subdirectory, with links at root for backward compatibility:
+Robot results are output to `robot_results/` subdirectory, with links at root for backward compatibility. Rendered Robot templates also live inside `robot_results/`, and top-level Robot suite names now start with `Robot Results` instead of the output directory name:
 
 - `output.xml` → `robot_results/output.xml`
 - `log.html` → `robot_results/log.html`
@@ -3973,9 +3977,12 @@ Called by `CombinedOrchestrator` after test execution completes:
 
 ```python
 from nac_test.utils.xunit_merger import merge_xunit_results
+from nac_test.core.types import CombinedResults
 
 # After PyATS and Robot execution
-merge_xunit_results(output_dir)  # Creates {output_dir}/xunit.xml
+combined_results = CombinedResults(robot=robot_results, api=api_results, d2d=d2d_results)
+merged_xunit_path = merge_xunit_results(output_dir, combined_results)
+# Returns Path to {output_dir}/xunit.xml if files were merged, None otherwise
 ```
 
 ---
@@ -4038,6 +4045,17 @@ class PabotRunner:
 ```bash
 pabot --processes {n} --outputdir {dir} {robot_files}
 ```
+
+**Extra Arguments Validation:**
+
+Additional Robot Framework arguments passed via the `--` separator are validated before execution:
+
+1. **Controlled Options Check**: Options controlled by nac-test (e.g., `--include`, `--exclude`, `--outputdir`, `--output`, `--log`, `--report`, `--xunit`, `--dryrun`) are rejected with guidance to use nac-test equivalents
+2. **Pabot Options Check**: Pabot-specific options (e.g., `--testlevelsplit`, `--pabotlib`) are rejected
+3. **Datasource Check**: Test file paths in extra arguments are rejected
+4. **Robot Validation**: Invalid Robot Framework options raise `DataError`
+
+The `CONTROLLED_ROBOT_OPTIONS` dict maps long options to their short forms and nac-test equivalents for user-friendly error messages.
 
 ---
 

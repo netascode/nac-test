@@ -19,6 +19,7 @@ from nac_test.core.constants import (
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
+    SUMMARY_SEPARATOR_WIDTH,
 )
 from nac_test.core.types import PyATSResults, TestResults
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
@@ -45,7 +46,6 @@ from nac_test.pyats_core.reporting.utils.archive_inspector import ArchiveInspect
 from nac_test.utils.cleanup import (
     cleanup_old_test_outputs,
     cleanup_pyats_runtime,
-    cleanup_stale_test_artifacts,
 )
 from nac_test.utils.controller import detect_controller_type
 from nac_test.utils.environment import EnvironmentValidator
@@ -557,9 +557,9 @@ class PyATSOrchestrator:
             api_tests: List of discovered API test files
             d2d_tests: List of discovered D2D test files
         """
-        print("\n" + "=" * 70)
+        print("\n" + "=" * SUMMARY_SEPARATOR_WIDTH)
         print("🔍 DRY-RUN MODE: Showing tests that would be executed")
-        print("=" * 70)
+        print("=" * SUMMARY_SEPARATOR_WIDTH)
 
         if api_tests:
             print(f"\n📋 API Tests ({len(api_tests)}):")
@@ -573,9 +573,9 @@ class PyATSOrchestrator:
                 rel_path = test_file.relative_to(self.test_dir)
                 print(f"   • {rel_path}")
 
-        print("\n" + "=" * 70)
+        print("\n" + "=" * SUMMARY_SEPARATOR_WIDTH)
         print("✅ PyATS dry-run complete (no tests executed)")
-        print("=" * 70 + "\n")
+        print("=" * SUMMARY_SEPARATOR_WIDTH + "\n")
 
     def run_tests(self) -> PyATSResults:
         """Main entry point - triggers the async execution flow.
@@ -605,10 +605,6 @@ class PyATSOrchestrator:
 
         # Clean up before test execution
         cleanup_pyats_runtime()
-
-        # Clean up stale test artifacts (api/, d2d/ directories under output root)
-        # to prevent JSONL files from interrupted runs being picked up (fixes issue #526)
-        cleanup_stale_test_artifacts(self.base_output_dir)
 
         # Clean up old test outputs (CI/CD only)
         if os.environ.get("CI"):

@@ -15,33 +15,59 @@ from nac_test.core.constants import (
     EXIT_ERROR,
     EXIT_FAILURE_CAP,
     EXIT_INTERRUPTED,
+    EXIT_PREFLIGHT_FAILURE,
 )
 from nac_test.core.types import (
     CombinedResults,
     ErrorType,
     ExecutionState,
+    PreFlightFailure,
+    PreFlightFailureType,
     PyATSResults,
     TestResults,
+    ValidatedRobotArgs,
 )
+
+
+class TestValidatedRobotArgs:
+    """Tests for ValidatedRobotArgs __len__ and derived __bool__."""
+
+    def test_len_reflects_number_of_args(self) -> None:
+        """len() counts args strings, not robot_opts entries."""
+        v = ValidatedRobotArgs(
+            args=["--loglevel", "DEBUG"], robot_opts={"loglevel": "DEBUG"}
+        )
+        assert len(v) == 2
+
+    def test_len_ignores_robot_opts(self) -> None:
+        """robot_opts does not contribute to len(): only args is counted."""
+        v = ValidatedRobotArgs(
+            args=[], robot_opts={"loglevel": "DEBUG", "variable": ["X:1"]}
+        )
+        assert len(v) == 0
 
 
 class TestTestResultsFactoryMethods:
     """Tests for TestResults factory methods."""
 
-    def test_empty_creates_empty_state(self) -> None:
-        """empty() creates results with EMPTY state and zero counts."""
-        result = TestResults.empty()
-
-        assert result.state == ExecutionState.EMPTY
-        assert result.total == 0
-        assert result.reason is None
-
-    def test_not_run_creates_skipped_state(self) -> None:
-        """not_run() creates results with SKIPPED state."""
-        result = TestResults.not_run()
-
-        assert result.state == ExecutionState.SKIPPED
-        assert result.total == 0
+    @pytest.mark.parametrize(
+        ("result", "expected_state", "expected_total"),
+        [
+            (TestResults.empty(), ExecutionState.EMPTY, 0),
+            (TestResults.not_run(), ExecutionState.SKIPPED, 0),
+            (TestResults(), ExecutionState.SUCCESS, 0),
+        ],
+        ids=["empty", "not_run", "default_constructor"],
+    )
+    def test_factory_creates_correct_state_and_total(
+        self,
+        result: TestResults,
+        expected_state: ExecutionState,
+        expected_total: int,
+    ) -> None:
+        """Factory methods create the correct state and zero total."""
+        assert result.state == expected_state
+        assert result.total == expected_total
 
     def test_not_run_with_reason(self) -> None:
         """not_run() stores reason."""
@@ -64,16 +90,6 @@ class TestTestResultsFactoryMethods:
 
         assert result.error_type == ErrorType.GENERIC
 
-    def test_from_error_with_invalid_robot_args_error_type(self) -> None:
-        """from_error() stores INVALID_ROBOT_ARGS error type."""
-        result = TestResults.from_error(
-            "Invalid Robot arguments", ErrorType.INVALID_ROBOT_ARGS
-        )
-
-        assert result.state == ExecutionState.ERROR
-        assert result.reason == "Invalid Robot arguments"
-        assert result.error_type == ErrorType.INVALID_ROBOT_ARGS
-
     def test_from_error_with_interrupted_error_type(self) -> None:
         """from_error() stores INTERRUPTED error type."""
         result = TestResults.from_error(
@@ -83,13 +99,6 @@ class TestTestResultsFactoryMethods:
         assert result.state == ExecutionState.ERROR
         assert result.reason == "Execution was interrupted"
         assert result.error_type == ErrorType.INTERRUPTED
-
-    def test_default_constructor_creates_success_state(self) -> None:
-        """Default constructor creates SUCCESS state."""
-        result = TestResults()
-
-        assert result.state == ExecutionState.SUCCESS
-        assert result.total == 0
 
 
 class TestTestResultsTotal:
@@ -366,6 +375,18 @@ class TestCombinedResultsExitCode:
         result = CombinedResults()
         assert result.exit_code == EXIT_DATA_ERROR
 
+    def test_exit_code_preflight_failure(self) -> None:
+        """Exit code 1 when pre-flight failure occurred."""
+        result = CombinedResults(
+            pre_flight_failure=PreFlightFailure(
+                failure_type=PreFlightFailureType.AUTH,
+                controller_type="ACI",
+                controller_url="https://apic.test.local",
+                detail="HTTP 401: Unauthorized",
+            )
+        )
+        assert result.exit_code == EXIT_PREFLIGHT_FAILURE
+
     def test_was_not_run_true_when_all_skipped(self) -> None:
         """was_not_run is True when all frameworks were intentionally skipped."""
         result = CombinedResults(
@@ -418,36 +439,13 @@ class TestCombinedResultsExitCode:
         )
         assert result.exit_code == EXIT_INTERRUPTED
 
-    def test_exit_code_252_for_invalid_robot_args_error_type(self) -> None:
-        """Exit code 252 for INVALID_ROBOT_ARGS error type."""
+    def test_exit_code_error_prioritized_over_empty(self) -> None:
+        """Exit code 255 (error) takes priority over 252 (empty)."""
         result = CombinedResults(
-            robot=TestResults.from_error(
-                "Invalid arguments", ErrorType.INVALID_ROBOT_ARGS
-            )
-        )
-        assert result.exit_code == EXIT_DATA_ERROR
-
-    def test_exit_code_priority_invalid_robot_args_over_generic_errors(self) -> None:
-        """Exit code 252 (invalid args) is prioritized over generic errors (255)."""
-        result = CombinedResults(
-            robot=TestResults.from_error(
-                "Invalid arguments", ErrorType.INVALID_ROBOT_ARGS
-            ),
+            robot=TestResults.empty(),
             api=TestResults.from_error("API execution failed"),
         )
-        assert result.exit_code == EXIT_DATA_ERROR
-
-    def test_exit_code_priority_interrupted_over_invalid_robot_args(self) -> None:
-        """Exit code 253 (interrupted) is prioritized over 252 (invalid args)."""
-        result = CombinedResults(
-            robot=TestResults.from_error(
-                "Execution was interrupted", ErrorType.INTERRUPTED
-            ),
-            api=TestResults.from_error(
-                "Invalid arguments", ErrorType.INVALID_ROBOT_ARGS
-            ),
-        )
-        assert result.exit_code == EXIT_INTERRUPTED
+        assert result.exit_code == EXIT_ERROR
 
 
 class TestCombinedResultsStateChecks:
@@ -519,3 +517,70 @@ class TestCombinedResultsStringRepresentation:
         )
         expected = "CombinedResults(API: 5/5/0/0, D2D: 3/2/1/0, Robot: 10/8/1/1)"
         assert str(result) == expected
+
+
+class TestCombinedResultsHasAnyResults:
+    """Tests for CombinedResults.has_any_results property."""
+
+    def test_empty_results_has_no_results(self) -> None:
+        """has_any_results is False when no framework results are set."""
+        results = CombinedResults()
+        assert results.has_any_results is False
+
+    def test_with_api_results_has_results(self) -> None:
+        """has_any_results is True when API results are present."""
+        results = CombinedResults(api=TestResults(passed=1))
+        assert results.has_any_results is True
+
+    def test_with_d2d_results_has_results(self) -> None:
+        """has_any_results is True when D2D results are present."""
+        results = CombinedResults(d2d=TestResults(passed=1))
+        assert results.has_any_results is True
+
+    def test_with_robot_results_has_results(self) -> None:
+        """has_any_results is True when Robot results are present."""
+        results = CombinedResults(robot=TestResults(passed=1))
+        assert results.has_any_results is True
+
+    def test_with_all_results_has_results(self) -> None:
+        """has_any_results is True when all framework results are present."""
+        results = CombinedResults(
+            api=TestResults(passed=1),
+            d2d=TestResults(passed=2),
+            robot=TestResults(passed=3),
+        )
+        assert results.has_any_results is True
+
+    def test_with_empty_test_results_has_results(self) -> None:
+        """has_any_results is True even when TestResults are empty (0 tests).
+
+        The property checks if frameworks *ran*, not if they produced tests.
+        An empty TestResults object still indicates execution occurred.
+        """
+        results = CombinedResults(api=TestResults.empty())
+        assert results.has_any_results is True
+
+    def test_with_preflight_failure_only_has_no_results(self) -> None:
+        """has_any_results is False when only pre_flight_failure is set."""
+        results = CombinedResults(
+            pre_flight_failure=PreFlightFailure(
+                failure_type=PreFlightFailureType.AUTH,
+                detail="Auth failed",
+                controller_type="ACI",
+                controller_url="https://example.com",
+            )
+        )
+        assert results.has_any_results is False
+
+    def test_with_preflight_failure_and_robot_has_results(self) -> None:
+        """has_any_results is True when pre_flight_failure + Robot results exist."""
+        results = CombinedResults(
+            pre_flight_failure=PreFlightFailure(
+                failure_type=PreFlightFailureType.AUTH,
+                detail="Auth failed",
+                controller_type="ACI",
+                controller_url="https://example.com",
+            ),
+            robot=TestResults(passed=5, failed=1),
+        )
+        assert results.has_any_results is True
