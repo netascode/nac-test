@@ -152,7 +152,6 @@ class TestDiscovery:
         """
         api_tests: list[TestFileMetadata] = []
         d2d_tests: list[TestFileMetadata] = []
-        skipped_files: list[tuple[Path, str]] = []
 
         tag_matcher = TagMatcher(include=include_tags, exclude=exclude_tags)
         filtered_count = 0
@@ -168,7 +167,6 @@ class TestDiscovery:
                 if not is_valid:
                     assert skip_reason is not None
                     logger.debug(f"Skipping {test_path}: {skip_reason}")
-                    skipped_files.append((test_path, skip_reason))
                     continue
 
                 metadata = TestMetadataResolver.resolve(test_path.absolute())
@@ -189,15 +187,7 @@ class TestDiscovery:
                 rel_path = test_path.relative_to(self.test_dir)
                 reason = f"{type(e).__name__}: {str(e)}"
                 logger.warning(f"Skipping {rel_path}: {reason}")
-                skipped_files.append((test_path, reason))
                 continue
-
-        if skipped_files:
-            logger.info(f"Skipped {len(skipped_files)} file(s) during discovery:")
-            for path, reason in skipped_files[:5]:
-                logger.debug(f"  - {path.name}: {reason}")
-            if len(skipped_files) > 5:
-                logger.debug(f"  ... and {len(skipped_files) - 5} more")
 
         if filtered_count:
             logger.info(f"Filtered out {filtered_count} test(s) by tag patterns")
@@ -212,6 +202,5 @@ class TestDiscovery:
         return PyatsDiscoveryResult(
             api_tests=api_tests,
             d2d_tests=d2d_tests,
-            skipped_files=skipped_files,
             filtered_by_tags=filtered_count,
         )

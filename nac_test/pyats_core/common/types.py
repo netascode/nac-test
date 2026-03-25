@@ -57,17 +57,12 @@ class PyatsDiscoveryResult:
     Attributes:
         api_tests: List of API test metadata (controller/REST tests)
         d2d_tests: List of D2D test metadata (Direct-to-Device/SSH tests)
-        skipped_files: List of (path, reason) tuples for files that failed validation
-                       (e.g., not a valid PyATS test, read errors). Does NOT include
-                       files excluded by tag filtering.
         filtered_by_tags: Count of valid tests excluded by --include/--exclude tag
-                          patterns. These are intentional user exclusions, separate
-                          from skipped_files which represent processing failures.
+                          patterns. These are intentional user exclusions.
     """
 
     api_tests: list[TestFileMetadata]
     d2d_tests: list[TestFileMetadata]
-    skipped_files: list[tuple[Path, str]]
     filtered_by_tags: int
 
     def __post_init__(self) -> None:

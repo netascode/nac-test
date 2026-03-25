@@ -27,7 +27,6 @@ def _make_execution_plan(
     return PyatsDiscoveryResult(
         api_tests=api_tests,
         d2d_tests=d2d_tests,
-        skipped_files=[],
         filtered_by_tags=0,
     )
 

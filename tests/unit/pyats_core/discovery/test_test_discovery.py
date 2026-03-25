@@ -123,12 +123,12 @@ class TestDiscoveryFiltering:
         assert not any(skip_marker in str(t.path) for t in plan.all_tests)
 
     @pytest.mark.parametrize(
-        ("extra_file_path", "extra_file_content", "expected_skip_reason"),
+        ("extra_file_path", "extra_file_content"),
         [
-            # Files without @aetest decorators → skipped with reason
-            ("test/helper_module.py", NO_AETEST_DECORATOR, "helper_module.py"),
-            # Files without nac_test imports → skipped with reason
-            ("test/third_party_test.py", NO_NAC_TEST_IMPORT, "third_party_test.py"),
+            # Files without @aetest decorators → skipped
+            ("test/helper_module.py", NO_AETEST_DECORATOR),
+            # Files without nac_test imports → skipped
+            ("test/third_party_test.py", NO_NAC_TEST_IMPORT),
         ],
         ids=["no-decorator", "no-nac-test-import"],
     )
@@ -137,9 +137,8 @@ class TestDiscoveryFiltering:
         tmp_path: Path,
         extra_file_path: str,
         extra_file_content: str,
-        expected_skip_reason: str,
     ) -> None:
-        """Test that invalid PyATS files are skipped and recorded."""
+        """Test that invalid PyATS files are skipped and not included in results."""
         # Create a valid test file
         test_dir = tmp_path / "test"
         test_dir.mkdir(parents=True)
@@ -155,27 +154,9 @@ class TestDiscoveryFiltering:
 
         assert plan.total_count == 1
         assert "verify_test.py" in str(plan.all_tests[0])
-        # The invalid file should be in skipped list
-        skipped_names = [str(p) for p, _ in plan.skipped_files]
-        assert any(expected_skip_reason in name for name in skipped_names)
-
-    def test_skipped_files_recorded_with_many_files(self, tmp_path: Path) -> None:
-        """Test that all skipped files are recorded in the result."""
-        test_dir = tmp_path / "test"
-        test_dir.mkdir(parents=True)
-
-        # Create one valid test file
-        (test_dir / "verify_test.py").write_text(VALID_PYATS_TEST)
-
-        # Create 7 files without proper imports (will be skipped)
-        for i in range(7):
-            (test_dir / f"invalid_test_{i}.py").write_text(NO_NAC_TEST_IMPORT)
-
-        discovery = TestDiscovery(tmp_path)
-        plan = discovery.discover_pyats_tests()
-
-        assert plan.total_count == 1
-        assert len(plan.skipped_files) == 7
+        assert not any(
+            extra_file_path.split("/")[-1] in str(t.path) for t in plan.all_tests
+        )
 
     @pytest.mark.parametrize(
         ("files", "expected_has_tests"),
@@ -406,7 +387,5 @@ class TestErrorHandling:
         discovery = TestDiscovery(tmp_path)
         plan = discovery.discover_pyats_tests()
 
-        # Good file should be discovered, bad file should be in skipped
+        # Good file should be discovered, bad file silently skipped
         assert plan.total_count == 1
-        assert len(plan.skipped_files) == 1
-        assert "Permission denied" in plan.skipped_files[0][1]
