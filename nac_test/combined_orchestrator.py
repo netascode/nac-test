@@ -6,6 +6,7 @@
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -89,6 +90,7 @@ class CombinedOrchestrator:
         processes: int | None = None,
         extra_args: ValidatedRobotArgs | None = None,
         verbose: bool = False,
+        merged_data: dict[str, Any] | None = None,
     ):
         """Initialize the combined orchestrator.
 
@@ -111,6 +113,7 @@ class CombinedOrchestrator:
             dev_pyats_only: Development mode - run only PyATS tests (skip Robot)
             dev_robot_only: Development mode - run only Robot Framework tests (skip PyATS)
             verbose: Enable verbose mode - keeps archive files, enables verbose output
+            merged_data: Already-loaded merged data model dict (avoids re-reading from disk)
         """
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
@@ -136,6 +139,9 @@ class CombinedOrchestrator:
         self.dev_pyats_only = dev_pyats_only
         self.dev_robot_only = dev_robot_only
         self.verbose = verbose
+        self.merged_data: dict[str, Any] = (
+            merged_data if merged_data is not None else {}
+        )
 
         # Controller type — detected lazily in run_tests() when PyATS tests are present
         self.controller_type: ControllerTypeKey | None = None
@@ -241,6 +247,7 @@ class CombinedOrchestrator:
                 extra_args=self.extra_args,
                 loglevel=self.loglevel,
                 verbose=self.verbose,
+                merged_data=self.merged_data,
             )
             try:
                 robot_results = robot_orchestrator.run_tests()

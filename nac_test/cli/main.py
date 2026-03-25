@@ -387,9 +387,7 @@ def main(
     typer.echo("\n\n📄 Merging data model files...")
 
     merged_data = DataMerger.merge_data_files(data)
-    DataMerger.write_merged_data_model(
-        merged_data, output, DEFAULT_MERGED_DATA_FILENAME
-    )
+    DataMerger.write_merged_data_model(merged_data, output)
 
     merged_data_path = output / DEFAULT_MERGED_DATA_FILENAME
     if os.name != "nt":
@@ -426,6 +424,7 @@ def main(
         dev_pyats_only=pyats,
         dev_robot_only=robot,
         verbose=verbose,
+        merged_data=merged_data,
     )
 
     # Track total runtime for benchmarking

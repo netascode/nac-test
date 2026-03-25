@@ -10,11 +10,11 @@ pattern as PyATSOrchestrator.
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import typer
 
 from nac_test.core.constants import (
-    DEFAULT_MERGED_DATA_FILENAME,
     DISABLE_TESTLEVELSPLIT,
     EXIT_DATA_ERROR,
     EXIT_ERROR,
@@ -59,6 +59,7 @@ class RobotOrchestrator:
         extra_args: ValidatedRobotArgs | None = None,
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
         verbose: bool = False,
+        merged_data: dict[str, Any] | None = None,
     ):
         """Initialize the Robot Framework orchestrator.
 
@@ -75,11 +76,11 @@ class RobotOrchestrator:
             extra_args: Additional Robot Framework arguments to pass to pabot
             loglevel: Log level
             verbose: Enable verbose mode - enables verbose output for pabot
+            merged_data: Already-loaded merged data model dict (avoids re-reading from disk)
         """
         self.templates_dir = Path(templates_dir)
         self.base_output_dir = Path(output_dir)
         self.output_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
-        self.merged_data_path = self.base_output_dir / DEFAULT_MERGED_DATA_FILENAME
 
         # Robot-specific parameters
         self.filters_path = filters_path
@@ -92,6 +93,9 @@ class RobotOrchestrator:
         self.extra_args = extra_args
         self.loglevel = loglevel
         self.verbose = verbose
+        self.merged_data: dict[str, Any] = (
+            merged_data if merged_data is not None else {}
+        )
 
         # Determine if ordering file should be used for test-level parallelization
         if not DISABLE_TESTLEVELSPLIT:
@@ -101,7 +105,7 @@ class RobotOrchestrator:
 
         # Initialize Robot Framework components (reuse existing implementations)
         self.robot_writer = RobotWriter(
-            merged_data_path=self.merged_data_path,
+            merged_data=self.merged_data,
             filters_path=self.filters_path,
             tests_path=self.tests_path,
             include_tags=self.include_tags,

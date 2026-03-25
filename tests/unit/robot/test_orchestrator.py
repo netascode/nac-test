@@ -6,12 +6,12 @@
 """Unit tests for Robot Framework orchestrator."""
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from nac_test.core.constants import (
-    DEFAULT_MERGED_DATA_FILENAME,
     EXIT_DATA_ERROR,
     LOG_HTML,
     ORDERING_FILENAME,
@@ -29,13 +29,16 @@ from tests.conftest import assert_is_link_to
 
 @pytest.fixture
 def temp_output_dir(tmp_path: Path) -> Path:
-    """Create a temporary output directory with merged data file for tests."""
+    """Create a temporary output directory for tests."""
     output_dir = tmp_path / "output"
     output_dir.mkdir()
-    # Create merged data file that RobotWriter expects to read
-    merged_data_file = output_dir / DEFAULT_MERGED_DATA_FILENAME
-    merged_data_file.write_text("test: data")
     return output_dir
+
+
+@pytest.fixture
+def merged_data() -> dict[str, Any]:
+    """Minimal merged data dict passed to RobotOrchestrator/RobotWriter."""
+    return {"test": "data"}
 
 
 @pytest.fixture
@@ -47,12 +50,13 @@ def mock_templates_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def orchestrator(mock_templates_dir, temp_output_dir) -> RobotOrchestrator:
+def orchestrator(mock_templates_dir, temp_output_dir, merged_data) -> RobotOrchestrator:
     """Create a RobotOrchestrator instance for testing."""
     return RobotOrchestrator(
         templates_dir=mock_templates_dir,
         output_dir=temp_output_dir,
         loglevel=DEFAULT_LOGLEVEL,
+        merged_data=merged_data,
     )
 
 
@@ -67,10 +71,7 @@ class TestRobotOrchestrator:
         assert orchestrator.output_dir == temp_output_dir / ROBOT_RESULTS_DIRNAME
         assert orchestrator.ordering_file == orchestrator.output_dir / ORDERING_FILENAME
         assert orchestrator.templates_dir == mock_templates_dir
-        assert (
-            orchestrator.merged_data_path
-            == temp_output_dir / DEFAULT_MERGED_DATA_FILENAME
-        )
+        assert orchestrator.merged_data == {"test": "data"}
         assert orchestrator.render_only is False
         assert orchestrator.dry_run is False
         assert orchestrator.loglevel == DEFAULT_LOGLEVEL
@@ -91,6 +92,7 @@ class TestRobotOrchestrator:
             processes=4,
             extra_args=ValidatedRobotArgs(args=["--exitonfailure"], robot_opts={}),
             loglevel=LogLevel.DEBUG,
+            merged_data={"test": "data"},
         )
 
         assert orchestrator.include_tags == ["smoke", "regression"]
@@ -340,6 +342,7 @@ class TestRobotOrchestrator:
             output_dir=temp_output_dir,
             verbose=verbose,
             loglevel=loglevel,
+            merged_data={"test": "data"},
         )
         orchestrator.robot_writer.write = MagicMock()
         mock_pabot.return_value = 0
@@ -393,6 +396,7 @@ class TestRobotOrchestrator:
             output_dir=temp_output_dir,
             include_tags=include_tags,
             exclude_tags=exclude_tags,
+            merged_data={"test": "data"},
         )
         orchestrator.robot_writer.write = MagicMock()
         mock_pabot.return_value = 0
