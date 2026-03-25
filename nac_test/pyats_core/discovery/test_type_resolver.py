@@ -179,10 +179,10 @@ class TestTypeResolver:
         """Initialize the test type resolver.
 
         Args:
-            test_root: Root directory containing test files. Will be resolved
-                      to an absolute path for consistent cache keys.
+            test_root: Root directory containing test files. Will be made absolute
+                      for consistent cache keys, without following symlinks.
         """
-        self.test_root = test_root.resolve()
+        self.test_root = test_root.absolute()
         self._cache: dict[Path, str] = {}
         self.logger = logging.getLogger(__name__)
         self.logger.debug(f"Initialized TestTypeResolver with root: {self.test_root}")
@@ -325,7 +325,7 @@ class TestTypeResolver:
             test_type = resolver.resolve(Path("verify_bgp.py"))  # Takes <0.01ms
             ```
         """
-        test_file = test_file.resolve()
+        test_file = test_file.absolute()
 
         # Check cache first
         if test_file in self._cache:

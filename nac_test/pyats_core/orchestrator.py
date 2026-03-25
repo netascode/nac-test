@@ -25,6 +25,7 @@ from nac_test.core.types import PyATSResults, TestResults
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
     DEFAULT_CPU_MULTIPLIER,
+    ENV_TEST_DIR,
     MAX_WORKERS_HARD_LIMIT,
     MEMORY_PER_WORKER_GB,
 )
@@ -88,10 +89,11 @@ class PyATSOrchestrator:
             loglevel: Log level for PyATS output filtering
         """
         self.data_paths = data_paths
-        self.test_dir = Path(test_dir).resolve()
-        self.base_output_dir = Path(
-            output_dir
-        ).resolve()  # Store base directory for merged data file access (absolute)
+        # Use absolute() rather than resolve() to preserve symlinks — resolve() would
+        # follow symlinks in test_dir and break relative_to() comparisons in the plugin
+        # and archive_inspector when individual test files are symlinks into test_dir.
+        self.test_dir = Path(test_dir).absolute()
+        self.base_output_dir = Path(output_dir).absolute()
         self.output_dir = (
             self.base_output_dir / PYATS_RESULTS_DIRNAME
         )  # PyATS works in its own subdirectory
@@ -184,7 +186,9 @@ class PyATSOrchestrator:
 
         try:
             # Use ArchiveInspector to extract test results
-            archive_results = ArchiveInspector.extract_test_results(archive_path)
+            archive_results = ArchiveInspector.extract_test_results(
+                archive_path, self.test_dir
+            )
 
             # Merge results into test_status, only updating tests that are
             # missing completion status (e.g., still "EXECUTING")
@@ -260,11 +264,13 @@ class PyATSOrchestrator:
             # The merged data file is created by main.py at the base output level.
             # Pass absolute path so the child process (with cwd set) can locate it.
             env["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = str(
-                (self.base_output_dir / self.merged_data_filename).resolve()
+                (self.base_output_dir / self.merged_data_filename).absolute()
             )
             # Set NAC_TEST_TYPE to differentiate API vs D2D test types for separate temp directories
             # This prevents race conditions where both test types write JSONL files to the same location
             env["NAC_TEST_TYPE"] = "api"
+            # Pass test_dir so plugin can compute relative test names
+            env[ENV_TEST_DIR] = str(self.test_dir)
 
             # Execute and return the archive path
             assert self.subprocess_runner is not None  # Should be initialized by now
