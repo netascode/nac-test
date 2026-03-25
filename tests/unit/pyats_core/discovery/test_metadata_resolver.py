@@ -18,7 +18,6 @@ Groups extraction tests are in test_groups_extraction.py.
 """
 
 import logging
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -31,8 +30,6 @@ from nac_test.pyats_core.discovery.test_type_resolver import (
 )
 
 from .helpers import FIXTURES_DIR, create_mock_path
-
-_UNUSED_TEST_ROOT = Path("/unused")
 
 
 class TestStaticAnalysisDetection:
@@ -58,20 +55,18 @@ class TestStaticAnalysisDetection:
     )
     def test_base_class_detection(self, fixture_path: str, expected_type: str) -> None:
         """Test detection of test type from base class inheritance."""
-        resolver = TestMetadataResolver(FIXTURES_DIR)
         test_file = FIXTURES_DIR / fixture_path
 
-        result = resolver.resolve(test_file)
+        result = TestMetadataResolver.resolve(test_file)
 
         assert result.test_type == expected_type
 
     def test_import_alias_not_detected(self) -> None:
         """Test that import aliases fall back to default with warning."""
-        resolver = TestMetadataResolver(FIXTURES_DIR)
         test_file = FIXTURES_DIR / "edge_cases" / "test_import_alias.py"
 
         with patch("logging.Logger.warning") as mock_warning:
-            result = resolver.resolve(test_file)
+            result = TestMetadataResolver.resolve(test_file)
 
         assert result.test_type == "api"  # Default
         mock_warning.assert_called_once()
@@ -106,10 +101,9 @@ class TestDirectoryFallback:
         self, fixture_path: str, expected_type: str
     ) -> None:
         """Test fallback to directory-based detection using fixture files."""
-        resolver = TestMetadataResolver(FIXTURES_DIR)
         test_file = FIXTURES_DIR / fixture_path
 
-        result = resolver.resolve(test_file)
+        result = TestMetadataResolver.resolve(test_file)
 
         assert result.test_type == expected_type
 
@@ -125,10 +119,9 @@ class TestDirectoryFallback:
         self, mock_path_str: str, content: str, expected_type: str
     ) -> None:
         """Test directory detection behavior with mock paths."""
-        resolver = TestMetadataResolver(_UNUSED_TEST_ROOT)
         mock_path = create_mock_path(mock_path_str, content)
 
-        result = resolver.resolve(mock_path)
+        result = TestMetadataResolver.resolve(mock_path)
 
         assert result.test_type == expected_type
 
@@ -140,13 +133,12 @@ class TestDefaultBehavior:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test that unknown tests default to API with warning."""
-        resolver = TestMetadataResolver(_UNUSED_TEST_ROOT)
         mock_path = create_mock_path(
             "/tests/random/test_file.py", "class Test(UnknownBase): pass"
         )
 
         with caplog.at_level(logging.WARNING):
-            result = resolver.resolve(mock_path)
+            result = TestMetadataResolver.resolve(mock_path)
 
         assert result.test_type == "api"
         assert "Could not detect test type" in caplog.text
@@ -163,11 +155,10 @@ class TestDefaultBehavior:
         self, fixture_path: str, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test that fixture files without recognized bases default to API."""
-        resolver = TestMetadataResolver(FIXTURES_DIR)
         test_file = FIXTURES_DIR / fixture_path
 
         with caplog.at_level(logging.WARNING):
-            result = resolver.resolve(test_file)
+            result = TestMetadataResolver.resolve(test_file)
 
         assert result.test_type == "api"
         assert "Could not detect test type" in caplog.text
@@ -180,27 +171,24 @@ class TestErrorHandling:
     """Test error cases and exception handling."""
 
     def test_syntax_error_falls_back(self, caplog: pytest.LogCaptureFixture) -> None:
-        resolver = TestMetadataResolver(FIXTURES_DIR)
         test_file = FIXTURES_DIR / "edge_cases" / "test_syntax_error.py"
 
         with caplog.at_level(logging.WARNING):
-            result = resolver.resolve(test_file)
+            result = TestMetadataResolver.resolve(test_file)
 
         assert result.test_type == "api"
         assert "Failed to parse" in caplog.text
 
     def test_file_not_found_error(self) -> None:
-        resolver = TestMetadataResolver(FIXTURES_DIR)
         test_file = FIXTURES_DIR / "nonexistent" / "test_missing.py"
 
         with pytest.raises(OSError):
-            resolver._extract_metadata_via_ast(test_file)
+            TestMetadataResolver._extract_metadata(test_file)
 
     def test_mixed_api_and_d2d_returns_first(self) -> None:
-        resolver = TestMetadataResolver(FIXTURES_DIR)
         test_file = FIXTURES_DIR / "edge_cases" / "test_mixed_invalid.py"
 
-        result = resolver.resolve(test_file)
+        result = TestMetadataResolver.resolve(test_file)
 
         assert result.test_type == "api"
 
@@ -216,22 +204,20 @@ class TestErrorHandling:
         assert exc2.found_bases == []
 
     def test_unicode_in_file_path(self) -> None:
-        resolver = TestMetadataResolver(_UNUSED_TEST_ROOT)
         mock_path = create_mock_path(
             "/tests/тесты/test_файл.py", "class TestCase(NACTestBase): pass"
         )
 
-        result = resolver.resolve(mock_path)
+        result = TestMetadataResolver.resolve(mock_path)
 
         assert result.test_type == "api"
 
     def test_permission_denied_error(self, caplog: pytest.LogCaptureFixture) -> None:
-        resolver = TestMetadataResolver(_UNUSED_TEST_ROOT)
         mock_path = create_mock_path("/tests/test.py", "")
         mock_path.read_text.side_effect = PermissionError("Permission denied")
 
         with caplog.at_level(logging.WARNING):
-            result = resolver.resolve(mock_path)
+            result = TestMetadataResolver.resolve(mock_path)
 
         assert result.test_type == "api"
         assert "Failed to parse" in caplog.text or "Could not detect" in caplog.text
@@ -240,22 +226,12 @@ class TestErrorHandling:
 class TestIntegration:
     """Integration tests with real fixture files."""
 
-    def test_resolver_initialization(self) -> None:
-        test_root = Path("/some/test/path")
-        resolver = TestMetadataResolver(test_root)
-
-        assert resolver.test_root == test_root.resolve()
-        assert (
-            resolver.logger.name == "nac_test.pyats_core.discovery.test_type_resolver"
-        )
-
     def test_all_fixture_files_resolve(self) -> None:
-        resolver = TestMetadataResolver(FIXTURES_DIR)
         errors = []
 
         for py_file in FIXTURES_DIR.rglob("*.py"):
             try:
-                metadata = resolver.resolve(py_file)
+                metadata = TestMetadataResolver.resolve(py_file)
                 assert metadata.test_type in {"api", "d2d"}
             except Exception as e:
                 errors.append(f"{py_file}: {e}")
@@ -266,13 +242,7 @@ class TestIntegration:
         test_file = FIXTURES_DIR / "api" / "test_api_simple.py"
 
         with caplog.at_level(logging.DEBUG):
-            resolver = TestMetadataResolver(FIXTURES_DIR)
-        assert "Initialized TestMetadataResolver" in caplog.text
-
-        caplog.clear()
-
-        with caplog.at_level(logging.DEBUG):
-            resolver.resolve(test_file)
+            TestMetadataResolver.resolve(test_file)
         assert "Analyzing AST" in caplog.text
 
     def test_base_class_mapping_completeness(self) -> None:

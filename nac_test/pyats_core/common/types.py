@@ -10,7 +10,6 @@ throughout the NAC test automation framework.
 
 import sys
 from dataclasses import dataclass, field
-from functools import cached_property
 from pathlib import Path
 from typing import (
     Any,
@@ -47,20 +46,13 @@ class TestFileMetadata:
     groups: list[str] = field(default_factory=list)
 
 
-@dataclass(frozen=True)
+@dataclass
 class PyatsDiscoveryResult:
     """Result of PyATS test discovery with tag filtering applied.
 
     Contains categorized test files (API vs D2D) and metadata needed for
     execution and post-execution result analysis. This is PyATS-specific;
     Robot Framework tests flow through a separate discovery path.
-
-    The pre-computed `test_type_by_path` dictionary enables O(1) lookups
-    during post-execution result splitting, replacing the previous pattern
-    of re-parsing test files to determine their types.
-
-    This dataclass is frozen (immutable) after creation, enabling cached
-    properties for frequently accessed computed values.
 
     Attributes:
         api_tests: List of API test metadata (controller/REST tests)
@@ -71,31 +63,35 @@ class PyatsDiscoveryResult:
         filtered_by_tags: Count of valid tests excluded by --include/--exclude tag
                           patterns. These are intentional user exclusions, separate
                           from skipped_files which represent processing failures.
-        test_type_by_path: Pre-computed mapping of resolved paths to test types
     """
 
     api_tests: list[TestFileMetadata]
     d2d_tests: list[TestFileMetadata]
     skipped_files: list[tuple[Path, str]]
     filtered_by_tags: int
-    test_type_by_path: dict[Path, str] = field(default_factory=dict)
 
-    @cached_property
+    def __post_init__(self) -> None:
+        """Build the path-to-type lookup from the categorized test lists."""
+        self.test_type_by_path: dict[Path, str] = {
+            m.path: m.test_type for m in self.api_tests + self.d2d_tests
+        }
+
+    @property
     def all_tests(self) -> list[TestFileMetadata]:
         """All discovered tests (API + D2D combined)."""
         return self.api_tests + self.d2d_tests
 
-    @cached_property
+    @property
     def total_count(self) -> int:
         """Total number of discovered tests."""
         return len(self.api_tests) + len(self.d2d_tests)
 
-    @cached_property
+    @property
     def api_paths(self) -> list[Path]:
         """API test paths for execution."""
         return [t.path for t in self.api_tests]
 
-    @cached_property
+    @property
     def d2d_paths(self) -> list[Path]:
         """D2D test paths for execution."""
         return [t.path for t in self.d2d_tests]
@@ -105,9 +101,9 @@ class PyatsDiscoveryResult:
         if test_file is None:
             return DEFAULT_TEST_TYPE
         path = (
-            Path(test_file).resolve()
+            Path(test_file).absolute()
             if isinstance(test_file, str)
-            else test_file.resolve()
+            else test_file.absolute()
         )
         return self.test_type_by_path.get(path, DEFAULT_TEST_TYPE)
 

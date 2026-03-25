@@ -24,14 +24,11 @@ def _make_execution_plan(
     """Create a PyatsDiscoveryResult from path lists for test mocking."""
     api_tests = [TestFileMetadata(path=p, test_type="api") for p in api_paths]
     d2d_tests = [TestFileMetadata(path=p, test_type="d2d") for p in d2d_paths]
-    test_type_by_path = {p.resolve(): "api" for p in api_paths}
-    test_type_by_path.update({p.resolve(): "d2d" for p in d2d_paths})
     return PyatsDiscoveryResult(
         api_tests=api_tests,
         d2d_tests=d2d_tests,
         skipped_files=[],
         filtered_by_tags=0,
-        test_type_by_path=test_type_by_path,
     )
 
 

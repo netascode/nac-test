@@ -153,10 +153,8 @@ class TestDiscovery:
         api_tests: list[TestFileMetadata] = []
         d2d_tests: list[TestFileMetadata] = []
         skipped_files: list[tuple[Path, str]] = []
-        test_type_by_path: dict[Path, str] = {}
 
         tag_matcher = TagMatcher(include=include_tags, exclude=exclude_tags)
-        resolver = TestMetadataResolver(self.test_dir)
         filtered_count = 0
 
         for test_path in self.test_dir.rglob("*.py"):
@@ -173,8 +171,7 @@ class TestDiscovery:
                     skipped_files.append((test_path, skip_reason))
                     continue
 
-                resolved_path = test_path.resolve()
-                metadata = resolver.resolve(resolved_path)
+                metadata = TestMetadataResolver.resolve(test_path.absolute())
 
                 if not tag_matcher.should_include(metadata.groups):
                     logger.debug(
@@ -183,7 +180,6 @@ class TestDiscovery:
                     filtered_count += 1
                     continue
 
-                test_type_by_path[resolved_path] = metadata.test_type
                 if metadata.test_type == "d2d":
                     d2d_tests.append(metadata)
                 else:
@@ -218,5 +214,4 @@ class TestDiscovery:
             d2d_tests=d2d_tests,
             skipped_files=skipped_files,
             filtered_by_tags=filtered_count,
-            test_type_by_path=test_type_by_path,
         )

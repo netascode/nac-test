@@ -56,7 +56,7 @@ Example Usage:
     from pathlib import Path
 
     # Initialize resolver
-    resolver = TestMetadataResolver(Path("/path/to/tests"))
+    resolver = TestMetadataResolver()
 
     # Get full metadata (type + groups) for tag filtering
     metadata = resolver.resolve(Path("/path/to/verify_bgp.py"))
@@ -88,6 +88,8 @@ from typing import Final
 from nac_test.pyats_core.common.types import (
     TestFileMetadata,
 )
+
+logger = logging.getLogger(__name__)
 
 # Module-level constants
 VALID_TEST_TYPES: Final[set[str]] = {"api", "d2d"}
@@ -161,26 +163,11 @@ class TestMetadataResolver:
     The resolver uses a multi-tier detection strategy with AST analysis as
     the primary method and directory-based fallback.
 
-    Attributes:
-        test_root: Root directory containing test files
-        logger: Logger instance for debugging and diagnostics
     """
 
-    def __init__(self, test_root: Path) -> None:
-        """Initialize the test metadata resolver.
-
-        Args:
-            test_root: Root directory containing test files. Will be resolved
-                      to an absolute path.
-        """
-        self.test_root = test_root.resolve()
-        self.logger = logging.getLogger(__name__)
-        self.logger.debug(
-            f"Initialized TestMetadataResolver with root: {self.test_root}"
-        )
-
-    def _extract_metadata_via_ast(self, file_path: Path) -> TestFileMetadata:
-        """Detect test type and extract groups by analyzing base class inheritance using AST.
+    @staticmethod
+    def _extract_metadata(file_path: Path) -> TestFileMetadata:
+        """Extract test type and groups by statically analyzing base class inheritance.
 
         This method parses the Python file into an Abstract Syntax Tree (AST)
         and examines the base classes of all top-level class definitions.
@@ -198,7 +185,7 @@ class TestMetadataResolver:
             OSError: When the file cannot be read (propagated)
             SyntaxError: When the Python file has syntax errors (propagated)
         """
-        self.logger.debug(f"Analyzing AST for file: {file_path}")
+        logger.debug(f"Analyzing AST for file: {file_path}")
 
         content = file_path.read_text(encoding="utf-8")
         tree = ast.parse(content, filename=str(file_path))
@@ -211,7 +198,7 @@ class TestMetadataResolver:
             if not isinstance(node, ast.ClassDef):
                 continue
 
-            self.logger.debug(f"Found class: {node.name}")
+            logger.debug(f"Found class: {node.name}")
 
             for base in node.bases:
                 base_name: str | None = None
@@ -219,28 +206,28 @@ class TestMetadataResolver:
                 if isinstance(base, ast.Name):
                     # Direct inheritance: class MyTest(SSHTestBase)
                     base_name = base.id
-                    self.logger.debug(f"  Direct base: {base_name}")
+                    logger.debug(f"  Direct base: {base_name}")
                 elif isinstance(base, ast.Attribute):
                     # Qualified inheritance: class MyTest(module.SSHTestBase)
                     # We only care about the class name, not the module
                     base_name = base.attr
-                    self.logger.debug(f"  Qualified base: {base_name}")
+                    logger.debug(f"  Qualified base: {base_name}")
 
                 if base_name:
                     found_bases.append(base_name)
 
                     if base_name in BASE_CLASS_MAPPING and detected_test_type is None:
                         detected_test_type = BASE_CLASS_MAPPING[base_name]
-                        self.logger.info(
+                        logger.info(
                             f"Detected test type '{detected_test_type}' from base class "
                             f"'{base_name}' in {file_path}"
                         )
 
             if detected_test_type is not None:
-                groups = self._extract_groups_from_class(node)
+                groups = TestMetadataResolver._extract_groups_from_class(node)
                 if groups:
                     detected_groups = groups
-                    self.logger.debug(f"  Extracted groups: {groups}")
+                    logger.debug(f"  Extracted groups: {groups}")
                 break
 
         if detected_test_type is not None:
@@ -248,13 +235,14 @@ class TestMetadataResolver:
                 path=file_path, test_type=detected_test_type, groups=detected_groups
             )
 
-        self.logger.debug(
+        logger.debug(
             f"No recognized base class in {file_path}. "
             f"Found bases: {found_bases if found_bases else 'none'}"
         )
         raise NoRecognizedBaseError(str(file_path), found_bases)
 
-    def _extract_groups_from_class(self, class_node: ast.ClassDef) -> list[str]:
+    @staticmethod
+    def _extract_groups_from_class(class_node: ast.ClassDef) -> list[str]:
         """Extract the `groups` attribute from a class definition.
 
         Looks for class-level assignments like:
@@ -271,7 +259,7 @@ class TestMetadataResolver:
             if isinstance(item, ast.Assign):
                 for target in item.targets:
                     if isinstance(target, ast.Name) and target.id == "groups":
-                        return self._parse_list_value(item.value)
+                        return TestMetadataResolver._parse_list_value(item.value)
 
             # Also handle annotated assignments: groups: list[str] = [...]
             if isinstance(item, ast.AnnAssign):
@@ -280,11 +268,12 @@ class TestMetadataResolver:
                     and item.target.id == "groups"
                     and item.value is not None
                 ):
-                    return self._parse_list_value(item.value)
+                    return TestMetadataResolver._parse_list_value(item.value)
 
         return []
 
-    def _parse_list_value(self, node: ast.expr) -> list[str]:
+    @staticmethod
+    def _parse_list_value(node: ast.expr) -> list[str]:
         """Parse a list literal from an AST node.
 
         Args:
@@ -302,7 +291,8 @@ class TestMetadataResolver:
                 result.append(elt.value)
         return result
 
-    def resolve(self, test_file: Path) -> TestFileMetadata:
+    @staticmethod
+    def resolve(test_file: Path) -> TestFileMetadata:
         """Resolve test metadata (type and groups) for a test file.
 
         This is the main API entry point for test metadata extraction. It uses
@@ -322,31 +312,31 @@ class TestMetadataResolver:
 
         Example:
             ```python
-            resolver = TestMetadataResolver(Path("/tests"))
-            metadata = resolver.resolve(Path("verify_bgp.py"))
+            metadata = TestMetadataResolver.resolve(Path("verify_bgp.py"))
             # metadata.test_type = "d2d"
             # metadata.groups = ["health", "bgp"]
             ```
         """
-        test_file = test_file.resolve()
+        test_file = test_file.absolute()
 
         # Try AST-based detection first (extracts both type and groups)
         try:
-            return self._extract_metadata_via_ast(test_file)
+            return TestMetadataResolver._extract_metadata(test_file)
         except NoRecognizedBaseError:
-            self.logger.debug(
+            logger.debug(
                 f"{test_file.name}: No recognized base class, trying directory detection"
             )
         except (OSError, SyntaxError) as e:
-            self.logger.warning(
+            logger.warning(
                 f"Failed to parse {test_file}: {e}, trying directory detection"
             )
 
         # Fall back to directory-based detection (no groups available)
-        test_type = self._detect_via_directory(test_file)
+        test_type = TestMetadataResolver._detect_via_directory(test_file)
         return TestFileMetadata(path=test_file, test_type=test_type, groups=[])
 
-    def _detect_via_directory(self, test_file: Path) -> str:
+    @staticmethod
+    def _detect_via_directory(test_file: Path) -> str:
         """Detect test type from directory structure.
 
         This is the fallback detection method when AST analysis fails to
@@ -362,20 +352,16 @@ class TestMetadataResolver:
 
         # Check for /d2d/ in path (Direct-to-Device tests)
         if "/d2d/" in path_str:
-            self.logger.debug(
-                f"{test_file.name}: Using directory-based detection (d2d)"
-            )
+            logger.debug(f"{test_file.name}: Using directory-based detection (d2d)")
             return "d2d"
 
         # Check for /api/ in path (API/Controller tests)
         if "/api/" in path_str:
-            self.logger.debug(
-                f"{test_file.name}: Using directory-based detection (api)"
-            )
+            logger.debug(f"{test_file.name}: Using directory-based detection (api)")
             return "api"
 
         # Default to 'api' with warning
-        self.logger.warning(
+        logger.warning(
             f"{test_file}: Could not detect test type from base class or directory. "
             f"Assuming 'api'. To fix: inherit from a known base class or place in /d2d/ directory."
         )
