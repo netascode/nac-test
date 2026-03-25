@@ -8,6 +8,7 @@ and provides pre-configured scenarios for different test outcomes.
 """
 
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 
@@ -160,7 +161,7 @@ class E2EScenario:
         """True if this scenario includes Robot Framework tests."""
         return self.expected_robot_total > 0
 
-    @property
+    @cached_property
     def robot_invoked(self) -> bool:
         """True if pabot was invoked, regardless of tag filter results.
 
