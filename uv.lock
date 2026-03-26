@@ -1803,7 +1803,7 @@ wheels = [
 
 [[package]]
 name = "nac-test"
-version = "2.0.0a1"
+version = "2.0.0b2"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
