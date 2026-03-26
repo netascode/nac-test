@@ -147,9 +147,9 @@ jobs:
           fi
 
       - name: Run E2E tests
-        # pytest is installed into the nac-test tool env via --with, so it runs
-        # in the same isolated venv — no dev venv on PATH to shadow robot.
-        run: pytest -n auto --dist loadscope tests/e2e/
+        # Run pytest via uv tool run inside the nac-test tool env — no dev venv
+        # on PATH to shadow the tool env's robot binary.
+        run: uv tool run --from nac-test pytest -n auto --dist loadscope tests/e2e/
 
   test-windows:
     name: Tests (Windows)
