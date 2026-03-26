@@ -126,10 +126,11 @@ jobs:
         run: uv python install ${{ matrix.python }}
 
       - name: Install nac-test via uv tool install
-        # Installs nac-test into an isolated tool environment (separate venv).
-        # This exercises the real entrypoint path that end-users get, including
-        # subprocess PATH resolution (the regression caught by #718).
-        run: uv tool install --python ${{ matrix.python }} .
+        # Installs nac-test and test dependencies into a single isolated tool
+        # environment (separate venv). Running pytest from within this same env
+        # means no dev venv exists to shadow the tool env's robot binary —
+        # reproducing the real end-user scenario and catching regressions like #718.
+        run: uv tool install --python ${{ matrix.python }} --with pytest --with pytest-xdist --with pytest-httpserver --with flask .
 
       - name: Verify nac-test entrypoint resolves to uv tool install
         # Confirm the nac-test on PATH comes from the uv tool environment, not the
@@ -145,13 +146,10 @@ jobs:
             exit 1
           fi
 
-      - name: Install test dependencies
-        run: uv sync --python ${{ matrix.python }} --extra dev
-
       - name: Run E2E tests
-        # pytest runs inside the dev venv (uv run), but invokes the installed
-        # nac-test entrypoint via subprocess — exercising the isolated tool env.
-        run: uv run --python ${{ matrix.python }} pytest -n auto --dist loadscope tests/e2e/
+        # pytest is installed into the nac-test tool env via --with, so it runs
+        # in the same isolated venv — no dev venv on PATH to shadow robot.
+        run: pytest -n auto --dist loadscope tests/e2e/
 
   test-windows:
     name: Tests (Windows)
