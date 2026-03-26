@@ -38,6 +38,52 @@ class TestRunPabotUnexpectedException:
             run_pabot(output_path)
 
 
+# --- Robot executable resolution tests ---
+
+
+class TestRunPabotRobotExecutableResolution:
+    """Test that run_pabot resolves the robot binary via sysconfig."""
+
+    @patch("nac_test.robot.pabot.pabot.pabot.main_program")
+    def test_run_pabot_resolves_robot_using_sysconfig(
+        self, mock_main_program: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test that robot executable is resolved using sysconfig.get_path('scripts')."""
+        fake_scripts_dir = tmp_path / "scripts"
+        fake_scripts_dir.mkdir()
+        fake_robot_executable = fake_scripts_dir / "robot"
+        fake_robot_executable.touch()
+        mock_main_program.return_value = 0
+
+        with patch(
+            "nac_test.robot.pabot.sysconfig.get_path",
+            return_value=str(fake_scripts_dir),
+        ):
+            run_pabot(tmp_path)
+
+        call_args = mock_main_program.call_args[0][0]
+        assert "--command" in call_args
+        command_idx = call_args.index("--command")
+        assert call_args[command_idx + 1] == str(fake_robot_executable)
+
+    @patch("nac_test.robot.pabot.pabot.pabot.main_program")
+    def test_run_pabot_raises_runtime_error_when_robot_not_found(
+        self, mock_main_program: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test that RuntimeError is raised when robot executable does not exist."""
+        fake_scripts_dir = tmp_path / "scripts"
+        fake_scripts_dir.mkdir()
+
+        with patch(
+            "nac_test.robot.pabot.sysconfig.get_path",
+            return_value=str(fake_scripts_dir),
+        ):
+            with pytest.raises(RuntimeError, match="robot executable not found"):
+                run_pabot(tmp_path)
+
+        mock_main_program.assert_not_called()
+
+
 class TestValidateExtraArgsDataError:
     """Test DataError handling in validate_extra_args."""
 
