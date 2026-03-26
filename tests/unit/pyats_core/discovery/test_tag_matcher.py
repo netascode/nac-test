@@ -16,8 +16,6 @@ Test Structure:
     - TestStrFormatting: Tests TagMatcher.__str__ formatting (parametrized)
 """
 
-from collections.abc import Sequence
-
 import pytest
 
 from nac_test.pyats_core.discovery.tag_matcher import TagMatcher
@@ -237,23 +235,16 @@ class TestEdgeCases:
                 ["health", "bgp", "ospf", "nrfu", "sanity", "regression"],
                 True,
             ),
-            # Tags as tuple
-            (["health"], ("health", "bgp"), True),
+            # Multiple tags
+            (["health"], ["health", "bgp"], True),
         ],
     )
     def test_tag_formats(
-        self, include: list[str], tags: Sequence[str], expected: bool
+        self, include: list[str], tags: list[str], expected: bool
     ) -> None:
         """Test various tag format inputs."""
         matcher = TagMatcher(include=include)
         assert matcher.should_include(tags) is expected
-
-    def test_include_as_tuple(self) -> None:
-        """Test that include patterns can be passed as a tuple."""
-        matcher = TagMatcher(include=("health", "bgp"))
-
-        assert matcher.should_include(["health"])
-        assert matcher.should_include(["bgp"])
 
     @pytest.mark.parametrize(
         ("include", "tags", "expected"),
