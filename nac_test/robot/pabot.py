@@ -2,6 +2,7 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 import logging
+import sysconfig
 from pathlib import Path
 
 import pabot.pabot
@@ -52,7 +53,22 @@ def run_pabot(
     include = include or []
     exclude = exclude or []
     robot_args: list[str] = []
-    pabot_args = ["--pabotlib", "--pabotlibport", "0"]
+    # Resolve robot binary from the current venv's scripts directory so that pabot
+    # finds the correct robot installation inside the current (possibly isolated)
+    # virtual environment, rather than relying on a bare `robot` on PATH.
+    robot_path = Path(sysconfig.get_path("scripts")) / "robot"
+    if not robot_path.exists():
+        raise RuntimeError(
+            "robot executable not found - ensure robotframework is installed in the same environment as nac-test"
+        )
+    pabot_args = [
+        "--command",
+        str(robot_path),
+        "--end-command",
+        "--pabotlib",
+        "--pabotlibport",
+        "0",
+    ]
 
     if ordering_file and ordering_file.exists():
         pabot_args.extend(["--testlevelsplit", "--ordering", str(ordering_file)])
