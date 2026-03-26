@@ -2,6 +2,7 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 import logging
+import sys
 from pathlib import Path
 
 import pabot.pabot
@@ -52,7 +53,19 @@ def run_pabot(
     include = include or []
     exclude = exclude or []
     robot_args: list[str] = []
-    pabot_args = ["--pabotlib", "--pabotlibport", "0"]
+    # Use sys.executable to invoke robot via `python -m robot` so that pabot
+    # finds the correct robot installation inside the current (possibly isolated)
+    # virtual environment, rather than relying on a bare `robot` on PATH.
+    pabot_args = [
+        "--command",
+        sys.executable,
+        "-m",
+        "robot",
+        "--end-command",
+        "--pabotlib",
+        "--pabotlibport",
+        "0",
+    ]
 
     if ordering_file and ordering_file.exists():
         pabot_args.extend(["--testlevelsplit", "--ordering", str(ordering_file)])
