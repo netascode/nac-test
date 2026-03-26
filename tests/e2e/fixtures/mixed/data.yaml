@@ -10,3 +10,4 @@ sdwan:
             system_hostname: sd-dc-c8kv-01
             vpn0_ip: 10.100.1.1
             system_ip: 10.0.0.1
+  test_credential: !env TEST_CREDENTIAL_SENTINEL
