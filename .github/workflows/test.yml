@@ -23,7 +23,7 @@ jobs:
 
       - name: Run bandit security scan
         run: bandit -c pyproject.toml -r nac_test/ -ll -f json -o bandit-security-report.json
-        
+
       - name: Upload security report
         uses: actions/upload-artifact@v7
         if: always()
@@ -72,8 +72,8 @@ jobs:
       - name: Pre-commit Checks
         uses: pre-commit/action@v3.0.1
 
-  test:
-    name: Tests
+  test-linux:
+    name: Tests (Linux)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -99,57 +99,7 @@ jobs:
         run: |
           uv sync --extra dev
           # Run tests in parallel (--dist loadscope keeps test classes together, this is critical for e2e tests)
-          # E2E tests are excluded here and run separately in the test-e2e job via uv tool install
-          uv run pytest -n auto --dist loadscope tests/ --ignore=tests/e2e
-
-  test-e2e:
-    name: Tests (E2E)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      matrix:
-        python:
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-
-      - name: Set up Python ${{ matrix.python }}
-        run: uv python install ${{ matrix.python }}
-
-      - name: Install nac-test via uv tool install
-        # Installs nac-test and test dependencies into a single isolated tool
-        # environment (separate venv). Running pytest from within this same env
-        # means no dev venv exists to shadow the tool env's robot binary —
-        # reproducing the real end-user scenario and catching regressions like #718.
-        run: uv tool install --python ${{ matrix.python }} --with pytest --with pytest-xdist --with pytest-httpserver --with flask .
-
-      - name: Verify nac-test entrypoint resolves to uv tool install
-        # Confirm the nac-test on PATH comes from the uv tool environment, not the
-        # dev venv or system. This guards against the test silently exercising the
-        # wrong entrypoint and missing regressions like #718.
-        run: |
-          TOOL_BIN=$(uv tool dir --bin)
-          NACTST=$(which nac-test)
-          echo "uv tool bin dir: $TOOL_BIN"
-          echo "nac-test resolves to: $NACTST"
-          if [[ "$NACTST" != "$TOOL_BIN/nac-test" ]]; then
-            echo "ERROR: nac-test ($NACTST) is not the uv tool install ($TOOL_BIN/nac-test)"
-            exit 1
-          fi
-
-      - name: Run E2E tests
-        # Run pytest via uv tool run inside the nac-test tool env — no dev venv
-        # on PATH to shadow the tool env's robot binary.
-        run: uv tool run --from nac-test pytest -n auto --dist loadscope tests/e2e/
+          uv run pytest -n auto --dist loadscope tests/
 
   test-windows:
     name: Tests (Windows)
@@ -182,16 +132,54 @@ jobs:
           uv run pytest -m windows -n auto --dist loadscope tests/e2e tests/integration/test_cli_basic.py tests/integration/test_cli_rendering.py tests/integration/test_cli_ordering.py tests/integration/test_cli_extra_args.py
           uv run nac-test --version
 
+  test-uv-tool:
+    name: Tests (uv tool install)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install nac-test via uv tool install
+        run: uv tool install --python 3.12 .
+
+      - name: Smoke test uv tool install (Linux)
+        # Smoke-tests the render→pabot→robot path in a clean uv tool env (no dev
+        # venv on PATH), catching regressions like #718. PyATS is not covered here
+        # as it requires a live API endpoint — see #722.
+        if: runner.os == 'Linux'
+        run: |
+          TMPDIR=$(mktemp -d)
+          nac-test -d tests/integration/fixtures/data -t tests/integration/fixtures/templates -o "$TMPDIR"
+
+      - name: Smoke test uv tool install (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $TMPDIR = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+          nac-test -d tests/integration/fixtures/data -t tests/integration/fixtures/templates -o "$TMPDIR"
+        shell: pwsh
+
   notification:
     name: Notification
     if: always() && github.event_name != 'pull_request'
-    needs: [security, lint, test, test-e2e, test-windows]
+    needs: [security, lint, test-linux, test-windows, test-uv-tool]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check Job Success
         run: |
-          if [ ${{ needs.security.result }} == 'success' ] && [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test.result }} == 'success' ] && [ ${{ needs.test-e2e.result }} == 'success' ] && [ ${{ needs.test-windows.result }} == 'success' ]; then
+          if [ ${{ needs.security.result }} == 'success' ] && [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test-linux.result }} == 'success' ] && [ ${{ needs.test-windows.result }} == 'success' ] && [ ${{ needs.test-uv-tool.result }} == 'success' ]; then
             echo "All jobs succeeded"
             echo "jobSuccess=success" >> $GITHUB_ENV
           else
