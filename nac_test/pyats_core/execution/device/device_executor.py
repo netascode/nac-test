@@ -14,6 +14,7 @@ from typing import Any
 from nac_test.pyats_core.constants import ENV_TEST_DIR
 from nac_test.pyats_core.execution.job_generator import JobGenerator
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
+from nac_test.utils.cleanup import get_cleanup_manager
 
 from .testbed_generator import TestbedGenerator
 
@@ -100,6 +101,11 @@ class DeviceExecutor:
                     testbed_file.write(testbed_content)
                     testbed_file_path = Path(testbed_file.name)
 
+                # Register temp files for deletion on exit (kept when NAC_TEST_DEBUG is set).
+                cleanup = get_cleanup_manager()
+                cleanup.register(job_file_path, skip_if_debug=True)
+                cleanup.register(testbed_file_path, skip_if_debug=True)
+
                 # Set up environment for this device
                 # Always start with a copy of os.environ to preserve PATH and other variables
                 env = os.environ.copy()
@@ -149,13 +155,6 @@ class DeviceExecutor:
                     test_name = f"{hostname}::{test_file.stem}"
                     if test_name in self.test_status:
                         self.test_status[test_name]["status"] = status
-
-                # Clean up temporary files -- UNCOMMENT ME
-                # try:
-                #     job_file_path.unlink()
-                #     testbed_file_path.unlink()
-                # except Exception:
-                #     pass
 
                 if archive_path:
                     logger.info(
