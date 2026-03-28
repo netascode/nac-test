@@ -422,15 +422,20 @@ def main(
     try:
         stats = orchestrator.run_tests()
     except KeyboardInterrupt:
+        # Handle Ctrl+C interruption gracefully
         typer.echo(
             typer.style(
                 "\n⚠️  Test execution was interrupted by user (Ctrl+C)",
                 fg=typer.colors.YELLOW,
             )
         )
+        # Exit with code 253 following Robot Framework convention
         raise typer.Exit(EXIT_INTERRUPTED) from None
     except Exception as e:
+        # Infrastructure errors (template rendering, controller detection, etc.)
         typer.echo(f"Error during execution: {e}")
+        # Pretty exception display is controlled by pretty_exceptions_enable=DEBUG_MODE
+        # on the Typer app — no need for a separate DEBUG_MODE branch here.
         raise typer.Exit(EXIT_ERROR) from e
 
     # Display total runtime before exit
