@@ -388,7 +388,7 @@ def main(
 
     # Register merged data file for cleanup on exit/signal (SIGTERM/SIGINT)
     cleanup_manager = get_cleanup_manager()
-    cleanup_manager.register(merged_data_path, skip_if_debug=True)
+    cleanup_manager.register(merged_data_path, keep_if_debug=True)
 
     duration = (datetime.now() - start_time).total_seconds()
     typer.echo(f"✅ Data model merging completed ({format_duration(duration)})")

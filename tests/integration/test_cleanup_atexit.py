@@ -29,7 +29,7 @@ app = typer.Typer()
 
 @app.command()
 def main() -> None:
-    get_cleanup_manager().register(Path({sentinel!r}), skip_if_debug=True)
+    get_cleanup_manager().register(Path("{sentinel}"), keep_if_debug=True)
     raise typer.Exit(0)
 
 app()
@@ -48,7 +48,7 @@ def test_cleanup_atexit_via_typer_exit(
 ) -> None:
     """CleanupManager deletes (or retains) registered files on typer.Exit(0).
 
-    Exercises the exact production exit path and the skip_if_debug flag.
+    Exercises the exact production exit path and the keep_if_debug flag.
     """
     sentinel = tmp_path / "job.py"
     sentinel.write_text("# temp job")

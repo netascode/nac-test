@@ -36,7 +36,7 @@ class CleanupManager:
         # File will be automatically removed on exit
 
         # Skip deletion when NAC_TEST_DEBUG is set (useful for debugging):
-        cleanup_manager.register(Path("/tmp/temp_job.py"), skip_if_debug=True)
+        cleanup_manager.register(Path("/tmp/temp_job.py"), keep_if_debug=True)
 
     Thread Safety:
         All operations are thread-safe via internal locking.
@@ -59,7 +59,7 @@ class CleanupManager:
         if self._initialized:
             return
 
-        self._files: dict[Path, bool] = {}  # path → skip_if_debug
+        self._files: dict[Path, bool] = {}  # path → keep_if_debug
         self._lock = threading.Lock()
         self._original_sigterm: Any = None
         self._original_sigint: Any = None
@@ -109,21 +109,21 @@ class CleanupManager:
         # For SIGTERM, re-send the signal
         signal.raise_signal(signum)
 
-    def register(self, path: Path, skip_if_debug: bool = False) -> None:
+    def register(self, path: Path, keep_if_debug: bool = False) -> None:
         """Register a file path for cleanup on exit.
 
         Args:
             path: Path to file that should be removed on exit.
                   Directories are not supported (use shutil.rmtree directly).
-            skip_if_debug: If True, the file will not be deleted when
+            keep_if_debug: If True, the file will not be deleted when
                   NAC_TEST_DEBUG is set — useful for intermediate files
                   (job scripts, testbed YAMLs, merged data) that aid debugging.
         """
         with self._lock:
             resolved = path.resolve()
-            self._files[resolved] = skip_if_debug
+            self._files[resolved] = keep_if_debug
             logger.debug(
-                f"Registered for cleanup: {resolved} (skip_if_debug={skip_if_debug})"
+                f"Registered for cleanup: {resolved} (keep_if_debug={keep_if_debug})"
             )
 
     def unregister(self, path: Path) -> None:
@@ -145,8 +145,8 @@ class CleanupManager:
             self._cleanup_done = True
 
             debug_kept: list[Path] = []
-            for path, skip_if_debug in self._files.items():
-                if skip_if_debug and DEBUG_MODE:
+            for path, keep_if_debug in self._files.items():
+                if keep_if_debug and DEBUG_MODE:
                     debug_kept.append(path)
                     continue
                 try:

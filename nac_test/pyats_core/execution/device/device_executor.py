@@ -103,8 +103,8 @@ class DeviceExecutor:
 
                 # Register temp files for deletion on exit (kept when NAC_TEST_DEBUG is set).
                 cleanup = get_cleanup_manager()
-                cleanup.register(job_file_path, skip_if_debug=True)
-                cleanup.register(testbed_file_path, skip_if_debug=True)
+                cleanup.register(job_file_path, keep_if_debug=True)
+                cleanup.register(testbed_file_path, keep_if_debug=True)
 
                 # Set up environment for this device
                 # Always start with a copy of os.environ to preserve PATH and other variables
