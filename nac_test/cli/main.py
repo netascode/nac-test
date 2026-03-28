@@ -433,6 +433,7 @@ def main(
         raise typer.Exit(EXIT_INTERRUPTED) from None
     except Exception as e:
         # Infrastructure errors (template rendering, controller detection, etc.)
+        logger.exception("Unexpected error during execution")
         typer.echo(f"Error during execution: {e}")
         # Pretty exception display is controlled by pretty_exceptions_enable=DEBUG_MODE
         # on the Typer app — no need for a separate DEBUG_MODE branch here.
