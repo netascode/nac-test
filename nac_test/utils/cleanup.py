@@ -14,6 +14,7 @@ from pathlib import Path
 from types import FrameType
 from typing import Any
 
+from nac_test.core.constants import DEBUG_MODE
 from nac_test.pyats_core.discovery.test_type_resolver import VALID_TEST_TYPES
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,9 @@ class CleanupManager:
         cleanup_manager = CleanupManager()
         cleanup_manager.register(Path("/tmp/sensitive_file.yaml"))
         # File will be automatically removed on exit
+
+        # Skip deletion when NAC_TEST_DEBUG is set (useful for debugging):
+        cleanup_manager.register(Path("/tmp/temp_job.py"), skip_if_debug=True)
 
     Thread Safety:
         All operations are thread-safe via internal locking.
@@ -55,7 +59,7 @@ class CleanupManager:
         if self._initialized:
             return
 
-        self._files: set[Path] = set()
+        self._files: dict[Path, bool] = {}  # path → skip_if_debug
         self._lock = threading.Lock()
         self._original_sigterm: Any = None
         self._original_sigint: Any = None
@@ -105,17 +109,22 @@ class CleanupManager:
         # For SIGTERM, re-send the signal
         signal.raise_signal(signum)
 
-    def register(self, path: Path) -> None:
+    def register(self, path: Path, skip_if_debug: bool = False) -> None:
         """Register a file path for cleanup on exit.
 
         Args:
             path: Path to file that should be removed on exit.
                   Directories are not supported (use shutil.rmtree directly).
+            skip_if_debug: If True, the file will not be deleted when
+                  NAC_TEST_DEBUG is set — useful for intermediate files
+                  (job scripts, testbed YAMLs, merged data) that aid debugging.
         """
         with self._lock:
             resolved = path.resolve()
-            self._files.add(resolved)
-            logger.debug(f"Registered for cleanup: {resolved}")
+            self._files[resolved] = skip_if_debug
+            logger.debug(
+                f"Registered for cleanup: {resolved} (skip_if_debug={skip_if_debug})"
+            )
 
     def unregister(self, path: Path) -> None:
         """Unregister a file path from cleanup.
@@ -125,7 +134,7 @@ class CleanupManager:
         """
         with self._lock:
             resolved = path.resolve()
-            self._files.discard(resolved)
+            self._files.pop(resolved, None)
             logger.debug(f"Unregistered from cleanup: {resolved}")
 
     def _cleanup(self) -> None:
@@ -135,13 +144,24 @@ class CleanupManager:
                 return
             self._cleanup_done = True
 
-            for path in self._files:
+            debug_kept: list[Path] = []
+            for path, skip_if_debug in self._files.items():
+                if skip_if_debug and DEBUG_MODE:
+                    debug_kept.append(path)
+                    continue
                 try:
                     if path.exists():
                         path.unlink()
                         logger.debug(f"Cleaned up: {path}")
                 except Exception as e:
                     logger.warning(f"Failed to clean up {path}: {e}")
+
+            if debug_kept:
+                logger.info(
+                    "Keeping %d file(s) for debugging (NAC_TEST_DEBUG is set): %s",
+                    len(debug_kept),
+                    ", ".join(str(p) for p in debug_kept),
+                )
 
             self._files.clear()
 

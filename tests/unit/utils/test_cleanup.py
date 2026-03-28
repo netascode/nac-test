@@ -60,6 +60,28 @@ class TestCleanupManagerRegistration:
 
         assert test_file.resolve() in fresh_cleanup_manager._files
 
+    def test_register_default_flag_is_false(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        """register() without skip_if_debug stores False (always delete)."""
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+
+        fresh_cleanup_manager.register(test_file)
+
+        assert fresh_cleanup_manager._files[test_file.resolve()] is False
+
+    def test_register_skip_if_debug_stores_true(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        """register(skip_if_debug=True) stores True for the path."""
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+
+        fresh_cleanup_manager.register(test_file, skip_if_debug=True)
+
+        assert fresh_cleanup_manager._files[test_file.resolve()] is True
+
     def test_register_multiple_files(
         self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
     ) -> None:
@@ -73,6 +95,19 @@ class TestCleanupManagerRegistration:
 
         assert len(fresh_cleanup_manager._files) == 2
 
+    def test_unregister_prevents_deletion(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        """A file removed from the registry is not deleted on cleanup."""
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+
+        fresh_cleanup_manager.register(test_file)
+        fresh_cleanup_manager.unregister(test_file)
+        fresh_cleanup_manager.cleanup_now()
+
+        assert test_file.exists()
+
     def test_unregister_removes_path(
         self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
     ) -> None:
@@ -80,6 +115,18 @@ class TestCleanupManagerRegistration:
         test_file.touch()
 
         fresh_cleanup_manager.register(test_file)
+        fresh_cleanup_manager.unregister(test_file)
+
+        assert test_file.resolve() not in fresh_cleanup_manager._files
+
+    def test_unregister_removes_skip_if_debug_path(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        """unregister() removes paths registered with skip_if_debug=True."""
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+
+        fresh_cleanup_manager.register(test_file, skip_if_debug=True)
         fresh_cleanup_manager.unregister(test_file)
 
         assert test_file.resolve() not in fresh_cleanup_manager._files
@@ -149,6 +196,68 @@ class TestCleanupManagerCleanup:
         assert not file2.exists()
         # Cleanup completed
         assert fresh_cleanup_manager._cleanup_done
+
+
+class TestCleanupManagerSkipIfDebug:
+    """Tests for skip_if_debug behaviour during cleanup."""
+
+    @pytest.mark.parametrize(
+        ("debug_mode", "expected_exists"),
+        [
+            (False, False),  # debug off → file is deleted
+            (True, True),  # debug on  → file is kept
+        ],
+        ids=["debug_off_deletes", "debug_on_keeps"],
+    )
+    def test_skip_if_debug_respects_debug_mode(
+        self,
+        fresh_cleanup_manager: CleanupManager,
+        tmp_path: Path,
+        debug_mode: bool,
+        expected_exists: bool,
+    ) -> None:
+        """Files registered with skip_if_debug=True are kept iff NAC_TEST_DEBUG is set."""
+        test_file = tmp_path / "job.py"
+        test_file.touch()
+
+        fresh_cleanup_manager.register(test_file, skip_if_debug=True)
+
+        with patch("nac_test.utils.cleanup.DEBUG_MODE", debug_mode):
+            fresh_cleanup_manager.cleanup_now()
+
+        assert test_file.exists() is expected_exists
+
+    def test_normal_files_always_deleted_regardless_of_debug(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        """Files registered without skip_if_debug are always deleted, even in debug mode."""
+        test_file = tmp_path / "sensitive.yaml"
+        test_file.touch()
+
+        fresh_cleanup_manager.register(test_file)
+
+        with patch("nac_test.utils.cleanup.DEBUG_MODE", True):
+            fresh_cleanup_manager.cleanup_now()
+
+        assert not test_file.exists()
+
+    def test_mixed_registration_in_debug_mode(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        """In debug mode, sensitive files are deleted but debug-skipped files are kept."""
+        sensitive = tmp_path / "merged_data.yaml"
+        debug_file = tmp_path / "job.py"
+        sensitive.touch()
+        debug_file.touch()
+
+        fresh_cleanup_manager.register(sensitive)
+        fresh_cleanup_manager.register(debug_file, skip_if_debug=True)
+
+        with patch("nac_test.utils.cleanup.DEBUG_MODE", True):
+            fresh_cleanup_manager.cleanup_now()
+
+        assert not sensitive.exists()
+        assert debug_file.exists()
 
 
 class TestCleanupManagerThreadSafety:
