@@ -29,6 +29,7 @@ from nac_test.core.constants import (
     HTML_REPORTS_DIRNAME,
     IS_WINDOWS,
     LOG_HTML,
+    MERGED_DATA_FILENAME,
     OUTPUT_XML,
     PRE_FLIGHT_FAILURE_FILENAME,
     PYATS_RESULTS_DIRNAME,
@@ -166,7 +167,6 @@ class E2ECombinedTestBase:
 
         expected_files = {
             COMBINED_SUMMARY_FILENAME,
-            "merged_data_model_test_variables.yaml",
         }
         if results.has_robot_results or results.has_pyats_results:
             expected_files.add(XUNIT_XML)
@@ -180,6 +180,18 @@ class E2ECombinedTestBase:
         assert not unexpected, (
             f"Unexpected entries in output root: {sorted(unexpected)}\n"
             f"Expected only: {sorted(allowed)}"
+        )
+
+    def test_merged_data_file_removed_after_run(self, results: E2EResults) -> None:
+        """Merged data model YAML must not persist after a successful run.
+
+        The file contains potentially sensitive variable data and is registered
+        with CleanupManager for deletion on exit. Its absence confirms cleanup ran.
+        """
+        merged_data_file = results.output_dir / MERGED_DATA_FILENAME
+        assert not merged_data_file.exists(), (
+            f"{MERGED_DATA_FILENAME} was not cleaned up after run — "
+            "it may contain sensitive data and should be deleted on exit"
         )
 
     # -------------------------------------------------------------------------
