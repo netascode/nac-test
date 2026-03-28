@@ -5,8 +5,6 @@ on:
   workflow_dispatch:
   pull_request:
   push:
-    branches:
-      - main
   workflow_call:
 
 jobs:
@@ -29,8 +27,8 @@ jobs:
         run: uv tool install bandit[toml]
 
       - name: Run bandit security scan
-        run: bandit -r nac_test/ -ll -f json -o bandit-security-report.json
-        
+        run: bandit -c pyproject.toml -r nac_test/ -ll -f json -o bandit-security-report.json
+
       - name: Upload security report
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
         if: always()
@@ -79,10 +77,41 @@ jobs:
       - name: Pre-commit Checks
         uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd  # v3.0.1
 
-  test:
-    name: Tests
+  test-linux:
+    name: Tests (Linux)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        python:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
+
+      - name: Test
+        run: |
+          uv sync --extra dev
+          # Run tests in parallel (--dist loadscope keeps test classes together, this is critical for e2e tests)
+          uv run pytest -n auto --dist loadscope tests/
+
+  test-windows:
+    name: Tests (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     strategy:
@@ -107,19 +136,62 @@ jobs:
       - name: Test
         run: |
           uv sync --extra dev
-          uv run pytest
+          # Explicit file list: Windows shell doesn't expand globs, and other integration
+          # tests import pyats which isn't available on Windows
+          uv run pytest -m windows -n auto --dist loadscope tests/e2e tests/integration/test_cli_basic.py tests/integration/test_cli_rendering.py tests/integration/test_cli_ordering.py tests/integration/test_cli_extra_args.py
+          uv run nac-test --version
+
+  test-uv-tool:
+    name: Tests (uv tool install)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install nac-test via uv tool install
+        run: uv tool install --python 3.12 .
+
+      - name: Smoke test uv tool install (Linux)
+        # Smoke-tests the render→pabot→robot path in a clean uv tool env (no dev
+        # venv on PATH), catching regressions like #718. PyATS is not covered here
+        # as it requires a live API endpoint — see #722.
+        if: runner.os == 'Linux'
+        run: |
+          TMPDIR=$(mktemp -d)
+          nac-test -d tests/integration/fixtures/data -t tests/integration/fixtures/templates -o "$TMPDIR"
+
+      - name: Smoke test uv tool install (Windows)
+        if: runner.os == 'Windows'
+        env:
+          PYTHONIOENCODING: utf-8  # Workaround for #723: cp1252 can't encode emoji in nac-test output
+        run: |
+          $TMPDIR = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+          nac-test -d tests/integration/fixtures/data -t tests/integration/fixtures/templates -o "$TMPDIR"
+        shell: pwsh
 
   notification:
     name: Notification
     if: always() && github.event_name != 'pull_request' && github.event_name != 'workflow_call'
-    needs: [security, lint, test]
+    needs: [security, lint, test-linux, test-windows, test-uv-tool]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
     steps:
       - name: Check Job Success
         run: |
-          if [ ${{ needs.security.result }} == 'success' ] && [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test.result }} == 'success' ]; then
+          if [ ${{ needs.security.result }} == 'success' ] && [ ${{ needs.lint.result }} == 'success' ] && [ ${{ needs.test-linux.result }} == 'success' ] && [ ${{ needs.test-windows.result }} == 'success' ] && [ ${{ needs.test-uv-tool.result }} == 'success' ]; then
             echo "All jobs succeeded"
             echo "jobSuccess=success" >> $GITHUB_ENV
           else

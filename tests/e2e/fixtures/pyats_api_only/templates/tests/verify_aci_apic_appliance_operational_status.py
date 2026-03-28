@@ -1,0 +1,1 @@
+../../verify_aci_apic_appliance_operational_status.py
