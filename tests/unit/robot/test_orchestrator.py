@@ -63,6 +63,33 @@ def orchestrator(mock_templates_dir, temp_output_dir, merged_data) -> RobotOrche
 class TestRobotOrchestrator:
     """Test suite for RobotOrchestrator."""
 
+    @staticmethod
+    def _setup_run_tests_mocks(
+        mock_generator: MagicMock,
+        mock_pabot: MagicMock,
+        orchestrator: RobotOrchestrator,
+        temp_output_dir: Path,
+    ) -> None:
+        """Wire up the standard mocks and artifact files needed to exercise run_tests().
+
+        Creates the robot_results/ directory with stub artifact files so that
+        _create_backward_compat_links() and the report generator don't fail.
+        """
+        orchestrator.robot_writer.write = MagicMock()
+        mock_pabot.return_value = 0
+
+        mock_generator_instance = MagicMock()
+        mock_generator_instance.generate_summary_report.return_value = (
+            None,
+            TestResults(),
+        )
+        mock_generator.return_value = mock_generator_instance
+
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir(exist_ok=True)
+        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
+            (robot_results_dir / filename).write_text(f"Mock {filename}")
+
     def test_initialization(
         self, orchestrator, temp_output_dir, mock_templates_dir
     ) -> None:
@@ -344,20 +371,9 @@ class TestRobotOrchestrator:
             verbose=verbose,
             loglevel=loglevel,
         )
-        orchestrator.robot_writer.write = MagicMock()
-        mock_pabot.return_value = 0
-
-        mock_generator_instance = MagicMock()
-        mock_generator_instance.generate_summary_report.return_value = (
-            None,
-            TestResults(),
+        self._setup_run_tests_mocks(
+            mock_generator, mock_pabot, orchestrator, temp_output_dir
         )
-        mock_generator.return_value = mock_generator_instance
-
-        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
-        robot_results_dir.mkdir()
-        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
-            (robot_results_dir / filename).write_text(f"Mock {filename}")
 
         orchestrator.run_tests()
 
@@ -398,20 +414,9 @@ class TestRobotOrchestrator:
             include_tags=include_tags,
             exclude_tags=exclude_tags,
         )
-        orchestrator.robot_writer.write = MagicMock()
-        mock_pabot.return_value = 0
-
-        mock_generator_instance = MagicMock()
-        mock_generator_instance.generate_summary_report.return_value = (
-            None,
-            TestResults(),
+        self._setup_run_tests_mocks(
+            mock_generator, mock_pabot, orchestrator, temp_output_dir
         )
-        mock_generator.return_value = mock_generator_instance
-
-        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
-        robot_results_dir.mkdir()
-        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
-            (robot_results_dir / filename).write_text(f"Mock {filename}")
 
         orchestrator.run_tests()
 
