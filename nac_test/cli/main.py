@@ -6,7 +6,7 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -393,10 +393,6 @@ def main(
     duration = (datetime.now() - start_time).total_seconds()
     typer.echo(f"✅ Data model merging completed ({format_duration(duration)})")
 
-    def exit_with_cleanup(code: int) -> NoReturn:
-        cleanup_manager.cleanup_now()
-        raise typer.Exit(code)
-
     # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
     orchestrator = CombinedOrchestrator(
         data_paths=data,
@@ -432,13 +428,10 @@ def main(
                 fg=typer.colors.YELLOW,
             )
         )
-        exit_with_cleanup(EXIT_INTERRUPTED)
+        raise typer.Exit(EXIT_INTERRUPTED) from None
     except Exception as e:
         typer.echo(f"Error during execution: {e}")
-        if DEBUG_MODE:
-            cleanup_manager.cleanup_now()
-            raise typer.Exit(EXIT_ERROR) from e
-        exit_with_cleanup(EXIT_ERROR)
+        raise typer.Exit(EXIT_ERROR) from e
 
     # Display total runtime before exit
     runtime_end = datetime.now()
@@ -453,9 +446,9 @@ def main(
                 typer.echo(f"\n❌ Template rendering failed: {reason}", err=True)
             else:
                 typer.echo("\n❌ Template rendering failed", err=True)
-            exit_with_cleanup(stats.exit_code)
+            raise typer.Exit(stats.exit_code)
         typer.echo("\n✅ Templates rendered successfully (render-only mode)")
-        exit_with_cleanup(0)
+        raise typer.Exit(0)
 
     if stats.pre_flight_failure is not None:
         pf = stats.pre_flight_failure
@@ -463,22 +456,22 @@ def main(
             f"\n❌ Pre-flight failure ({pf.failure_type.display_name})",
             err=True,
         )
-        exit_with_cleanup(stats.exit_code)
+        raise typer.Exit(stats.exit_code)
 
     if stats.has_errors:
         error_list = "; ".join(stats.errors)
         typer.echo(f"\n❌ Execution errors: {error_list}", err=True)
-        exit_with_cleanup(stats.exit_code)
+        raise typer.Exit(stats.exit_code)
 
     if stats.has_failures:
         typer.echo(
             f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests", err=True
         )
-        exit_with_cleanup(stats.exit_code)
+        raise typer.Exit(stats.exit_code)
 
     if stats.is_empty:
         typer.echo("\n⚠️  No tests were executed", err=True)
-        exit_with_cleanup(stats.exit_code)
+        raise typer.Exit(stats.exit_code)
 
     typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
-    exit_with_cleanup(0)
+    raise typer.Exit(0)
