@@ -8,6 +8,7 @@ from pathlib import Path
 import pabot.pabot
 
 from nac_test.core.constants import (
+    IS_WINDOWS,
     XUNIT_XML,
 )
 from nac_test.core.types import ValidatedRobotArgs
@@ -56,7 +57,9 @@ def run_pabot(
     # Resolve robot binary from the current venv's scripts directory so that pabot
     # finds the correct robot installation inside the current (possibly isolated)
     # virtual environment, rather than relying on a bare `robot` on PATH.
-    robot_path = Path(sysconfig.get_path("scripts")) / "robot"
+    robot_path = Path(sysconfig.get_path("scripts")) / (
+        "robot.exe" if IS_WINDOWS else "robot"
+    )
     if not robot_path.exists():
         raise RuntimeError(
             "robot executable not found - ensure robotframework is installed in the same environment as nac-test"
