@@ -136,13 +136,13 @@ class RobotOrchestrator:
         logger.info(f"Robot working directory: {self.output_dir}")
         logger.info(f"Templates directory: {self.templates_dir}")
 
-        # Phase 1: Template rendering (delegate to existing RobotWriter)
+        # Phase 2: Template rendering (delegate to existing RobotWriter)
         typer.echo("📝 Rendering Robot Framework templates...")
         self.robot_writer.write(
             self.templates_dir, self.output_dir, ordering_file=self.ordering_file
         )
 
-        # Phase 2: Test execution (unless render-only mode)
+        # Phase 3: Test execution (unless render-only mode)
         if not self.render_only:
             typer.echo("🤖 Executing Robot Framework tests...\n\n")
             default_robot_loglevel = (

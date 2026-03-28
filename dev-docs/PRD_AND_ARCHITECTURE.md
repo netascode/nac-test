@@ -6058,15 +6058,56 @@ class SystemResourceCalculator:
 
 ### Cleanup Utilities (`utils/cleanup.py`)
 
-Resource cleanup on exit:
+#### CleanupManager
+
+`CleanupManager` is a process-wide singleton that ensures registered files
+are deleted when the process exits, regardless of how it exits.
+
+**Triggers covered:**
+- Normal exit via `atexit` (including `typer.Exit`)
+- `SIGTERM` (e.g. `docker stop`, `kill`) — Unix only
+- `SIGINT` (Ctrl+C / `KeyboardInterrupt`) — Unix only
+
+`SIGKILL` cannot be intercepted; files may remain if the process is killed
+with `-9`.
+
+**Key methods:**
 
 ```python
-def cleanup_temp_files(patterns: List[str]) -> None:
-    """Remove temporary files matching patterns."""
+cleanup = get_cleanup_manager()           # always returns the singleton
 
-def cleanup_output_directory(output_dir: Path) -> None:
-    """Clean up output directory before run."""
+cleanup.register(path)                    # delete path on exit
+cleanup.register(path, keep_if_debug=True)  # skip deletion when NAC_TEST_DEBUG=true
+cleanup.unregister(path)                  # cancel a previously registered path
+cleanup.cleanup_now()                     # trigger cleanup immediately (idempotent)
 ```
+
+**`keep_if_debug` flag**
+
+Files registered with `keep_if_debug=True` are retained when
+`NAC_TEST_DEBUG=true` is set. Use this for intermediate files that are
+useful for debugging (job scripts, per-device testbed YAMLs, merged data
+model). Sensitive files (e.g. files containing credentials) should always
+be registered without this flag so they are unconditionally removed.
+
+**Thread safety:** all operations are protected by an internal lock.
+
+**Signal handler behaviour:** on SIGTERM the original handler is restored
+and the signal is re-raised via `signal.raise_signal()` so upstream
+process managers (Docker, systemd) see the expected exit status. On SIGINT
+the original handler is restored and `KeyboardInterrupt` is raised so the
+normal Python exception handling chain proceeds.
+
+#### PyATS runtime cleanup helpers
+
+Three standalone functions handle CI/CD-specific directory hygiene (not
+related to `CleanupManager`):
+
+| Function | Purpose |
+|---|---|
+| `cleanup_pyats_runtime(workspace_path)` | Removes the `.pyats/` runtime directory before a run to prevent disk exhaustion |
+| `cleanup_old_test_outputs(output_dir, days)` | Removes `.jsonl` result files older than `days` days |
+| `cleanup_stale_test_artifacts(output_dir)` | Removes `api/`, `d2d/`, and `default/` subdirectories containing stale JSONL files from interrupted runs |
 
 ### Environment Utilities (`utils/environment.py`)
 
