@@ -6079,7 +6079,7 @@ cleanup = get_cleanup_manager()           # always returns the singleton
 cleanup.register(path)                    # delete path on exit
 cleanup.register(path, keep_if_debug=True)  # skip deletion when NAC_TEST_DEBUG=true
 cleanup.unregister(path)                  # cancel a previously registered path
-cleanup.cleanup_now()                     # trigger cleanup immediately (idempotent)
+cleanup.run_cleanup()                     # trigger cleanup immediately (idempotent)
 ```
 
 **`keep_if_debug` flag**
@@ -6091,6 +6091,12 @@ model). Sensitive files (e.g. files containing credentials) should always
 be registered without this flag so they are unconditionally removed.
 
 **Thread safety:** all operations are protected by an internal lock.
+
+**Fork safety:** the singleton must not be used in forked child processes.
+If a process is forked while `CleanupManager` is initialised, the child
+inherits the lock in an undefined state and cleanup behaviour is
+unpredictable. Subprocesses spawned via `subprocess.Popen` are unaffected
+— they start a fresh interpreter with no inherited singleton state.
 
 **Signal handler behaviour:** on SIGTERM the original handler is restored
 and the signal is re-raised via `signal.raise_signal()` so upstream
