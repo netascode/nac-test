@@ -185,7 +185,7 @@ jobs:
 
   notification:
     name: Notification
-    if: always() && github.event_name != 'pull_request' && github.event_name != 'workflow_call'
+    if: always() && github.event_name != 'pull_request' && github.event_name != 'workflow_call' && github.actor != 'dependabot[bot]'
     needs: [security, lint, test-linux, test-windows, test-uv-tool]
     runs-on: ubuntu-latest
     timeout-minutes: 5
