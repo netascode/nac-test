@@ -8,6 +8,7 @@ functionality including render-only mode, list rendering variations,
 chunked rendering, and merged data model output.
 """
 
+import filecmp
 from pathlib import Path
 
 import pytest
@@ -259,6 +260,42 @@ def test_chunked_list_rendering_produces_expected_content(tmp_path: Path) -> Non
     # Verify files and their content match expected content
     verify_file_content(
         Path(templates_path) / "expected_content.yaml", robot_results_dir
+    )
+
+
+def test_merged_data_model_creates_default_filename(tmp_path: Path) -> None:
+    """Test that the merged data model is written with the expected filename and content."""
+    runner = CliRunner()
+    templates_path = "tests/integration/fixtures/templates/"
+    expected_filename = "merged_data_model_test_variables.yaml"
+    output_model_path = tmp_path / expected_filename
+    data_dir = Path("tests/integration/fixtures/data_merge")
+    expected_model_path = data_dir / "result.yaml"
+
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            str(data_dir / "file1.yaml"),
+            "-d",
+            str(data_dir / "file2.yaml"),
+            "-t",
+            templates_path,
+            "-o",
+            str(tmp_path),
+            "--render-only",
+        ],
+    )
+    assert result.exit_code == 0, (
+        f"Merged data model creation should succeed, got exit code "
+        f"{result.exit_code}: {result.output}"
+    )
+    assert output_model_path.exists(), (
+        f"Merged data model file should exist at {output_model_path}"
+    )
+    assert filecmp.cmp(output_model_path, expected_model_path, shallow=False), (
+        f"Merged data model content should match expected content from "
+        f"{expected_model_path}"
     )
 
 
