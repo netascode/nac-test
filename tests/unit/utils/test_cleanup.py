@@ -73,19 +73,6 @@ class TestCleanupManagerRegistration:
 
         assert fresh_cleanup_manager._files[test_file.resolve()] is True
 
-    def test_register_multiple_files(
-        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
-    ) -> None:
-        file1 = tmp_path / "file1.txt"
-        file2 = tmp_path / "file2.txt"
-        file1.touch()
-        file2.touch()
-
-        fresh_cleanup_manager.register(file1)
-        fresh_cleanup_manager.register(file2)
-
-        assert len(fresh_cleanup_manager._files) == 2
-
     def test_unregister_prevents_deletion(
         self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
     ) -> None:
@@ -99,25 +86,15 @@ class TestCleanupManagerRegistration:
 
         assert test_file.exists()
 
+    @pytest.mark.parametrize("keep_if_debug", [False, True])
     def test_unregister_removes_path(
-        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path, keep_if_debug: bool
     ) -> None:
+        """unregister() removes the path regardless of keep_if_debug flag."""
         test_file = tmp_path / "test.txt"
         test_file.touch()
 
-        fresh_cleanup_manager.register(test_file)
-        fresh_cleanup_manager.unregister(test_file)
-
-        assert test_file.resolve() not in fresh_cleanup_manager._files
-
-    def test_unregister_removes_keep_if_debug_path(
-        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
-    ) -> None:
-        """unregister() removes paths registered with keep_if_debug=True."""
-        test_file = tmp_path / "test.txt"
-        test_file.touch()
-
-        fresh_cleanup_manager.register(test_file, keep_if_debug=True)
+        fresh_cleanup_manager.register(test_file, keep_if_debug=keep_if_debug)
         fresh_cleanup_manager.unregister(test_file)
 
         assert test_file.resolve() not in fresh_cleanup_manager._files
@@ -151,8 +128,11 @@ class TestCleanupManagerCleanup:
 
         fresh_cleanup_manager.register(test_file)
         fresh_cleanup_manager.run_cleanup()
-        fresh_cleanup_manager.run_cleanup()  # Second call should be safe
 
+        assert not test_file.exists()  # deleted on first call
+        assert fresh_cleanup_manager._cleanup_done
+
+        fresh_cleanup_manager.run_cleanup()  # second call must not raise
         assert fresh_cleanup_manager._cleanup_done
 
     def test_cleanup_handles_already_deleted_file(
@@ -254,17 +234,32 @@ class TestCleanupManagerSkipIfDebug:
 class TestCleanupManagerThreadSafety:
     """Tests for thread-safe behavior."""
 
-    def test_concurrent_registration(
+    def test_concurrent_register_and_cleanup(
         self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
     ) -> None:
+        """Concurrent register() and run_cleanup() calls must not lose files silently.
+
+        The real risk is a file registered while cleanup is iterating _files,
+        causing either a RuntimeError (dict changed size) or a silently
+        skipped deletion. This test creates files in parallel with cleanup
+        and asserts that every file ends up either deleted (cleanup won the
+        race) or still tracked and then cleaned up explicitly — nothing is
+        silently lost.
+        """
         num_threads = 10
         files_per_thread = 10
+        all_files: list[Path] = []
+        errors: list[Exception] = []
 
         def register_files(thread_id: int) -> None:
-            for i in range(files_per_thread):
-                f = tmp_path / f"thread{thread_id}_file{i}.txt"
-                f.touch()
-                fresh_cleanup_manager.register(f)
+            try:
+                for i in range(files_per_thread):
+                    f = tmp_path / f"thread{thread_id}_file{i}.txt"
+                    f.touch()
+                    all_files.append(f)
+                    fresh_cleanup_manager.register(f)
+            except Exception as e:
+                errors.append(e)
 
         threads = [
             threading.Thread(target=register_files, args=(i,))
@@ -273,10 +268,29 @@ class TestCleanupManagerThreadSafety:
 
         for t in threads:
             t.start()
+
+        # Trigger cleanup mid-registration to exercise lock contention
+        fresh_cleanup_manager.run_cleanup()
+
         for t in threads:
             t.join()
 
-        assert len(fresh_cleanup_manager._files) == num_threads * files_per_thread
+        assert not errors, f"Exceptions in registration threads: {errors}"
+
+        # Any file not yet deleted must still be tracked; clean up remaining
+        for f in all_files:
+            if f.exists():
+                assert f.resolve() in fresh_cleanup_manager._files, (
+                    f"{f.name} still exists but is no longer tracked — silently lost"
+                )
+
+        # Reset idempotency guard so we can clean up remaining files
+        fresh_cleanup_manager._cleanup_done = False
+        fresh_cleanup_manager.run_cleanup()
+
+        assert all(not f.exists() for f in all_files), (
+            "Some files were neither deleted by cleanup nor cleaned up on retry"
+        )
 
 
 @pytest.mark.skipif(IS_WINDOWS, reason="Signal tests not supported on Windows")
