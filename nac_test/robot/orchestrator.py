@@ -118,10 +118,9 @@ class RobotOrchestrator:
         This method:
         1. Creates the Robot Framework working directory under robot_results/
         2. Renders Robot test templates using RobotWriter
-        3. Creates merged data model file in the Robot working directory
-        4. Executes tests using pabot (unless render_only mode)
-        5. Creates backward compatibility symlinks
-        6. Extracts and returns test statistics
+        3. Executes tests using pabot (unless render_only mode)
+        4. Creates backward compatibility symlinks
+        5. Extracts and returns test statistics
 
         Follows the same pattern as PyATSOrchestrator.run_tests().
 

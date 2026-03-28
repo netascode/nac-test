@@ -355,7 +355,13 @@ class RobotWriter:
                         if params[1] == "iterate_list_chunked":
                             # Handle chunked iteration
                             object_path = params[5]
-                            chunk_size = int(params[6].rstrip("#}"))
+                            try:
+                                chunk_size = int(params[6].rstrip("#}"))
+                            except (ValueError, IndexError) as e:
+                                raise ValueError(
+                                    f"Invalid chunk_size in iterate_list_chunked directive "
+                                    f"in {Path(dir, filename)}: {match.group()!r}"
+                                ) from e
                             for item in elem:
                                 attr_value = item.get(attr)
                                 if attr_value is None:

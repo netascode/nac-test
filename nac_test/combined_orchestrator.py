@@ -406,7 +406,7 @@ class CombinedOrchestrator:
         if combined_dashboard.exists():
             typer.echo(f"Dashboard:  {combined_dashboard.resolve()}")
         if results.robot is not None and not results.robot.is_empty:
-            robot_log = self.output_dir / ROBOT_RESULTS_DIRNAME / "log.html"
+            robot_log = self.output_dir / ROBOT_RESULTS_DIRNAME / LOG_HTML
             if robot_log.exists():
                 typer.echo(f"Robot:      {robot_log.resolve()}")
         if results.api is not None and not results.api.is_empty:
