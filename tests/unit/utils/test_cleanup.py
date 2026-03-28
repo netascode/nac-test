@@ -50,25 +50,16 @@ class TestCleanupManagerSingleton:
 class TestCleanupManagerRegistration:
     """Tests for file registration and unregistration."""
 
-    def test_register_adds_path(
+    def test_register_adds_path_with_default_flag_false(
         self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
     ) -> None:
+        """register() without keep_if_debug adds the path and stores False (always delete)."""
         test_file = tmp_path / "test.txt"
         test_file.touch()
 
         fresh_cleanup_manager.register(test_file)
 
         assert test_file.resolve() in fresh_cleanup_manager._files
-
-    def test_register_default_flag_is_false(
-        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
-    ) -> None:
-        """register() without keep_if_debug stores False (always delete)."""
-        test_file = tmp_path / "test.txt"
-        test_file.touch()
-
-        fresh_cleanup_manager.register(test_file)
-
         assert fresh_cleanup_manager._files[test_file.resolve()] is False
 
     def test_register_keep_if_debug_stores_true(
@@ -104,7 +95,7 @@ class TestCleanupManagerRegistration:
 
         fresh_cleanup_manager.register(test_file)
         fresh_cleanup_manager.unregister(test_file)
-        fresh_cleanup_manager.cleanup_now()
+        fresh_cleanup_manager.run_cleanup()
 
         assert test_file.exists()
 
@@ -148,7 +139,7 @@ class TestCleanupManagerCleanup:
         test_file.write_text("secret: password123")
 
         fresh_cleanup_manager.register(test_file)
-        fresh_cleanup_manager.cleanup_now()
+        fresh_cleanup_manager.run_cleanup()
 
         assert not test_file.exists()
 
@@ -159,8 +150,8 @@ class TestCleanupManagerCleanup:
         test_file.touch()
 
         fresh_cleanup_manager.register(test_file)
-        fresh_cleanup_manager.cleanup_now()
-        fresh_cleanup_manager.cleanup_now()  # Second call should be safe
+        fresh_cleanup_manager.run_cleanup()
+        fresh_cleanup_manager.run_cleanup()  # Second call should be safe
 
         assert fresh_cleanup_manager._cleanup_done
 
@@ -173,7 +164,7 @@ class TestCleanupManagerCleanup:
         fresh_cleanup_manager.register(test_file)
         test_file.unlink()  # Delete before cleanup
 
-        fresh_cleanup_manager.cleanup_now()  # Should not raise
+        fresh_cleanup_manager.run_cleanup()  # Should not raise
 
     def test_cleanup_continues_after_single_file_error(
         self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
@@ -190,7 +181,7 @@ class TestCleanupManagerCleanup:
         file1.unlink()
         file1.mkdir()
 
-        fresh_cleanup_manager.cleanup_now()
+        fresh_cleanup_manager.run_cleanup()
 
         # file2 should still be cleaned up despite file1 error
         assert not file2.exists()
@@ -223,7 +214,7 @@ class TestCleanupManagerSkipIfDebug:
         fresh_cleanup_manager.register(test_file, keep_if_debug=True)
 
         with patch("nac_test.utils.cleanup.DEBUG_MODE", debug_mode):
-            fresh_cleanup_manager.cleanup_now()
+            fresh_cleanup_manager.run_cleanup()
 
         assert test_file.exists() is expected_exists
 
@@ -237,7 +228,7 @@ class TestCleanupManagerSkipIfDebug:
         fresh_cleanup_manager.register(test_file)
 
         with patch("nac_test.utils.cleanup.DEBUG_MODE", True):
-            fresh_cleanup_manager.cleanup_now()
+            fresh_cleanup_manager.run_cleanup()
 
         assert not test_file.exists()
 
@@ -254,7 +245,7 @@ class TestCleanupManagerSkipIfDebug:
         fresh_cleanup_manager.register(debug_file, keep_if_debug=True)
 
         with patch("nac_test.utils.cleanup.DEBUG_MODE", True):
-            fresh_cleanup_manager.cleanup_now()
+            fresh_cleanup_manager.run_cleanup()
 
         assert not sensitive.exists()
         assert debug_file.exists()

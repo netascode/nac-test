@@ -65,7 +65,7 @@ class CleanupManager:
         self._cleanup_done = False
 
         # Register atexit handler
-        atexit.register(self._cleanup)
+        atexit.register(self.run_cleanup)
 
         # Install signal handlers (Unix only - Windows doesn't support SIGTERM properly)
         if not IS_WINDOWS:
@@ -90,7 +90,7 @@ class CleanupManager:
         logger.debug(f"Received {sig_name}, performing cleanup")
 
         # Perform cleanup
-        self._cleanup()
+        self.run_cleanup()
 
         # Re-raise the signal with original handler or default behavior
         if signum == signal.SIGTERM:
@@ -138,8 +138,14 @@ class CleanupManager:
             self._files.pop(resolved, None)
             logger.debug(f"Unregistered from cleanup: {resolved}")
 
-    def _cleanup(self) -> None:
-        """Remove all registered files. Safe to call multiple times."""
+    def run_cleanup(self) -> None:
+        """Delete all registered files. Safe to call multiple times.
+
+        Called automatically on normal exit (atexit), SIGTERM, and SIGINT.
+        Can also be called manually before an explicit exit.
+        After the first call, registered files are cleared and subsequent
+        calls are no-ops.
+        """
         with self._lock:
             if self._cleanup_done:
                 return
@@ -165,14 +171,6 @@ class CleanupManager:
                 )
 
             self._files.clear()
-
-    def cleanup_now(self) -> None:
-        """Manually trigger cleanup (e.g., before explicit exit).
-
-        After calling this, registered files are cleared and won't be
-        cleaned up again on exit.
-        """
-        self._cleanup()
 
 
 def get_cleanup_manager() -> CleanupManager:
