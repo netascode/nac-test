@@ -11,7 +11,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from nac_test.core.constants import DEFAULT_MERGED_DATA_FILENAME
 from nac_test.pyats_core.constants import ENV_TEST_DIR
 from nac_test.pyats_core.execution.job_generator import JobGenerator
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
@@ -31,6 +30,7 @@ class DeviceExecutor:
         test_status: dict[str, Any],
         test_dir: Path,
         base_output_dir: Path,
+        merged_data_path: Path,
         custom_testbed_path: Path | None = None,
     ):
         """Initialize device executor.
@@ -41,6 +41,7 @@ class DeviceExecutor:
             test_status: Dictionary for tracking test status
             test_dir: Directory containing PyATS test files (user-specified)
             base_output_dir: Base output directory for test results
+            merged_data_path: Path to the merged data model YAML file
             custom_testbed_path: Optional path to custom PyATS testbed YAML
         """
         self.job_generator = job_generator
@@ -48,6 +49,7 @@ class DeviceExecutor:
         self.test_status = test_status
         self.test_dir = test_dir
         self.base_output_dir = base_output_dir
+        self.merged_data_path = merged_data_path
         self.custom_testbed_path = custom_testbed_path
 
     async def run_device_job_with_semaphore(
@@ -106,7 +108,7 @@ class DeviceExecutor:
                         "HOSTNAME": hostname,
                         "DEVICE_INFO": json.dumps(device),
                         "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
-                            self.base_output_dir / DEFAULT_MERGED_DATA_FILENAME
+                            self.merged_data_path
                         ),
                         "NAC_TEST_TYPE": "d2d",
                         ENV_TEST_DIR: str(self.test_dir),

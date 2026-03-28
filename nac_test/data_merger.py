@@ -4,12 +4,17 @@
 """Shared data merging utilities for both Robot and PyATS test execution."""
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
 from nac_yaml import yaml
 
-from nac_test.core.constants import DEFAULT_MERGED_DATA_FILENAME
+from nac_test.core.constants import (
+    IS_WINDOWS,
+    MERGED_DATA_FILE_MODE,
+    MERGED_DATA_FILENAME,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,19 +40,40 @@ class DataMerger:
         return data if isinstance(data, dict) else {}
 
     @staticmethod
+    def merged_data_path(output_directory: Path) -> Path:
+        """Return the path where the merged data model file will be written.
+
+        Single source of truth for locating the merged data file — use this
+        instead of constructing the path manually from the constant.
+
+        Args:
+            output_directory: Base output directory passed to write_merged_data_model()
+
+        Returns:
+            Full path to the merged data model YAML file
+        """
+        return output_directory / MERGED_DATA_FILENAME
+
+    @staticmethod
     def write_merged_data_model(
         data: dict[str, Any],
         output_directory: Path,
-    ) -> None:
+    ) -> Path:
         """Write merged data model to YAML file.
 
-        The output filename is always DEFAULT_MERGED_DATA_FILENAME — the single
-        fixed location used by all consumers (Robot, PyATS subprocesses, cleanup).
+        The output filename is always MERGED_DATA_FILENAME — the single fixed
+        location used by all consumers (Robot, PyATS subprocesses, cleanup).
 
         Args:
             data: The merged data dictionary to write
             output_directory: Directory where the YAML file will be saved
+
+        Returns:
+            Path to the written file (use this instead of reconstructing the path)
         """
-        full_output_path = output_directory / DEFAULT_MERGED_DATA_FILENAME
+        full_output_path = DataMerger.merged_data_path(output_directory)
         logger.info("Writing merged data model to %s", full_output_path)
         yaml.write_yaml_file(data, full_output_path)
+        if not IS_WINDOWS:
+            os.chmod(full_output_path, MERGED_DATA_FILE_MODE)
+        return full_output_path

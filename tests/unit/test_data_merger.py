@@ -10,7 +10,8 @@ Covers:
 
 from pathlib import Path
 
-from nac_test.core.constants import DEFAULT_MERGED_DATA_FILENAME
+from nac_yaml import yaml
+
 from nac_test.data_merger import DataMerger
 
 FIXTURES_DIR = Path("tests/unit/fixtures/data_merge")
@@ -83,25 +84,26 @@ class TestMergeDataFiles:
 class TestWriteMergedDataModel:
     """Tests for DataMerger.write_merged_data_model()."""
 
-    def test_writes_to_default_filename(self, tmp_path: Path) -> None:
-        """Output file is always named DEFAULT_MERGED_DATA_FILENAME."""
-        DataMerger.write_merged_data_model({"key": "value"}, tmp_path)
-        expected = tmp_path / DEFAULT_MERGED_DATA_FILENAME
-        assert expected.exists(), f"Expected {expected} to exist"
+    def test_returns_path_to_written_file(self, tmp_path: Path) -> None:
+        """write_merged_data_model returns the path of the file it created."""
+        returned = DataMerger.write_merged_data_model({"key": "value"}, tmp_path)
+        assert returned == DataMerger.merged_data_path(tmp_path)
+        assert returned.exists()
 
     def test_writes_no_extra_files(self, tmp_path: Path) -> None:
         """Exactly one file is created in the output directory."""
         DataMerger.write_merged_data_model({"key": "value"}, tmp_path)
-        files = list(tmp_path.iterdir())
-        assert len(files) == 1
+        assert len(list(tmp_path.iterdir())) == 1
+
+    def test_merged_data_path_matches_written_file(self, tmp_path: Path) -> None:
+        """merged_data_path() returns the same path as the file written by write_merged_data_model()."""
+        returned = DataMerger.write_merged_data_model({"key": "value"}, tmp_path)
+        assert DataMerger.merged_data_path(tmp_path) == returned
 
     def test_roundtrip_preserves_content(self, tmp_path: Path) -> None:
         """Data written to YAML can be read back with the same structure."""
-        from nac_yaml import yaml
-
         original = {"host": "router1", "vlan": 100, "tags": ["a", "b"]}
-        DataMerger.write_merged_data_model(original, tmp_path)
-        output_path = tmp_path / DEFAULT_MERGED_DATA_FILENAME
+        output_path = DataMerger.write_merged_data_model(original, tmp_path)
         reloaded = yaml.load_yaml_files([output_path])
         assert reloaded["host"] == "router1"
         assert reloaded["vlan"] == 100
@@ -109,13 +111,10 @@ class TestWriteMergedDataModel:
 
     def test_roundtrip_preserves_merged_fixture_content(self, tmp_path: Path) -> None:
         """Full merge result can be written and reloaded without data loss."""
-        from nac_yaml import yaml
-
         merged = DataMerger.merge_data_files(
             [FIXTURES_DIR / "file1.yaml", FIXTURES_DIR / "file2.yaml"]
         )
-        DataMerger.write_merged_data_model(merged, tmp_path)
-        output_path = tmp_path / DEFAULT_MERGED_DATA_FILENAME
+        output_path = DataMerger.write_merged_data_model(merged, tmp_path)
         reloaded = yaml.load_yaml_files([output_path])
         assert reloaded["root"]["attr1"] == "value1"
         assert reloaded["root"]["attr2"] == "value2"

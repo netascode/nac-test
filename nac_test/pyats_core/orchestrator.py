@@ -15,7 +15,6 @@ from typing import Any
 
 from nac_test.core.constants import (
     DEBUG_MODE,
-    DEFAULT_MERGED_DATA_FILENAME,
     DRY_RUN_REASON,
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
@@ -23,6 +22,7 @@ from nac_test.core.constants import (
     SUMMARY_SEPARATOR_WIDTH,
 )
 from nac_test.core.types import PyATSResults, TestResults
+from nac_test.data_merger import DataMerger
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
     DEFAULT_CPU_MULTIPLIER,
@@ -97,7 +97,7 @@ class PyATSOrchestrator:
         self.output_dir = (
             self.base_output_dir / PYATS_RESULTS_DIRNAME
         )  # PyATS works in its own subdirectory
-        self.merged_data_filename = DEFAULT_MERGED_DATA_FILENAME
+        self.merged_data_path = DataMerger.merged_data_path(self.base_output_dir)
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
         self.dry_run = dry_run
@@ -139,7 +139,7 @@ class PyATSOrchestrator:
         # Initialize discovery components
         self.test_discovery = TestDiscovery(self.test_dir)
         self.device_inventory_discovery = DeviceInventoryDiscovery(
-            self.base_output_dir / self.merged_data_filename
+            self.merged_data_path
         )
 
         # Initialize execution components
@@ -309,7 +309,7 @@ class PyATSOrchestrator:
             # The merged data file is created by main.py at the base output level.
             # Pass absolute path so the child process (with cwd set) can locate it.
             env["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = str(
-                (self.base_output_dir / self.merged_data_filename).absolute()
+                self.merged_data_path.absolute()
             )
             # Set NAC_TEST_TYPE to differentiate API vs D2D test types for separate temp directories
             # This prevents race conditions where both test types write JSONL files to the same location
@@ -429,6 +429,7 @@ class PyATSOrchestrator:
                 self.d2d_test_status,  # Use d2d_test_status for device tests
                 self.test_dir,
                 self.base_output_dir,
+                self.merged_data_path,
                 self.custom_testbed_path,
             )
 
