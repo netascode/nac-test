@@ -97,7 +97,10 @@ class PyATSOrchestrator:
         self.output_dir = (
             self.base_output_dir / PYATS_RESULTS_DIRNAME
         )  # PyATS works in its own subdirectory
-        self.merged_data_path = DataMerger.merged_data_path(self.base_output_dir)
+        # Absolute path so child processes can locate it regardless of working directory.
+        self.merged_data_path = DataMerger.merged_data_path(
+            self.base_output_dir
+        ).absolute()
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
         self.dry_run = dry_run
@@ -306,10 +309,8 @@ class PyATSOrchestrator:
             # We cannot pass Python objects across process boundaries
             # so we use env vars to communicate
             # configuration (like data file paths) from the orchestrator to the test subprocess.
-            # The merged data file is created by main.py at the base output level.
-            # Pass absolute path so the child process (with cwd set) can locate it.
             env["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = str(
-                self.merged_data_path.absolute()
+                self.merged_data_path
             )
             # Set NAC_TEST_TYPE to differentiate API vs D2D test types for separate temp directories
             # This prevents race conditions where both test types write JSONL files to the same location
