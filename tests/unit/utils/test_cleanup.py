@@ -9,6 +9,7 @@ import signal
 import threading
 from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -206,6 +207,44 @@ class TestCleanupManagerSignalHandlers:
             mock_raise.assert_called_once_with(signal.SIGTERM)
 
         assert not test_file.exists()
+
+    @pytest.mark.parametrize(
+        ("signum", "original_handler", "expected_restored"),
+        [
+            # SIG_DFL (value 0) is falsy — must use `is not None`, not truthiness check
+            (signal.SIGTERM, signal.SIG_DFL, signal.SIG_DFL),
+            # SIG_IGN (value 1) is truthy but should still be restored correctly
+            (signal.SIGTERM, signal.SIG_IGN, signal.SIG_IGN),
+            # None means no prior handler was recorded — fall back to SIG_DFL
+            (signal.SIGTERM, None, signal.SIG_DFL),
+        ],
+        ids=["SIG_DFL_restored", "SIG_IGN_restored", "None_falls_back_to_SIG_DFL"],
+    )
+    def test_signal_handler_restores_original_handler(
+        self,
+        fresh_cleanup_manager: CleanupManager,
+        signum: int,
+        original_handler: Any,
+        expected_restored: Any,
+    ) -> None:
+        """Handler restores the original signal disposition, including falsy SIG_DFL."""
+        if signum == signal.SIGTERM:
+            fresh_cleanup_manager._original_sigterm = original_handler
+        else:
+            fresh_cleanup_manager._original_sigint = original_handler
+
+        restored: list[Any] = []
+
+        def capture_signal(sig: int, handler: Any) -> None:
+            restored.append((sig, handler))
+
+        with (
+            patch("signal.signal", side_effect=capture_signal),
+            patch("signal.raise_signal"),
+        ):
+            fresh_cleanup_manager._signal_handler(signum, None)
+
+        assert restored == [(signum, expected_restored)]
 
 
 class TestCleanupManagerIntegration:

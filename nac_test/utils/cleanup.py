@@ -96,7 +96,7 @@ class CleanupManager:
             original = self._original_sigint
 
         # Restore original handler and re-raise
-        signal.signal(signum, original if original else signal.SIG_DFL)
+        signal.signal(signum, original if original is not None else signal.SIG_DFL)
 
         # For SIGINT, raise KeyboardInterrupt to allow normal exception handling
         if signum == signal.SIGINT:
