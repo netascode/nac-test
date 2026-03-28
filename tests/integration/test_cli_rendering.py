@@ -16,7 +16,11 @@ import yaml
 from typer.testing import CliRunner
 
 import nac_test.cli.main
-from nac_test.core.constants import EXIT_ERROR, ROBOT_RESULTS_DIRNAME
+from nac_test.core.constants import (
+    EXIT_ERROR,
+    MERGED_DATA_FILENAME,
+    ROBOT_RESULTS_DIRNAME,
+)
 
 pytestmark = [pytest.mark.integration, pytest.mark.windows]
 
@@ -267,8 +271,7 @@ def test_merged_data_model_creates_default_filename(tmp_path: Path) -> None:
     """Test that the merged data model is written with the expected filename and content."""
     runner = CliRunner()
     templates_path = "tests/integration/fixtures/templates/"
-    expected_filename = "merged_data_model_test_variables.yaml"
-    output_model_path = tmp_path / expected_filename
+    output_model_path = tmp_path / MERGED_DATA_FILENAME
     data_dir = Path("tests/integration/fixtures/data_merge")
     expected_model_path = data_dir / "result.yaml"
 
