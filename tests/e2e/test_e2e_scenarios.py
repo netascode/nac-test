@@ -123,22 +123,16 @@ class E2ECombinedTestBase:
         )
 
     def test_cli_has_no_exception(self, results: E2EResults) -> None:
-        """Verify CLI execution completed without unexpected exceptions.
+        """Verify CLI execution completed without an unexpected Python exception.
 
-        Note: SystemExit is expected when tests fail (non-zero exit code).
-        Typer's CliRunner captures this as an exception, but it's not an error.
+        With subprocess execution, a module-level import error or unhandled crash
+        during interpreter startup writes a traceback to stderr before any CLI
+        exception handling runs. A clean exit — including a non-zero exit code from
+        test failures — produces no traceback in stderr.
         """
-        exception = results.cli_result.exception
-        if exception is not None:
-            # SystemExit is expected for non-zero exit codes (test failures)
-            assert isinstance(exception, SystemExit), (
-                f"CLI raised unexpected exception: {type(exception).__name__}: {exception}"
-            )
-            # Verify the exit code matches what we expect
-            assert exception.code == results.scenario.expected_exit_code, (
-                f"SystemExit code {exception.code} doesn't match expected "
-                f"{results.scenario.expected_exit_code}"
-            )
+        assert "Traceback (most recent call last)" not in results.stderr, (
+            f"CLI crashed with an unexpected exception:\n{results.stderr}"
+        )
 
     # -------------------------------------------------------------------------
     # Directory Structure Tests

@@ -141,26 +141,3 @@ def mock_api_server_preflight_401() -> Generator[MockAPIServer, None, None]:
     mock_api_server so no mutation of the session-wide server is needed.
     """
     yield from _start_mock_server(MOCK_API_CONFIG_PREFLIGHT_401_PATH)
-
-
-# =============================================================================
-# Class-scoped fixtures
-# =============================================================================
-
-
-@pytest.fixture(scope="class")
-def class_mocker() -> Generator[pytest.MonkeyPatch, None, None]:
-    """Provide a class-scoped monkeypatch fixture for environment management.
-
-    This allows class-scoped fixtures to use monkeypatch for automatic cleanup
-    of environment variables instead of manual save/restore logic.
-
-    Usage in class-scoped fixtures:
-        @pytest.fixture(scope="class")
-        def my_fixture(class_mocker: pytest.MonkeyPatch):
-            class_mocker.setenv("MY_VAR", "value")
-            # Automatic cleanup when class scope ends
-    """
-    monkey_patch = pytest.MonkeyPatch()
-    yield monkey_patch
-    monkey_patch.undo()
