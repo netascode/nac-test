@@ -7,14 +7,13 @@ import atexit
 import logging
 import shutil
 import signal
-import sys
 import threading
 import time
 from pathlib import Path
 from types import FrameType
 from typing import Any
 
-from nac_test.core.constants import DEBUG_MODE
+from nac_test.core.constants import DEBUG_MODE, IS_WINDOWS
 from nac_test.pyats_core.discovery.test_type_resolver import VALID_TEST_TYPES
 
 logger = logging.getLogger(__name__)
@@ -69,7 +68,7 @@ class CleanupManager:
         atexit.register(self._cleanup)
 
         # Install signal handlers (Unix only - Windows doesn't support SIGTERM properly)
-        if sys.platform != "win32":
+        if not IS_WINDOWS:
             self._install_signal_handlers()
 
         self._initialized = True
@@ -120,6 +119,8 @@ class CleanupManager:
                   (job scripts, testbed YAMLs, merged data) that aid debugging.
         """
         with self._lock:
+            # resolve() canonicalises symlinks (e.g. macOS /tmp → /private/tmp)
+            # so registration and cleanup always refer to the same inode.
             resolved = path.resolve()
             self._files[resolved] = keep_if_debug
             logger.debug(
