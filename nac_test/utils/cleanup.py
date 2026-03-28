@@ -39,6 +39,12 @@ class CleanupManager:
 
     Thread Safety:
         All operations are thread-safe via internal locking.
+
+    Fork Safety:
+        Not safe to use in forked child processes. If a process is forked
+        while the singleton is initialised, the child inherits the lock in
+        an undefined state. Subprocesses spawned via subprocess.Popen are
+        unaffected (they get a fresh interpreter).
     """
 
     _instance: "CleanupManager | None" = None
