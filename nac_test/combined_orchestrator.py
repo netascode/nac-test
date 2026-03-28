@@ -75,6 +75,7 @@ class CombinedOrchestrator:
         data_paths: list[Path],
         templates_dir: Path,
         output_dir: Path,
+        merged_data: dict[str, Any] | None = None,
         filters_path: Path | None = None,
         tests_path: Path | None = None,
         include_tags: list[str] | None = None,
@@ -90,7 +91,6 @@ class CombinedOrchestrator:
         processes: int | None = None,
         extra_args: ValidatedRobotArgs | None = None,
         verbose: bool = False,
-        merged_data: dict[str, Any] | None = None,
     ):
         """Initialize the combined orchestrator.
 
@@ -98,6 +98,7 @@ class CombinedOrchestrator:
             data_paths: List of paths to data model YAML files
             templates_dir: Directory containing test templates and PyATS test files
             output_dir: Base directory for test output
+            merged_data: Already-loaded merged data model dict (avoids re-reading from disk)
             filters_path: Path to Jinja filters (Robot only)
             tests_path: Path to Jinja tests (Robot only)
             include_tags: Tags to include (Robot only)
@@ -113,11 +114,13 @@ class CombinedOrchestrator:
             dev_pyats_only: Development mode - run only PyATS tests (skip Robot)
             dev_robot_only: Development mode - run only Robot Framework tests (skip PyATS)
             verbose: Enable verbose mode - keeps archive files, enables verbose output
-            merged_data: Already-loaded merged data model dict (avoids re-reading from disk)
         """
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
         self.output_dir = Path(output_dir)
+        self.merged_data: dict[str, Any] = (
+            merged_data if merged_data is not None else {}
+        )
 
         # Robot-specific parameters
         self.filters_path = filters_path
@@ -139,9 +142,6 @@ class CombinedOrchestrator:
         self.dev_pyats_only = dev_pyats_only
         self.dev_robot_only = dev_robot_only
         self.verbose = verbose
-        self.merged_data: dict[str, Any] = (
-            merged_data if merged_data is not None else {}
-        )
 
         # Controller type — detected lazily in run_tests() when PyATS tests are present
         self.controller_type: ControllerTypeKey | None = None
@@ -237,6 +237,7 @@ class CombinedOrchestrator:
             robot_orchestrator = RobotOrchestrator(
                 templates_dir=self.templates_dir,
                 output_dir=self.output_dir,
+                merged_data=self.merged_data,
                 filters_path=self.filters_path,
                 tests_path=self.tests_path,
                 include_tags=self.include_tags,
@@ -247,7 +248,6 @@ class CombinedOrchestrator:
                 extra_args=self.extra_args,
                 loglevel=self.loglevel,
                 verbose=self.verbose,
-                merged_data=self.merged_data,
             )
             try:
                 robot_results = robot_orchestrator.run_tests()

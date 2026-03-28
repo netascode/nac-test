@@ -55,8 +55,8 @@ def orchestrator(mock_templates_dir, temp_output_dir, merged_data) -> RobotOrche
     return RobotOrchestrator(
         templates_dir=mock_templates_dir,
         output_dir=temp_output_dir,
-        loglevel=DEFAULT_LOGLEVEL,
         merged_data=merged_data,
+        loglevel=DEFAULT_LOGLEVEL,
     )
 
 
@@ -85,6 +85,7 @@ class TestRobotOrchestrator:
         orchestrator = RobotOrchestrator(
             templates_dir=mock_templates_dir,
             output_dir=temp_output_dir,
+            merged_data={"test": "data"},
             include_tags=["smoke", "regression"],
             exclude_tags=["wip"],
             render_only=True,
@@ -92,7 +93,6 @@ class TestRobotOrchestrator:
             processes=4,
             extra_args=ValidatedRobotArgs(args=["--exitonfailure"], robot_opts={}),
             loglevel=LogLevel.DEBUG,
-            merged_data={"test": "data"},
         )
 
         assert orchestrator.include_tags == ["smoke", "regression"]
@@ -340,9 +340,9 @@ class TestRobotOrchestrator:
         orchestrator = RobotOrchestrator(
             templates_dir=mock_templates_dir,
             output_dir=temp_output_dir,
+            merged_data={"test": "data"},
             verbose=verbose,
             loglevel=loglevel,
-            merged_data={"test": "data"},
         )
         orchestrator.robot_writer.write = MagicMock()
         mock_pabot.return_value = 0
@@ -394,9 +394,9 @@ class TestRobotOrchestrator:
         orchestrator = RobotOrchestrator(
             templates_dir=mock_templates_dir,
             output_dir=temp_output_dir,
+            merged_data={"test": "data"},
             include_tags=include_tags,
             exclude_tags=exclude_tags,
-            merged_data={"test": "data"},
         )
         orchestrator.robot_writer.write = MagicMock()
         mock_pabot.return_value = 0

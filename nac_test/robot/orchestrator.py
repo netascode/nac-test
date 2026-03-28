@@ -49,6 +49,7 @@ class RobotOrchestrator:
         self,
         templates_dir: Path,
         output_dir: Path,
+        merged_data: dict[str, Any] | None = None,
         filters_path: Path | None = None,
         tests_path: Path | None = None,
         include_tags: list[str] | None = None,
@@ -59,13 +60,13 @@ class RobotOrchestrator:
         extra_args: ValidatedRobotArgs | None = None,
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
         verbose: bool = False,
-        merged_data: dict[str, Any] | None = None,
     ):
         """Initialize the Robot Framework orchestrator.
 
         Args:
             templates_dir: Directory containing Robot template files
             output_dir: Base output directory (orchestrator uses its robot_results subdirectory)
+            merged_data: Already-loaded merged data model dict (avoids re-reading from disk)
             filters_path: Optional path to filter files
             tests_path: Optional path to test files
             include_tags: Optional list of tags to include
@@ -76,11 +77,13 @@ class RobotOrchestrator:
             extra_args: Additional Robot Framework arguments to pass to pabot
             loglevel: Log level
             verbose: Enable verbose mode - enables verbose output for pabot
-            merged_data: Already-loaded merged data model dict (avoids re-reading from disk)
         """
         self.templates_dir = Path(templates_dir)
         self.base_output_dir = Path(output_dir)
         self.output_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
+        self.merged_data: dict[str, Any] = (
+            merged_data if merged_data is not None else {}
+        )
 
         # Robot-specific parameters
         self.filters_path = filters_path
@@ -93,9 +96,6 @@ class RobotOrchestrator:
         self.extra_args = extra_args
         self.loglevel = loglevel
         self.verbose = verbose
-        self.merged_data: dict[str, Any] = (
-            merged_data if merged_data is not None else {}
-        )
 
         # Determine if ordering file should be used for test-level parallelization
         if not DISABLE_TESTLEVELSPLIT:

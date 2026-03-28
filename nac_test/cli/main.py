@@ -397,8 +397,9 @@ def main(
     orchestrator = CombinedOrchestrator(
         data_paths=data,
         templates_dir=templates,
-        custom_testbed_path=testbed,
         output_dir=output,
+        merged_data=merged_data,
+        custom_testbed_path=testbed,
         filters_path=filters,
         tests_path=tests,
         include_tags=include,
@@ -413,7 +414,6 @@ def main(
         dev_pyats_only=pyats,
         dev_robot_only=robot,
         verbose=verbose,
-        merged_data=merged_data,
     )
 
     # Track total runtime for benchmarking
