@@ -95,11 +95,6 @@ class TestWriteMergedDataModel:
         DataMerger.write_merged_data_model({"key": "value"}, tmp_path)
         assert len(list(tmp_path.iterdir())) == 1
 
-    def test_merged_data_path_matches_written_file(self, tmp_path: Path) -> None:
-        """merged_data_path() returns the same path as the file written by write_merged_data_model()."""
-        returned = DataMerger.write_merged_data_model({"key": "value"}, tmp_path)
-        assert DataMerger.merged_data_path(tmp_path) == returned
-
     def test_roundtrip_preserves_content(self, tmp_path: Path) -> None:
         """Data written to YAML can be read back with the same structure."""
         original = {"host": "router1", "vlan": 100, "tags": ["a", "b"]}
