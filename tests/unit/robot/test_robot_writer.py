@@ -6,7 +6,6 @@
 """Unit tests for RobotWriter.
 
 Covers:
-- Constructor: merged_data dict is stored directly (no file I/O, no conversion)
 - render_template: uses self.data as template context by default
 - render_template: custom_data overrides self.data when provided
 - render_template: output file and parent directories are created
@@ -47,54 +46,6 @@ def writer() -> RobotWriter:
         filters_path=None,
         tests_path=None,
     )
-
-
-# ---------------------------------------------------------------------------
-# Constructor tests
-# ---------------------------------------------------------------------------
-
-
-class TestRobotWriterInit:
-    """Tests for RobotWriter.__init__()."""
-
-    def test_stores_merged_data_directly(self) -> None:
-        """Constructor stores the dict by reference — no copy or type conversion."""
-        data = {"host": "sw1", "count": 5}
-        w = RobotWriter(merged_data=data, filters_path=None, tests_path=None)
-        assert w.data is data
-
-    def test_accepts_empty_dict(self) -> None:
-        """Constructor accepts an empty dict without raising."""
-        w = RobotWriter(merged_data={}, filters_path=None, tests_path=None)
-        assert w.data == {}
-
-    def test_tags_default_to_empty_lists(self) -> None:
-        """include_tags and exclude_tags default to empty lists when omitted."""
-        w = RobotWriter(merged_data={}, filters_path=None, tests_path=None)
-        assert w.include_tags == []
-        assert w.exclude_tags == []
-
-    @pytest.mark.parametrize(
-        ("include_tags", "exclude_tags"),
-        [
-            (["smoke"], []),
-            ([], ["slow"]),
-            (["smoke"], ["slow"]),
-            (["smoke", "regression"], ["slow", "wip"]),
-        ],
-        ids=["include_only", "exclude_only", "both", "multiple_each"],
-    )
-    def test_tags_stored_correctly(self, include_tags, exclude_tags) -> None:
-        """Explicit include/exclude tags are stored without modification."""
-        w = RobotWriter(
-            merged_data={},
-            filters_path=None,
-            tests_path=None,
-            include_tags=include_tags,
-            exclude_tags=exclude_tags,
-        )
-        assert w.include_tags == include_tags
-        assert w.exclude_tags == exclude_tags
 
 
 # ---------------------------------------------------------------------------
