@@ -1,3 +1,4 @@
+# UTF-8: Ü ö ä ñ 日本語 中文
 # ACI e2e tests need both top-level `apic` and `default` dicts defined
 # at runtime (actual dict content doesn't matter for these tests),
 # define them here in a common file.

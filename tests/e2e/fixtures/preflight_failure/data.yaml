@@ -1,3 +1,4 @@
+# UTF-8: Ü ö ä ñ 日本語 中文
 # ACI data for pre-flight failure e2e scenario.
 # No SDWAN/device data needed — the single Robot test does not reference
 # controller-specific variables; it just logs and passes.

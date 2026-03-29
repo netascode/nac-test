@@ -218,7 +218,7 @@ class PyATSOrchestrator:
         """
         reporter_config = self._build_reporter_config()
         config_path = temp_dir / "plugin_config.yaml"
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             dump_to_stream(reporter_config, f)
         return config_path
 
@@ -388,7 +388,7 @@ class PyATSOrchestrator:
 
             # Write testbed to temporary file
             testbed_file = self.output_dir / "broker_testbed.yaml"
-            with open(testbed_file, "w") as f:
+            with open(testbed_file, "w", encoding="utf-8") as f:
                 f.write(consolidated_testbed_yaml)
 
             logger.info(f"Consolidated testbed written to: {testbed_file}")

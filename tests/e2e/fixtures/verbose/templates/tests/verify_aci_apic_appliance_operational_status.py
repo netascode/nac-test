@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
+# UTF-8: Ü ö ä 日本語 中文
 
 import jmespath
 from nac_test_pyats_common.aci.test_base import APICTestBase

@@ -134,7 +134,7 @@ class RobotWriter:
                         cleaned_lines.append(line)
         result = "\n".join(cleaned_lines)
 
-        with open(output_path, "w") as file:
+        with open(output_path, "w", encoding="utf-8") as file:
             file.write(result)
 
     def _fix_duplicate_path(self, *paths: str) -> Path:
@@ -324,7 +324,7 @@ class RobotWriter:
                 content = ""
                 next_template = False
                 try:
-                    with open(Path(dir, filename)) as file:
+                    with open(Path(dir, filename), encoding="utf-8") as file:
                         content = file.read()
                 except OSError as e:
                     logger.warning(
@@ -503,7 +503,7 @@ class RobotWriter:
             self.ordering_entries.sort(key=lambda x: x.split(" ")[1])
 
             logger.info(f"Creating ordering file: {ordering_file}")
-            with open(ordering_file, "w") as file:
+            with open(ordering_file, "w", encoding="utf-8") as file:
                 for entry in self.ordering_entries:
                     file.write(f"{entry}\n")
         else:
