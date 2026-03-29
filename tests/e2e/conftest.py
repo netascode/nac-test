@@ -228,6 +228,7 @@ def _run_e2e_scenario(
         ["nac-test"] + cli_args,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         env=env,
     )
 

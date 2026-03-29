@@ -182,7 +182,7 @@ class MockAPIServer:
         if not yaml_path.exists():
             raise FileNotFoundError(f"YAML configuration file not found: {yaml_path}")
 
-        with open(yaml_path) as f:
+        with open(yaml_path, encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
         if not config or "endpoints" not in config:

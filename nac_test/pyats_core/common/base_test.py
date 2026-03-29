@@ -704,7 +704,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                     dump_data["messages"].append({"message": msg_data})
 
             # Write to file
-            with open(dump_file, "w") as f:
+            with open(dump_file, "w", encoding="utf-8") as f:
                 json.dump(dump_data, f, indent=2, default=str)
 
             # Log with clear indication of location
@@ -781,7 +781,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 f"Merged data model file not found: {data_file_path}"
             )
 
-        with open(data_file) as f:
+        with open(data_file, encoding="utf-8") as f:
             data = safe_load(f)
             return data if isinstance(data, dict) else {}
 

@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation    Robot Framework test that always passes (windows_pyats_skip scenario)
+Documentation    Robot Framework test that always passes (windows_pyats_skip scenario) — Ü ö 日本語
 
 *** Test Cases ***
 {% for site in sdwan.sites %}

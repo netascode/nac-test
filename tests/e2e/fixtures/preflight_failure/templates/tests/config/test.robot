@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation    Robot Framework test for the pre-flight failure scenario.
+Documentation    Robot Framework test for the pre-flight failure scenario. — Ü ö 日本語
 ...              Verifies that Robot tests still run when ACI pre-flight auth fails.
 
 *** Test Cases ***

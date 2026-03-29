@@ -113,7 +113,7 @@ class TestDiscovery:
                 if self._should_skip_path(filename, test_path):
                     continue
                 try:
-                    content = test_path.read_text()
+                    content = test_path.read_text(encoding="utf-8")
                     is_valid, _ = self._is_valid_pyats_test(content)
                     if is_valid:
                         return True
@@ -141,7 +141,7 @@ class TestDiscovery:
                 continue
 
             try:
-                content = test_path.read_text()
+                content = test_path.read_text(encoding="utf-8")
                 is_valid, skip_reason = self._is_valid_pyats_test(content)
 
                 if not is_valid:

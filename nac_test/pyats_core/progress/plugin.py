@@ -157,7 +157,7 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
             # Extract TITLE from the test file using AST parsing
             title = None
             try:
-                with open(task.testscript) as f:
+                with open(task.testscript, encoding="utf-8") as f:
                     tree = ast.parse(f.read())
 
                 for node in ast.walk(tree):
