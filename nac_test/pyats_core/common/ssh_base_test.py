@@ -6,6 +6,7 @@ import json
 import logging
 import os
 from collections.abc import Callable, Coroutine
+from pathlib import Path
 from typing import Any
 
 from pyats import aetest
@@ -188,7 +189,14 @@ class SSHTestBase(NACTestBase):
         """Helper for async setup operations with connection error handling."""
         try:
             # Check if broker is active (priority over testbed to enable connection pooling)
-            broker_active = "NAC_TEST_BROKER_SOCKET" in os.environ
+            broker_socket_env = os.environ.get("NAC_TEST_BROKER_SOCKET")
+            if broker_socket_env and not Path(broker_socket_env).is_socket():
+                self.logger.warning(
+                    f"NAC_TEST_BROKER_SOCKET is set but path is not a valid Unix socket "
+                    f"({broker_socket_env}), falling back to direct connection"
+                )
+                broker_socket_env = None
+            broker_active = broker_socket_env is not None
 
             if broker_active:
                 # Use broker client for connection management

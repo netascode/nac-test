@@ -4,7 +4,11 @@
 """Shared fixtures for unit tests."""
 
 import os
+import tempfile
+from collections.abc import Generator
+from pathlib import Path
 from typing import Any
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
@@ -68,6 +72,13 @@ def assert_connection_has_optimizations(connection: dict[str, Any]) -> None:
 
 
 @pytest.fixture()
+def socket_dir() -> Generator[Path, None, None]:
+    """Short-path temp dir suitable for Unix socket paths (macOS 104-char limit)."""
+    with tempfile.TemporaryDirectory() as d:
+        yield Path(d)
+
+
+@pytest.fixture()
 def clean_controller_env(monkeypatch: MonkeyPatch) -> None:
     """Clear all controller-related environment variables.
 
@@ -104,6 +115,18 @@ def sdwan_controller_env(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv("SDWAN_URL", "https://sdwan.test.com")
     monkeypatch.setenv("SDWAN_USERNAME", "admin")
     monkeypatch.setenv("SDWAN_PASSWORD", "test_pass")
+
+
+@pytest.fixture()
+def ssh_instance() -> Any:
+    """Bare SSHTestBase with mocked logger and broker_client for _async_setup tests."""
+    from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
+
+    instance = SSHTestBase.__new__(SSHTestBase)
+    instance.logger = Mock()
+    instance.broker_client = Mock()
+    instance.broker_client.connect = AsyncMock()
+    return instance
 
 
 @pytest.fixture()
