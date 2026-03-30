@@ -73,7 +73,11 @@ class BrokerClient:
 
             except Exception as e:
                 logger.error(f"Failed to connect to broker: {e}")
-                await self.disconnect()
+                if self.writer:
+                    self.writer.close()
+                self.reader = None
+                self.writer = None
+                self._connected = False
                 raise ConnectionError(f"Cannot connect to broker: {e}") from e
 
     async def disconnect(self) -> None:
