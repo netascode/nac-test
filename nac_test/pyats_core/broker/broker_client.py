@@ -120,7 +120,7 @@ class BrokerClient:
             return response  # type: ignore[no-any-return]
 
         except Exception as e:
-            logger.error(f"Error communicating with broker: {e}")
+            logger.debug(f"Error communicating with broker: {e}")
             # Reset connection on error
             await self.disconnect()
             raise
@@ -165,7 +165,7 @@ class BrokerClient:
             return response.get("result", False)  # type: ignore[no-any-return]
 
         except Exception as e:
-            logger.error(f"Failed to ensure connection to {hostname}: {e}")
+            logger.debug(f"Failed to ensure connection to {hostname}: {e}")
             return False
 
     async def disconnect_device(self, hostname: str) -> None:

@@ -217,15 +217,14 @@ class SSHTestBase(NACTestBase):
                     "broker not active and testbed not available"
                 )
 
+        except ConnectionError:
+            # Already logged at source (broker or testbed layer) — just re-raise
+            raise
         except Exception as e:
-            # Connection failed - raise exception to be caught in setup_ssh_context
-            error_msg = f"Failed to connect to device {hostname}: {str(e)}"
+            # Unexpected error — log here since no lower layer will have done so
+            error_msg = f"Failed to connect to {hostname}: {e}"
             self.logger.error(error_msg)
-
-            # Raise with a clear message that will be caught by the calling method
-            raise ConnectionError(
-                f"Device connection failed: {hostname}\nError: {str(e)}"
-            ) from e
+            raise ConnectionError(error_msg) from e
 
         # 2. Create and attach the command cache
         self.command_cache = CommandCache(hostname)
