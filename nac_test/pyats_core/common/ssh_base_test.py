@@ -190,15 +190,16 @@ class SSHTestBase(NACTestBase):
         try:
             # Check if broker is active (priority over testbed to enable connection pooling)
             broker_socket_env = os.environ.get("NAC_TEST_BROKER_SOCKET")
-            if broker_socket_env and not Path(broker_socket_env).is_socket():
-                self.logger.warning(
-                    f"NAC_TEST_BROKER_SOCKET is set but path is not a valid Unix socket "
-                    f"({broker_socket_env}), falling back to direct connection"
-                )
-                broker_socket_env = None
-            broker_active = broker_socket_env is not None
+            broker_socket = Path(broker_socket_env) if broker_socket_env else None
 
-            if broker_active:
+            if broker_socket is not None and not broker_socket.is_socket():
+                self.logger.warning(
+                    f"NAC_TEST_BROKER_SOCKET is set but {broker_socket} is not a valid "
+                    f"Unix socket, falling back to direct connection"
+                )
+                broker_socket = None
+
+            if broker_socket is not None:
                 # Use broker client for connection management
                 # Testbed may still be available for Genie parsers
                 self.logger.info(
