@@ -16,7 +16,10 @@ tests/integration/test_broker.py for broader end-to-end broker validation).
 """
 
 import asyncio
+import os
 import socket as _socket
+import subprocess
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -157,6 +160,30 @@ class TestConnectFailure:
         assert "bad-router" in result.get("error", "")
 
 
+class TestBrokerClientSocketPathValidation:
+    def test_broker_client_fails_for_socket_path_that_is_a_directory(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        client = BrokerClient(socket_path=tmp_path)
+        result = asyncio.run(
+            asyncio.wait_for(client.ensure_connection("router-1"), timeout=1.0)
+        )
+        assert result is False
+
+    def test_broker_client_fails_for_socket_path_that_is_a_file(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        sock = tmp_path / "not_a_socket"
+        sock.write_text("not a socket")
+        client = BrokerClient(socket_path=sock)
+        result = asyncio.run(
+            asyncio.wait_for(client.ensure_connection("router-1"), timeout=1.0)
+        )
+        assert result is False
+
+
 class TestSocketDeletedMidRun:
     def test_existing_client_still_works_after_socket_unlinked(
         self,
@@ -280,6 +307,75 @@ class TestConcurrentAccess:
         asyncio.run(_run())
 
         # Both clients raced to connect; the broker should only call device.connect once.
+        assert good_device.connect.call_count == 1
+
+
+class TestMultiProcessConcurrency:
+    def test_multiple_processes_can_connect_concurrently(
+        self,
+        make_broker: Any,
+        good_device: MagicMock,
+    ) -> None:
+        broker: ConnectionBroker = make_broker({"router-1": good_device})
+
+        async def _run() -> None:
+            await broker._start_socket_server()
+            try:
+                env = {
+                    "NAC_TEST_BROKER_SOCKET": str(broker.socket_path),
+                    **dict(os.environ),
+                }
+
+                code = (
+                    "import asyncio\n"
+                    "from nac_test.pyats_core.broker.broker_client import BrokerClient\n"
+                    "async def main():\n"
+                    "    c = BrokerClient()\n"
+                    "    ok = await asyncio.wait_for(c.ensure_connection('router-1'), timeout=2.0)\n"
+                    "    raise SystemExit(0 if ok else 1)\n"
+                    "asyncio.run(main())\n"
+                )
+
+                procs = [
+                    subprocess.Popen(
+                        [sys.executable, "-c", code],
+                        env=env,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                    )
+                    for _ in range(5)
+                ]
+
+                try:
+                    loop = asyncio.get_event_loop()
+
+                    # Keep the broker event loop responsive while we wait for processes
+                    # to finish. communicate() is blocking, so run it in the default
+                    # executor.
+                    async def _communicate(p: subprocess.Popen[str]) -> tuple[str, str]:
+                        return await loop.run_in_executor(
+                            None, lambda: p.communicate(timeout=5)
+                        )
+
+                    results = await asyncio.gather(*[_communicate(p) for p in procs])
+
+                    for p, (stdout, stderr) in zip(procs, results, strict=True):
+                        assert p.returncode == 0, f"stdout={stdout}\nstderr={stderr}"
+
+                finally:
+                    for p in procs:
+                        if p.poll() is None:
+                            p.kill()
+                            p.communicate(timeout=1)
+
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        asyncio.run(_run())
+
         assert good_device.connect.call_count == 1
 
 
