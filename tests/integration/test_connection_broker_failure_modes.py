@@ -219,6 +219,32 @@ class TestSocketDeletedMidRun:
         assert asyncio.run(_run()) is False
 
 
+class TestConnectionHealthCheckFailure:
+    def test_reconnects_when_cached_connection_is_unhealthy(
+        self,
+        make_broker: Any,
+        good_device: MagicMock,
+    ) -> None:
+        stale_device = MagicMock()
+        stale_device.connected = False
+        stale_device.spawn = False
+
+        broker: ConnectionBroker = make_broker({"router-1": good_device})
+        broker.connected_devices["router-1"] = stale_device
+
+        async def _run() -> None:
+            loop = asyncio.get_event_loop()
+            with patch(
+                "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
+                return_value=loop,
+            ):
+                with _patch_executor(loop):
+                    conn = await broker._get_connection("router-1")
+                    assert conn is good_device
+
+        asyncio.run(_run())
+
+
 class TestDisconnectCleanup:
     def test_disconnect_cleans_up_even_when_device_disconnect_raises(
         self,
