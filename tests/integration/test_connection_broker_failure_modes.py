@@ -245,6 +245,44 @@ class TestConnectionHealthCheckFailure:
         asyncio.run(_run())
 
 
+class TestConcurrentAccess:
+    def test_concurrent_connect_requests_only_connect_once(
+        self,
+        make_broker: Any,
+        good_device: MagicMock,
+    ) -> None:
+        broker: ConnectionBroker = make_broker({"router-1": good_device})
+
+        async def _run() -> None:
+            await broker._start_socket_server()
+            try:
+                loop = asyncio.get_event_loop()
+                with patch(
+                    "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
+                    return_value=loop,
+                ):
+                    # Avoid threads; run the connect lambda synchronously
+                    with _patch_executor(loop):
+                        async with (
+                            BrokerClient(socket_path=broker.socket_path) as c1,
+                            BrokerClient(socket_path=broker.socket_path) as c2,
+                        ):
+                            results = await asyncio.gather(
+                                c1.ensure_connection("router-1"),
+                                c2.ensure_connection("router-1"),
+                            )
+                            assert results == [True, True]
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        asyncio.run(_run())
+
+        # Both clients raced to connect; the broker should only call device.connect once.
+        assert good_device.connect.call_count == 1
+
+
 class TestDisconnectCleanup:
     def test_disconnect_cleans_up_even_when_device_disconnect_raises(
         self,
