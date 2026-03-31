@@ -92,6 +92,48 @@ def _patch_executor(loop: asyncio.AbstractEventLoop) -> Any:
     return patch.object(loop, "run_in_executor", side_effect=fake_executor)
 
 
+async def _run_broker(broker: ConnectionBroker, coro: Any) -> Any:
+    await broker._start_socket_server()
+    try:
+        result = await coro
+        return result
+    finally:
+        assert broker.server is not None
+        broker.server.close()
+        await broker.server.wait_closed()
+
+
+async def _expect_broker_error(
+    client: BrokerClient, broker_request: dict[str, Any], timeout: float = 1.0
+) -> str:
+    try:
+        await asyncio.wait_for(client._send_request(broker_request), timeout=timeout)
+    except ConnectionError as e:
+        return str(e)
+
+    raise AssertionError("Expected ConnectionError")
+
+
+def _frame(obj: dict[str, Any]) -> bytes:
+    data = json.dumps(obj).encode("utf-8")
+    return len(data).to_bytes(4, byteorder="big") + data
+
+
+async def _read_framed_json(
+    reader: asyncio.StreamReader, timeout: float = 1.0
+) -> dict[str, Any]:
+    resp_len = int.from_bytes(
+        await asyncio.wait_for(reader.readexactly(4), timeout=timeout),
+        byteorder="big",
+    )
+    resp: dict[str, Any] = json.loads(
+        (await asyncio.wait_for(reader.readexactly(resp_len), timeout=timeout)).decode(
+            "utf-8"
+        )
+    )
+    return resp
+
+
 class TestBrokerUnavailable:
     def test_ensure_connection_returns_false_when_broker_not_running(
         self,
@@ -122,7 +164,7 @@ class TestBrokerUnavailable:
         assert result is False
 
 
-class TestConnectFailure:
+class TestDeviceConnection:
     def test_connect_command_returns_error_when_device_unreachable(
         self,
         make_broker: Any,
@@ -133,9 +175,9 @@ class TestConnectFailure:
         broker: ConnectionBroker = make_broker({"bad-router": bad_device})
 
         async def _run() -> dict[str, Any]:
-            await broker._start_socket_server()
-            try:
-                loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop()
+
+            async def _body() -> dict[str, Any]:
                 with patch(
                     "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
                     return_value=loop,
@@ -150,15 +192,38 @@ class TestConnectFailure:
                                 )
                             except ConnectionError as e:
                                 return {"status": "error", "error": str(e)}
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+
+            result: dict[str, Any] = await _run_broker(broker, _body())
+            return result
 
         result = asyncio.run(_run())
         assert result["status"] == "error"
         assert result.get("error", "") != "Unknown broker error"
         assert "bad-router" in result.get("error", "")
+
+    def test_reconnects_when_cached_connection_is_unhealthy(
+        self,
+        make_broker: Any,
+        good_device: MagicMock,
+    ) -> None:
+        stale_device = MagicMock()
+        stale_device.connected = False
+        stale_device.spawn = False
+
+        broker: ConnectionBroker = make_broker({"router-1": good_device})
+        broker.connected_devices["router-1"] = stale_device
+
+        async def _run() -> None:
+            loop = asyncio.get_event_loop()
+            with patch(
+                "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
+                return_value=loop,
+            ):
+                with _patch_executor(loop):
+                    conn = await broker._get_connection("router-1")
+                    assert conn is good_device
+
+        asyncio.run(_run())
 
 
 class TestBrokerClientSocketPathValidation:
@@ -193,9 +258,9 @@ class TestSocketDeletedMidRun:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> str:
-            await broker._start_socket_server()
             loop = asyncio.get_event_loop()
-            try:
+
+            async def _body() -> str:
                 with patch(
                     "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
                     return_value=loop,
@@ -207,10 +272,9 @@ class TestSocketDeletedMidRun:
                         )
                         assert result == {"status": "success", "result": "pong"}
                         return str(result["result"])
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+
+            result: str = await _run_broker(broker, _body())
+            return result
 
         assert asyncio.run(_run()) == "pong"
 
@@ -221,9 +285,9 @@ class TestSocketDeletedMidRun:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> bool:
-            await broker._start_socket_server()
             loop = asyncio.get_event_loop()
-            try:
+
+            async def _body() -> bool:
                 with patch(
                     "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
                     return_value=loop,
@@ -239,41 +303,14 @@ class TestSocketDeletedMidRun:
                             new_client.ensure_connection("router-1"),
                             timeout=1.0,
                         )
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+
+            result: bool = await _run_broker(broker, _body())
+            return result
 
         assert asyncio.run(_run()) is False
 
 
-class TestConnectionHealthCheckFailure:
-    def test_reconnects_when_cached_connection_is_unhealthy(
-        self,
-        make_broker: Any,
-        good_device: MagicMock,
-    ) -> None:
-        stale_device = MagicMock()
-        stale_device.connected = False
-        stale_device.spawn = False
-
-        broker: ConnectionBroker = make_broker({"router-1": good_device})
-        broker.connected_devices["router-1"] = stale_device
-
-        async def _run() -> None:
-            loop = asyncio.get_event_loop()
-            with patch(
-                "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
-                return_value=loop,
-            ):
-                with _patch_executor(loop):
-                    conn = await broker._get_connection("router-1")
-                    assert conn is good_device
-
-        asyncio.run(_run())
-
-
-class TestConcurrentAccess:
+class TestConcurrency:
     def test_concurrent_connect_requests_only_connect_once(
         self,
         make_broker: Any,
@@ -282,9 +319,9 @@ class TestConcurrentAccess:
         broker: ConnectionBroker = make_broker({"router-1": good_device})
 
         async def _run() -> None:
-            await broker._start_socket_server()
-            try:
-                loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop()
+
+            async def _body() -> None:
                 with patch(
                     "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
                     return_value=loop,
@@ -300,18 +337,14 @@ class TestConcurrentAccess:
                                 c2.ensure_connection("router-1"),
                             )
                             assert results == [True, True]
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+
+            await _run_broker(broker, _body())
 
         asyncio.run(_run())
 
         # Both clients raced to connect; the broker should only call device.connect once.
         assert good_device.connect.call_count == 1
 
-
-class TestMultiProcessConcurrency:
     def test_multiple_processes_can_connect_concurrently(
         self,
         make_broker: Any,
@@ -320,40 +353,36 @@ class TestMultiProcessConcurrency:
         broker: ConnectionBroker = make_broker({"router-1": good_device})
 
         async def _run() -> None:
-            await broker._start_socket_server()
-            try:
-                env = {
-                    "NAC_TEST_BROKER_SOCKET": str(broker.socket_path),
-                    **dict(os.environ),
-                }
+            env = {
+                "NAC_TEST_BROKER_SOCKET": str(broker.socket_path),
+                **dict(os.environ),
+            }
 
-                code = (
-                    "import asyncio\n"
-                    "from nac_test.pyats_core.broker.broker_client import BrokerClient\n"
-                    "async def main():\n"
-                    "    c = BrokerClient()\n"
-                    "    ok = await asyncio.wait_for(c.ensure_connection('router-1'), timeout=2.0)\n"
-                    "    raise SystemExit(0 if ok else 1)\n"
-                    "asyncio.run(main())\n"
+            code = (
+                "import asyncio\n"
+                "from nac_test.pyats_core.broker.broker_client import BrokerClient\n"
+                "async def main():\n"
+                "    c = BrokerClient()\n"
+                "    ok = await asyncio.wait_for(c.ensure_connection('router-1'), timeout=2.0)\n"
+                "    raise SystemExit(0 if ok else 1)\n"
+                "asyncio.run(main())\n"
+            )
+
+            procs = [
+                subprocess.Popen(
+                    [sys.executable, "-c", code],
+                    env=env,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
                 )
+                for _ in range(5)
+            ]
 
-                procs = [
-                    subprocess.Popen(
-                        [sys.executable, "-c", code],
-                        env=env,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                    )
-                    for _ in range(5)
-                ]
-
+            async def _body() -> None:
                 try:
                     loop = asyncio.get_event_loop()
 
-                    # Keep the broker event loop responsive while we wait for processes
-                    # to finish. communicate() is blocking, so run it in the default
-                    # executor.
                     async def _communicate(p: subprocess.Popen[str]) -> tuple[str, str]:
                         return await loop.run_in_executor(
                             None, lambda: p.communicate(timeout=5)
@@ -370,10 +399,7 @@ class TestMultiProcessConcurrency:
                             p.kill()
                             p.communicate(timeout=1)
 
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+            await _run_broker(broker, _body())
 
         asyncio.run(_run())
 
@@ -429,75 +455,42 @@ class TestMalformedRequests:
         err = asyncio.run(_run())
         assert "Unknown command" in err
 
-    def test_truncated_frame_closes_connection(self, make_broker: Any) -> None:
+    @pytest.mark.parametrize(
+        ("payload", "use_payload_len"),
+        [
+            ((10).to_bytes(4, byteorder="big") + b"123", False),
+            (b"not json", True),
+            ((0).to_bytes(4, byteorder="big"), False),
+            (b"\xff\xfe\xff", True),
+            ((1_000_000).to_bytes(4, byteorder="big"), False),
+        ],
+        ids=[
+            "truncated-frame",
+            "non-json",
+            "zero-length",
+            "bad-utf8",
+            "absurd-length",
+        ],
+    )
+    def test_invalid_protocol_closes_connection(
+        self,
+        make_broker: Any,
+        payload: bytes,
+        use_payload_len: bool,
+    ) -> None:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> None:
-            await broker._start_socket_server()
-            try:
+            async def _body() -> None:
                 reader, writer = await asyncio.open_unix_connection(
                     str(broker.socket_path)
                 )
 
-                # Claim a 10-byte frame but only send 3 bytes, then half-close.
-                writer.write((10).to_bytes(4, byteorder="big") + b"123")
-                await writer.drain()
-                writer.write_eof()
+                if use_payload_len:
+                    writer.write(len(payload).to_bytes(4, byteorder="big") + payload)
+                else:
+                    writer.write(payload)
 
-                # Server should close the connection due to IncompleteReadError.
-                data = await asyncio.wait_for(reader.read(), timeout=1.0)
-                assert data == b""
-
-                writer.close()
-                await writer.wait_closed()
-
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
-
-        asyncio.run(_run())
-
-    def test_non_json_payload_closes_connection(self, make_broker: Any) -> None:
-        broker: ConnectionBroker = make_broker({})
-
-        async def _run() -> None:
-            await broker._start_socket_server()
-            try:
-                reader, writer = await asyncio.open_unix_connection(
-                    str(broker.socket_path)
-                )
-                payload = b"not json"
-                writer.write(len(payload).to_bytes(4, byteorder="big") + payload)
-                await writer.drain()
-                writer.write_eof()
-
-                # json.loads throws -> server logs error and closes connection.
-                data = await asyncio.wait_for(reader.read(), timeout=1.0)
-                assert data == b""
-
-                writer.close()
-                await writer.wait_closed()
-
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
-
-        asyncio.run(_run())
-
-    def test_zero_length_frame_closes_connection(self, make_broker: Any) -> None:
-        broker: ConnectionBroker = make_broker({})
-
-        async def _run() -> None:
-            await broker._start_socket_server()
-            try:
-                reader, writer = await asyncio.open_unix_connection(
-                    str(broker.socket_path)
-                )
-
-                # Per broker protocol, a 0-length frame causes the server loop to break.
-                writer.write((0).to_bytes(4, byteorder="big"))
                 await writer.drain()
                 writer.write_eof()
 
@@ -507,10 +500,7 @@ class TestMalformedRequests:
                 writer.close()
                 await writer.wait_closed()
 
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+            await _run_broker(broker, _body())
 
         asyncio.run(_run())
 
@@ -555,139 +545,42 @@ class TestMalformedRequests:
         assert result["status"] == "error"
         assert "get" in result.get("error", "")
 
-    def test_bad_utf8_payload_closes_connection(self, make_broker: Any) -> None:
-        broker: ConnectionBroker = make_broker({})
-
-        async def _run() -> None:
-            await broker._start_socket_server()
-            try:
-                reader, writer = await asyncio.open_unix_connection(
-                    str(broker.socket_path)
-                )
-
-                # Invalid UTF-8 sequence.
-                payload = b"\xff\xfe\xff"
-                writer.write(len(payload).to_bytes(4, byteorder="big") + payload)
-                await writer.drain()
-                writer.write_eof()
-
-                data = await asyncio.wait_for(reader.read(), timeout=1.0)
-                assert data == b""
-
-                writer.close()
-                await writer.wait_closed()
-
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
-
-        asyncio.run(_run())
-
-    def test_absurd_length_prefix_closes_connection(self, make_broker: Any) -> None:
-        broker: ConnectionBroker = make_broker({})
-
-        async def _run() -> None:
-            await broker._start_socket_server()
-            try:
-                reader, writer = await asyncio.open_unix_connection(
-                    str(broker.socket_path)
-                )
-
-                # Claim a huge frame length, then EOF immediately; should close rather than hang.
-                writer.write((1_000_000).to_bytes(4, byteorder="big"))
-                await writer.drain()
-                writer.write_eof()
-
-                data = await asyncio.wait_for(reader.read(), timeout=1.0)
-                assert data == b""
-
-                writer.close()
-                await writer.wait_closed()
-
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
-
-        asyncio.run(_run())
-
-    def test_execute_missing_parameters_returns_error(self, make_broker: Any) -> None:
+    @pytest.mark.parametrize(
+        ("broker_request", "expected_substrings"),
+        [
+            (
+                {"command": "execute", "hostname": "r1"},
+                ["Missing", "cmd"],
+            ),
+            (
+                {"command": "connect"},
+                ["Missing", "hostname"],
+            ),
+            (
+                {"command": "disconnect"},
+                ["Missing", "hostname"],
+            ),
+        ],
+    )
+    def test_missing_required_parameters_return_error(
+        self,
+        make_broker: Any,
+        broker_request: dict[str, Any],
+        expected_substrings: list[str],
+    ) -> None:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> str:
-            await broker._start_socket_server()
-            try:
+            async def _body() -> str:
                 async with BrokerClient(socket_path=broker.socket_path) as client:
-                    try:
-                        await asyncio.wait_for(
-                            client._send_request(
-                                {"command": "execute", "hostname": "r1"}
-                            ),
-                            timeout=1.0,
-                        )
-                    except ConnectionError as e:
-                        return str(e)
+                    return await _expect_broker_error(client, broker_request)
 
-                    raise AssertionError("Expected ConnectionError")
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+            result: str = await _run_broker(broker, _body())
+            return result
 
         err = asyncio.run(_run())
-        assert "Missing" in err
-        assert "cmd" in err
-
-    def test_connect_missing_hostname_returns_error(self, make_broker: Any) -> None:
-        broker: ConnectionBroker = make_broker({})
-
-        async def _run() -> str:
-            await broker._start_socket_server()
-            try:
-                async with BrokerClient(socket_path=broker.socket_path) as client:
-                    try:
-                        await asyncio.wait_for(
-                            client._send_request({"command": "connect"}),
-                            timeout=1.0,
-                        )
-                    except ConnectionError as e:
-                        return str(e)
-
-                    raise AssertionError("Expected ConnectionError")
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
-
-        err = asyncio.run(_run())
-        assert "Missing" in err
-        assert "hostname" in err
-
-    def test_disconnect_missing_hostname_returns_error(self, make_broker: Any) -> None:
-        broker: ConnectionBroker = make_broker({})
-
-        async def _run() -> str:
-            await broker._start_socket_server()
-            try:
-                async with BrokerClient(socket_path=broker.socket_path) as client:
-                    try:
-                        await asyncio.wait_for(
-                            client._send_request({"command": "disconnect"}),
-                            timeout=1.0,
-                        )
-                    except ConnectionError as e:
-                        return str(e)
-
-                    raise AssertionError("Expected ConnectionError")
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
-
-        err = asyncio.run(_run())
-        assert "Missing" in err
-        assert "hostname" in err
+        for s in expected_substrings:
+            assert s in err
 
     def test_disconnect_succeeds_when_device_not_connected(
         self, make_broker: Any
@@ -695,8 +588,7 @@ class TestMalformedRequests:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> dict[str, Any]:
-            await broker._start_socket_server()
-            try:
+            async def _body() -> dict[str, Any]:
                 async with BrokerClient(socket_path=broker.socket_path) as client:
                     return await asyncio.wait_for(
                         client._send_request(
@@ -704,10 +596,9 @@ class TestMalformedRequests:
                         ),
                         timeout=1.0,
                     )
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+
+            result: dict[str, Any] = await _run_broker(broker, _body())
+            return result
 
         result = asyncio.run(_run())
         assert result == {"status": "success", "result": True}
@@ -716,8 +607,7 @@ class TestMalformedRequests:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> dict[str, Any]:
-            await broker._start_socket_server()
-            try:
+            async def _body() -> dict[str, Any]:
                 reader, writer = await asyncio.open_unix_connection(
                     str(broker.socket_path)
                 )
@@ -726,26 +616,14 @@ class TestMalformedRequests:
                 writer.write(len(payload).to_bytes(4, byteorder="big") + payload)
                 await writer.drain()
 
-                response_len = int.from_bytes(
-                    await asyncio.wait_for(reader.readexactly(4), timeout=1.0),
-                    byteorder="big",
-                )
-                response: dict[str, Any] = json.loads(
-                    (
-                        await asyncio.wait_for(
-                            reader.readexactly(response_len), timeout=1.0
-                        )
-                    ).decode("utf-8")
-                )
+                response = await _read_framed_json(reader)
 
                 writer.close()
                 await writer.wait_closed()
                 return response
 
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+            result: dict[str, Any] = await _run_broker(broker, _body())
+            return result
 
         result = asyncio.run(_run())
         assert result["status"] == "error"
@@ -815,7 +693,7 @@ class TestMalformedRequests:
         asyncio.run(_run())
 
 
-class TestDisconnectCleanup:
+class TestCleanup:
     def test_disconnect_cleans_up_even_when_device_disconnect_raises(
         self,
         make_broker: Any,
@@ -839,8 +717,6 @@ class TestDisconnectCleanup:
 
         assert "router-1" not in broker.connected_devices
 
-
-class TestShutdownCleanup:
     def test_shutdown_disconnects_all_connected_devices(
         self,
         make_broker: Any,
