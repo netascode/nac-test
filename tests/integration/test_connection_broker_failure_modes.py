@@ -157,6 +157,68 @@ class TestConnectFailure:
         assert "bad-router" in result.get("error", "")
 
 
+class TestSocketDeletedMidRun:
+    def test_existing_client_still_works_after_socket_unlinked(
+        self,
+        make_broker: Any,
+    ) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> str:
+            await broker._start_socket_server()
+            loop = asyncio.get_event_loop()
+            try:
+                with patch(
+                    "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
+                    return_value=loop,
+                ):
+                    async with BrokerClient(socket_path=broker.socket_path) as client:
+                        broker.socket_path.unlink()
+                        result = await asyncio.wait_for(
+                            client._send_request({"command": "ping"}), timeout=1.0
+                        )
+                        assert result == {"status": "success", "result": "pong"}
+                        return str(result["result"])
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        assert asyncio.run(_run()) == "pong"
+
+    def test_new_client_fails_after_socket_unlinked(
+        self,
+        make_broker: Any,
+    ) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> bool:
+            await broker._start_socket_server()
+            loop = asyncio.get_event_loop()
+            try:
+                with patch(
+                    "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
+                    return_value=loop,
+                ):
+                    async with BrokerClient(socket_path=broker.socket_path) as client:
+                        await asyncio.wait_for(
+                            client._send_request({"command": "ping"}), timeout=1.0
+                        )
+                        broker.socket_path.unlink()
+
+                        new_client = BrokerClient(socket_path=broker.socket_path)
+                        return await asyncio.wait_for(
+                            new_client.ensure_connection("router-1"),
+                            timeout=1.0,
+                        )
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        assert asyncio.run(_run()) is False
+
+
 class TestDisconnectCleanup:
     def test_disconnect_cleans_up_even_when_device_disconnect_raises(
         self,
