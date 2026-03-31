@@ -16,6 +16,7 @@ tests/integration/test_broker.py for broader end-to-end broker validation).
 """
 
 import asyncio
+import json
 import os
 import socket as _socket
 import subprocess
@@ -377,6 +378,239 @@ class TestMultiProcessConcurrency:
         asyncio.run(_run())
 
         assert good_device.connect.call_count == 1
+
+
+class TestMalformedRequests:
+    def test_unknown_command_returns_error(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> str:
+            await broker._start_socket_server()
+            try:
+                async with BrokerClient(socket_path=broker.socket_path) as client:
+                    try:
+                        await asyncio.wait_for(
+                            client._send_request({"command": "nope"}),
+                            timeout=1.0,
+                        )
+                    except ConnectionError as e:
+                        return str(e)
+
+                    raise AssertionError("Expected ConnectionError")
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        err = asyncio.run(_run())
+        assert "Unknown command" in err
+
+    def test_missing_command_returns_error(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> str:
+            await broker._start_socket_server()
+            try:
+                async with BrokerClient(socket_path=broker.socket_path) as client:
+                    try:
+                        await asyncio.wait_for(
+                            client._send_request({}),
+                            timeout=1.0,
+                        )
+                    except ConnectionError as e:
+                        return str(e)
+
+                    raise AssertionError("Expected ConnectionError")
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        err = asyncio.run(_run())
+        assert "Unknown command" in err
+
+    def test_truncated_frame_closes_connection(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> None:
+            await broker._start_socket_server()
+            try:
+                reader, writer = await asyncio.open_unix_connection(
+                    str(broker.socket_path)
+                )
+
+                # Claim a 10-byte frame but only send 3 bytes, then half-close.
+                writer.write((10).to_bytes(4, byteorder="big") + b"123")
+                await writer.drain()
+                writer.write_eof()
+
+                # Server should close the connection due to IncompleteReadError.
+                data = await asyncio.wait_for(reader.read(), timeout=1.0)
+                assert data == b""
+
+                writer.close()
+                await writer.wait_closed()
+
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        asyncio.run(_run())
+
+    def test_non_json_payload_closes_connection(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> None:
+            await broker._start_socket_server()
+            try:
+                reader, writer = await asyncio.open_unix_connection(
+                    str(broker.socket_path)
+                )
+                payload = b"not json"
+                writer.write(len(payload).to_bytes(4, byteorder="big") + payload)
+                await writer.drain()
+                writer.write_eof()
+
+                # json.loads throws -> server logs error and closes connection.
+                data = await asyncio.wait_for(reader.read(), timeout=1.0)
+                assert data == b""
+
+                writer.close()
+                await writer.wait_closed()
+
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        asyncio.run(_run())
+
+    def test_zero_length_frame_closes_connection(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> None:
+            await broker._start_socket_server()
+            try:
+                reader, writer = await asyncio.open_unix_connection(
+                    str(broker.socket_path)
+                )
+
+                # Per broker protocol, a 0-length frame causes the server loop to break.
+                writer.write((0).to_bytes(4, byteorder="big"))
+                await writer.drain()
+                writer.write_eof()
+
+                data = await asyncio.wait_for(reader.read(), timeout=1.0)
+                assert data == b""
+
+                writer.close()
+                await writer.wait_closed()
+
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        asyncio.run(_run())
+
+    def test_valid_json_non_object_returns_error_response(
+        self, make_broker: Any
+    ) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> dict[str, Any]:
+            await broker._start_socket_server()
+            try:
+                reader, writer = await asyncio.open_unix_connection(
+                    str(broker.socket_path)
+                )
+
+                payload = b"[]"
+                writer.write(len(payload).to_bytes(4, byteorder="big") + payload)
+                await writer.drain()
+
+                response_len = int.from_bytes(
+                    await asyncio.wait_for(reader.readexactly(4), timeout=1.0),
+                    byteorder="big",
+                )
+                response: dict[str, Any] = json.loads(
+                    (
+                        await asyncio.wait_for(
+                            reader.readexactly(response_len), timeout=1.0
+                        )
+                    ).decode("utf-8")
+                )
+
+                writer.close()
+                await writer.wait_closed()
+                return response
+
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        result = asyncio.run(_run())
+        assert result["status"] == "error"
+        assert "get" in result.get("error", "")
+
+    def test_bad_utf8_payload_closes_connection(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> None:
+            await broker._start_socket_server()
+            try:
+                reader, writer = await asyncio.open_unix_connection(
+                    str(broker.socket_path)
+                )
+
+                # Invalid UTF-8 sequence.
+                payload = b"\xff\xfe\xff"
+                writer.write(len(payload).to_bytes(4, byteorder="big") + payload)
+                await writer.drain()
+                writer.write_eof()
+
+                data = await asyncio.wait_for(reader.read(), timeout=1.0)
+                assert data == b""
+
+                writer.close()
+                await writer.wait_closed()
+
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        asyncio.run(_run())
+
+    def test_absurd_length_prefix_closes_connection(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> None:
+            await broker._start_socket_server()
+            try:
+                reader, writer = await asyncio.open_unix_connection(
+                    str(broker.socket_path)
+                )
+
+                # Claim a huge frame length, then EOF immediately; should close rather than hang.
+                writer.write((1_000_000).to_bytes(4, byteorder="big"))
+                await writer.drain()
+                writer.write_eof()
+
+                data = await asyncio.wait_for(reader.read(), timeout=1.0)
+                assert data == b""
+
+                writer.close()
+                await writer.wait_closed()
+
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        asyncio.run(_run())
 
 
 class TestDisconnectCleanup:
