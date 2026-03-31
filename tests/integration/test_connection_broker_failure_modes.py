@@ -612,6 +612,208 @@ class TestMalformedRequests:
 
         asyncio.run(_run())
 
+    def test_execute_missing_parameters_returns_error(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> str:
+            await broker._start_socket_server()
+            try:
+                async with BrokerClient(socket_path=broker.socket_path) as client:
+                    try:
+                        await asyncio.wait_for(
+                            client._send_request(
+                                {"command": "execute", "hostname": "r1"}
+                            ),
+                            timeout=1.0,
+                        )
+                    except ConnectionError as e:
+                        return str(e)
+
+                    raise AssertionError("Expected ConnectionError")
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        err = asyncio.run(_run())
+        assert "Missing" in err
+        assert "cmd" in err
+
+    def test_connect_missing_hostname_returns_error(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> str:
+            await broker._start_socket_server()
+            try:
+                async with BrokerClient(socket_path=broker.socket_path) as client:
+                    try:
+                        await asyncio.wait_for(
+                            client._send_request({"command": "connect"}),
+                            timeout=1.0,
+                        )
+                    except ConnectionError as e:
+                        return str(e)
+
+                    raise AssertionError("Expected ConnectionError")
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        err = asyncio.run(_run())
+        assert "Missing" in err
+        assert "hostname" in err
+
+    def test_disconnect_missing_hostname_returns_error(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> str:
+            await broker._start_socket_server()
+            try:
+                async with BrokerClient(socket_path=broker.socket_path) as client:
+                    try:
+                        await asyncio.wait_for(
+                            client._send_request({"command": "disconnect"}),
+                            timeout=1.0,
+                        )
+                    except ConnectionError as e:
+                        return str(e)
+
+                    raise AssertionError("Expected ConnectionError")
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        err = asyncio.run(_run())
+        assert "Missing" in err
+        assert "hostname" in err
+
+    def test_disconnect_succeeds_when_device_not_connected(
+        self, make_broker: Any
+    ) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> dict[str, Any]:
+            await broker._start_socket_server()
+            try:
+                async with BrokerClient(socket_path=broker.socket_path) as client:
+                    return await asyncio.wait_for(
+                        client._send_request(
+                            {"command": "disconnect", "hostname": "router-1"}
+                        ),
+                        timeout=1.0,
+                    )
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        result = asyncio.run(_run())
+        assert result == {"status": "success", "result": True}
+
+    def test_error_responses_are_framed_json(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> dict[str, Any]:
+            await broker._start_socket_server()
+            try:
+                reader, writer = await asyncio.open_unix_connection(
+                    str(broker.socket_path)
+                )
+
+                payload = json.dumps({"command": "connect"}).encode("utf-8")
+                writer.write(len(payload).to_bytes(4, byteorder="big") + payload)
+                await writer.drain()
+
+                response_len = int.from_bytes(
+                    await asyncio.wait_for(reader.readexactly(4), timeout=1.0),
+                    byteorder="big",
+                )
+                response: dict[str, Any] = json.loads(
+                    (
+                        await asyncio.wait_for(
+                            reader.readexactly(response_len), timeout=1.0
+                        )
+                    ).decode("utf-8")
+                )
+
+                writer.close()
+                await writer.wait_closed()
+                return response
+
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        result = asyncio.run(_run())
+        assert result["status"] == "error"
+        assert "hostname" in result.get("error", "")
+
+    def test_sequential_requests_over_single_connection(self, make_broker: Any) -> None:
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> None:
+            await broker._start_socket_server()
+            try:
+                reader, writer = await asyncio.open_unix_connection(
+                    str(broker.socket_path)
+                )
+
+                def _frame(obj: dict[str, Any]) -> bytes:
+                    data = json.dumps(obj).encode("utf-8")
+                    return len(data).to_bytes(4, byteorder="big") + data
+
+                async def _read_response() -> dict[str, Any]:
+                    resp_len = int.from_bytes(
+                        await asyncio.wait_for(reader.readexactly(4), timeout=1.0),
+                        byteorder="big",
+                    )
+                    resp: dict[str, Any] = json.loads(
+                        (
+                            await asyncio.wait_for(
+                                reader.readexactly(resp_len), timeout=1.0
+                            )
+                        ).decode("utf-8")
+                    )
+                    return resp
+
+                # 1) ping
+                writer.write(_frame({"command": "ping"}))
+                await writer.drain()
+                assert await _read_response() == {"status": "success", "result": "pong"}
+
+                # 2) handled error response (missing hostname)
+                writer.write(_frame({"command": "connect"}))
+                await writer.drain()
+                resp2 = await _read_response()
+                assert resp2["status"] == "error"
+
+                # 3) ping still works after a handled error
+                writer.write(_frame({"command": "ping"}))
+                await writer.drain()
+                assert await _read_response() == {"status": "success", "result": "pong"}
+
+                # 4) invalid protocol closes connection (send bad JSON)
+                bad = b"not json"
+                writer.write(len(bad).to_bytes(4, byteorder="big") + bad)
+                await writer.drain()
+                writer.write_eof()
+
+                data = await asyncio.wait_for(reader.read(), timeout=1.0)
+                assert data == b""
+
+                writer.close()
+                await writer.wait_closed()
+
+            finally:
+                assert broker.server is not None
+                broker.server.close()
+                await broker.server.wait_closed()
+
+        asyncio.run(_run())
+
 
 class TestDisconnectCleanup:
     def test_disconnect_cleans_up_even_when_device_disconnect_raises(
