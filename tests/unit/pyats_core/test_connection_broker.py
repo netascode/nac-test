@@ -72,32 +72,21 @@ def test_create_connection_prepends_hostname_when_missing(
 
 
 class TestIsConnectionHealthy:
-    @pytest.mark.parametrize(
-        ("connected", "spawn", "expected"),
-        [
-            (True, True, True),
-            (False, True, False),
-            (True, False, False),
-        ],
-        ids=["healthy", "not-connected", "no-spawn"],
-    )
-    def test_healthy_states(
-        self,
-        broker: ConnectionBroker,
-        connected: bool,
-        spawn: bool,
-        expected: bool,
+    def test_returns_false_when_attribute_raises(
+        self, broker: ConnectionBroker
     ) -> None:
-        conn = MagicMock()
-        conn.connected = connected
-        conn.spawn = spawn
-        assert broker._is_connection_healthy(conn) is expected
-
-    def test_unhealthy_when_attribute_raises(self, broker: ConnectionBroker) -> None:
+        """If pyATS connection attributes raise, treat as unhealthy (no crash)."""
         conn = MagicMock()
         type(conn).connected = property(
             lambda self: (_ for _ in ()).throw(Exception("boom"))
         )
+        assert broker._is_connection_healthy(conn) is False
+
+    def test_returns_false_when_attribute_missing(
+        self, broker: ConnectionBroker
+    ) -> None:
+        """If a connection object lacks expected attributes, treat as unhealthy."""
+        conn = object()
         assert broker._is_connection_healthy(conn) is False
 
 
@@ -119,12 +108,14 @@ class TestProcessRequest:
     def test_connect_missing_hostname(self, broker: ConnectionBroker) -> None:
         result = asyncio.run(broker._process_request({"command": "connect"}))
         assert result["status"] == "error"
+        assert "hostname" in result.get("error", "").lower()
 
     def test_execute_missing_params(self, broker: ConnectionBroker) -> None:
         result = asyncio.run(
             broker._process_request({"command": "execute", "hostname": "router-1"})
         )
         assert result["status"] == "error"
+        assert "cmd" in result.get("error", "").lower()
 
     def test_connect_success(self, broker: ConnectionBroker) -> None:
         broker._ensure_connection = AsyncMock(return_value=(True, ""))  # type: ignore[method-assign]

@@ -10,15 +10,72 @@ handling paths that unit tests cannot reach.
 
 Async methods are tested using asyncio.run() — same pattern as the rest of the
 unit test suite (see test_subprocess_runner.py).
+
+Note: This file is intended to live under tests/integration/ (see
+tests/integration/test_broker.py for broader end-to-end broker validation).
 """
 
 import asyncio
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from nac_test.pyats_core.broker.broker_client import BrokerClient
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
+
+
+@pytest.fixture
+def socket_dir() -> Any:
+    """Short-path temp dir suitable for Unix socket paths (macOS 104-char limit)."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as d:
+        yield Path(d)
+
+
+@pytest.fixture
+def good_device() -> MagicMock:
+    """A device whose connect() succeeds."""
+    device = MagicMock()
+    device.connected = True
+    device.spawn = True
+    device.connect.return_value = None
+    device.execute.return_value = "output"
+    return device
+
+
+@pytest.fixture
+def bad_device() -> MagicMock:
+    """A device whose connect() always fails."""
+    device = MagicMock()
+    device.connect.side_effect = ConnectionError(
+        'failed to connect to bad-router\nFailed while bringing device to "any" state'
+    )
+    return device
+
+
+@pytest.fixture
+def make_broker(
+    socket_dir: Path,
+    tmp_path: Path,
+) -> Callable[[dict[str, MagicMock]], ConnectionBroker]:
+    """Factory fixture: call make_broker(devices) to get a wired ConnectionBroker."""
+
+    def _factory(devices: dict[str, MagicMock]) -> ConnectionBroker:
+        broker = ConnectionBroker(
+            socket_path=socket_dir / "b.sock",
+            output_dir=tmp_path,
+        )
+        broker.testbed = MagicMock()
+        broker.testbed.devices = devices
+        for hostname in devices:
+            broker.connection_locks[hostname] = asyncio.Lock()
+        return broker
+
+    return _factory
 
 
 def _patch_executor(loop: asyncio.AbstractEventLoop) -> Any:
@@ -31,10 +88,10 @@ def _patch_executor(loop: asyncio.AbstractEventLoop) -> Any:
 
 
 def test_ensure_connection_returns_false_when_broker_not_running(
-    socket_dir: Path,
+    tmp_path: Path,
 ) -> None:
     """ensure_connection returns False (does not raise) when broker is unreachable."""
-    client = BrokerClient(socket_path=socket_dir / "no_such.sock")
+    client = BrokerClient(socket_path=tmp_path / "no_such.sock")
 
     result = asyncio.run(client.ensure_connection("router-1"))
 
