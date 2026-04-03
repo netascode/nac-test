@@ -272,7 +272,7 @@ Diagnostic = Annotated[
         "--diagnostic",
         callback=diagnostic_callback,
         is_eager=True,
-        help="Wrap execution with diagnostic collection. Produces a zip with system info, logs, and artifacts.",
+        help="Wrap execution with diagnostic collection (Linux/macOS only). Produces a zip with system info, logs, and artifacts.",
     ),
 ]
 

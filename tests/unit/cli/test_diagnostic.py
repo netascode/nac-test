@@ -154,3 +154,28 @@ class TestDiagnosticCallback:
                 diagnostic_callback(True)
 
             assert exc_info.value.exit_code == 42
+
+    @patch("nac_test.cli.diagnostic.subprocess.run")
+    def test_windows_errors_without_running_script(self, mock_run: MagicMock) -> None:
+        """Test that --diagnostic hard-errors on Windows without running subprocess."""
+        mock_run.return_value = MagicMock(returncode=0)
+
+        with (
+            patch("nac_test.cli.diagnostic.IS_WINDOWS", True),
+            patch(
+                "nac_test.cli.diagnostic.sys.argv",
+                ["nac-test", "-d", "./data", "-o", "./output", "--diagnostic"],
+            ),
+            patch("nac_test.cli.diagnostic.typer.echo") as mock_echo,
+        ):
+            with pytest.raises(typer.Exit) as exc_info:
+                diagnostic_callback(True)
+
+            assert exc_info.value.exit_code == EXIT_INVALID_ARGS
+            mock_run.assert_not_called()
+            mock_echo.assert_called_once()
+            assert (
+                "--diagnostic is supported only on Linux and macOS"
+                in mock_echo.call_args.args[0]
+            )
+            assert mock_echo.call_args.kwargs["err"] is True

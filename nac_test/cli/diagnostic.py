@@ -15,7 +15,7 @@ from pathlib import Path
 
 import typer
 
-from nac_test.core.constants import EXIT_INVALID_ARGS
+from nac_test.core.constants import EXIT_INVALID_ARGS, IS_WINDOWS
 
 
 def _find_diagnostic_script() -> Path:
@@ -118,6 +118,16 @@ def diagnostic_callback(value: bool) -> None:
     """
     if not value:
         return
+
+    if IS_WINDOWS:
+        typer.echo(
+            typer.style(
+                "Error: --diagnostic is supported only on Linux and macOS (requires bash).",
+                fg=typer.colors.RED,
+            ),
+            err=True,
+        )
+        raise typer.Exit(code=EXIT_INVALID_ARGS)
 
     # Find the diagnostic script
     script_path = _find_diagnostic_script()

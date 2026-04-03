@@ -170,6 +170,25 @@ detect_architecture() {
 DETECTED_ARCH=$(detect_architecture)
 
 ###############################################################################
+# REQUIREMENTS PREFLIGHT
+###############################################################################
+
+if ! command -v zip >/dev/null 2>&1; then
+    echo ""
+    echo -e "${RED}zip command not found${NC}"
+    echo -e "${YELLOW}Install it and re-run diagnostics:${NC}"
+    if $IS_MACOS; then
+        echo "  brew install zip"
+    else
+        echo "  sudo apt-get update && sudo apt-get install -y zip"
+        echo "  # or: sudo dnf install -y zip"
+        echo "  # or: sudo yum install -y zip"
+    fi
+    echo ""
+    exit 1
+fi
+
+###############################################################################
 # SETUP DIAGNOSTIC DIRECTORY
 ###############################################################################
 
