@@ -9,58 +9,11 @@ import pytest
 import typer
 
 from nac_test.cli.diagnostic import (
-    _extract_output_dir,
     _find_diagnostic_script,
     _reconstruct_command,
-    diagnostic_callback,
+    run_diagnostic,
 )
 from nac_test.core.constants import EXIT_INVALID_ARGS
-
-
-class TestExtractOutputDir:
-    """Tests for _extract_output_dir function."""
-
-    def test_short_flag_with_space(self) -> None:
-        """Test extraction with -o value syntax."""
-        args = ["-d", "./data", "-o", "./output", "-t", "./tests"]
-        result = _extract_output_dir(args)
-        assert result == "./output"
-
-    def test_long_flag_with_space(self) -> None:
-        """Test extraction with --output value syntax."""
-        args = ["-d", "./data", "--output", "./my-output", "-t", "./tests"]
-        result = _extract_output_dir(args)
-        assert result == "./my-output"
-
-    def test_long_flag_with_equals(self) -> None:
-        """Test extraction with --output=value syntax."""
-        args = ["-d", "./data", "--output=./results", "-t", "./tests"]
-        result = _extract_output_dir(args)
-        assert result == "./results"
-
-    def test_short_flag_with_equals(self) -> None:
-        """Test extraction with -o=value syntax."""
-        args = ["-d", "./data", "-o=./results", "-t", "./tests"]
-        result = _extract_output_dir(args)
-        assert result == "./results"
-
-    def test_missing_output_returns_none(self) -> None:
-        """Test that missing -o/--output returns None."""
-        args = ["-d", "./data", "-t", "./tests"]
-        result = _extract_output_dir(args)
-        assert result is None
-
-    def test_output_at_end_of_args(self) -> None:
-        """Test that -o at end without value returns None."""
-        args = ["-d", "./data", "-o"]
-        result = _extract_output_dir(args)
-        assert result is None
-
-    def test_returns_first_occurrence(self) -> None:
-        """Test that first -o occurrence is returned when multiple present."""
-        args = ["-o", "first", "-o", "second"]
-        result = _extract_output_dir(args)
-        assert result == "first"
 
 
 class TestReconstructCommand:
@@ -107,69 +60,15 @@ class TestFindDiagnosticScript:
         assert result.name == "nac-test-diagnostic.sh"
 
 
-class TestDiagnosticCallback:
-    """Tests for diagnostic_callback function."""
-
-    def test_false_returns_immediately(self) -> None:
-        """Test that False value returns without action."""
-        # This should not raise or call subprocess - just returns None
-        diagnostic_callback(False)  # Should complete without raising
-
-    def test_true_without_output_dir_raises_exit(self) -> None:
-        """Test that True without -o/--output raises Exit with code 1."""
-        with patch("nac_test.cli.diagnostic.sys.argv", ["nac-test", "-d", "./data"]):
-            with pytest.raises(typer.Exit) as exc_info:
-                diagnostic_callback(True)
-            assert exc_info.value.exit_code == EXIT_INVALID_ARGS
-
-    @patch("nac_test.cli.diagnostic.subprocess.run")
-    def test_true_with_output_dir_runs_script(self, mock_run: MagicMock) -> None:
-        """Test that True with valid args runs subprocess and exits."""
-        mock_run.return_value = MagicMock(returncode=0)
-
-        with patch(
-            "nac_test.cli.diagnostic.sys.argv",
-            ["nac-test", "-d", "./data", "-o", "./output", "--diagnostic"],
-        ):
-            with pytest.raises(typer.Exit) as exc_info:
-                diagnostic_callback(True)
-
-            assert exc_info.value.exit_code == 0
-            mock_run.assert_called_once()
-            # Verify bash is called with script path
-            call_args = mock_run.call_args[0][0]
-            assert call_args[0] == "bash"
-            assert "nac-test-diagnostic.sh" in call_args[1]
-
-    @patch("nac_test.cli.diagnostic.subprocess.run")
-    def test_propagates_script_exit_code(self, mock_run: MagicMock) -> None:
-        """Test that subprocess exit code is propagated."""
-        mock_run.return_value = MagicMock(returncode=42)
-
-        with patch(
-            "nac_test.cli.diagnostic.sys.argv",
-            ["nac-test", "-d", "./data", "-o", "./output", "--diagnostic"],
-        ):
-            with pytest.raises(typer.Exit) as exc_info:
-                diagnostic_callback(True)
-
-            assert exc_info.value.exit_code == 42
-
-    @patch("nac_test.cli.diagnostic.subprocess.run")
-    def test_windows_errors_without_running_script(self, mock_run: MagicMock) -> None:
-        """Test that --diagnostic hard-errors on Windows without running subprocess."""
-        mock_run.return_value = MagicMock(returncode=0)
-
+class TestRunDiagnostic:
+    def test_windows_errors_without_running_script(self) -> None:
         with (
             patch("nac_test.cli.diagnostic.IS_WINDOWS", True),
-            patch(
-                "nac_test.cli.diagnostic.sys.argv",
-                ["nac-test", "-d", "./data", "-o", "./output", "--diagnostic"],
-            ),
+            patch("nac_test.cli.diagnostic.subprocess.run") as mock_run,
             patch("nac_test.cli.diagnostic.typer.echo") as mock_echo,
         ):
             with pytest.raises(typer.Exit) as exc_info:
-                diagnostic_callback(True)
+                run_diagnostic(Path("/tmp/out"), argv=["nac-test", "--diagnostic"])
 
             assert exc_info.value.exit_code == EXIT_INVALID_ARGS
             mock_run.assert_not_called()
@@ -179,3 +78,20 @@ class TestDiagnosticCallback:
                 in mock_echo.call_args.args[0]
             )
             assert mock_echo.call_args.kwargs["err"] is True
+
+    @patch("nac_test.cli.diagnostic.subprocess.run")
+    def test_propagates_script_exit_code(self, mock_run: MagicMock) -> None:
+        mock_run.return_value = MagicMock(returncode=42)
+
+        with (
+            patch("nac_test.cli.diagnostic.IS_WINDOWS", False),
+            patch("nac_test.cli.diagnostic.typer.echo"),
+        ):
+            with pytest.raises(typer.Exit) as exc_info:
+                run_diagnostic(
+                    Path("/tmp/out"),
+                    argv=["nac-test", "-o", "/tmp/out", "--diagnostic"],
+                )
+
+            assert exc_info.value.exit_code == 42
+            mock_run.assert_called_once()
