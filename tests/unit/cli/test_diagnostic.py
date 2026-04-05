@@ -70,7 +70,7 @@ class TestRunDiagnostic:
             with pytest.raises(typer.Exit) as exc_info:
                 run_diagnostic(Path("/tmp/out"), argv=["nac-test", "--diagnostic"])
 
-            assert exc_info.value.exit_code == EXIT_INVALID_ARGS
+            assert exc_info.value.exit_code == EXIT_INVALID_ARGS  # type: ignore[unreachable]
             mock_run.assert_not_called()
             mock_echo.assert_called_once()
             assert (
@@ -93,5 +93,5 @@ class TestRunDiagnostic:
                     argv=["nac-test", "-o", "/tmp/out", "--diagnostic"],
                 )
 
-            assert exc_info.value.exit_code == 42
+            assert exc_info.value.exit_code == 42  # type: ignore[unreachable]
             mock_run.assert_called_once()
