@@ -11,6 +11,7 @@ import importlib.resources
 import shlex
 import subprocess
 from pathlib import Path
+from typing import NoReturn
 
 import typer
 
@@ -49,7 +50,7 @@ def _reconstruct_command(argv: list[str]) -> str:
     return shlex.join(filtered_args)
 
 
-def run_diagnostic(output_dir: Path, argv: list[str]) -> None:
+def run_diagnostic(output_dir: Path, argv: list[str]) -> NoReturn:
     """Run diagnostic collection and exit if requested.
 
     This is invoked from the main CLI entrypoint *after* Typer/Click has
