@@ -371,7 +371,7 @@ collect() {
 log ""
 log "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
 log "${CYAN}║        NAC-Test Diagnostic Collection v5.0                       ║${NC}"
-log "${CYAN}║              Architecture-Agnostic Edition                        ║${NC}"
+log "${CYAN}║              Architecture-Agnostic Edition                       ║${NC}"
 log "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
 log ""
 log "${GREEN}=== NAC-Test Diagnostic Collection v5.0 ===${NC}"
@@ -682,7 +682,6 @@ log ""
     echo "Exit code: $NAC_TEST_EXIT"
 } > "$DIAG_DIR/100_nac_test_execution.txt" 2>&1
 
-NAC_TEST_EXIT=${PIPESTATUS[0]}
 NAC_TEST_END=$(date +%s)
 NAC_TEST_DURATION=$((NAC_TEST_END - NAC_TEST_START))
 
@@ -870,7 +869,7 @@ zip -r "$ZIP_NAME" "$DIAG_DIR" > /dev/null
 
 log ""
 log "${GREEN}╔══════════════════════════════════════════════════════════════════╗${NC}"
-log "${GREEN}║              DIAGNOSTIC COLLECTION COMPLETE                       ║${NC}"
+log "${GREEN}║              DIAGNOSTIC COLLECTION COMPLETE                      ║${NC}"
 log "${GREEN}╚══════════════════════════════════════════════════════════════════╝${NC}"
 log ""
 log "Archive: ${GREEN}$ZIP_NAME${NC}"
