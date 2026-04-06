@@ -539,7 +539,7 @@ echo '=== NaC-related packages ==='
 "
 
 collect "034_pyats_version" "
-python -c 'import pyats; print(f\"PyATS version: {pyats.__version__}\")' 2>&1 || echo 'PyATS not installed or import failed'
+pyats version check 2>&1 || echo 'pyats CLI not available'
 "
 
 ###############################################################################
@@ -657,6 +657,7 @@ NAC_TEST_START=$(date +%s)
 
 # Execute the user's nac-test command
 log "${YELLOW}Starting nac-test execution...${NC}"
+log "Output is being captured in $DIAG_DIR/100_nac_test_execution.txt"
 log ""
 
 {
