@@ -758,14 +758,16 @@ echo '   review them before sharing if you have concerns about credential exposu
         log "  ${YELLOW}⚠️  WARNING: Archives may contain logs with credentials - review before sharing${NC}"
     fi
 
-    # Collect Robot Framework outputs (if running --robot)
+    # Collect Robot Framework outputs
+    ROBOT_FILES=$(find "$OUTPUT_DIR/robot_results" \( -name 'output.xml' -o -name 'log.html' -o -name 'report.html' \) -mmin -60 2>/dev/null)
+
     collect "120_robot_outputs" "
 echo 'Robot Framework output files:'
-find '$OUTPUT_DIR' -name 'output.xml' -o -name 'log.html' -o -name 'report.html' 2>/dev/null | head -20
+echo \"$ROBOT_FILES\" | head -20
 "
 
     ROBOT_COUNT=0
-    for robot_file in $(find "$OUTPUT_DIR" \( -name 'output.xml' -o -name 'log.html' -o -name 'report.html' \) -mmin -60 2>/dev/null); do
+    for robot_file in $ROBOT_FILES; do
         cp "$robot_file" "$DIAG_DIR/" 2>/dev/null && ROBOT_COUNT=$((ROBOT_COUNT + 1))
     done
     if [ "$ROBOT_COUNT" -gt 0 ]; then
