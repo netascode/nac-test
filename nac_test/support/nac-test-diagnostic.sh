@@ -88,8 +88,10 @@ done
 
 shift $((OPTIND-1))
 
-# The remaining argument is the nac-test command
-NAC_TEST_COMMAND="$*"
+# The remaining positional argument must be a single shell command string
+# (quoted by the caller). We treat it as an opaque command for `bash -c`.
+[ $# -eq 1 ] || { echo -e "${RED}Error: nac-test command must be passed as a single quoted argument${NC}"; exit 1; }
+NAC_TEST_COMMAND="$1"
 
 # Validate required arguments
 if [ -z "$OUTPUT_DIR" ]; then
@@ -657,7 +659,8 @@ NAC_TEST_START=$(date +%s)
 
 # Execute the user's nac-test command
 log "${YELLOW}Starting nac-test execution...${NC}"
-log "Output is being captured in $DIAG_DIR/100_nac_test_execution.txt"
+log "Note: nac-test output is not shown on screen."
+log "  Saved to: $DIAG_DIR/100_nac_test_execution.txt"
 log ""
 
 {
