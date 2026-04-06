@@ -865,7 +865,10 @@ done
 ZIP_NAME="${DIAG_DIR}.zip"
 log ""
 log "Creating archive: $ZIP_NAME"
-zip -r "$ZIP_NAME" "$DIAG_DIR" > /dev/null
+(
+    cd "$(dirname "$DIAG_DIR")" || exit 1
+    zip -r "$(basename "$ZIP_NAME")" "$(basename "$DIAG_DIR")" > /dev/null
+)
 
 log ""
 log "${GREEN}╔══════════════════════════════════════════════════════════════════╗${NC}"
