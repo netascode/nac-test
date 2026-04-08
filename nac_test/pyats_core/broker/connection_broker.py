@@ -198,8 +198,14 @@ class ConnectionBroker:
                 if not hostname:
                     return {"status": "error", "error": "Missing hostname parameter"}
 
-                success = await self._ensure_connection(hostname)
-                return {"status": "success" if success else "error", "result": success}
+                success, error_msg = await self._ensure_connection(hostname)
+                if success:
+                    return {"status": "success", "result": True}
+                else:
+                    return {
+                        "status": "error",
+                        "error": error_msg or f"Failed to connect to {hostname}",
+                    }
 
             elif command == "disconnect":
                 hostname = message.get("hostname")
@@ -218,7 +224,7 @@ class ConnectionBroker:
                 return {"status": "error", "error": f"Unknown command: {command}"}
 
         except Exception as e:
-            logger.error(f"Error processing request: {e}", exc_info=True)
+            logger.error(f"Error processing request: {e}")
             return {"status": "error", "error": str(e)}
 
     async def _execute_command(self, hostname: str, cmd: str) -> str:
@@ -340,13 +346,19 @@ class ConnectionBroker:
                 return device
 
             except Exception as e:
-                logger.error(f"Failed to connect to {hostname}: {e}", exc_info=True)
-                return None
+                msg = str(e)
+                if hostname not in msg:
+                    msg = f"{hostname}: {msg}"
+                logger.error(msg)
+                raise
 
-    async def _ensure_connection(self, hostname: str) -> bool:
-        """Ensure device is connected, return success status."""
-        connection = await self._get_connection(hostname)
-        return connection is not None
+    async def _ensure_connection(self, hostname: str) -> tuple[bool, str]:
+        """Ensure device is connected, return (success, error_message)."""
+        try:
+            connection = await self._get_connection(hostname)
+            return connection is not None, ""
+        except Exception as e:
+            return False, str(e)
 
     async def _disconnect_device(self, hostname: str) -> None:
         """Disconnect from device and clean up."""

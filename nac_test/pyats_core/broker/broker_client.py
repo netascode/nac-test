@@ -52,6 +52,23 @@ class BrokerClient:
             "or ensure connection broker is running."
         )
 
+    def _teardown_connection(self) -> None:
+        """Reset connection state without acquiring the lock.
+
+        Must be called while already holding _connection_lock. Extracted so
+        that both connect()'s error path and disconnect() share identical
+        teardown logic.
+
+        Note: does not call writer.wait_closed() because on the connect()
+        failure path there is nothing meaningful buffered to flush.
+        disconnect() calls wait_closed() explicitly after this method returns.
+        """
+        if self.writer:
+            self.writer.close()
+        self.reader = None
+        self.writer = None
+        self._connected = False
+
     async def connect(self) -> None:
         """Connect to the broker service."""
         async with self._connection_lock:
@@ -73,19 +90,16 @@ class BrokerClient:
 
             except Exception as e:
                 logger.error(f"Failed to connect to broker: {e}")
-                await self.disconnect()
+                self._teardown_connection()
                 raise ConnectionError(f"Cannot connect to broker: {e}") from e
 
     async def disconnect(self) -> None:
         """Disconnect from the broker service."""
         async with self._connection_lock:
-            if self.writer:
-                self.writer.close()
-                await self.writer.wait_closed()
-
-            self.reader = None
-            self.writer = None
-            self._connected = False
+            writer = self.writer
+            self._teardown_connection()
+            if writer:
+                await writer.wait_closed()
 
     async def _send_request(self, request: dict[str, Any]) -> dict[str, Any]:
         """Send request to broker and return response."""
@@ -120,7 +134,7 @@ class BrokerClient:
             return response  # type: ignore[no-any-return]
 
         except Exception as e:
-            logger.error(f"Error communicating with broker: {e}")
+            logger.debug(f"Error communicating with broker: {e}")
             # Reset connection on error
             await self.disconnect()
             raise
@@ -165,7 +179,7 @@ class BrokerClient:
             return response.get("result", False)  # type: ignore[no-any-return]
 
         except Exception as e:
-            logger.error(f"Failed to ensure connection to {hostname}: {e}")
+            logger.debug(f"Failed to ensure connection to {hostname}: {e}")
             return False
 
     async def disconnect_device(self, hostname: str) -> None:

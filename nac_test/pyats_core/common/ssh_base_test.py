@@ -6,6 +6,7 @@ import json
 import logging
 import os
 from collections.abc import Callable, Coroutine
+from pathlib import Path
 from typing import Any
 
 from pyats import aetest
@@ -188,9 +189,17 @@ class SSHTestBase(NACTestBase):
         """Helper for async setup operations with connection error handling."""
         try:
             # Check if broker is active (priority over testbed to enable connection pooling)
-            broker_active = "NAC_TEST_BROKER_SOCKET" in os.environ
+            broker_socket_env = os.environ.get("NAC_TEST_BROKER_SOCKET")
+            broker_socket = Path(broker_socket_env) if broker_socket_env else None
 
-            if broker_active:
+            if broker_socket is not None and not broker_socket.is_socket():
+                self.logger.warning(
+                    f"NAC_TEST_BROKER_SOCKET is set but {broker_socket} is not a valid "
+                    f"Unix socket, falling back to direct connection"
+                )
+                broker_socket = None
+
+            if broker_socket is not None:
                 # Use broker client for connection management
                 # Testbed may still be available for Genie parsers
                 self.logger.info(
@@ -217,15 +226,14 @@ class SSHTestBase(NACTestBase):
                     "broker not active and testbed not available"
                 )
 
+        except ConnectionError:
+            # Already logged at source (broker or testbed layer) — just re-raise
+            raise
         except Exception as e:
-            # Connection failed - raise exception to be caught in setup_ssh_context
-            error_msg = f"Failed to connect to device {hostname}: {str(e)}"
+            # Unexpected error — log here since no lower layer will have done so
+            error_msg = f"Failed to connect to {hostname}: {e}"
             self.logger.error(error_msg)
-
-            # Raise with a clear message that will be caught by the calling method
-            raise ConnectionError(
-                f"Device connection failed: {hostname}\nError: {str(e)}"
-            ) from e
+            raise ConnectionError(error_msg) from e
 
         # 2. Create and attach the command cache
         self.command_cache = CommandCache(hostname)
