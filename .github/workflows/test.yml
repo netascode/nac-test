@@ -8,16 +8,11 @@ on:
   workflow_call:
 
 env:
-  # Cisco Artifactory credentials for supply-chain-safe package resolution.
-  # Empty on fork PRs (GitHub doesn't expose secrets to forks), which triggers
-  # the "Configure package index" fallback step below.
+  # Artifactory credentials — empty on fork PRs, triggering pypi.org fallback below.
   UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME: ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME }}
   UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD: ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD }}
-  # UV_DEFAULT_INDEX routes all uv operations (including `uv tool install`) through
-  # Artifactory. tool.uv.index in pyproject.toml only affects project-scoped commands
-  # (sync/lock/run), so this env var is needed for tool installs like bandit and mypy.
-  # The name= prefix must match the index name in pyproject.toml so uv can pair it
-  # with the UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME/PASSWORD credentials.
+  # Named default index so `uv tool install` also routes through Artifactory
+  # (tool.uv.index in pyproject.toml only applies to project-scoped commands).
   UV_DEFAULT_INDEX: cisco-artifactory-devhub=https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/simple
 
 jobs:
@@ -36,8 +31,7 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure package index
-        # Fall back to pypi.org when Artifactory credentials are unavailable (fork PRs)
+      - name: Configure package index  # fall back to pypi.org for fork PRs
         if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
         run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
@@ -73,8 +67,7 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure package index
-        # Fall back to pypi.org when Artifactory credentials are unavailable (fork PRs)
+      - name: Configure package index  # fall back to pypi.org for fork PRs
         if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
         run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
@@ -122,8 +115,7 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure package index
-        # Fall back to pypi.org when Artifactory credentials are unavailable (fork PRs)
+      - name: Configure package index  # fall back to pypi.org for fork PRs
         if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
         run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
@@ -158,8 +150,7 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure package index
-        # Fall back to pypi.org when Artifactory credentials are unavailable (fork PRs)
+      - name: Configure package index  # fall back to pypi.org for fork PRs
         if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
         run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> $env:GITHUB_ENV
         shell: pwsh
@@ -193,8 +184,7 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure package index (Linux)
-        # Fall back to pypi.org when Artifactory credentials are unavailable (fork PRs)
+      - name: Configure package index (Linux)  # fall back to pypi.org for fork PRs
         if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == '' && runner.os == 'Linux'
         run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
