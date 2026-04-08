@@ -92,6 +92,11 @@ override-dependencies = [
     "pytest-cov>=7.1",
 ]
 
+[[tool.uv.index]]
+name = "cisco-artifactory-devhub"
+url = "https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/simple"
+default = true
+
 [tool.coverage.run]
 source = ["nac_test"]
 
