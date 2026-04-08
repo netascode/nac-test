@@ -212,8 +212,15 @@ jobs:
           # messages, 200 chars for PR titles are generous practical limits)
           COMMIT_MSG=$(echo "$RAW_COMMIT_MSG" | head -c 500)
           PR_TITLE=$(echo "$RAW_PR_TITLE" | head -c 200)
-          echo "SAFE_COMMIT_MSG=${COMMIT_MSG}" >> "$GITHUB_ENV"
-          echo "SAFE_PR_TITLE=${PR_TITLE}" >> "$GITHUB_ENV"
+
+          {
+            echo "SAFE_COMMIT_MSG<<'EOF'"
+            echo "$COMMIT_MSG"
+            echo "EOF"
+            echo "SAFE_PR_TITLE<<'EOF'"
+            echo "$PR_TITLE"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
 
       # Using direct curl to Webex API instead of a GitHub Action because:
       # - qsnyder/action-wxt is unmaintained (last commit 2022, no releases)
