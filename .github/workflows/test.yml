@@ -16,7 +16,7 @@ env:
   UV_DEFAULT_INDEX: cisco-artifactory-devhub=https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/simple
   # Generous timeouts and retries for Artifactory resilience.
   UV_HTTP_TIMEOUT: 120
-  UV_CONNECT_TIMEOUT: 30
+  UV_HTTP_CONNECT_TIMEOUT: 30
   UV_HTTP_RETRIES: 10
 
 jobs:
