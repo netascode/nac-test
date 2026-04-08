@@ -11,7 +11,7 @@ env:
   # Cisco Artifactory credentials for supply-chain-safe package resolution.
   # Empty on fork PRs (GitHub doesn't expose secrets to forks), which triggers
   # the "Configure package index" fallback step below.
-  UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME: ""  # TODO: restore to ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME }} after testing
+  UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME: ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME }}
   UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD: ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD }}
 
 jobs:
