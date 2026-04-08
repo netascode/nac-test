@@ -16,7 +16,11 @@ import yaml
 from typer.testing import CliRunner
 
 import nac_test.cli.main
-from nac_test.core.constants import EXIT_ERROR, ROBOT_RESULTS_DIRNAME
+from nac_test.core.constants import (
+    EXIT_ERROR,
+    MERGED_DATA_FILENAME,
+    ROBOT_RESULTS_DIRNAME,
+)
 
 pytestmark = [pytest.mark.integration, pytest.mark.windows]
 
@@ -264,89 +268,36 @@ def test_chunked_list_rendering_produces_expected_content(tmp_path: Path) -> Non
 
 
 def test_merged_data_model_creates_default_filename(tmp_path: Path) -> None:
-    """Test that merged data model creates file with default filename.
-
-    Verifies that the CLI creates a merged data model YAML file with
-    the default filename when no custom filename is specified.
-
-    Args:
-        tmp_path: Pytest fixture providing a temporary directory.
-    """
+    """Test that the merged data model is written with the expected filename and content."""
     runner = CliRunner()
-    data_path = "tests/integration/fixtures/data_merge/"
     templates_path = "tests/integration/fixtures/templates/"
-    expected_filename = "merged_data_model_test_variables.yaml"
-    output_model_path = tmp_path / expected_filename
-    data_dir = Path(data_path)
+    output_model_path = tmp_path / MERGED_DATA_FILENAME
+    data_dir = Path("tests/integration/fixtures/data_merge")
     expected_model_path = data_dir / "result.yaml"
 
-    base_args = [
-        "-d",
-        str(data_dir / "file1.yaml"),
-        "-d",
-        str(data_dir / "file2.yaml"),
-        "-t",
-        templates_path,
-        "-o",
-        str(tmp_path),
-        "--render-only",
-    ]
-
-    result = runner.invoke(nac_test.cli.main.app, base_args)
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            str(data_dir / "file1.yaml"),
+            "-d",
+            str(data_dir / "file2.yaml"),
+            "-t",
+            templates_path,
+            "-o",
+            str(tmp_path),
+            "--render-only",
+        ],
+    )
     assert result.exit_code == 0, (
         f"Merged data model creation should succeed, got exit code "
         f"{result.exit_code}: {result.output}"
     )
     assert output_model_path.exists(), (
-        f"Default merged data model file should exist at {output_model_path}"
+        f"Merged data model file should exist at {output_model_path}"
     )
     assert filecmp.cmp(output_model_path, expected_model_path, shallow=False), (
         f"Merged data model content should match expected content from "
-        f"{expected_model_path}"
-    )
-
-
-def test_merged_data_model_creates_custom_filename(tmp_path: Path) -> None:
-    """Test that merged data model creates file with custom filename.
-
-    Verifies that the CLI creates a merged data model YAML file with
-    a custom filename when --merged-data-filename is specified.
-
-    Args:
-        tmp_path: Pytest fixture providing a temporary directory.
-    """
-    runner = CliRunner()
-    data_path = "tests/integration/fixtures/data_merge/"
-    templates_path = "tests/integration/fixtures/templates/"
-    expected_filename = "custom.yaml"
-    output_model_path = tmp_path / expected_filename
-    data_dir = Path(data_path)
-    expected_model_path = data_dir / "result.yaml"
-
-    base_args = [
-        "-d",
-        str(data_dir / "file1.yaml"),
-        "-d",
-        str(data_dir / "file2.yaml"),
-        "-t",
-        templates_path,
-        "-o",
-        str(tmp_path),
-        "--render-only",
-        "--merged-data-filename",
-        "custom.yaml",
-    ]
-
-    result = runner.invoke(nac_test.cli.main.app, base_args)
-    assert result.exit_code == 0, (
-        f"Merged data model with custom filename should succeed, got exit code "
-        f"{result.exit_code}: {result.output}"
-    )
-    assert output_model_path.exists(), (
-        f"Custom merged data model file should exist at {output_model_path}"
-    )
-    assert filecmp.cmp(output_model_path, expected_model_path, shallow=False), (
-        f"Custom merged data model content should match expected content from "
         f"{expected_model_path}"
     )
 

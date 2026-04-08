@@ -84,6 +84,9 @@ LOG_HTML: str = "log.html"
 REPORT_HTML: str = "report.html"
 XUNIT_XML: str = "xunit.xml"
 ORDERING_FILENAME: str = "ordering.txt"
+MERGED_DATA_FILENAME: str = "merged_data_model_test_variables.yaml"
+# Owner read/write only — prevents other users from reading sensitive merged data
+MERGED_DATA_FILE_MODE: int = 0o600
 SUMMARY_SEPARATOR_WIDTH: int = 70
 
 # HTTP status code range boundaries

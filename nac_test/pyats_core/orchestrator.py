@@ -22,6 +22,7 @@ from nac_test.core.constants import (
     SUMMARY_SEPARATOR_WIDTH,
 )
 from nac_test.core.types import PyATSResults, TestResults
+from nac_test.data_merger import DataMerger
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
     DEFAULT_CPU_MULTIPLIER,
@@ -66,7 +67,6 @@ class PyATSOrchestrator:
         data_paths: list[Path],
         test_dir: Path,
         output_dir: Path,
-        merged_data_filename: str,
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
@@ -80,7 +80,6 @@ class PyATSOrchestrator:
             data_paths: List of paths to data model YAML files
             test_dir: Directory containing PyATS test files
             output_dir: Base output directory (orchestrator creates pyats_results subdirectory)
-            merged_data_filename: Name of the merged data model file
             minimal_reports: Only include command outputs for failed/errored tests in reports
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
@@ -98,7 +97,10 @@ class PyATSOrchestrator:
         self.output_dir = (
             self.base_output_dir / PYATS_RESULTS_DIRNAME
         )  # PyATS works in its own subdirectory
-        self.merged_data_filename = merged_data_filename
+        # Absolute path so child processes can locate it regardless of working directory.
+        self.merged_data_path = DataMerger.merged_data_path(
+            self.base_output_dir
+        ).absolute()
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
         self.dry_run = dry_run
@@ -140,7 +142,7 @@ class PyATSOrchestrator:
         # Initialize discovery components
         self.test_discovery = TestDiscovery(self.test_dir)
         self.device_inventory_discovery = DeviceInventoryDiscovery(
-            self.base_output_dir / self.merged_data_filename
+            self.merged_data_path
         )
 
         # Initialize execution components
@@ -307,10 +309,8 @@ class PyATSOrchestrator:
             # We cannot pass Python objects across process boundaries
             # so we use env vars to communicate
             # configuration (like data file paths) from the orchestrator to the test subprocess.
-            # The merged data file is created by main.py at the base output level.
-            # Pass absolute path so the child process (with cwd set) can locate it.
             env["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = str(
-                (self.base_output_dir / self.merged_data_filename).absolute()
+                self.merged_data_path
             )
             # Set NAC_TEST_TYPE to differentiate API vs D2D test types for separate temp directories
             # This prevents race conditions where both test types write JSONL files to the same location
@@ -430,6 +430,7 @@ class PyATSOrchestrator:
                 self.d2d_test_status,  # Use d2d_test_status for device tests
                 self.test_dir,
                 self.base_output_dir,
+                self.merged_data_path,
                 self.custom_testbed_path,
             )
 

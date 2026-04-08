@@ -51,7 +51,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
         )
 
         # Controller detection is now deferred to run_tests()
@@ -76,7 +75,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             dev_pyats_only=True,
         )
 
@@ -125,7 +123,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             dev_pyats_only=True,
         )
 
@@ -190,7 +187,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             dev_pyats_only=True,  # Run PyATS only mode
         )
 
@@ -235,7 +231,6 @@ class TestCombinedOrchestratorController:
                     data_paths=[data_dir],
                     test_dir=templates_dir,
                     output_dir=output_dir,
-                    merged_data_filename="merged.yaml",
                     minimal_reports=False,
                     custom_testbed_path=None,
                     controller_type="SDWAN",
@@ -291,7 +286,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             render_only=True,  # Critical: render-only mode
         )
 
@@ -362,7 +356,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
         )
 
         # Controller type should be None after init (deferred to run_tests)
@@ -404,7 +397,6 @@ class TestCombinedOrchestratorController:
                     data_paths=[data_dir],
                     test_dir=templates_dir,
                     output_dir=output_dir,
-                    merged_data_filename="merged.yaml",
                     minimal_reports=False,
                     custom_testbed_path=None,
                     controller_type="CC",

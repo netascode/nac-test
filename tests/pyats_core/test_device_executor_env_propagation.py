@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from nac_test.data_merger import DataMerger
 from nac_test.pyats_core.constants import ENV_TEST_DIR
 from nac_test.pyats_core.execution.device.device_executor import DeviceExecutor
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
@@ -51,6 +52,7 @@ class TestDeviceExecutorEnvPropagation:
             test_status={},
             test_dir=pyats_test_dirs.test_dir,
             base_output_dir=pyats_test_dirs.output_dir,
+            merged_data_path=DataMerger.merged_data_path(pyats_test_dirs.output_dir),
         )
 
         device: dict[str, Any] = {

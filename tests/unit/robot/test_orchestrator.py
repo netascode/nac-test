@@ -2,12 +2,11 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 # mypy: disable-error-code="no-untyped-def,method-assign"
-# SPDX-License-Identifier: MPL-2.0
-# Copyright (c) 2025 Daniel Schmidt
 
 """Unit tests for Robot Framework orchestrator."""
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -37,11 +36,9 @@ def temp_output_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def mock_data_paths(tmp_path: Path) -> list[Path]:
-    """Create mock data paths."""
-    data_file = tmp_path / "data.yaml"
-    data_file.write_text("test: data")
-    return [data_file]
+def merged_data() -> dict[str, Any]:
+    """Minimal merged data dict passed to RobotOrchestrator/RobotWriter."""
+    return {"test": "data"}
 
 
 @pytest.fixture
@@ -53,15 +50,12 @@ def mock_templates_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def orchestrator(
-    mock_data_paths, mock_templates_dir, temp_output_dir
-) -> RobotOrchestrator:
+def orchestrator(mock_templates_dir, temp_output_dir, merged_data) -> RobotOrchestrator:
     """Create a RobotOrchestrator instance for testing."""
     return RobotOrchestrator(
-        data_paths=mock_data_paths,
         templates_dir=mock_templates_dir,
         output_dir=temp_output_dir,
-        merged_data_filename="merged_data.yaml",
+        merged_data=merged_data,
         loglevel=DEFAULT_LOGLEVEL,
     )
 
@@ -69,16 +63,42 @@ def orchestrator(
 class TestRobotOrchestrator:
     """Test suite for RobotOrchestrator."""
 
+    @staticmethod
+    def _setup_run_tests_mocks(
+        mock_generator: MagicMock,
+        mock_pabot: MagicMock,
+        orchestrator: RobotOrchestrator,
+        temp_output_dir: Path,
+    ) -> None:
+        """Wire up the standard mocks and artifact files needed to exercise run_tests().
+
+        Creates the robot_results/ directory with stub artifact files so that
+        _create_backward_compat_links() and the report generator don't fail.
+        """
+        orchestrator.robot_writer.write = MagicMock()
+        mock_pabot.return_value = 0
+
+        mock_generator_instance = MagicMock()
+        mock_generator_instance.generate_summary_report.return_value = (
+            None,
+            TestResults(),
+        )
+        mock_generator.return_value = mock_generator_instance
+
+        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
+        robot_results_dir.mkdir(exist_ok=True)
+        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
+            (robot_results_dir / filename).write_text(f"Mock {filename}")
+
     def test_initialization(
-        self, orchestrator, temp_output_dir, mock_data_paths, mock_templates_dir
+        self, orchestrator, temp_output_dir, mock_templates_dir
     ) -> None:
         """Test orchestrator initialization."""
         assert orchestrator.base_output_dir == temp_output_dir
         assert orchestrator.output_dir == temp_output_dir / ROBOT_RESULTS_DIRNAME
         assert orchestrator.ordering_file == orchestrator.output_dir / ORDERING_FILENAME
-        assert orchestrator.data_paths == mock_data_paths
         assert orchestrator.templates_dir == mock_templates_dir
-        assert orchestrator.merged_data_filename == "merged_data.yaml"
+        assert orchestrator.merged_data == {"test": "data"}
         assert orchestrator.render_only is False
         assert orchestrator.dry_run is False
         assert orchestrator.loglevel == DEFAULT_LOGLEVEL
@@ -86,14 +106,13 @@ class TestRobotOrchestrator:
     # TODO(#699): remove this test — it only asserts that __init__ assigns attributes,
     # not any application logic. Replace with tests for actual orchestrator behaviour.
     def test_initialization_with_optional_params(
-        self, mock_data_paths, mock_templates_dir, temp_output_dir
+        self, mock_templates_dir, temp_output_dir
     ) -> None:
         """Test orchestrator initialization with optional parameters."""
         orchestrator = RobotOrchestrator(
-            data_paths=mock_data_paths,
             templates_dir=mock_templates_dir,
             output_dir=temp_output_dir,
-            merged_data_filename="merged.yaml",
+            merged_data={"test": "data"},
             include_tags=["smoke", "regression"],
             exclude_tags=["wip"],
             render_only=True,
@@ -199,20 +218,13 @@ class TestRobotOrchestrator:
         """Test run_tests in render-only mode."""
         orchestrator.render_only = True
 
-        # Mock RobotWriter instance methods directly on the orchestrator's writer
         orchestrator.robot_writer.write = MagicMock()
-        orchestrator.robot_writer.write_merged_data_model = MagicMock()
 
         stats = orchestrator.run_tests()
 
-        # Verify template rendering was called
         orchestrator.robot_writer.write.assert_called_once()
-        orchestrator.robot_writer.write_merged_data_model.assert_called_once()
-
-        # Verify pabot was NOT called
         mock_pabot.assert_not_called()
 
-        # Verify render-only mode returns not_run() result with SKIPPED state
         assert stats.was_not_run is True
         assert stats.reason == "render-only mode"
 
@@ -222,14 +234,10 @@ class TestRobotOrchestrator:
         self, mock_generator, mock_pabot, orchestrator, temp_output_dir
     ) -> None:
         """Test run_tests executes full test lifecycle."""
-        # Mock RobotWriter instance methods directly
         orchestrator.robot_writer.write = MagicMock()
-        orchestrator.robot_writer.write_merged_data_model = MagicMock()
 
-        # Mock pabot success
         mock_pabot.return_value = 0
 
-        # Mock report generator - now returns tuple (path, stats)
         mock_generator_instance = MagicMock()
         mock_stats = TestResults(passed=1, failed=0, skipped=0)
         mock_generator_instance.generate_summary_report.return_value = (
@@ -238,7 +246,6 @@ class TestRobotOrchestrator:
         )
         mock_generator.return_value = mock_generator_instance
 
-        # Create mock Robot output files in robot_results/ (pabot 5.2+ writes directly there)
         robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
         robot_results_dir.mkdir()
         for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
@@ -246,13 +253,10 @@ class TestRobotOrchestrator:
 
         stats = orchestrator.run_tests()
 
-        # Verify all phases executed
         orchestrator.robot_writer.write.assert_called_once()
-        orchestrator.robot_writer.write_merged_data_model.assert_called_once()
         mock_pabot.assert_called_once()
         mock_generator_instance.generate_summary_report.assert_called_once()
 
-        # Verify statistics returned
         assert stats.total == 1
         assert stats.passed == 1
         assert stats.failed == 0
@@ -263,9 +267,7 @@ class TestRobotOrchestrator:
         self, mock_pabot: MagicMock, orchestrator: RobotOrchestrator
     ) -> None:
         """Test run_tests returns TestResults.empty() on pabot exit code 252 (no tests matched filters)."""
-        # Mock RobotWriter instance methods
         orchestrator.robot_writer.write = MagicMock()
-        orchestrator.robot_writer.write_merged_data_model = MagicMock()
 
         # Mock pabot exit code EXIT_DATA_ERROR (for example no tests matched --include/--exclude filters)
         mock_pabot.return_value = EXIT_DATA_ERROR
@@ -354,7 +356,6 @@ class TestRobotOrchestrator:
         self,
         mock_generator,
         mock_pabot,
-        mock_data_paths,
         mock_templates_dir,
         temp_output_dir,
         verbose,
@@ -364,28 +365,15 @@ class TestRobotOrchestrator:
     ) -> None:
         """Test that verbose and loglevel are correctly passed to run_pabot."""
         orchestrator = RobotOrchestrator(
-            data_paths=mock_data_paths,
             templates_dir=mock_templates_dir,
             output_dir=temp_output_dir,
-            merged_data_filename="merged.yaml",
+            merged_data={"test": "data"},
             verbose=verbose,
             loglevel=loglevel,
         )
-        orchestrator.robot_writer.write = MagicMock()
-        orchestrator.robot_writer.write_merged_data_model = MagicMock()
-        mock_pabot.return_value = 0
-
-        mock_generator_instance = MagicMock()
-        mock_generator_instance.generate_summary_report.return_value = (
-            None,
-            TestResults(),
+        self._setup_run_tests_mocks(
+            mock_generator, mock_pabot, orchestrator, temp_output_dir
         )
-        mock_generator.return_value = mock_generator_instance
-
-        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
-        robot_results_dir.mkdir()
-        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
-            (robot_results_dir / filename).write_text(f"Mock {filename}")
 
         orchestrator.run_tests()
 
@@ -413,7 +401,6 @@ class TestRobotOrchestrator:
         self,
         mock_generator,
         mock_pabot,
-        mock_data_paths,
         mock_templates_dir,
         temp_output_dir,
         include_tags,
@@ -421,28 +408,15 @@ class TestRobotOrchestrator:
     ) -> None:
         """Test that include/exclude tags are correctly passed through to run_pabot."""
         orchestrator = RobotOrchestrator(
-            data_paths=mock_data_paths,
             templates_dir=mock_templates_dir,
             output_dir=temp_output_dir,
-            merged_data_filename="merged.yaml",
+            merged_data={"test": "data"},
             include_tags=include_tags,
             exclude_tags=exclude_tags,
         )
-        orchestrator.robot_writer.write = MagicMock()
-        orchestrator.robot_writer.write_merged_data_model = MagicMock()
-        mock_pabot.return_value = 0
-
-        mock_generator_instance = MagicMock()
-        mock_generator_instance.generate_summary_report.return_value = (
-            None,
-            TestResults(),
+        self._setup_run_tests_mocks(
+            mock_generator, mock_pabot, orchestrator, temp_output_dir
         )
-        mock_generator.return_value = mock_generator_instance
-
-        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
-        robot_results_dir.mkdir()
-        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
-            (robot_results_dir / filename).write_text(f"Mock {filename}")
 
         orchestrator.run_tests()
 
