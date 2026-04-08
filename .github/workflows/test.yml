@@ -126,7 +126,7 @@ jobs:
 
       - name: Test
         run: |
-          uv sync --extra dev
+          uv sync --extra dev --verbose
           # Run tests in parallel (--dist loadscope keeps test classes together, this is critical for e2e tests)
           uv run pytest -n auto --dist loadscope tests/
 
