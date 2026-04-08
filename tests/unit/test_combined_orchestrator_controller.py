@@ -242,6 +242,8 @@ class TestCombinedOrchestratorController:
                     dry_run=False,
                     verbose=False,
                     loglevel=DEFAULT_LOGLEVEL,
+                    include_tags=[],
+                    exclude_tags=[],
                 )
 
                 # Verify run_tests was called on the instance
@@ -375,15 +377,12 @@ class TestCombinedOrchestratorController:
             mock_instance.run_tests.return_value = PyATSResults()
             mock_pyats.return_value = mock_instance
 
-            # Mock TestDiscovery to return PyATS files
+            # Mock TestDiscovery so CombinedOrchestrator sees PyATS files
             with patch(
                 "nac_test.combined_orchestrator.TestDiscovery"
             ) as mock_discovery:
                 mock_discovery_instance = MagicMock()
-                mock_discovery_instance.discover_pyats_tests.return_value = (
-                    [Path(test_file)],
-                    [],
-                )
+                mock_discovery_instance.has_pyats_tests.return_value = True
                 mock_discovery.return_value = mock_discovery_instance
 
                 # Mock preflight auth and typer functions
@@ -411,6 +410,8 @@ class TestCombinedOrchestratorController:
                     dry_run=False,
                     verbose=False,
                     loglevel=DEFAULT_LOGLEVEL,
+                    include_tags=[],
+                    exclude_tags=[],
                 )
 
                 # Verify run_tests was called on the instance

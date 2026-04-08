@@ -20,8 +20,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from ...utils import get_or_create_event_loop
-from ..ssh.command_cache import CommandCache
+from nac_test.pyats_core.ssh.command_cache import CommandCache
+from nac_test.utils import get_or_create_event_loop
 
 logger = logging.getLogger(__name__)
 

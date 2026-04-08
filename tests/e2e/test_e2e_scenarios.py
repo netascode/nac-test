@@ -144,6 +144,8 @@ class E2ECombinedTestBase:
 
     def test_combined_summary_at_root(self, results: E2EResults) -> None:
         """Verify combined_summary.html exists at root level."""
+        if results.scenario.expected_total_tests == 0:
+            pytest.skip("No tests expected - combined summary not generated")
         combined = results.output_dir / COMBINED_SUMMARY_FILENAME
         assert combined.exists(), f"Missing {COMBINED_SUMMARY_FILENAME} at root"
         assert combined.is_file()
@@ -153,7 +155,7 @@ class E2ECombinedTestBase:
     ) -> None:
         """Verify the output root contains only whitelisted entries."""
         expected_dirs = set()
-        if results.has_robot_results:
+        if results.robot_dir_exists:
             expected_dirs.add(ROBOT_RESULTS_DIRNAME)
         if results.has_pyats_results or results.scenario.expected_preflight_failure:
             expected_dirs.add(PYATS_RESULTS_DIRNAME)
@@ -183,7 +185,7 @@ class E2ECombinedTestBase:
     def test_robot_results_directory_state(self, results: E2EResults) -> None:
         """Verify robot_results/ exists when expected, doesn't exist otherwise."""
         robot_dir = results.output_dir / ROBOT_RESULTS_DIRNAME
-        if results.has_robot_results:
+        if results.robot_dir_exists:
             assert robot_dir.exists(), f"Expected {ROBOT_RESULTS_DIRNAME}/ to exist"
             assert robot_dir.is_dir()
         else:
@@ -529,6 +531,8 @@ class E2ECombinedTestBase:
 
     def test_combined_dashboard_has_valid_html(self, results: E2EResults) -> None:
         """Verify combined dashboard is valid HTML with UTF-8 charset."""
+        if results.scenario.expected_total_tests == 0:
+            pytest.skip("No tests expected - combined dashboard not generated")
         html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
         html_content = load_html_file(html_path)
         verify_html_structure(html_content)
@@ -553,6 +557,8 @@ class E2ECombinedTestBase:
 
     def test_combined_stats_correct(self, results: E2EResults) -> None:
         """Verify combined dashboard statistics are correct."""
+        if results.scenario.expected_total_tests == 0:
+            pytest.skip("No tests expected - combined dashboard not generated")
         html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
         scenario = results.scenario
         assert_combined_stats(
@@ -565,6 +571,8 @@ class E2ECombinedTestBase:
 
     def test_combined_stats_internal_consistency(self, results: E2EResults) -> None:
         """Verify combined stats are internally consistent."""
+        if results.scenario.expected_total_tests == 0:
+            pytest.skip("No tests expected - combined dashboard not generated")
         html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
         html_content = load_html_file(html_path)
         stats = extract_summary_stats_from_combined(html_content)
@@ -580,6 +588,8 @@ class E2ECombinedTestBase:
         self, results: E2EResults
     ) -> None:
         """Verify combined dashboard success rate matches expected value."""
+        if results.scenario.expected_total_tests == 0:
+            pytest.skip("No tests expected - combined dashboard not generated")
         html_path = results.output_dir / COMBINED_SUMMARY_FILENAME
         html_content = load_html_file(html_path)
         stats = extract_summary_stats_from_combined(html_content)
@@ -1623,3 +1633,150 @@ class TestE2EPreflightAuthFailure(E2ECombinedTestBase):
             f"Expected pre-flight failure report at "
             f"{PYATS_RESULTS_DIRNAME}/{PRE_FLIGHT_FAILURE_FILENAME}"
         )
+
+
+# =============================================================================
+# TAG FILTERING SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2ETagFilterInclude(E2ECombinedTestBase):
+    """E2E tests for tag filtering with --include bgp.
+
+    Scenario: --include bgp
+    Expected: 1 Robot test (bgp-tagged), 1 PyATS test (verify_bgp_api.py)
+    """
+
+    @pytest.fixture
+    def results(self, e2e_tag_filter_include_results: E2EResults) -> E2EResults:
+        """Provide tag filter include scenario results."""
+        return e2e_tag_filter_include_results
+
+    # -------------------------------------------------------------------------
+    # Tag filtering specific tests
+    # -------------------------------------------------------------------------
+
+    def test_only_bgp_robot_test_in_output_xml(self, results: E2EResults) -> None:
+        """Verify output.xml contains only the bgp-tagged Robot test."""
+        from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
+
+        xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+
+        tests = root.findall(".//test")
+        test_names = [t.get("name", "") for t in tests]
+
+        assert len(tests) == 1, f"Expected 1 Robot test, got {len(tests)}: {test_names}"
+        assert "bgp" in test_names[0].lower(), (
+            f"Expected bgp-related test, got: {test_names[0]}"
+        )
+
+    def test_only_bgp_pyats_test_executed(self, results: E2EResults) -> None:
+        """Verify only the bgp-tagged PyATS test was discovered and executed."""
+        assert "verify_bgp_api" in results.filtered_stdout, (
+            "Expected verify_bgp_api in output"
+        )
+        assert "verify_ospf_api" not in results.filtered_stdout, (
+            "Did not expect verify_ospf_api (should be filtered out by --include bgp)"
+        )
+
+
+class TestE2ETagFilterExclude(E2ECombinedTestBase):
+    """E2E tests for tag filtering with --exclude ospf.
+
+    Scenario: --exclude ospf
+    Expected: 1 Robot test (bgp-tagged, ospf excluded), 1 PyATS test (verify_bgp_api.py)
+    """
+
+    @pytest.fixture
+    def results(self, e2e_tag_filter_exclude_results: E2EResults) -> E2EResults:
+        """Provide tag filter exclude scenario results."""
+        return e2e_tag_filter_exclude_results
+
+    # -------------------------------------------------------------------------
+    # Tag filtering specific tests
+    # -------------------------------------------------------------------------
+
+    def test_ospf_robot_test_excluded_from_output_xml(
+        self, results: E2EResults
+    ) -> None:
+        """Verify output.xml does not contain the ospf-tagged Robot test."""
+        from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
+
+        xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+
+        tests = root.findall(".//test")
+        test_names = [t.get("name", "") for t in tests]
+
+        assert len(tests) == 1, f"Expected 1 Robot test, got {len(tests)}: {test_names}"
+        assert "ospf" not in test_names[0].lower(), (
+            f"Expected ospf test to be excluded, got: {test_names[0]}"
+        )
+
+    def test_ospf_pyats_test_excluded(self, results: E2EResults) -> None:
+        """Verify the ospf-tagged PyATS test was filtered out."""
+        assert "verify_bgp_api" in results.filtered_stdout, (
+            "Expected verify_bgp_api in output"
+        )
+        assert "verify_ospf_api" not in results.filtered_stdout, (
+            "Did not expect verify_ospf_api (should be filtered out by --exclude ospf)"
+        )
+
+
+class TestE2ETagFilterCombined(E2ECombinedTestBase):
+    """E2E tests for tag filtering with --include api-only.
+
+    Scenario: --include api-only
+    Expected: 0 Robot tests (no api-only tag), 1 PyATS test (verify_ospf_api.py has api-only)
+    """
+
+    @pytest.fixture
+    def results(self, e2e_tag_filter_combined_results: E2EResults) -> E2EResults:
+        """Provide tag filter combined scenario results."""
+        return e2e_tag_filter_combined_results
+
+    # -------------------------------------------------------------------------
+    # Tag filtering specific tests
+    # -------------------------------------------------------------------------
+
+    def test_only_ospf_api_pyats_test_executed(self, results: E2EResults) -> None:
+        """Verify only verify_ospf_api.py was discovered (has api-only tag)."""
+        assert "verify_ospf_api" in results.filtered_stdout, (
+            "Expected verify_ospf_api in output (has api-only tag)"
+        )
+        assert "verify_bgp_api" not in results.filtered_stdout, (
+            "Did not expect verify_bgp_api (does not have api-only tag)"
+        )
+
+
+class TestE2ETagFilterNoMatch(E2ECombinedTestBase):
+    """E2E tests for tag filtering with --exclude bgpORospf (no tests match).
+
+    Scenario: --exclude bgpORospf
+    Expected: 0 Robot tests, 0 PyATS tests, exit code 252 (no tests found)
+    """
+
+    @pytest.fixture
+    def results(self, e2e_tag_filter_no_match_results: E2EResults) -> E2EResults:
+        """Provide tag filter no match scenario results."""
+        return e2e_tag_filter_no_match_results
+
+    # -------------------------------------------------------------------------
+    # Tag filtering specific tests
+    # -------------------------------------------------------------------------
+
+    def test_no_pyats_tests_in_stdout(self, results: E2EResults) -> None:
+        """Verify no PyATS tests appear in stdout when all filtered."""
+        assert "verify_bgp_api.py" not in results.filtered_stdout, (
+            "Did not expect verify_bgp_api.py (excluded by bgpORospf)"
+        )
+        assert "verify_ospf_api.py" not in results.filtered_stdout, (
+            "Did not expect verify_ospf_api.py (excluded by bgpORospf)"
+        )
+        assert (
+            "No pyATS tests matching tag filter (exclude: 'bgp OR ospf')"
+            in results.filtered_stdout
+        ), "Expected descriptive filter message in stdout"

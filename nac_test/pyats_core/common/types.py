@@ -9,6 +9,8 @@ throughout the NAC test automation framework.
 """
 
 import sys
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import (
     Any,
     Generic,
@@ -23,14 +25,65 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import TypedDict
 
-# Python 3.10 doesn't allow inheriting from both TypedDict and Generic.
-# Use typing_extensions for 3.10 compatibility, standard typing for 3.11+.
-if sys.version_info >= (3, 11):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-
 from nac_test.pyats_core.reporting.types import ResultStatus
+
+DEFAULT_TEST_TYPE: str = "api"
+
+
+@dataclass(slots=True)
+class TestFileMetadata:
+    """Metadata extracted from a PyATS test file.
+
+    Attributes:
+        path: Absolute path to the test file
+        test_type: The test type ("api" or "d2d")
+        groups: List of group tags from the test class's `groups` attribute.
+                Empty list if no groups are defined.
+    """
+
+    path: Path
+    test_type: str
+    groups: list[str] = field(default_factory=list)
+
+
+@dataclass
+class PyatsDiscoveryResult:
+    """Result of PyATS test discovery with tag filtering applied.
+
+    Contains categorized test files (API vs D2D) and metadata needed for
+    execution and post-execution result analysis. This is PyATS-specific;
+    Robot Framework tests flow through a separate discovery path.
+
+    Attributes:
+        api_tests: List of API test metadata (controller/REST tests)
+        d2d_tests: List of D2D test metadata (Direct-to-Device/SSH tests)
+        filtered_by_tags: Count of valid tests excluded by --include/--exclude tag
+                          patterns. These are intentional user exclusions.
+    """
+
+    api_tests: list[TestFileMetadata]
+    d2d_tests: list[TestFileMetadata]
+    filtered_by_tags: int
+
+    @property
+    def all_tests(self) -> list[TestFileMetadata]:
+        """All discovered tests (API + D2D combined)."""
+        return self.api_tests + self.d2d_tests
+
+    @property
+    def total_count(self) -> int:
+        """Total number of discovered tests."""
+        return len(self.api_tests) + len(self.d2d_tests)
+
+    @property
+    def api_paths(self) -> list[Path]:
+        """API test paths for execution."""
+        return [t.path for t in self.api_tests]
+
+    @property
+    def d2d_paths(self) -> list[Path]:
+        """D2D test paths for execution."""
+        return [t.path for t in self.d2d_tests]
 
 
 class ApiDetails(TypedDict, total=False):
