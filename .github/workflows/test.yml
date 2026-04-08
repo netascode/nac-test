@@ -214,10 +214,10 @@ jobs:
           PR_TITLE=$(echo "$RAW_PR_TITLE" | head -c 200)
 
           {
-            echo "SAFE_COMMIT_MSG<<'EOF'"
+            echo "SAFE_COMMIT_MSG<<EOF"
             echo "$COMMIT_MSG"
             echo "EOF"
-            echo "SAFE_PR_TITLE<<'EOF'"
+            echo "SAFE_PR_TITLE<<EOF"
             echo "$PR_TITLE"
             echo "EOF"
           } >> "$GITHUB_ENV"
