@@ -16,7 +16,9 @@ env:
   # UV_DEFAULT_INDEX routes all uv operations (including `uv tool install`) through
   # Artifactory. tool.uv.index in pyproject.toml only affects project-scoped commands
   # (sync/lock/run), so this env var is needed for tool installs like bandit and mypy.
-  UV_DEFAULT_INDEX: https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/simple
+  # The name= prefix must match the index name in pyproject.toml so uv can pair it
+  # with the UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME/PASSWORD credentials.
+  UV_DEFAULT_INDEX: cisco-artifactory-devhub=https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/simple
 
 jobs:
   security:
