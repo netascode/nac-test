@@ -53,7 +53,6 @@ from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
 from nac_test.utils.terminal import terminal
-from nac_test.utils.yaml import dump_to_stream
 
 logger = logging.getLogger(__name__)
 
@@ -167,51 +166,6 @@ class PyATSOrchestrator:
         )
 
         return cpu_workers
-
-    def _build_reporter_config(self) -> dict[str, Any]:
-        """Build the configuration for PyATS reporters.
-
-        This centralizes the reporter setup to use an asynchronous QueueHandler
-        which puts all incoming reporting messages into a queue and lets a
-        separate thread handle the slow disk I/O. This makes the ReportServer
-        non-blocking and prevents client timeouts under heavy load.
-
-        Returns:
-            A dictionary representing the reporter configuration.
-        """
-        return {
-            "reporter": {
-                "server": {
-                    "handlers": {
-                        "fh": {
-                            "class": "pyats.reporter.handlers.FileHandler",
-                        },
-                        "qh": {
-                            "class": "pyats.reporter.handlers.QueueHandler",
-                            "handlers": ["fh"],
-                        },
-                    }
-                },
-                "root": {
-                    "handlers": ["qh"],
-                },
-            }
-        }
-
-    def _generate_plugin_config(self, temp_dir: Path) -> Path:
-        """Generate the PyATS plugin configuration file.
-
-        Args:
-            temp_dir: The temporary directory to write the file in.
-
-        Returns:
-            The path to the generated configuration file.
-        """
-        reporter_config = self._build_reporter_config()
-        config_path = temp_dir / "plugin_config.yaml"
-        with open(config_path, "w") as f:
-            dump_to_stream(reporter_config, f)
-        return config_path
 
     def _populate_test_status_from_archive(self, archive_path: Path) -> None:
         """Populate test_status from archive results.json when progress events are missing.
@@ -667,59 +621,57 @@ class PyATSOrchestrator:
             loglevel=self.loglevel,
         )
         # Archives should be stored at base level, not in pyats_results subdirectory
-        self.subprocess_runner = SubprocessRunner(
-            self.base_output_dir,
-            output_handler=self.output_processor.process_line,
-            loglevel=self.loglevel,
-        )
-        # Generate the plugin config and pass it to the runner
-        with tempfile.TemporaryDirectory() as temp_dir:
-            plugin_config_path = self._generate_plugin_config(Path(temp_dir))
-            if self.subprocess_runner is not None:
-                self.subprocess_runner.plugin_config_path = plugin_config_path
+        try:
+            self.subprocess_runner = SubprocessRunner(
+                self.base_output_dir,
+                output_handler=self.output_processor.process_line,
+                loglevel=self.loglevel,
+            )
+        except RuntimeError as e:
+            # pyats entrypoint not found or config file creation failed.
+            error_msg = str(e)
+            api_result = TestResults.from_error(error_msg) if api_tests else None
+            d2d_result = TestResults.from_error(error_msg) if d2d_tests else None
+            return PyATSResults(api=api_result, d2d=d2d_result)
 
-            # Execute tests based on their type
-            tasks = []
+        # Execute tests based on their type
+        tasks = []
 
-            if api_tests:
-                tasks.append(self._execute_api_tests_standard(api_tests))
+        if api_tests:
+            tasks.append(self._execute_api_tests_standard(api_tests))
 
-            if d2d_tests:
-                # Get device inventory for D2D tests
-                devices = self.device_inventory_discovery.get_device_inventory(
-                    d2d_tests
-                )
+        if d2d_tests:
+            # Get device inventory for D2D tests
+            devices = self.device_inventory_discovery.get_device_inventory(d2d_tests)
 
-                # Display any skipped devices
-                skipped = self.device_inventory_discovery.skipped_devices
-                if skipped:
-                    print()  # Blank line before warnings
-                    for skip_info in skipped:
-                        device_id = skip_info.get("device_id", "<unknown>")
-                        reason = skip_info.get("reason", "Unknown error")
-                        print(
-                            terminal.warning(
-                                f"WARNING - Skipping device {device_id}: {reason}"
-                            )
-                        )
-                    print()  # Blank line after warnings
-
-                if devices:
-                    tasks.append(
-                        self._execute_ssh_tests_device_centric(d2d_tests, devices)
-                    )
-                else:
+            # Display any skipped devices
+            skipped = self.device_inventory_discovery.skipped_devices
+            if skipped:
+                print()  # Blank line before warnings
+                for skip_info in skipped:
+                    device_id = skip_info.get("device_id", "<unknown>")
+                    reason = skip_info.get("reason", "Unknown error")
                     print(
                         terminal.warning(
-                            "No devices found in inventory. D2D tests will be skipped."
+                            f"WARNING - Skipping device {device_id}: {reason}"
                         )
                     )
+                print()  # Blank line after warnings
 
-            # Run all test types in parallel
-            if tasks:
-                await asyncio.gather(*tasks)
+            if devices:
+                tasks.append(self._execute_ssh_tests_device_centric(d2d_tests, devices))
             else:
-                print("No tests to execute after categorization")
+                print(
+                    terminal.warning(
+                        "No devices found in inventory. D2D tests will be skipped."
+                    )
+                )
+
+        # Run all test types in parallel
+        if tasks:
+            await asyncio.gather(*tasks)
+        else:
+            print("No tests to execute after categorization")
 
         # Split test_status into api_test_status and d2d_test_status based on test type.
         # OutputProcessor correctly parses results for ALL tests into test_status.
@@ -769,6 +721,16 @@ class PyATSOrchestrator:
 
         return pyats_results
 
+    def _cleanup_subprocess_runner(self, keep_artifacts: bool) -> None:
+        """Explicitly clean up config files created by SubprocessRunner.
+
+        Called after report generation completes (success or failure paths).
+        Unexpected exit paths are handled opportunistically via SubprocessRunner.__del__
+        until a more robust mechanism is implemented as part of #677.
+        """
+        if self.subprocess_runner and not keep_artifacts:
+            self.subprocess_runner.cleanup()
+
     async def _generate_html_reports_async(
         self,
     ) -> PyATSResults:
@@ -807,6 +769,11 @@ class PyATSOrchestrator:
         )
         result = await generator.generate_reports_from_archives(archive_paths)
 
+        # Determine whether to keep artifacts (debug mode or explicit env var)
+        keep_artifacts: bool = bool(
+            DEBUG_MODE or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")
+        )
+
         if result["status"] in ["success", "partial"]:
             # Log report generation timing (procedural info)
             duration_str = format_duration(result["duration"])
@@ -835,7 +802,7 @@ class PyATSOrchestrator:
 
             # Clean up archives after successful extraction and report generation
             # (unless in debug mode or user wants to keep data)
-            if not (DEBUG_MODE or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")):
+            if not keep_artifacts:
                 for archive_path in archive_paths:
                     try:
                         archive_path.unlink()
@@ -863,6 +830,9 @@ class PyATSOrchestrator:
                     except Exception as e:
                         logger.debug(f"Could not remove directory {type_dir}: {e}")
 
+            # Clean up PyATS config files created by SubprocessRunner
+            self._cleanup_subprocess_runner(keep_artifacts)
+
             # Extract and return test statistics
             if result.get("pyats_stats"):
                 return self._extract_pyats_stats(result["pyats_stats"])
@@ -873,4 +843,6 @@ class PyATSOrchestrator:
             print(f"\n{terminal.error('Failed to generate reports')}")
             if result.get("error"):
                 print(f"Error: {result['error']}")
+            # Clean up PyATS config files; report generation failed so no stats to return
+            self._cleanup_subprocess_runner(keep_artifacts)
             return PyATSResults()

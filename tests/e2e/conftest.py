@@ -42,7 +42,7 @@ from tests.e2e.mocks.mock_server import MockAPIServer
 
 # Sentinel value for credential exposure detection (#689)
 # All test passwords use this value so we can detect if credentials leak into artifacts
-TEST_CREDENTIAL_SENTINEL = "CRED_SENTINEL_MUST_NOT_APPEAR_IN_ARTIFACTS"
+TEST_CREDENTIAL_SENTINEL: str = "CRED_SENTINEL_MUST_NOT_APPEAR_IN_ARTIFACTS"
 
 
 @dataclass

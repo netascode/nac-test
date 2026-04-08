@@ -37,6 +37,10 @@ LOAD_AVERAGE_THRESHOLD: float = 0.8
 # PyATS-specific file paths
 AUTH_CACHE_DIR: str = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
 
+# PyATS config files written to output directory during test execution
+PYATS_PLUGIN_CONFIG_FILENAME: str = ".pyats_plugin.yaml"
+PYATS_CONFIG_FILENAME: str = ".pyats.conf"
+
 # pushed to pyats device connection settings to speed up disconnects (default is 10s/1s)
 PYATS_POST_DISCONNECT_WAIT_SECONDS: int = 0
 PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS: int = 0
