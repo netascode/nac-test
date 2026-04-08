@@ -73,7 +73,7 @@ jobs:
         run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
       - name: Install mypy
-        run: uv tool install mypy
+        run: uv tool install mypy --verbose
 
       - name: Update lock file
         # Only run for dependabot on same-repo PRs (not forks)
