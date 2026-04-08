@@ -51,7 +51,8 @@ def _reconstruct_command(argv: list[str]) -> str:
 
 
 def run_diagnostic(output_dir: Path, argv: list[str]) -> NoReturn:
-    """Run diagnostic collection and exit if requested.
+    """Run diagnostic collection shell script, wrapping nac-test
+    execution with pre/post environment and log collection.
 
     This is invoked from the main CLI entrypoint *after* Typer/Click has
     validated required args, so --diagnostic cannot bypass missing required
