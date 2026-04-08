@@ -8,7 +8,10 @@ on:
   workflow_call:
 
 env:
-  UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME: ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME }}
+  # Cisco Artifactory credentials for supply-chain-safe package resolution.
+  # Empty on fork PRs (GitHub doesn't expose secrets to forks), which triggers
+  # the "Configure package index" fallback step below.
+  UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME: ""  # TODO: restore to ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME }} after testing
   UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD: ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD }}
 
 jobs:
@@ -26,6 +29,11 @@ jobs:
         uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82  # v7.5.0
         with:
           enable-cache: true
+
+      - name: Configure package index
+        # Fall back to pypi.org when Artifactory credentials are unavailable (fork PRs)
+        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
+        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
       - name: Install bandit
         run: uv tool install bandit[toml]
@@ -58,6 +66,11 @@ jobs:
         uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82  # v7.5.0
         with:
           enable-cache: true
+
+      - name: Configure package index
+        # Fall back to pypi.org when Artifactory credentials are unavailable (fork PRs)
+        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
+        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
       - name: Install mypy
         run: uv tool install mypy
@@ -103,6 +116,11 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Configure package index
+        # Fall back to pypi.org when Artifactory credentials are unavailable (fork PRs)
+        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
+        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
+
       - name: Set up Python ${{ matrix.python }}
         run: uv python install ${{ matrix.python }}
 
@@ -134,6 +152,12 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Configure package index
+        # Fall back to pypi.org when Artifactory credentials are unavailable (fork PRs)
+        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
+        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> $env:GITHUB_ENV
+        shell: pwsh
+
       - name: Set up Python ${{ matrix.python }}
         run: uv python install ${{ matrix.python }}
 
@@ -162,6 +186,16 @@ jobs:
         uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82  # v7.5.0
         with:
           enable-cache: true
+
+      - name: Configure package index (Linux)
+        # Fall back to pypi.org when Artifactory credentials are unavailable (fork PRs)
+        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == '' && runner.os == 'Linux'
+        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
+
+      - name: Configure package index (Windows)
+        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == '' && runner.os == 'Windows'
+        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> $env:GITHUB_ENV
+        shell: pwsh
 
       - name: Set up Python 3.12
         run: uv python install 3.12
