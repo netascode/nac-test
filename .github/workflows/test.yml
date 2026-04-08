@@ -76,7 +76,7 @@ jobs:
         run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
       - name: Install mypy
-        run: uv tool install mypy --verbose
+        run: uv tool install mypy
 
       - name: Update lock file
         # Only run for dependabot on same-repo PRs (not forks)
@@ -128,7 +128,7 @@ jobs:
 
       - name: Test
         run: |
-          uv sync --extra dev --verbose
+          uv sync --extra dev
           # Run tests in parallel (--dist loadscope keeps test classes together, this is critical for e2e tests)
           uv run pytest -n auto --dist loadscope tests/
 
