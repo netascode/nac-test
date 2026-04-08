@@ -91,6 +91,10 @@ dev = [
 override-dependencies = [
     "pytest-cov>=7.1",
 ]
+# Dependency cooldown: ignore packages uploaded less than 3 days ago.
+# wecan't use this because our artifactory doesn't provide upload timestamps
+# but it would be a good idea to enable once they do
+# exclude-newer = "3 days"
 
 [[tool.uv.index]]
 # Install from Artifactory by default for supply-chain-safe dependency resolution.
