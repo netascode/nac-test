@@ -15,6 +15,7 @@
    - [Robot Framework Integration](#robot-framework-integration)
 5. [Architecture Components](#architecture-components)
    - [CLI Layer](#cli-layer)
+   - [Pre-Flight Validation](#pre-flight-validation-fail-fast-authentication-architecture)
    - [Combined Orchestrator](#combined-orchestrator)
    - [PyATS Core](#pyats-core)
    - [Robot Framework Orchestrator](#robot-framework-orchestrator)
@@ -35,22 +36,27 @@
     - [Environment Variable Support](#environment-variable-support)
     - [Controller Type Auto-Detection](#controller-type-auto-detection)
 11. [Utilities](#utilities)
-12. [Contributor Guide](#contributor-guide)
+    - [Diagnostic Collection](#diagnostic-collection-clidiagnosticpy-supportnac-test-diagnosticsh)
+12. [File System Layout](#file-system-layout)
+13. [Deployment and Operations](#deployment-and-operations)
+14. [GitHub Templates and Developer Experience](#github-templates-and-developer-experience)
+15. [Contributor Guide](#contributor-guide)
     - [Post-Migration: Where to Make Changes](#post-migration-where-to-make-changes)
     - [Local Development Setup](#local-development-setup)
     - [Testing Changes Across Packages](#testing-changes-across-packages)
-13. [Scalability Considerations](#scalability-considerations)
+16. [Scalability Considerations](#scalability-considerations)
     - [Adding New Architectures](#adding-new-architectures-ise-meraki-ios-xe)
-14. [Known Limitations & TODOs](#known-limitations--todos)
+17. [Known Limitations & TODOs](#known-limitations--todos)
     - [File-Based Locking Portability](#file-based-locking-portability)
-15. [Cross-Package Error Handling Strategy](#cross-package-error-handling-strategy)
+    - [Platform Safety Gates and macOS Considerations](#platform-safety-gates-and-macos-considerations)
+18. [Cross-Package Error Handling Strategy](#cross-package-error-handling-strategy)
     - [Error Hierarchy](#error-hierarchy)
     - [Custom Exception Classes](#custom-exception-classes)
     - [Auth Class Error Handling Pattern](#auth-class-error-handling-pattern)
     - [Logging Policy](#logging-policy)
-16. [Integration Tests for Cross-Package Compatibility](#integration-tests-for-cross-package-compatibility)
+19. [Integration Tests for Cross-Package Compatibility](#integration-tests-for-cross-package-compatibility)
     - [Version Compatibility Tests](#version-compatibility-tests)
-17. [SD-WAN Schema Navigation Details](#sd-wan-schema-navigation-details)
+20. [SD-WAN Schema Navigation Details](#sd-wan-schema-navigation-details)
     - [SDWANDeviceResolver Schema Structure](#sdwandeviceresolver-schema-structure)
     - [Key Methods](#key-methods)
     - [Management IP Extraction Logic](#management-ip-extraction-logic)
@@ -70,16 +76,26 @@
 - Architecture-agnostic device inventory discovery via contract pattern
 - **Controller type auto-detection** from environment variable patterns
 - Multi-archive support for separate API and D2D test results
+- **Combined dashboard** (`combined_summary.html`) aggregating PyATS and Robot results
+- **Merged xunit.xml** for CI/CD pipeline integration across both frameworks
 - HTML report generation with test-case-level detail
 - Real-time progress reporting via custom PyATS plugin
 - YAML data merging with Jinja2 templating and environment variable substitution
-- SSH connection management with resource-aware pooling
+- SSH connection management with resource-aware pooling via ConnectionBroker
+- **Fail-fast authentication** with pre-flight credential validation and `auth-failure-report.html`
 - **Device validation utilities** for fail-fast error detection
+- **User-provided testbed YAML** support for custom device configurations and helper devices
 - Command output caching for D2D tests
+- **Diagnostic collection** (`--diagnostic`) for troubleshooting with system info, crash reports, and environment details
+- **PyATS dry-run support** (`--dry-run`) for test discovery validation without execution
+- **Granular verbosity control** via `--verbose` and `--loglevel` flags
+- **Robot Framework-style exit codes** (0=pass, 1–249=failures, 250=cap, 252=invalid args, 253=interrupted, 255=error)
+- **Platform safety**: macOS fork+SSL crash prevention, hard exit gate for macOS Python < 3.12
 
-**Version:** 1.1.0 (beta)
-**Python Requirement:** 3.11+
-**Primary Dependencies:** PyATS, Robot Framework, Pabot, Click, Jinja2, Rich
+**Version:** 2.0.0a1
+**Python Requirement:** 3.10+ (macOS requires 3.12+ due to fork+SSL safety)
+**Platform Support:** Linux and macOS only (Windows users should use WSL2)
+**Primary Dependencies:** PyATS, Robot Framework, Pabot (≥5.2.2), Typer, Jinja2, Rich, httpx, filelock, lxml
 
 ---
 
@@ -140,35 +156,107 @@ The NAC testing infrastructure follows a three-tier package architecture that se
 │                    Orchestration + Generic Infrastructure            │
 │                                                                      │
 │  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  nac_test/pyats_core/                                        │   │
+│  │  nac_test/                                                    │   │
+│  │  ├── _env.py                 # Centralized env var handling   │   │
+│  │  ├── combined_orchestrator.py # PyATS + Robot coordination    │   │
+│  │  ├── data_merger.py          # YAML merging with Jinja2       │   │
+│  │  ├── exceptions.py           # Custom exception hierarchy     │   │
 │  │  │                                                           │   │
-│  │  ├── common/                 # Generic base infrastructure   │   │
-│  │  │   ├── base_test.py        # NACTestBase                   │   │
-│  │  │   ├── ssh_base_test.py    # SSHTestBase                   │   │
-│  │  │   ├── auth_cache.py       # AuthCache (generic caching)   │   │
-│  │  │   └── connection_pool.py  # Connection pooling            │   │
+│  │  ├── cli/                    # Typer-based CLI interface      │   │
+│  │  │   ├── main.py             # Entry point + flag definitions │   │
+│  │  │   ├── diagnostic.py       # --diagnostic flag handler      │   │
+│  │  │   ├── ui/                 # User-facing display            │   │
+│  │  │   │   └── banners.py      # Error/warning banners          │   │
+│  │  │   └── validators/         # Pre-flight validation          │   │
+│  │  │       ├── aci_defaults.py # ACI defaults file check        │   │
+│  │  │       ├── controller_auth.py # Fail-fast auth validation   │   │
+│  │  │       └── common.py       # Shared validator helpers       │   │
 │  │  │                                                           │   │
-│  │  ├── orchestrator/           # Test orchestration            │   │
-│  │  │   ├── protocols.py        # DeviceResolverProtocol        │   │
-│  │  │   └── orchestrator.py     # Main orchestration            │   │
+│  │  ├── core/                   # Cross-cutting infrastructure   │   │
+│  │  │   ├── constants.py        # Named constants (exit codes…)  │   │
+│  │  │   ├── types.py            # TestResults, CombinedResults   │   │
+│  │  │   ├── models.py           # Shared data models             │   │
+│  │  │   ├── error_classification.py # Auth error classification  │   │
+│  │  │   └── reporting/          # Combined reporting             │   │
+│  │  │       └── combined_generator.py # combined_summary.html    │   │
 │  │  │                                                           │   │
-│  │  ├── execution/device/       # Test execution                │   │
-│  │  │   └── testbed_generator.py # Generic testbed generation   │   │
+│  │  ├── pyats_core/             # PyATS framework integration    │   │
+│  │  │   ├── orchestrator.py     # PyATS orchestration            │   │
+│  │  │   ├── constants.py        # PyATS-specific constants       │   │
+│  │  │   ├── common/             # Generic base infrastructure    │   │
+│  │  │   │   ├── base_test.py    # NACTestBase                    │   │
+│  │  │   │   ├── ssh_base_test.py # SSHTestBase                   │   │
+│  │  │   │   ├── auth_cache.py   # AuthCache (filelock-based)     │   │
+│  │  │   │   ├── connection_pool.py # Connection pooling           │   │
+│  │  │   │   ├── subprocess_auth.py # Fork-safe auth (macOS)      │   │
+│  │  │   │   └── retry_strategy.py  # Retry logic                 │   │
+│  │  │   ├── broker/             # SSH connection management      │   │
+│  │  │   │   ├── connection_broker.py # Connection pooling server  │   │
+│  │  │   │   └── broker_client.py    # Client for broker IPC      │   │
+│  │  │   ├── discovery/          # Test & device discovery        │   │
+│  │  │   │   ├── test_discovery.py   # Test file discovery        │   │
+│  │  │   │   ├── test_type_resolver.py # AST-based type detection │   │
+│  │  │   │   └── device_inventory.py # Contract-based discovery   │   │
+│  │  │   ├── execution/          # Test execution                 │   │
+│  │  │   │   ├── subprocess_runner.py # PyATS subprocess mgmt     │   │
+│  │  │   │   ├── job_generator.py    # Job file generation        │   │
+│  │  │   │   ├── output_processor.py # Output stream processing   │   │
+│  │  │   │   └── device/             # D2D device execution       │   │
+│  │  │   │       ├── device_executor.py # Semaphore-controlled    │   │
+│  │  │   │       └── testbed_generator.py # Testbed YAML gen      │   │
+│  │  │   ├── http/               # HTTP client (fork-safe)        │   │
+│  │  │   │   └── subprocess_client.py # macOS fork-safe HTTP      │   │
+│  │  │   ├── progress/           # Real-time progress reporting   │   │
+│  │  │   │   ├── plugin.py       # PyATS progress plugin          │   │
+│  │  │   │   └── reporter.py     # Console progress reporter      │   │
+│  │  │   ├── reporting/          # HTML report generation         │   │
+│  │  │   │   ├── generator.py    # Single archive reports         │   │
+│  │  │   │   ├── multi_archive_generator.py # Multi-archive       │   │
+│  │  │   │   ├── batching_reporter.py # High-volume batching      │   │
+│  │  │   │   ├── collector.py    # Test result collection         │   │
+│  │  │   │   ├── step_interceptor.py # Step metadata capture      │   │
+│  │  │   │   ├── templates.py    # Jinja2 template utilities      │   │
+│  │  │   │   ├── types.py        # ResultStatus enum              │   │
+│  │  │   │   └── utils/          # Archive utilities              │   │
+│  │  │   │       ├── archive_extractor.py                         │   │
+│  │  │   │       ├── archive_inspector.py                         │   │
+│  │  │   │       ├── archive_aggregator.py                        │   │
+│  │  │   │       └── archive_security.py                          │   │
+│  │  │   └── ssh/                # SSH utilities                  │   │
+│  │  │       ├── command_cache.py # Command output caching        │   │
+│  │  │       ├── connection_manager.py # SSH connections           │   │
+│  │  │       └── connection_utils.py   # Connection helpers        │   │
 │  │  │                                                           │   │
-│  │  ├── broker/                 # Connection management         │   │
-│  │  │   └── connection_broker.py # SSH connection pooling       │   │
+│  │  ├── robot/                  # Robot Framework integration    │   │
+│  │  │   ├── orchestrator.py     # Robot orchestration            │   │
+│  │  │   ├── robot_writer.py     # Template → .robot generation   │   │
+│  │  │   ├── pabot.py            # Pabot parallel execution       │   │
+│  │  │   └── reporting/          # Robot report generation        │   │
+│  │  │       ├── robot_generator.py    # Robot summary reports    │   │
+│  │  │       └── robot_output_parser.py # output.xml parsing      │   │
 │  │  │                                                           │   │
-│  │  ├── reporting/              # HTML report generation        │   │
-│  │  │   ├── generator.py                                        │   │
-│  │  │   └── multi_archive_generator.py                          │   │
+│  │  ├── support/                # Diagnostic support             │   │
+│  │  │   └── nac-test-diagnostic.sh # Diagnostic collection      │   │
 │  │  │                                                           │   │
-│  │  └── discovery/              # Test & device discovery       │   │
-│  │      ├── test_discovery.py   # Test file discovery           │   │
-│  │      ├── test_type_resolver.py # AST-based type detection    │   │
-│  │      └── device_inventory.py # Contract-based discovery      │   │
+│  │  └── utils/                  # Shared utilities               │   │
+│  │      ├── asyncio_utils.py    # Async helpers                  │   │
+│  │      ├── cleanup.py          # Stale artifact cleanup         │   │
+│  │      ├── controller.py       # Controller type detection      │   │
+│  │      ├── device_validation.py # Device inventory validation   │   │
+│  │      ├── environment.py      # Environment variable helpers   │   │
+│  │      ├── file_discovery.py   # File discovery utilities       │   │
+│  │      ├── formatting.py       # Duration/output formatting     │   │
+│  │      ├── logging.py          # Logging setup + LogLevel enum  │   │
+│  │      ├── platform.py         # macOS/Python version gates     │   │
+│  │      ├── strings.py          # String utilities (hostname…)   │   │
+│  │      ├── system_resources.py # Worker calculation             │   │
+│  │      ├── terminal.py         # Terminal detection             │   │
+│  │      ├── url.py              # URL parsing utilities          │   │
+│  │      └── xunit_merger.py     # Merge Robot+PyATS xunit.xml   │   │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                                                                      │
-│  Dependencies: pyats, httpx, pyyaml, jinja2, rich, etc.             │
+│  Dependencies: pyats, httpx, pyyaml, jinja2, rich, typer,           │
+│                filelock, lxml, robotframework-pabot (≥5.2.2)        │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -176,7 +264,7 @@ The NAC testing infrastructure follows a three-tier package architecture that se
 
 | Layer | Package | Responsibilities |
 |-------|---------|------------------|
-| **Layer 1** | `nac-test` | Test orchestration, testbed generation, connection brokering, HTML report generation, progress tracking, generic base classes (`NACTestBase`, `SSHTestBase`), `AuthCache` |
+| **Layer 1** | `nac-test` | Test orchestration, testbed generation, connection brokering, HTML report generation (including combined dashboard), xunit.xml merging, progress tracking, generic base classes (`NACTestBase`, `SSHTestBase`), `AuthCache`, pre-flight validation (fail-fast auth, ACI defaults), diagnostic collection, platform safety gates, CLI with Typer |
 | **Layer 2** | `nac-test-pyats-common` | Architecture-specific authentication (APICAuth, SDWANManagerAuth, CatalystCenterAuth), architecture-specific test base classes, client configuration, device resolvers |
 | **Layer 3** | Architecture repos | Test files (`verify_*.py`), NAC schema definitions |
 
@@ -191,7 +279,24 @@ The NAC testing infrastructure follows a three-tier package architecture that se
 │   ├── nac-sdwan-terraform                                       │
 │   └── nac-catc-terraform                                        │
 │           │                                                      │
-│           │ pip install nac-test-pyats-common                   │
+│           │ pip install nac-test                                 │
+│           ▼                                                      │
+│   ┌───────────────────────────────────────────────────────────┐ │
+│   │                      nac-test                              │ │
+│   │   • Test orchestration (combined, PyATS, Robot)           │ │
+│   │   • Generic base classes (NACTestBase, SSHTestBase)       │ │
+│   │   • AuthCache (filelock-based), connection pooling        │ │
+│   │   • Testbed generation + user-provided testbed support    │ │
+│   │   • ConnectionBroker (SSH pooling via Unix sockets)       │ │
+│   │   • HTML report generation + combined dashboard           │ │
+│   │   • xunit.xml merger for CI/CD                            │ │
+│   │   • Pre-flight validation (fail-fast auth, ACI defaults)  │ │
+│   │   • Diagnostic collection                                  │ │
+│   │   • Platform safety gates (macOS Python ≥3.12)            │ │
+│   │   • DeviceResolverProtocol                                │ │
+│   └───────────────────────────────────────────────────────────┘ │
+│           │                                                      │
+│           │ nac-test-pyats-common (direct dependency)           │
 │           ▼                                                      │
 │   ┌───────────────────────────────────────────────────────────┐ │
 │   │            nac-test-pyats-common                           │ │
@@ -201,28 +306,16 @@ The NAC testing infrastructure follows a three-tier package architecture that se
 │   │   • Device resolvers (SDWANDeviceResolver, etc.)         │ │
 │   └───────────────────────────────────────────────────────────┘ │
 │           │                                                      │
-│           │ pip install nac-test (dependency)                   │
-│           ▼                                                      │
-│   ┌───────────────────────────────────────────────────────────┐ │
-│   │                      nac-test                              │ │
-│   │   • Test orchestration                                     │ │
-│   │   • Generic base classes (NACTestBase, SSHTestBase)       │ │
-│   │   • AuthCache, connection pooling                         │ │
-│   │   • Testbed generation                                     │ │
-│   │   • Connection broker                                      │ │
-│   │   • HTML report generation                                 │ │
-│   │   • DeviceResolverProtocol                                │ │
-│   └───────────────────────────────────────────────────────────┘ │
-│           │                                                      │
 │           │ pip install pyats, httpx, etc.                      │
 │           ▼                                                      │
-│       [pyats, httpx, pyyaml, jinja2, rich, etc.]               │
+│       [pyats, httpx, pyyaml, jinja2, rich, typer,              │
+│        filelock, lxml, robotframework-pabot ≥5.2.2]            │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 **Key Points:**
-1. **Architecture repos only need `pip install nac-test-pyats-common`** - it brings `nac-test` as a transitive dependency
+1. **Architecture repos only need `pip install nac-test`** — `nac-test-pyats-common` is now a direct dependency of `nac-test` (no more `pip install nac-test[all]` or `pip install nac-test-pyats-common` separately)
 2. **No circular dependencies** - clean unidirectional flow
 3. **nac-test stays focused** - orchestration, reporting, generic infrastructure only
 
@@ -263,11 +356,12 @@ Device resolvers are tightly coupled with test base classes—they parse NAC sch
 
 Both packages follow [Semantic Versioning 2.0.0](https://semver.org/):
 
-| nac-test-pyats-common | nac-test Required | Notes |
-|-----------------------|-------------------|-------|
-| 1.0.x | ~=1.1.0 | Initial release |
-| 1.1.x | ~=1.1.0 | New architecture added |
-| 2.0.x | ~=2.0.0 | Breaking changes require nac-test 2.0 |
+| nac-test | nac-test-pyats-common Required | Notes |
+|----------|-------------------------------|-------|
+| 2.0.0a1 | (direct dependency) | Current alpha — `nac-test-pyats-common` is now bundled as a direct dependency |
+| 1.1.x | ~=1.0.0 | Previous beta (v1.1-beta branch) |
+
+> **v2.0 Installation Change:** As of v2.0.0a1, `nac-test-pyats-common` is a direct dependency of `nac-test`. Users install with `pip install nac-test` — the separate `[adapters]` and `[all]` extra groups have been removed.
 
 **Breaking Change Policy:**
 
@@ -431,7 +525,7 @@ graph TB
 
 ### pyats Command
 
-The `--pyats` flag triggers PyATS-based test execution, supporting both API and D2D test modes with parallel execution and comprehensive reporting.
+The `--pyats` flag filters execution to PyATS-only (skipping Robot Framework), supporting both API and D2D test modes with parallel execution and comprehensive reporting. Without `--pyats`, both frameworks run sequentially.
 
 #### Command Syntax
 
@@ -439,14 +533,24 @@ The `--pyats` flag triggers PyATS-based test execution, supporting both API and 
 nac-test --pyats [OPTIONS]
 
 Options:
-  --data PATH                Path to data YAML file or directory
-  --templates PATH           Path to Robot templates directory
-  --filters PATH             Path to Python filters file
-  --output-dir PATH          Output directory for results (default: ./output)
-  --parallel INTEGER         Number of parallel workers (default: auto)
-  --test-dir PATH            Directory containing PyATS test files
-  --minimal-reports          Only include command outputs for failed tests
-  -v, --verbose              Enable verbose logging
+  -d, --data PATH              Path to data YAML file or directory (required, repeatable)
+  -t, --templates PATH         Path to test templates directory (required)
+  -o, --output PATH            Output directory for results (required)
+  -f, --filters PATH           Path to Jinja filters directory
+  --tests PATH                 Path to Jinja test functions directory
+  --testbed PATH               Path to custom PyATS testbed YAML
+  --processes INTEGER          Number of parallel processes (default: auto)
+  --max-parallel-devices INT   Maximum parallel SSH/D2D devices (default: auto)
+  --minimal-reports            Only include command outputs for failed tests
+  --verbose                    Enable verbose output for nac-test, Robot, and PyATS
+  -l, --loglevel LEVEL         Log level: WARNING (default), ERROR, INFO, DEBUG
+  --render-only                Only render tests without executing them
+  --dry-run                    Validate test structure without execution
+  --diagnostic                 Wrap execution with diagnostic collection
+  -i, --include TAG            Select tests by tag (repeatable)
+  -e, --exclude TAG            Exclude tests by tag (repeatable)
+  -m, --merged-data-filename   Custom filename for merged data model YAML
+  --version                    Display version number
 ```
 
 #### Execution Flow
@@ -513,14 +617,25 @@ sequenceDiagram
 The CLI is built with Click and serves as the main entry point:
 
 ```python
-@click.command()
-@click.option("--pyats", is_flag=True, help="Run PyATS tests")
-@click.option("--data", type=click.Path(), help="Data YAML path")
-@click.option("--templates", type=click.Path(), help="Templates directory")
-@click.option("--test-dir", type=click.Path(), help="PyATS test directory")
-@click.option("--output-dir", type=click.Path(), default="output")
-@click.option("--parallel", type=int, default=None)
-def main(pyats, data, templates, test_dir, output_dir, parallel):
+# Simplified — see nac_test/cli/main.py for full Typer Annotated type definitions
+@app.command()
+def main(
+    data: list[Path],           # -d, --data (required, repeatable)
+    templates: Path,            # -t, --templates (required)
+    output: Path,               # -o, --output (required)
+    filters: Path | None = None,          # -f, --filters
+    testbed: Path | None = None,          # --testbed
+    render_only: bool = False,            # --render-only
+    dry_run: bool = False,                # --dry-run
+    processes: int | None = None,         # --processes
+    pyats: bool = False,                  # --pyats (dev mode)
+    robot: bool = False,                  # --robot (dev mode)
+    max_parallel_devices: int | None = None,  # --max-parallel-devices
+    minimal_reports: bool = False,        # --minimal-reports
+    verbose: bool = False,                # --verbose
+    loglevel: LogLevel | None = None,     # -l, --loglevel
+    # ... additional flags omitted for brevity
+) -> None:
 ```
 
 **Key Steps:**
@@ -653,8 +768,8 @@ Options:
   --data PATH              Path to data YAML file or directory
   --templates PATH         Path to Robot templates directory
   --filters PATH           Path to Python filters file
-  --output-dir PATH        Output directory
-  --parallel INTEGER       Number of parallel processes
+  --output PATH            Output directory
+  --processes INTEGER      Number of parallel processes (pabot --processes)
 ```
 
 #### Robot Orchestrator Flow
@@ -708,34 +823,39 @@ The CLI (`cli/main.py`) is nac-test's **user-facing gateway**, providing a type-
 
 1. **Type-Safe by Default**: All parameters use Typer's Annotated type system
 2. **Environment Variable First**: Every CLI flag has corresponding env var (CI/CD friendly)
-3. **Fail Fast**: Input validation happens before expensive operations
+3. **Fail Fast**: Input validation and pre-flight checks (auth, ACI defaults) happen before expensive operations
 4. **Single Source of Truth**: Merged data model created once, shared across both frameworks
-5. **Clear Error Messages**: Typer's rich output + errorhandler for actionable feedback
+5. **Clear Error Messages**: Typer's rich output + structured error classification for actionable feedback
 6. **Observable Execution**: Runtime tracking with timestamps for benchmarking
 
 ---
 
 #### CLI Exit Code Strategy
 
-nac-test implements graduated exit codes following Robot Framework conventions to provide meaningful feedback for CI/CD systems:
+nac-test implements graduated exit codes following Robot Framework conventions to provide meaningful feedback for CI/CD systems. Named constants for exit codes are defined in `nac_test/core/constants.py`.
 
 **Exit Code Semantics:**
 
-| Exit Code | Meaning | Usage in nac-test |
-|-----------|---------|-------------------|
-| **0** | Success | All tests passed across all frameworks |
-| **1-250** | Test failures | Exact count of failed tests (capped at 250) |
-| **252** | Invalid arguments or no tests | Robot Framework argument errors or no tests found |
-| **253** | Execution interrupted | Test execution was interrupted (Ctrl+C, etc.) |
-| **255** | Infrastructure errors | Framework crashes, controller auth failures, etc. |
+| Exit Code | Constant | Meaning | Usage in nac-test |
+|-----------|----------|---------|-------------------|
+| **0** | — | Success | All tests passed across all frameworks |
+| **1-249** | — | Test failures | Exact count of failed tests |
+| **2** | `EXIT_INVALID_ARGS` | Invalid CLI arguments | POSIX convention for nac-test argument errors |
+| **250** | `EXIT_FAILURE_CAP` | 250+ failures | Failure count capped at 250 per Robot Framework spec |
+| **252** | `EXIT_INVALID_ROBOT_ARGS` | Invalid Robot arguments / no tests | Robot Framework argument errors or no tests found |
+| **253** | `EXIT_INTERRUPTED` | Execution interrupted | Test execution was interrupted (Ctrl+C / KeyboardInterrupt) |
+| **255** | `EXIT_ERROR` | Infrastructure errors | Framework crashes, controller auth failures, etc. |
 
 **Implementation Details:**
 
 - **CombinedResults.exit_code**: Aggregated exit code across all frameworks (single source of truth)
-- **Priority Order**: Infrastructure errors (255) > Invalid arguments (252) > Test failures (1-250) > Success (0)
+- **ErrorType enum**: Classifies errors as `GENERIC`, `INVALID_ROBOT_ARGS`, or `INTERRUPTED`
+- **Legacy `errorhandler` module removed**: `CombinedResults.exit_code` is now the sole authority for exit codes
+- **Priority Order**: Infrastructure errors (255) > Interrupted (253) > Invalid arguments (252) > Test failures (1-250) > Success (0)
 - **Failure Aggregation**: Sums failures across all frameworks, capped at 250 per Robot Framework spec
 - **Special Cases**:
   - Intentionally skipped execution (render-only mode) returns 0
+  - Dry-run mode (PyATS or Robot) returns 0
   - Empty results (no tests found) returns 252
 
 **CI/CD Integration Benefits:**
@@ -919,6 +1039,7 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
   - Data model merging: RUNS
   - Robot template rendering: RUNS (templates written to the `robot_results/` subdirectory)
   - Test execution: SKIPPED (neither PyATS nor Robot execution)
+  - Controller environment variable validation: SKIPPED (no auth check needed)
   - Use case: Verify template rendering logic without expensive test execution
 - **Example**:
   ```bash
@@ -930,15 +1051,18 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 - **Type**: `bool` (flag)
 - **Default**: `False`
 - **Environment Variable**: `NAC_TEST_DRY_RUN`
-- **Purpose**: Robot Framework dry run mode (syntax validation without execution)
+- **Purpose**: Dry run mode — validates test structure without execution for both Robot Framework and PyATS
 - **Behavior**:
-  - Passed directly to Robot Framework (`robot --dryrun`)
-  - Validates test syntax and structure
+  - **Robot Framework**: Passed directly to Robot Framework (`robot --dryrun`) for syntax validation
+  - **PyATS**: Discovers and categorizes PyATS tests (API vs D2D), prints what would execute without running them, returns exit code 0
   - Does not execute test logic or connect to devices/controllers
 - **Example**:
   ```bash
-  # Validate Robot test syntax
+  # Validate test structure across both frameworks
   nac-test -d config/ -t templates/ -o output/ --dry-run
+
+  # Dry-run PyATS tests only
+  nac-test -d config/ -t templates/ -o output/ --pyats --dry-run
   ```
 
 ##### Output Control Flags
@@ -997,12 +1121,12 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 
 ##### Logging and Metadata Flags
 
-**`-v, --verbosity`** (OPTIONAL)
-- **Type**: `VerbosityLevel` (enum)
+**`-l, --loglevel`** (OPTIONAL)
+- **Type**: `LogLevel` (enum)
 - **Values**: `CRITICAL`, `ERROR`, `WARNING` (default), `INFO`, `DEBUG`
 - **Environment Variable**: `NAC_TEST_LOGLEVEL`
 - **Eager**: `True` (processed before other options for early logging configuration)
-- **Purpose**: Control logging output granularity
+- **Purpose**: Control logging output granularity for nac-test, PyATS, and Robot Framework
 - **Behavior**:
   - Configures Python's logging framework via `configure_logging()`
   - Applied globally before orchestrator initialization
@@ -1011,13 +1135,62 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
   - WARNING: Default - important events, skipped tests
   - ERROR: Failures with tracebacks
   - CRITICAL: Fatal errors requiring immediate attention
+  - When `--verbose` is set without an explicit `--loglevel`, defaults to DEBUG
 - **Examples**:
   ```bash
   # Verbose debugging output
-  nac-test -d config/ -t templates/ -o output/ -v DEBUG
+  nac-test -d config/ -t templates/ -o output/ --loglevel DEBUG
 
   # Operational visibility
-  nac-test -d config/ -t templates/ -o output/ -v INFO
+  nac-test -d config/ -t templates/ -o output/ -l INFO
+  ```
+
+> **Deprecation Note:** `-v, --verbosity` is now a hidden alias for `-l, --loglevel` and will be removed in a future version.
+
+**`--verbose`** (OPTIONAL)
+- **Type**: `bool` (flag)
+- **Default**: `False`
+- **Environment Variable**: `NAC_TEST_VERBOSE`
+- **Purpose**: Enable verbose mode for nac-test, Robot Framework (pabot), and PyATS console output
+- **Behavior**:
+  - Enables pabot verbose output
+  - Enables PyATS console output (without `--verbose`, PyATS stdout is suppressed)
+  - Implies `--loglevel DEBUG` unless `--loglevel` is explicitly set
+- **Example**:
+  ```bash
+  # Verbose with full console output from all frameworks
+  nac-test -d config/ -t templates/ -o output/ --verbose
+  ```
+
+> **Note on Robot Framework `--loglevel`:** Robot Framework's own `--loglevel` can no longer be controlled via pass-through arguments. Use `--variable LOGLEVEL:DEBUG` with `Set Log Level` keyword instead.
+
+**`--diagnostic`** (OPTIONAL)
+- **Type**: `bool` (flag, eager callback)
+- **Default**: `False`
+- **Purpose**: Wrap test execution with diagnostic collection for troubleshooting
+- **Behavior**:
+  - Collects system info, crash reports, environment details
+  - Produces a zip archive with all diagnostic artifacts
+  - Uses bundled `nac-test-diagnostic.sh` script from `nac_test/support/`
+- **Example**:
+  ```bash
+  # Collect diagnostics alongside test execution
+  nac-test -d config/ -t templates/ -o output/ --diagnostic
+  ```
+
+**`--testbed`** (OPTIONAL)
+- **Type**: `Path | None`
+- **Validation**: Must exist, must be a file (not directory)
+- **Environment Variable**: `NAC_TEST_TESTBED`
+- **Purpose**: Provide a custom PyATS testbed YAML to override auto-discovered device connections or add helper devices (e.g., jump hosts)
+- **Behavior**:
+  - Devices in the user-provided testbed take precedence over auto-discovered devices
+  - Preserves PyATS features like `%ENV{}` syntax and topology sections
+  - Defensive validation handles malformed YAML, empty files, wrong types gracefully
+- **Example**:
+  ```bash
+  # Override auto-discovered devices with custom testbed
+  nac-test -d config/ -t templates/ -o output/ --pyats --testbed custom_testbed.yaml
   ```
 
 **`--version`** (SPECIAL)
@@ -1031,7 +1204,7 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 - **Example**:
   ```bash
   $ nac-test --version
-  nac-test, version 1.1.0
+  nac-test, version 2.0.0a1
   ```
 
 ---
@@ -1082,84 +1255,91 @@ data: list[Path]  # Not typing.List[Path]
 include: list[str]  # Not typing.List[str]
 
 # Optional with explicit None default
-max_parallel_devices: Optional[MaxParallelDevices] = None
+max_parallel_devices: MaxParallelDevices | None = None
 ```
 
 ---
 
 #### Main Entry Point Implementation
 
-The `main()` function orchestrates the entire nac-test execution lifecycle.
+The `main()` function orchestrates the entire nac-test execution lifecycle. It uses a **stats-based exit code system** where `CombinedResults` determines the exit code from aggregated test outcomes — replacing the legacy `errorhandler` library pattern.
 
 **Complete Implementation Flow**:
 
 ```python
-@app.command()
+@app.command(
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
+)
 def main(
+    ctx: typer.Context,               # Captures extra Robot Framework args
     data: Data,
     templates: Templates,
     output: Output,
     filters: Filters = None,
     tests: Tests = None,
-    include: Include = [],
-    exclude: Exclude = [],
+    include: Include = None,
+    exclude: Exclude = None,
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
+    processes: Processes = None,
     pyats: PyATS = False,
     robot: Robot = False,
-    max_parallel_devices: Optional[MaxParallelDevices] = None,
+    max_parallel_devices: MaxParallelDevices | None = None,
     minimal_reports: MinimalReports = False,
-    verbosity: Verbosity = VerbosityLevel.WARNING,
-    version: Version = False,  # Handled by eager callback
+    testbed: Testbed = None,
+    loglevel: LoglevelOption = None,
+    verbosity: DeprecatedVerbosity = None,  # Hidden alias for --loglevel
+    version: Version = False,               # Eager callback
+    diagnostic: Diagnostic = False,         # Eager callback
+    verbose: Verbose = False,
     merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
-    """A CLI tool to render and execute Robot Framework tests using Jinja templating."""
+    """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating."""
 
-    # PHASE 1: Early Validation and Logging Setup
-    # Verbosity already configured (is_eager=True processed first)
-    configure_logging(verbosity, error_handler)
+    # PHASE 1: Loglevel Resolution (deprecated --verbosity → --loglevel)
+    if verbosity is not None:
+        typer.echo(typer.style(
+            "Warning: --verbosity is deprecated, use --loglevel instead.",
+            fg=typer.colors.YELLOW,
+        ), err=True)
+        if loglevel is None:
+            loglevel = verbosity
+    # Priority: explicit --loglevel > --verbose (implies DEBUG) > default (WARNING)
+    effective_loglevel = loglevel or (LogLevel.DEBUG if verbose else DEFAULT_LOGLEVEL)
+    configure_logging(effective_loglevel)
 
-    # PHASE 2: Development Flag Mutual Exclusivity Check
+    # PHASE 2: Platform Safety Gate
+    check_and_exit_if_unsupported_macos_python()
+
+    # PHASE 3: Development Flag Mutual Exclusivity
     if pyats and robot:
-        typer.echo(
-            typer.style(
-                "Error: Cannot use both --pyats and --robot flags simultaneously.",
-                fg=typer.colors.RED,
-            )
-        )
-        typer.echo(
-            "Use one development flag at a time, or neither for combined execution."
-        )
-        raise typer.Exit(1)  # Exit code 1 for user error
+        typer.echo(typer.style(
+            "Error: Cannot use both --pyats and --robot flags simultaneously.",
+            fg=typer.colors.RED,
+        ))
+        typer.echo("Use one development flag at a time, or neither for combined execution.")
+        raise typer.Exit(EXIT_INVALID_ARGS)  # Exit code 2 (POSIX convention)
 
-    # PHASE 3: Output Directory Creation (Safe: parents=True, exist_ok=True)
+    # PHASE 4: ACI Defaults Validation
     output.mkdir(parents=True, exist_ok=True)
+    if not validate_aci_defaults(data):
+        display_aci_defaults_banner()
+        raise typer.Exit(1)
 
-    # PHASE 4: Data Model Merging (SOT Creation)
+    # PHASE 5: Data Model Merging (SOT Creation)
     start_time = datetime.now()
-    start_timestamp = start_time.strftime("%H:%M:%S")
-    typer.echo(f"\n\n[{start_timestamp}] 📄 Merging data model files...")
-
-    # Deep merge all data files
+    typer.echo(f"\n\n[{start_time.strftime(CONSOLE_TIME_FORMAT)}] 📄 Merging data model files...")
     merged_data = DataMerger.merge_data_files(data)
-
-    # Write merged data to output dir (SOT for both PyATS and Robot)
     DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
-
     end_time = datetime.now()
-    end_timestamp = end_time.strftime("%H:%M:%S")
     duration = (end_time - start_time).total_seconds()
-    duration_str = (
-        f"{duration:.1f}s"
-        if duration < 60
-        else f"{int(duration // 60)}m {duration % 60:.0f}s"
-    )
-    typer.echo(f"[{end_timestamp}] ✅ Data model merging completed ({duration_str})")
+    typer.echo(f"[{end_time.strftime(CONSOLE_TIME_FORMAT)}] ✅ Data model merging completed ({format_duration(duration)})")
 
-    # PHASE 5: Orchestrator Initialization
+    # PHASE 6: Orchestrator Initialization (all CLI params forwarded)
     orchestrator = CombinedOrchestrator(
         data_paths=data,
         templates_dir=templates,
+        custom_testbed_path=testbed,     # User-provided testbed YAML
         output_dir=output,
         merged_data_filename=merged_data_filename,
         filters_path=filters,
@@ -1168,137 +1348,187 @@ def main(
         exclude_tags=exclude,
         render_only=render_only,
         dry_run=dry_run,
+        processes=processes,              # Pabot --processes
+        extra_args=ctx.args,              # Extra Robot Framework args
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
-        verbosity=verbosity,
-        dev_pyats_only=pyats,    # Development mode flags
-        dev_robot_only=robot,     # Development mode flags
+        loglevel=effective_loglevel,
+        dev_pyats_only=pyats,
+        dev_robot_only=robot,
+        verbose=verbose,
     )
 
-    # PHASE 6: Test Execution with Runtime Tracking
+    # PHASE 7: Test Execution with Runtime Tracking
     runtime_start = datetime.now()
-
     try:
-        orchestrator.run_tests()  # Main execution (may take minutes to hours)
+        stats = orchestrator.run_tests()  # Returns CombinedResults
+    except KeyboardInterrupt:
+        typer.echo(typer.style(
+            "\n⚠️  Test execution was interrupted by user (Ctrl+C)",
+            fg=typer.colors.YELLOW,
+        ))
+        raise typer.Exit(EXIT_INTERRUPTED) from None
     except Exception as e:
-        # Ensure runtime displayed even on failure
         typer.echo(f"Error during execution: {e}")
-        raise  # Re-raise for error_handler tracking
+        if DEBUG_MODE:
+            raise typer.Exit(EXIT_ERROR) from e   # Developer: full traceback
+        raise typer.Exit(EXIT_ERROR) from None     # Customer: clean output
 
-    # PHASE 7: Runtime Reporting
-    runtime_end = datetime.now()
-    total_runtime = (runtime_end - runtime_start).total_seconds()
+    # PHASE 8: Results-Based Exit
+    total_runtime = (datetime.now() - runtime_start).total_seconds()
+    typer.echo(f"\nTotal runtime: {format_duration(total_runtime)}")
 
-    # Format runtime consistently with data merge timing
-    if total_runtime < 60:
-        runtime_str = f"{total_runtime:.2f} seconds"
-    else:
-        minutes = int(total_runtime / 60)
-        secs = total_runtime % 60
-        runtime_str = f"{minutes} minutes {secs:.2f} seconds"
-
-    typer.echo(f"\nTotal runtime: {runtime_str}")
-    exit()  # Calls custom exit() for error-aware exit code
+    if render_only:
+        if stats.has_errors:
+            reason = stats.robot.reason if stats.robot and stats.robot.reason else None
+            typer.echo(f"\n❌ Template rendering failed{f': {reason}' if reason else ''}", err=True)
+            raise typer.Exit(stats.exit_code)
+        typer.echo("\n✅ Templates rendered successfully (render-only mode)")
+        raise typer.Exit(0)
+    if stats.pre_flight_failure is not None:
+        raise typer.Exit(stats.exit_code)
+    if stats.has_errors:
+        typer.echo(f"\n❌ Execution errors: {'; '.join(stats.errors)}", err=True)
+        raise typer.Exit(stats.exit_code)
+    if stats.has_failures:
+        typer.echo(f"\n❌ Tests failed: {stats.failed} out of {stats.total} tests", err=True)
+        raise typer.Exit(stats.exit_code)
+    if stats.is_empty:
+        typer.echo("\n⚠️  No tests were executed", err=True)
+        raise typer.Exit(stats.exit_code)
+    typer.echo(f"\n✅ All tests passed: {stats.passed} out of {stats.total} tests")
+    raise typer.Exit(0)
 ```
 
 **Phase-by-Phase Analysis**:
 
-1. **Early Validation and Logging Setup**:
-   - Verbosity already configured (Typer `is_eager=True` ensures early processing)
-   - Logging configured via `configure_logging()` before any operations
-   - Error handler tracks failures globally for exit code determination
+1. **Loglevel Resolution**:
+   - Handles deprecated `--verbosity` → `--loglevel` migration with a visible warning
+   - Priority chain: explicit `--loglevel` > `--verbose` (implies DEBUG) > `DEFAULT_LOGLEVEL` (WARNING)
+   - Both `--loglevel` and `--verbosity` use `is_eager=True` for early processing
 
-2. **Development Flag Mutual Exclusivity Check**:
+2. **Platform Safety Gate**:
+   - Calls `check_and_exit_if_unsupported_macos_python()` — hard-exits on macOS with Python < 3.12 (fork+SSL crash prevention)
+   - No-op on Linux (all Python 3.10+ versions supported)
+
+3. **Development Flag Mutual Exclusivity**:
    - Prevents nonsensical `--pyats --robot` combination
    - Fails fast with clear error message (Typer red styling)
-   - Exit code 1 signals user error
+   - Exit code `EXIT_INVALID_ARGS` (2) per POSIX convention
 
-3. **Output Directory Creation**:
-   - Safe creation with `parents=True` (creates parent dirs if needed)
-   - `exist_ok=True` allows reusing existing directories
-   - No validation needed (created automatically)
+4. **ACI Defaults Validation**:
+   - `validate_aci_defaults(data)` catches the common mistake of forgetting `-d ./defaults/`
+   - Displays a banner with instructions if validation fails
+   - Prevents expensive merge operation on invalid data paths
 
-4. **Data Model Merging (SOT Creation)**:
+5. **Data Model Merging (SOT Creation)**:
    - **Single Source of Truth**: Merged data written once, read by both frameworks
    - Deep merge algorithm (documented in Data Model Merging Process)
    - Hierarchical override: last file wins for conflicts
-   - Custom YAML tags resolved: `!env`, `!vault`
-   - Timing instrumentation: Start/end timestamps + duration
-   - User feedback: Terminal output with timestamps and duration
+   - Duration formatted via shared `format_duration()` utility
+   - Timestamps use `CONSOLE_TIME_FORMAT` constant
 
-5. **Orchestrator Initialization**:
-   - All CLI parameters passed to CombinedOrchestrator
+6. **Orchestrator Initialization**:
+   - All CLI parameters forwarded to CombinedOrchestrator
+   - New parameters: `custom_testbed_path`, `processes`, `extra_args`, `verbose`, `loglevel`
+   - `ctx.args` passes through any extra Robot Framework arguments (e.g., `--variable`, `--listener`)
    - Orchestrator contains all business logic (CLI only handles arg parsing)
-   - Development mode flags (`dev_pyats_only`, `dev_robot_only`) passed explicitly
 
-6. **Test Execution with Runtime Tracking**:
-   - Runtime tracked separately from data merge time
-   - `try/except` ensures runtime displayed even on orchestrator failure
-   - Exception re-raised for error_handler tracking (exit code determination)
+7. **Test Execution with Runtime Tracking**:
+   - `orchestrator.run_tests()` returns `CombinedResults` (not void)
+   - `KeyboardInterrupt` caught explicitly for graceful Ctrl+C handling (exit code 253)
+   - `DEBUG_MODE` controls exception chain visibility: developers see full traceback, customers see clean output
 
-7. **Runtime Reporting**:
-   - Consistent formatting: `45.2s` or `8m 30.5s`
-   - Displayed to user before exit
-   - Provides benchmarking data for optimization
+8. **Results-Based Exit** (replaces legacy `errorhandler` pattern):
+   - `CombinedResults.exit_code` property computes the exit code from aggregated test outcomes
+   - Cascading checks: render-only → pre-flight failure → errors → failures → empty → success
+   - Each path provides specific user-facing feedback before exiting
+   - No global error state — exit code determined entirely from returned `CombinedResults`
 
 ---
 
 #### Error Handling and Exit Code Management
 
-nac-test uses the **errorhandler** library for centralized error tracking and intelligent exit code determination.
+nac-test uses a **stats-based exit code system** where `CombinedResults.exit_code` determines the process exit code from aggregated test outcomes. This replaced the legacy `errorhandler` library in v2.0.0a1.
 
-**Error Handler Integration**:
+**CombinedResults Exit Code Logic**:
 
 ```python
-# From cli/main.py
-import errorhandler
-
-error_handler = errorhandler.ErrorHandler()
-
-def exit() -> None:
-    """Exit with appropriate code based on error state."""
-    if error_handler.fired:
-        raise typer.Exit(1)  # Non-zero exit for errors
-    else:
-        raise typer.Exit(0)  # Success
+# From core/types.py — CombinedResults.exit_code property
+@property
+def exit_code(self) -> int:
+    """Calculate appropriate exit code per Robot Framework convention."""
+    if self.pre_flight_failure is not None:
+        return 1
+    if self.has_errors:
+        error_types = [r.error_type for r in self._results if r.error_type is not None]
+        if ErrorType.INTERRUPTED in error_types:
+            return EXIT_INTERRUPTED       # 253
+        if ErrorType.INVALID_ROBOT_ARGS in error_types:
+            return EXIT_DATA_ERROR        # 252
+        return EXIT_ERROR                 # 255
+    if self.has_failures:
+        return min(self.failed, EXIT_FAILURE_CAP)  # 1-250
+    if self.was_not_run:
+        return 0
+    if self.is_empty:
+        return EXIT_DATA_ERROR            # 252
+    return 0
 ```
 
 **Exit Code Contract**:
 
-| Exit Code | Condition | Meaning |
-|-----------|-----------|---------|
-| `0` | `error_handler.fired == False` | Success - all tests passed or completed cleanly |
-| `1` | `error_handler.fired == True` | Failure - errors occurred during execution |
-| `1` | Mutual exclusivity violation | User error - invalid flag combination |
+| Exit Code | Named Constant | Condition | Meaning |
+|-----------|---------------|-----------|---------|
+| `0` | — | All tests passed or all skipped | Success |
+| `1` | — | `pre_flight_failure is not None` | Pre-flight failure (auth or controller detection) |
+| `1-250` | `EXIT_FAILURE_CAP` | `has_failures` (capped at 250) | Test failures (count = min(failed, 250)) |
+| `2` | `EXIT_INVALID_ARGS` | Mutual exclusivity violation | POSIX invalid arguments |
+| `252` | `EXIT_DATA_ERROR` | `is_empty` or invalid Robot args | No tests found/executed OR Robot Framework argument error |
+| `253` | `EXIT_INTERRUPTED` | `ErrorType.INTERRUPTED` | Execution interrupted (Ctrl+C) |
+| `255` | `EXIT_ERROR` | `has_errors` (generic) | Infrastructure/execution errors |
 
-**Error Tracking Throughout Execution**:
+**Priority Resolution** (highest to lowest):
+
+1. **Pre-flight failure** (1): Testing could not even begin — most actionable signal
+2. **Interrupted** (253): User explicitly stopped execution
+3. **Data error** (252): Configuration/argument problem
+4. **Generic error** (255): Framework or infrastructure failure
+5. **Test failures** (1-250): Actual test assertion failures
+6. **Empty** (252): No tests discovered or matched filters
+7. **Success** (0): Everything passed or was intentionally skipped
+
+**CLI → CombinedResults Flow**:
 
 ```python
-# Logging configuration registers error_handler
-configure_logging(verbosity, error_handler)
+# CLI main() delegates exit code entirely to CombinedResults:
+stats = orchestrator.run_tests()   # Returns CombinedResults
 
-# Throughout codebase:
-logger.error("Connection failed")  # Tracked by error_handler
-logger.critical("Fatal error")     # Tracked by error_handler
-
-# At exit:
-exit()  # Checks error_handler.fired for exit code
+# Each exit path checks stats properties:
+if stats.has_errors:
+    raise typer.Exit(stats.exit_code)   # 253, 252, or 255
+if stats.has_failures:
+    raise typer.Exit(stats.exit_code)   # 1-250
+if stats.is_empty:
+    raise typer.Exit(stats.exit_code)   # 252
+raise typer.Exit(0)                     # Success
 ```
 
-**Benefits**:
+**Benefits over legacy errorhandler pattern**:
 
-1. **Centralized State**: Single source of truth for "did errors occur?"
-2. **Automatic Tracking**: All `logger.error()` and `logger.critical()` calls tracked
-3. **Clean Exit Interface**: `exit()` abstracts exit code logic
-4. **CI/CD Friendly**: Non-zero exit code triggers pipeline failures
+1. **No Global State**: Exit code computed from returned data, not mutable global
+2. **Deterministic**: Same `CombinedResults` always produces same exit code
+3. **Testable**: Unit test exit code logic without running actual tests
+4. **Granular**: Different error types map to specific exit codes (253 vs 252 vs 255)
+5. **CI/CD Friendly**: Non-zero exit code triggers pipeline failures with specific meaning
 
 ---
 
 #### Environment Variable Support
 
-Every CLI flag (except `--version` and `--merged-data-filename`) supports environment variable configuration for CI/CD and containerized environments.
+Every CLI flag (except `--version`, `--diagnostic`, and `--merged-data-filename`) supports environment variable configuration for CI/CD and containerized environments.
 
-**Environment Variable Mapping Table**:
+**Environment Variable Mapping Table (CLI Flags)**:
 
 | CLI Flag | Environment Variable | Type | Example |
 |----------|---------------------|------|---------|
@@ -1307,8 +1537,10 @@ Every CLI flag (except `--version` and `--merged-data-filename`) supports enviro
 | `-o, --output` | `NAC_TEST_OUTPUT` | `Path` | `NAC_TEST_OUTPUT="/artifacts/output"` |
 | `-f, --filters` | `NAC_TEST_FILTERS` | `Path` | `NAC_TEST_FILTERS="/app/filters"` |
 | `--tests` | `NAC_TEST_TESTS` | `Path` | `NAC_TEST_TESTS="/app/custom_tests"` |
+| `--testbed` | `NAC_TEST_TESTBED` | `Path` | `NAC_TEST_TESTBED="testbed.yaml"` |
 | `-i, --include` | `NAC_TEST_INCLUDE` | `list[str]` | `NAC_TEST_INCLUDE="smoke:regression"` |
 | `-e, --exclude` | `NAC_TEST_EXCLUDE` | `list[str]` | `NAC_TEST_EXCLUDE="wip:experimental"` |
+| `--processes` | `NAC_TEST_PROCESSES` | `int` | `NAC_TEST_PROCESSES=4` |
 | `--render-only` | `NAC_TEST_RENDER_ONLY` | `bool` | `NAC_TEST_RENDER_ONLY=1` |
 | `--dry-run` | `NAC_TEST_DRY_RUN` | `bool` | `NAC_TEST_DRY_RUN=true` |
 | `--pyats` | `NAC_TEST_PYATS` | `bool` | `NAC_TEST_PYATS=1` |
@@ -1316,7 +1548,31 @@ Every CLI flag (except `--version` and `--merged-data-filename`) supports enviro
 | `--max-parallel-devices` | `NAC_TEST_MAX_PARALLEL_DEVICES` | `int` | `NAC_TEST_MAX_PARALLEL_DEVICES=25` |
 | `--minimal-reports` | `NAC_TEST_MINIMAL_REPORTS` | `bool` | `NAC_TEST_MINIMAL_REPORTS=true` |
 | `--verbose` | `NAC_TEST_VERBOSE` | `bool` | `NAC_TEST_VERBOSE=1` |
-| `-v, --verbosity` | `NAC_TEST_LOGLEVEL` | `enum` | `NAC_TEST_LOGLEVEL=DEBUG` |
+| `-l, --loglevel` | `NAC_TEST_LOGLEVEL` | `enum` | `NAC_TEST_LOGLEVEL=DEBUG` |
+
+> **Deprecation Note:** `--verbosity` / `-v` is now a hidden alias for `--loglevel` / `-l` and will be removed in a future version.
+
+**Internal Tuning Environment Variables (PyATS)**:
+
+These environment variables control PyATS-internal behavior and were standardized to the `NAC_TEST_PYATS_` prefix in v2.0.0a1:
+
+| Environment Variable | Old Name (deprecated) | Type | Default | Purpose |
+|---------------------|----------------------|------|---------|---------|
+| `NAC_TEST_PYATS_PROCESSES` | `PYATS_MAX_WORKERS` | `int` | auto | PyATS parallel processes |
+| `NAC_TEST_PYATS_MAX_CONNECTIONS` | `MAX_CONNECTIONS` | `int` | auto | Max HTTP connections |
+| `NAC_TEST_PYATS_API_CONCURRENCY` | `NAC_API_CONCURRENCY` | `int` | 55 | API concurrency semaphore |
+| `NAC_TEST_PYATS_SSH_CONCURRENCY` | `NAC_SSH_CONCURRENCY` | `int` | auto | SSH concurrency limit |
+| `NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT` | `PYATS_OUTPUT_BUFFER_LIMIT` | `int` | — | Output buffer limit |
+| `NAC_TEST_PYATS_KEEP_REPORT_DATA` | `KEEP_HTML_REPORT_DATA` | `bool` | false | Keep JSONL files after HTML gen |
+| `NAC_TEST_PYATS_OVERFLOW_DIR` | `NAC_TEST_OVERFLOW_DIR` | `str` | — | Overflow directory |
+| `NAC_TEST_PYATS_BATCH_SIZE` | — | `int` | 200 | Batching reporter batch size |
+| `NAC_TEST_PYATS_BATCH_TIMEOUT` | — | `float` | 0.5 | Batching reporter timeout (s) |
+| `NAC_TEST_PYATS_QUEUE_SIZE` | — | `int` | 5000 | Batching reporter queue size |
+| `NAC_TEST_PYATS_MEMORY_LIMIT_MB` | — | `int` | 500 | Batching reporter memory limit |
+| `NAC_TEST_PYATS_PIPE_DRAIN_DELAY` | — | `float` | — | Pipe drain delay |
+| `NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT` | — | `float` | — | Pipe drain timeout |
+| `NAC_TEST_PYATS_SENTINEL_TIMEOUT` | — | `float` | — | Sentinel timeout |
+| `NAC_TEST_DEBUG` | `PYATS_DEBUG` | `bool` | false | Enable debug mode (verbose exceptions) |
 
 **List Type Parsing**:
 
@@ -1344,7 +1600,7 @@ NAC_TEST_MINIMAL_REPORTS=yes   # String "yes"
 # GitLab CI example
 test_aci_fabric:
   stage: test
-  image: python:3.11
+  image: python:3.12
   variables:
     NAC_TEST_DATA: "config/base.yaml:config/prod.yaml"
     NAC_TEST_TEMPLATES: "templates/aci"
@@ -1373,7 +1629,7 @@ nac-test \
   -d config/aci_prod_overlay.yaml \
   -t templates/aci/ \
   -o output/production-run/ \
-  -v INFO
+  -l INFO
 
 # Output:
 # [10:23:45] 📄 Merging data model files...
@@ -1397,7 +1653,7 @@ nac-test \
   -t templates/aci/ \
   -o output/dev-api/ \
   --pyats \
-  -v DEBUG
+  -l DEBUG
 
 # Output:
 # ⚠️  WARNING: Running in PyATS-only development mode (--pyats)
@@ -1424,7 +1680,7 @@ nac-test \
   -f custom_filters/ \
   -o output/template-debug/ \
   --robot \
-  -v INFO
+  -l INFO
 
 # Output:
 # ⚠️  WARNING: Running in Robot-only development mode (--robot)
@@ -1450,7 +1706,7 @@ nac-test \
   -t templates/aci/ \
   -o output/ci-run/ \
   --minimal-reports \
-  -v WARNING
+  -l WARNING
 
 # Archive sizes:
 # Full reports: 30 GB (1500 tests × 20 MB avg)
@@ -1468,7 +1724,7 @@ nac-test \
   -t templates/aci/ \
   -o output/smoke/ \
   -i smoke \
-  -v INFO
+  -l INFO
 
 # Run regression tests but exclude WIP features
 nac-test \
@@ -1477,7 +1733,7 @@ nac-test \
   -o output/regression/ \
   -i regression \
   -e wip \
-  -v INFO
+  -l INFO
 ```
 
 **Example 6: Environment Variable Configuration (CI/CD)**
@@ -1505,7 +1761,7 @@ nac-test \
   -t templates/aci/ \
   -o output/limited/ \
   --max-parallel-devices 10 \
-  -v INFO
+  -l INFO
 
 # Automatic calculation might yield 50 workers
 # Manual override caps at 10 for CI runner constraints
@@ -1520,7 +1776,7 @@ nac-test \
   -t templates/aci/ \
   -o output/render-check/ \
   --render-only \
-  -v DEBUG
+  -l DEBUG
 
 # Output:
 # [11:05:30] 📄 Merging data model files...
@@ -1560,7 +1816,7 @@ nac-test \
 
 **Drawbacks Accepted**:
 - Slightly larger dependency footprint than argparse
-- Requires Python 3.6+ (acceptable given nac-test requires 3.11+)
+- Requires Python 3.9+ (acceptable given nac-test requires 3.10+, macOS requires 3.12+)
 
 ---
 
@@ -1617,39 +1873,49 @@ if pyats and robot:
 
 ---
 
-**Q4: Why `is_eager=True` for `--verbosity` flag?**
+**Q4: Why `is_eager=True` for `--loglevel` flag?**
 
 **A**: Logging must be configured **before** any other operations for consistent output:
 
 **Without `is_eager=True`**:
 ```python
 # Typer processes flags in arbitrary order
-def main(data: Data, verbosity: Verbosity = VerbosityLevel.WARNING):
+def main(data: Data, loglevel: LoglevelOption = None):
     # data processed first (might log messages)
-    # verbosity processed second (logging config too late)
+    # loglevel processed second (logging config too late)
 ```
 
 **With `is_eager=True`**:
 ```python
-Verbosity = Annotated[
-    VerbosityLevel,
+LoglevelOption = Annotated[
+    LogLevel | None,
     typer.Option(
-        "-v",
-        "--verbosity",
+        "--loglevel",
+        "-l",
         is_eager=True,  # Process FIRST, before all other flags
+        envvar="NAC_TEST_LOGLEVEL",
         ...
     ),
 ]
 
-def main(data: Data, verbosity: Verbosity = VerbosityLevel.WARNING):
-    configure_logging(verbosity, error_handler)  # Already configured
+def main(data: Data, loglevel: LoglevelOption = None, verbose: Verbose = False):
+    # Priority: explicit --loglevel > --verbose (implies DEBUG) > default
+    effective_loglevel = loglevel or (LogLevel.DEBUG if verbose else DEFAULT_LOGLEVEL)
+    configure_logging(effective_loglevel)
     # All subsequent operations use correct log level
 ```
 
+**Loglevel Resolution Chain**:
+1. Explicit `--loglevel DEBUG` — highest priority, always wins
+2. `--verbose` flag — implies `DEBUG`, also enables pabot/PyATS console output
+3. Deprecated `--verbosity` — mapped to `--loglevel` with warning
+4. Default — `WARNING` (from `DEFAULT_LOGLEVEL`)
+
 **Benefits**:
 1. **Consistent Logging**: All operations use configured log level
-2. **Debugging**: DEBUG verbosity captures early initialization messages
+2. **Debugging**: DEBUG loglevel captures early initialization messages
 3. **Predictable Behavior**: Logging config always happens first
+4. **Backward Compatibility**: Deprecated `--verbosity` still works with a migration warning
 
 ---
 
@@ -1698,6 +1964,207 @@ Total runtime: 7 minutes 29.82 seconds             ← Total (merge + orchestrat
 #### Design Philosophy
 
 > The CLI is nac-test's **front door** - it must be welcoming, type-safe, and foolproof. Type annotations provide compile-time safety and self-documentation. Environment variables enable configuration-as-code for CI/CD pipelines. Mutual exclusivity enforcement prevents ambiguous intent. Fail-fast validation catches errors before expensive operations. Timing instrumentation provides performance visibility at multiple granularities. The merged data model serves as a Single Source of Truth, created once and shared across both frameworks. Development mode flags (`--pyats`, `--robot`) optimize for rapid iteration (4-48x faster) without compromising production completeness. Error-aware exit codes ensure reliable pipeline integration. Rich terminal output keeps users informed during long-running operations. The result is a CLI that feels intuitive for interactive use while being robust and automatable for CI/CD environments.
+
+---
+
+### Pre-Flight Validation: Fail-Fast Authentication Architecture
+
+nac-test performs a pre-flight authentication check against the detected controller **before** any test framework is invoked. If the controller is unreachable or credentials are invalid, the user gets a single, actionable error message and a self-contained HTML troubleshooting report—rather than watching N identical auth failures scroll past during parallel test execution.
+
+---
+
+#### Why Pre-Flight Validation Exists
+
+Without pre-flight validation, a credential typo causes this:
+
+```
+Worker 1: HTTP 401 Unauthorized - APIC authentication failed
+Worker 2: HTTP 401 Unauthorized - APIC authentication failed
+Worker 3: HTTP 401 Unauthorized - APIC authentication failed
+... (50 more identical failures) ...
+```
+
+With pre-flight validation:
+
+```
+❌ Authentication failed for APIC at https://apic.example.com
+   Reason: HTTP 401 — Unauthorized
+   Check: APIC_USERNAME and APIC_PASSWORD environment variables
+
+   See: output/combined_summary.html for troubleshooting steps
+```
+
+**Design Goals:**
+
+1. **Fail Fast**: Detect auth/connectivity issues in <2 seconds, before expensive operations
+2. **Cache Warm**: On success, the token is cached in `AuthCache`—first real test gets a cache hit
+3. **Graceful Degradation**: If adapters are not installed or env vars are missing, the check is skipped silently
+4. **Same Auth Path**: Uses the identical auth implementations from `nac-test-pyats-common` that PyATS tests use
+
+---
+
+#### Architecture Components
+
+##### AuthCheckResult (Structured Outcome)
+
+**Location:** `nac_test/cli/validators/controller_auth.py`
+
+```python
+@dataclass(frozen=True)
+class AuthCheckResult:
+    """Result of a pre-flight controller authentication check."""
+
+    success: bool
+    reason: AuthOutcome                    # SUCCESS, BAD_CREDENTIALS, UNREACHABLE, UNEXPECTED_ERROR
+    controller_type: ControllerTypeKey     # "ACI", "SDWAN", "CC"
+    controller_url: str                    # The URL that was checked
+    detail: str                            # Human-readable detail (e.g., "HTTP 401: Unauthorized")
+    status_code: int | None = None         # HTTP status code, or None for non-HTTP failures
+```
+
+Every pre-flight check returns an `AuthCheckResult`—never raises an exception. The CLI inspects the `success` field and branches accordingly.
+
+##### AuthOutcome Enum (Error Classification)
+
+**Location:** `nac_test/core/error_classification.py`
+
+```python
+class AuthOutcome(Enum):
+    """Outcome classification for a pre-flight controller authentication check."""
+
+    SUCCESS = "success"
+    BAD_CREDENTIALS = "bad_credentials"    # HTTP 401, 403
+    UNREACHABLE = "unreachable"            # Timeout, DNS failure, connection refused
+    UNEXPECTED_ERROR = "unexpected_error"  # Server errors, unknown failures
+```
+
+##### Two-Tier Error Classification
+
+The `_classify_auth_error()` function uses a two-tier strategy to convert raw exceptions into structured `AuthOutcome` values:
+
+```
+Tier 1: Network-Level Indicators (checked first)
+  └─ "timed out", "connection refused", "DNS failure", etc.
+  └─ Result: AuthOutcome.UNREACHABLE
+
+Tier 2: HTTP Status Code Extraction
+  └─ Regex: \b([1-5]\d{2})\b matches 3-digit status codes
+  └─ 401, 403 → AuthOutcome.BAD_CREDENTIALS
+  └─ 429, 503 → AuthOutcome.UNREACHABLE (service temporarily unavailable)
+  └─ Other 4xx/5xx → AuthOutcome.UNEXPECTED_ERROR
+```
+
+**Why Tier 1 before Tier 2:** Network indicators are checked first to avoid false positives from port numbers being matched as status codes (e.g., "connection to port 443 refused" would otherwise match HTTP 443).
+
+---
+
+#### Pre-Flight Check Flow
+
+```mermaid
+sequenceDiagram
+    participant CLI as CLI (main.py)
+    participant PF as preflight_auth_check()
+    participant Reg as CONTROLLER_REGISTRY
+    participant Cache as AuthCache
+    participant Adapter as Auth Adapter<br/>(nac-test-pyats-common)
+    participant Ctrl as Controller
+
+    CLI->>PF: preflight_auth_check(controller_type)
+    PF->>Reg: Get auth callable for controller_type
+    alt Adapters not installed
+        Reg-->>PF: None
+        PF-->>CLI: AuthCheckResult(success=True, detail="skipped")
+    end
+
+    PF->>Cache: Invalidate stale token
+    PF->>Adapter: auth_callable()
+    Adapter->>Ctrl: HTTP POST /api/login
+    alt Success
+        Ctrl-->>Adapter: 200 OK + token
+        Adapter->>Cache: Store token
+        Adapter-->>PF: Returns auth object
+        PF-->>CLI: AuthCheckResult(success=True)
+    else Auth Failure
+        Ctrl-->>Adapter: 401 Unauthorized
+        Adapter-->>PF: Raises exception
+        PF->>PF: _classify_auth_error(exception)
+        PF-->>CLI: AuthCheckResult(success=False, reason=BAD_CREDENTIALS)
+    else Unreachable
+        Adapter-->>PF: Raises timeout/connection error
+        PF->>PF: _classify_auth_error(exception)
+        PF-->>CLI: AuthCheckResult(success=False, reason=UNREACHABLE)
+    end
+```
+
+**Key design decisions in the flow:**
+
+1. **Cache invalidation before check**: Ensures we test current credentials, not a stale cached token
+2. **Conditional imports**: Auth adapters are imported lazily inside `_get_auth_callable()` to avoid hard dependency on `nac-test-pyats-common`
+3. **sys.argv stripping**: The `--pyats` flag is temporarily removed from `sys.argv` during adapter import because PyATS's configuration module parses `sys.argv` at import time, and `--pyats` prefix-matches `--pyats-configuration`
+
+---
+
+#### Auth Failure HTML Report
+
+When pre-flight authentication fails, nac-test generates a self-contained HTML troubleshooting report at `{output_dir}/combined_summary.html` instead of the normal test results dashboard.
+
+**Location:** `nac_test/core/reporting/combined_generator.py` → `_generate_pre_flight_failure_report()`
+**Template:** `nac_test/core/templates/auth_failure/report.html.j2`
+
+The report includes:
+
+- **Failure classification** (Bad Credentials vs Unreachable vs Unexpected Error)
+- **Controller details** (type, URL, display name)
+- **Environment variable guidance** (correct variable names for the detected architecture)
+- **curl example** (copy-pastable command to test connectivity independently)
+- **Timestamp** for correlation with logs
+
+The report writes to `combined_summary.html` (the same filename as the normal dashboard) so CI/CD pipelines that publish this file always get a meaningful artifact, whether tests ran or not.
+
+---
+
+#### Integration with CombinedResults
+
+Pre-flight failure flows through the `CombinedResults` type system:
+
+```python
+# From core/types.py
+@dataclass
+class PreFlightFailure:
+    """Represents a failure detected during pre-flight checks."""
+    failure_type: str              # "auth_failure" or "controller_detection"
+    controller_type: str           # Detected controller type
+    controller_url: str            # Controller URL
+    detail: str                    # Human-readable error detail
+    status_code: int | None        # HTTP status code (if applicable)
+
+@dataclass
+class CombinedResults:
+    pre_flight_failure: PreFlightFailure | None = None
+    # ... other fields ...
+
+    @property
+    def exit_code(self) -> int:
+        if self.pre_flight_failure is not None:
+            return 1  # Highest priority — testing couldn't even begin
+        # ... other exit code logic ...
+```
+
+Pre-flight failure has **exit code 1** and **highest priority** in the exit code resolution chain. This is the most actionable signal for CI/CD: "testing could not begin due to a configuration/connectivity issue."
+
+---
+
+#### Graceful Degradation Rules
+
+The pre-flight check is designed to never block test execution unnecessarily:
+
+| Condition | Behavior | Rationale |
+|-----------|----------|-----------|
+| `nac-test-pyats-common` not installed | Skip check, return success | Can't validate without adapters |
+| Controller type has no auth adapter | Skip check, return success | Nothing to validate |
+| Environment variables missing | Skip check, return success | Let actual auth fail later with proper error |
+| Auth succeeds | Return success, token cached | First test gets cache hit |
+| Auth fails | Return failure with classification | User gets actionable error immediately |
 
 ---
 
@@ -2416,6 +2883,51 @@ archive_paths = await asyncio.gather(*tasks, return_exceptions=True)
               Return d2d_aggregated_archive path
 ```
 
+**D2D Hostname Flow Through the Reporting Pipeline:**
+
+Device hostnames flow through multiple layers of the D2D execution and reporting pipeline. Understanding this flow is critical because the same test file executes against many devices in parallel, and the hostname is the only way to correlate results to specific devices.
+
+```
+DeviceExecutor                     SubprocessRunner                   base_test.py                      HTML Report
+─────────────                      ────────────────                   ────────────                      ───────────
+Set env var:                       Read HOSTNAME env var:             Read HOSTNAME env var:            Display per-device
+  HOSTNAME="leaf-101"  ──────────►  archive_name =                    test_id =                         results grouped
+  DEVICE_INFO={...}                  "pyats_archive_device_            "classname_leaf_101_              by hostname
+                                      leaf-101"                         20260115_103045_123"
+                                                                     ▲
+                                                                     │
+                                                                     sanitize_hostname("leaf-101")
+                                                                     → "leaf_101"
+                                                                     (utils/strings.py)
+```
+
+| Touchpoint | Location | How Hostname Is Used |
+|-----------|----------|---------------------|
+| Environment injection | `device_executor.py` | Sets `HOSTNAME` env var for each per-device subprocess |
+| Archive naming | `subprocess_runner.py` | `pyats_archive_device_{hostname}` archive filename |
+| Test ID generation | `base_test.py` `_generate_unique_test_id()` | Includes sanitized hostname in JSONL test IDs |
+| Progress reporting | `progress_reporter_plugin.py` | `task_start` event includes hostname for live progress |
+| Hostname sanitization | `utils/strings.py` `sanitize_hostname()` | Replaces non-alphanumeric chars with `_`, lowercases for filesystem safety |
+
+**Skipped Device Reporting Pipeline:**
+
+When the architecture-specific device resolver cannot resolve a device (e.g., missing management IP, DNS failure, invalid credentials), the device is captured in a `skipped_devices` list rather than silently dropped. This information flows through three layers to reach the user:
+
+```
+Architecture Resolver                DeviceInventoryDiscovery           PyATSOrchestrator
+(nac-test-pyats-common)              (nac-test core)                    (nac-test core)
+────────────────────                 ───────────────────────            ─────────────────
+SDWANDeviceResolver:                 Captures resolver's                Displays CLI warnings:
+  skipped_devices = [                skipped_devices via                ⚠ WARNING - Skipping
+    {"device_id": "edge-3",          getattr(cls._last_resolver,         device edge-3:
+     "reason": "No mgmt IP"}           "skipped_devices", [])             No mgmt IP found
+  ]
+```
+
+The `_last_resolver` pattern allows `DeviceInventoryDiscovery` to access the resolver's skip list without requiring the architecture resolver to expose it through the `get_ssh_device_inventory()` return value. This preserves backward compatibility with existing resolvers that don't track skips.
+
+If all devices are skipped, the orchestrator prints a warning and skips D2D execution entirely (no error—the run continues with API tests if present).
+
 ##### Development Mode Flow (--pyats Flag)
 
 ```
@@ -2612,7 +3124,7 @@ nac-test --data /data/aci_dev.yaml \
          --templates /templates \
          --output /output \
          --pyats \
-         --verbosity INFO
+         --loglevel INFO
 ```
 
 **Orchestration Flow:**
@@ -3810,6 +4322,7 @@ class TestResults:
     other: int = 0  # Tests with other statuses (blocked, aborted, passx, info)
     reason: str | None = None  # Context for non-SUCCESS states
     state: ExecutionState = ExecutionState.SUCCESS
+    error_type: ErrorType | None = None  # Category for exit code determination
 
     @property
     def total(self) -> int:
@@ -3828,12 +4341,12 @@ class TestResults:
         return cls(state=ExecutionState.SKIPPED, reason=reason)
 
     @classmethod
-    def from_error(cls, reason: str) -> "TestResults":
+    def from_error(cls, reason: str, error_type: ErrorType = ErrorType.GENERIC) -> "TestResults":
         """Execution failed with an error."""
-        return cls(reason=reason, state=ExecutionState.ERROR)
+        return cls(reason=reason, state=ExecutionState.ERROR, error_type=error_type)
 
     # Computed properties: success_rate, has_failures, has_error, is_empty,
-    #                      is_error, was_not_run, exit_code
+    #                      is_error, was_not_run
 
     def __str__(self) -> str:
         base = f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
@@ -3851,10 +4364,12 @@ class CombinedResults:
     api: TestResults | None = None   # From PyATSResults.api
     d2d: TestResults | None = None   # From PyATSResults.d2d
     robot: TestResults | None = None # From RobotOrchestrator
-    
+    pre_flight_failure: PreFlightFailure | None = None  # Auth/connectivity failure
+
     # Computed properties aggregate across all non-None results:
-    # .total, .passed, .failed, .skipped, .errors (list[str]), .success_rate,
-    # .has_failures, .has_errors, .is_empty, .exit_code
+    # .total, .passed, .failed, .skipped, .other, .errors (list[str]),
+    # .success_rate, .has_failures, .has_errors, .is_empty, .was_not_run,
+    # .exit_code (Robot Framework convention: 0, 1-250, 252, 253, 255)
 ```
 
 **ExecutionState Usage:**
@@ -5572,27 +6087,61 @@ class ExecutionSummary(BaseModel):
 ### Constants (`core/constants.py`)
 
 ```python
-# Default values
-DEFAULT_OUTPUT_DIR = "output"
-DEFAULT_PARALLEL = 4
-DEFAULT_TEST_TIMEOUT = 300
+# Retry configuration
+RETRY_MAX_ATTEMPTS: int = 3
+RETRY_INITIAL_DELAY: float = 1.0
+RETRY_MAX_DELAY: float = 60.0
+RETRY_EXPONENTIAL_BASE: float = 2.0
 
-# Status values
-STATUS_PASSED = "passed"
-STATUS_FAILED = "failed"
-STATUS_SKIPPED = "skipped"
-STATUS_ERRORED = "errored"
+# Timeouts
+DEFAULT_TEST_TIMEOUT: int = 21600  # 6 hours per test
+CONNECTION_CLOSE_DELAY: float = 0.25
+
+# Concurrency limits (configurable via env vars)
+DEFAULT_API_CONCURRENCY: int = 55   # NAC_TEST_PYATS_API_CONCURRENCY
+DEFAULT_SSH_CONCURRENCY: int = 20   # NAC_TEST_PYATS_SSH_CONCURRENCY
+
+# Platform detection
+IS_MACOS: bool = platform.system() == "Darwin"
+IS_UNSUPPORTED_MACOS_PYTHON: bool = IS_MACOS and sys.version_info < (3, 12)
+
+# Debug mode
+DEBUG_MODE: bool = get_bool_env("NAC_TEST_DEBUG")
+
+# Exit codes (Robot Framework conventions)
+EXIT_INVALID_ARGS: int = 2      # Invalid nac-test CLI arguments (POSIX)
+EXIT_FAILURE_CAP: int = 250     # Maximum failure count (1-250)
+EXIT_DATA_ERROR: int = 252      # Invalid Robot args OR no tests found
+EXIT_INTERRUPTED: int = 253     # Execution interrupted (Ctrl+C)
+EXIT_ERROR: int = 255           # Infrastructure/execution errors
+
+# Output directory structure
+PYATS_RESULTS_DIRNAME: str = "pyats_results"
+ROBOT_RESULTS_DIRNAME: str = "robot_results"
+COMBINED_SUMMARY_FILENAME: str = "combined_summary.html"
+
+# HTTP status code classification
+HTTP_AUTH_FAILURE_CODES: tuple[int, ...] = (401, 403)
+HTTP_SERVICE_UNAVAILABLE_CODES: tuple[int, ...] = (408, 429, 503, 504)
 ```
 
 ### PyATS Constants (`pyats_core/constants.py`)
 
 ```python
-# Test execution
-DEFAULT_TEST_TIMEOUT = 300  # 5 minutes per test
+# Worker calculation (PR #514 — profiled at ~0.08GB avg, 0.35GB with headroom)
+MIN_WORKERS: int = 2
+MAX_WORKERS: int = 32
+MAX_WORKERS_HARD_LIMIT: int = 50
+MEMORY_PER_WORKER_GB: float = 0.35    # Reduced from 2.0 based on profiling
+DEFAULT_CPU_MULTIPLIER: int = 2
+LOAD_AVERAGE_THRESHOLD: float = 0.8
 
-# Archive patterns
-API_ARCHIVE_PATTERN = "nac_test_job_api_*.zip"
-D2D_ARCHIVE_PATTERN = "nac_test_job_d2d_*.zip"
+# Testbed connection tuning
+PYATS_POST_DISCONNECT_WAIT_SECONDS: int = 0
+PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS: int = 0
+
+# Subprocess output buffer limit (10MB default, vs asyncio's 64KB)
+PYATS_OUTPUT_BUFFER_LIMIT: int = 10 * 1024 * 1024  # NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT
 ```
 
 ---
@@ -6072,15 +6621,40 @@ class SystemResourceCalculator:
 
 ### Cleanup Utilities (`utils/cleanup.py`)
 
-Resource cleanup on exit:
+Resource and artifact cleanup to prevent stale data from affecting subsequent runs:
 
 ```python
-def cleanup_temp_files(patterns: List[str]) -> None:
-    """Remove temporary files matching patterns."""
+def cleanup_pyats_runtime(workspace_path: Path | None = None) -> None:
+    """Clean up PyATS runtime directories (.pyats/) before test execution.
 
-def cleanup_output_directory(output_dir: Path) -> None:
-    """Clean up output directory before run."""
+    Essential for CI/CD environments to prevent disk exhaustion.
+    Logs the directory size before removal for monitoring.
+    """
+
+def cleanup_old_test_outputs(output_dir: Path, days: int = 7) -> None:
+    """Remove old *.jsonl test output files older than the specified number of days."""
+
+def cleanup_stale_test_artifacts(output_dir: Path) -> None:
+    """Clean up stale test artifacts that cause incorrect report aggregation.
+
+    Targets the test type directories (api/, d2d/, default/) which contain
+    html_report_data_temp/*.jsonl files from interrupted runs. These stale
+    JSONL files get picked up during report generation and cause incorrect
+    results if not cleaned.
+
+    Does NOT remove:
+        - Archive files (nac_test_job_*.zip): ArchiveInspector uses only
+          the newest archive per type, so old archives are harmless.
+        - pyats_results/ directory: Unconditionally removed and recreated
+          during report generation.
+    """
 ```
+
+**Why `cleanup_stale_test_artifacts()` exists (PR #571):**
+
+When a test run is interrupted (e.g., Ctrl+C), JSONL files from the in-progress run persist in `api/html_report_data_temp/` or `d2d/html_report_data_temp/`. If the next run succeeds, the report generator discovers both the old stale JSONL files and the new ones, causing incorrect aggregation (e.g., reporting failures from a previous run alongside current results). This function runs at the start of PyATS orchestration to remove those directories, ensuring a clean slate.
+
+The `"default"` directory is also cleaned as a safety net for tests run outside orchestration (standalone `base_test.py` execution) which use `"default"` as their test type.
 
 ### Environment Utilities (`utils/environment.py`)
 
@@ -6094,64 +6668,222 @@ def set_env_vars(env_vars: Dict[str, str]) -> None:
     """Set environment variables."""
 ```
 
+### Diagnostic Collection (`cli/diagnostic.py` + `support/nac-test-diagnostic.sh`)
+
+nac-test bundles a comprehensive diagnostic collection system for troubleshooting test execution failures. When invoked with the `--diagnostic` flag, nac-test wraps the user's command inside a diagnostic shell script that collects environment information, executes the command, captures all output, and packages everything into a credential-masked zip archive.
+
+#### Invocation
+
+```bash
+# The --diagnostic flag wraps the command in diagnostic collection
+nac-test -d ./data -t ./tests -o ./results --pyats --diagnostic
+```
+
+The `--diagnostic` flag requires `-o/--output` to be specified (exit code 2 if missing).
+
+#### Architecture
+
+```
+CLI (main.py)
+  │
+  ├─ --diagnostic flag → diagnostic_callback() (Typer eager callback)
+  │     │
+  │     ├─ _find_diagnostic_script()        → Locates bundled shell script via importlib.resources
+  │     ├─ _reconstruct_command(sys.argv)   → Strips --diagnostic, builds shell-safe command
+  │     ├─ _extract_output_dir(sys.argv)    → Parses -o/--output from arguments
+  │     │
+  │     └─ subprocess.run(["bash", script_path, "-o", output_dir, command])
+  │           └─ Exits with script's return code
+  │
+  └─ (normal execution path when --diagnostic not set)
+```
+
+The diagnostic callback is an **eager Typer callback**, meaning it intercepts execution before any other CLI processing occurs. This ensures the diagnostic wrapper captures the entire nac-test lifecycle.
+
+#### What the Diagnostic Script Collects
+
+**Script:** `nac_test/support/nac-test-diagnostic.sh` (v5.0, cross-platform)
+
+| Category | Information Collected |
+|----------|---------------------|
+| **OS Detection** | macOS vs Linux, version, architecture (Intel/Apple Silicon) |
+| **Architecture Detection** | Auto-detects ACI/SD-WAN/Catalyst Center from environment variables |
+| **Environment Variables** | Presence (not values) of controller credentials, NAC_TEST_* variables |
+| **System Information** | CPU, memory, disk, file descriptors, network interfaces |
+| **Python Environment** | Python version, pip list, virtual environment status |
+| **Multiprocessing Config** | Fork method, start method, macOS fork safety settings |
+| **PyATS Configuration** | PyATS version, plugin config, log settings |
+| **SSL/Network** | Certificate chain, connectivity to controller, proxy settings |
+| **Crash Reports** (macOS) | New crash reports generated during execution |
+| **Command Execution** | Full stdout/stderr capture with debug environment variables |
+| **nac-test Output** | Archives, HTML reports, JSONL files from the output directory |
+
+#### Credential Masking
+
+The diagnostic script applies credential masking at multiple points:
+
+1. **Environment variable collection**: Only checks presence/absence of credential variables, never logs values
+2. **Command output**: Post-processes captured output to redact any leaked credentials
+3. **Final pass**: A comprehensive regex-based masking pass runs over all collected files before zip creation
+
+This ensures the diagnostic archive is safe to share with support teams without exposing credentials.
+
+#### Output Structure
+
+```
+nac_test_diagnostic_YYYYMMDD_HHMMSS/
+├── diagnostic_summary.txt       # Human-readable summary
+├── environment_vars.txt         # Variable presence (not values)
+├── system_info.txt              # OS, CPU, memory, disk
+├── python_environment.txt       # Python version, packages
+├── nac_test_execution.log       # Full command output
+├── crash_reports/               # macOS crash reports (if any)
+└── nac_test_output/             # Copies of test output artifacts
+```
+
+The entire directory is compressed into `nac_test_diagnostic_YYYYMMDD_HHMMSS.zip`.
+
 ---
 
 ## File System Layout
 
 ```
 project-root/
-├── pyproject.toml              # Poetry project configuration
+├── pyproject.toml              # uv/pip project configuration
 ├── Makefile                    # Build automation
 ├── README.md                   # Project documentation
 ├── CHANGELOG.md                # Version history
 │
+├── .github/                    # GitHub templates (PR #510)
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md       # Bug report template
+│   │   └── feature_request.md  # Feature request template
+│   └── pull_request_template.md # PR template
+│
 ├── nac_test/                   # Main package
 │   ├── __init__.py
 │   ├── __main__.py             # Entry point
-│   ├── cli/
-│   │   └── main.py             # CLI implementation
+│   ├── _env.py                 # Centralized env var handling
 │   ├── combined_orchestrator.py
 │   ├── data_merger.py
-│   ├── core/
-│   │   ├── constants.py
-│   │   └── models.py
-│   ├── pyats_core/             # PyATS execution engine
-│   │   ├── broker/             # Connection broker
-│   │   ├── common/             # Base test classes
-│   │   ├── discovery/          # Test/device discovery
-│   │   ├── execution/          # Job execution
-│   │   ├── progress/           # Progress reporting
-│   │   ├── reporting/          # HTML reports
-│   │   └── ssh/                # SSH management
-│   ├── robot/                  # Robot Framework
+│   ├── exceptions.py           # Custom exception hierarchy
+│   │
+│   ├── cli/                    # Typer-based CLI interface
+│   │   ├── main.py             # Entry point + flag definitions
+│   │   ├── diagnostic.py       # --diagnostic flag handler
+│   │   ├── ui/
+│   │   │   └── banners.py      # Error/warning banners
+│   │   └── validators/         # Pre-flight validation
+│   │       ├── aci_defaults.py # ACI defaults file check
+│   │       ├── controller_auth.py # Fail-fast auth validation
+│   │       └── common.py       # Shared validator helpers
+│   │
+│   ├── core/                   # Cross-cutting infrastructure
+│   │   ├── constants.py        # Named constants (exit codes, etc.)
+│   │   ├── types.py            # TestResults, CombinedResults
+│   │   ├── models.py           # Shared data models
+│   │   ├── error_classification.py # Auth error classification
+│   │   └── reporting/
+│   │       └── combined_generator.py # combined_summary.html
+│   │
+│   ├── pyats_core/             # PyATS framework integration
+│   │   ├── orchestrator.py     # PyATS orchestration
+│   │   ├── constants.py        # PyATS-specific constants
+│   │   ├── common/             # Generic base infrastructure
+│   │   │   ├── base_test.py    # NACTestBase
+│   │   │   ├── ssh_base_test.py # SSHTestBase
+│   │   │   ├── auth_cache.py   # AuthCache (filelock-based)
+│   │   │   ├── connection_pool.py
+│   │   │   ├── subprocess_auth.py # Fork-safe auth (macOS)
+│   │   │   └── retry_strategy.py
+│   │   ├── broker/             # SSH connection management
+│   │   │   ├── connection_broker.py
+│   │   │   └── broker_client.py
+│   │   ├── discovery/          # Test & device discovery
+│   │   │   ├── test_discovery.py
+│   │   │   ├── test_type_resolver.py # AST-based type detection
+│   │   │   └── device_inventory.py
+│   │   ├── execution/          # Test execution
+│   │   │   ├── subprocess_runner.py
+│   │   │   ├── job_generator.py
+│   │   │   ├── output_processor.py
+│   │   │   └── device/
+│   │   │       ├── device_executor.py
+│   │   │       └── testbed_generator.py
+│   │   ├── http/
+│   │   │   └── subprocess_client.py # macOS fork-safe HTTP
+│   │   ├── progress/
+│   │   │   ├── plugin.py       # PyATS progress plugin
+│   │   │   └── reporter.py     # Console progress reporter
+│   │   ├── reporting/          # HTML report generation
+│   │   │   ├── generator.py
+│   │   │   ├── multi_archive_generator.py
+│   │   │   ├── batching_reporter.py
+│   │   │   ├── collector.py
+│   │   │   ├── step_interceptor.py
+│   │   │   ├── templates.py
+│   │   │   ├── types.py        # ResultStatus enum
+│   │   │   └── utils/
+│   │   │       ├── archive_extractor.py
+│   │   │       ├── archive_inspector.py
+│   │   │       ├── archive_aggregator.py
+│   │   │       └── archive_security.py
+│   │   └── ssh/
+│   │       ├── command_cache.py
+│   │       ├── connection_manager.py
+│   │       └── connection_utils.py
+│   │
+│   ├── robot/                  # Robot Framework integration
 │   │   ├── orchestrator.py
-│   │   ├── pabot.py
-│   │   └── robot_writer.py
-│   └── utils/                  # Utilities
-│       ├── cleanup.py
+│   │   ├── robot_writer.py     # Template → .robot generation
+│   │   ├── pabot.py            # Pabot parallel execution (≥5.2.2)
+│   │   └── reporting/
+│   │       ├── robot_generator.py
+│   │       └── robot_output_parser.py
+│   │
+│   ├── support/                # Diagnostic support
+│   │   └── nac-test-diagnostic.sh # Diagnostic collection script
+│   │
+│   └── utils/                  # Shared utilities
+│       ├── asyncio_utils.py
+│       ├── cleanup.py          # Stale artifact cleanup
+│       ├── controller.py       # Controller type detection
+│       ├── device_validation.py
 │       ├── environment.py
-│       ├── logging.py
-│       ├── path_setup.py
-│       ├── system_resources.py
-│       └── terminal.py
+│       ├── file_discovery.py
+│       ├── formatting.py       # Duration/output formatting
+│       ├── logging.py          # Logging setup + LogLevel enum
+│       ├── platform.py         # macOS/Python version gates
+│       ├── strings.py          # String utilities (hostname sanitization)
+│       ├── system_resources.py # Worker calculation
+│       ├── terminal.py
+│       ├── url.py              # URL parsing utilities
+│       └── xunit_merger.py     # Merge Robot+PyATS xunit.xml
 │
 ├── tests/                      # Test suite
+│   ├── e2e/                    # End-to-end tests
 │   ├── integration/
 │   │   ├── fixtures/           # Test fixtures
-│   │   └── test_integration.py
+│   │   └── test_*.py
+│   ├── pyats_core/             # PyATS core tests
 │   └── unit/
-│       └── test_*.py
+│       ├── cli/
+│       ├── core/
+│       ├── robot/
+│       └── utils/
 │
 └── output/                     # Generated outputs (git-ignored)
-    ├── merged_data_model.yaml  # Merged data file
-    ├── pyats_results/          # Extracted archives
-    │   ├── api/                # API test results
-    │   │   ├── html_reports/
-    │   │   └── results.json
-    │   └── d2d/                # D2D test results
-    │       ├── html_reports/
-    │       └── results.json
-    └── nac_test_job_*.zip      # PyATS archives
+    ├── merged_data_model_test_variables.yaml
+    ├── combined_summary.html
+    ├── xunit.xml               # Merged PyATS + Robot xunit
+    ├── pyats_results/
+    │   ├── html_reports/
+    │   │   └── summary_report.html
+    │   └── nac_test_job_*.zip
+    └── robot_results/
+        ├── output.xml
+        ├── log.html
+        └── report.html
 ```
 
 ---
@@ -6165,43 +6897,94 @@ project-root/
 git clone <repository-url>
 cd nac-test
 
-# Install with Poetry
-poetry install
+# Install with uv (recommended)
+uv pip install -e .
 
 # Or with pip
 pip install -e .
+
+# For development (includes test/lint dependencies)
+uv pip install -e ".[dev]"
 ```
+
+> **v2.0.0a1 Change:** `nac-test-pyats-common` is now a direct dependency of `nac-test`. Users install with `pip install nac-test` — the separate `[adapters]` and `[all]` extra groups have been removed. There is no longer a need for `pip install nac-test[all]` or `pip install nac-test-pyats-common` separately.
 
 ### Running Tests
 
 ```bash
-# Run PyATS tests
-nac-test --pyats --test-dir ./tests --data ./data --output-dir ./output
+# Run combined PyATS + Robot tests (production mode)
+nac-test -d ./data -t ./templates -o ./output
 
-# Run Robot Framework tests
-nac-test --data ./data --templates ./templates --output-dir ./output
+# Run PyATS tests only (development mode)
+nac-test -d ./data -t ./templates -o ./output --pyats
 
-# With parallel execution
-nac-test --pyats --test-dir ./tests --parallel 8
+# Run Robot Framework tests only (development mode)
+nac-test -d ./data -t ./templates -o ./output --robot
 
-# With minimal reports
-nac-test --pyats --test-dir ./tests --minimal-reports
+# With parallel execution limit
+nac-test -d ./data -t ./templates -o ./output --max-parallel-devices 10
+
+# With minimal reports for CI/CD artifact storage
+nac-test -d ./data -t ./templates -o ./output --minimal-reports
+
+# Dry-run: validate test structure without execution
+nac-test -d ./data -t ./templates -o ./output --dry-run
+
+# Render templates without executing tests
+nac-test -d ./data -t ./templates -o ./output --render-only
+
+# Verbose mode with debug logging
+nac-test -d ./data -t ./templates -o ./output --verbose
+
+# Diagnostic collection for troubleshooting
+nac-test -d ./data -t ./templates -o ./output --diagnostic
 ```
 
 ### Environment Variables
 
 ```bash
-# Device credentials (loaded from data YAML)
-export APIC_HOST="10.1.1.1"
-export APIC_USERNAME="admin"
-export APIC_PASSWORD="secret"
+# Controller credentials (architecture-specific)
+# ACI
+export ACI_URL="https://10.1.1.1"
+export ACI_USERNAME="admin"
+export ACI_PASSWORD="secret"
 
-# Resource limits
-export NAC_TEST_PYATS_MAX_SSH_CONNECTIONS="100"
+# SD-WAN
+export SDWAN_URL="https://10.1.1.2"
+export SDWAN_USERNAME="admin"
+export SDWAN_PASSWORD="secret"
+
+# Catalyst Center
+export CC_URL="https://10.1.1.3"
+export CC_USERNAME="admin"
+export CC_PASSWORD="secret"
+
+# nac-test CLI flags (all prefixed with NAC_TEST_)
+export NAC_TEST_LOGLEVEL="INFO"
+export NAC_TEST_VERBOSE="1"
+export NAC_TEST_MINIMAL_REPORTS="true"
+
+# Internal tuning (all prefixed with NAC_TEST_PYATS_)
+export NAC_TEST_PYATS_PROCESSES="8"
+export NAC_TEST_PYATS_API_CONCURRENCY="55"
+export NAC_TEST_PYATS_SSH_CONCURRENCY="20"
 
 # Debug mode
-export NAC_TEST_VERBOSE="1"
+export NAC_TEST_DEBUG="true"
 ```
+
+> **v2.0.0a1 Environment Variable Standardization (PR #599):** All internal PyATS tuning variables were renamed from ad-hoc names (e.g., `PYATS_MAX_WORKERS`, `MAX_CONNECTIONS`, `NAC_API_CONCURRENCY`) to a consistent `NAC_TEST_PYATS_` prefix. Old names are still accepted for backward compatibility but will be removed in a future version. See the **Internal Tuning Environment Variables (PyATS)** table in the [Environment Variable Support](#environment-variable-support) section for the complete mapping.
+
+**Naming Convention:**
+
+| Scope | Prefix | Examples |
+|-------|--------|----------|
+| CLI flags | `NAC_TEST_` | `NAC_TEST_DATA`, `NAC_TEST_PYATS`, `NAC_TEST_DRY_RUN` |
+| PyATS internal tuning | `NAC_TEST_PYATS_` | `NAC_TEST_PYATS_PROCESSES`, `NAC_TEST_PYATS_API_CONCURRENCY` |
+| Debug/development | `NAC_TEST_DEBUG` | `NAC_TEST_DEBUG=true` |
+| Controller credentials | Architecture-specific | `ACI_URL`, `SDWAN_USERNAME`, `CC_PASSWORD` |
+
+The two-tier prefix (`NAC_TEST_` for CLI, `NAC_TEST_PYATS_` for internal tuning) prevents naming collisions and makes it clear which variables are user-facing vs internal tuning knobs. The `_env.py` module provides `get_bool_env()` and `get_positive_numeric_env()` helpers that handle both old and new variable names during the transition period.
 
 ---
 
@@ -8191,26 +8974,60 @@ tests/
 
 **Step 1: File Discovery** (Source: `test_discovery.py`)
 
+Test discovery scans the `--templates` directory recursively for all `.py` files and validates them as PyATS tests using content-based detection. There is **no path-based filtering** — files can live anywhere under the templates directory.
+
 ```python
 def discover_pyats_tests(self) -> tuple[list[Path], list[tuple[Path, str]]]:
-    """Find all .py test files when --pyats flag is set"""
+    """Find all PyATS test files in the test directory.
 
+    Searches for Python files and validates them as PyATS tests
+    by checking for nac_test imports and @aetest decorators.
+    """
     for test_path in self.test_dir.rglob("*.py"):
         # Skip non-test files
         if "__pycache__" in str(test_path):
             continue
-        if test_path.name.startswith("_"):
+        if test_path.name.startswith("_"):  # Also covers __init__.py
             continue
-        if test_path.name == "__init__.py":
+        if self._is_excluded(test_path):    # Excluded paths (filters, jinja tests)
             continue
 
-        # Include files in standard test directories
-        if "/test/" in path_str or "/tests/" in path_str:
-            # Exclude utility directories
-            if "pyats_common" not in path_str and "jinja_filters" not in path_str:
-                # Validate file contains PyATS imports
-                if "aetest" in content or "from pyats" in content:
-                    test_files.append(test_path)
+        content = test_path.read_text()
+        is_valid, skip_reason = self._is_valid_pyats_test(content)
+
+        if is_valid:
+            test_files.append(test_path.resolve())
+        else:
+            skipped_files.append((test_path, skip_reason))
+```
+
+**PyATS Test Validation Criteria** (both must match):
+
+```python
+# Pattern 1: Must import from nac_test or nac_test_pyats_common
+_PYATS_IMPORT_PATTERN = re.compile(
+    r"^\s*(?:from|import)\s+(?:nac_test|nac_test_pyats_common)\b",
+    re.MULTILINE,
+)
+
+# Pattern 2: Must have @aetest.test, @aetest.setup, or @aetest.cleanup decorator
+_PYATS_DECORATOR_PATTERN = re.compile(
+    r"^\s*@aetest\.(test|setup|cleanup)\b",
+    re.MULTILINE,
+)
+```
+
+> **Historical Note (PR #511):** Earlier versions required test files to reside under a `/tests/` or `/test/` directory and used simple string matching (`"aetest" in content`). The current implementation removes the path requirement and uses regex patterns for more precise detection—preventing false positives from comments or strings containing `aetest`.
+
+**Exclude Paths:**
+
+The `TestDiscovery` constructor accepts an `exclude_paths` parameter. The CLI uses this to prevent custom Jinja2 filter directories and test function directories from being scanned for PyATS tests:
+
+```python
+TestDiscovery(
+    test_dir=templates_dir,
+    exclude_paths=[filters_dir, tests_dir]  # --filters and --tests dirs
+)
 ```
 
 **Step 2: Categorization via TestTypeResolver** (Source: `test_discovery.py`)
@@ -10779,7 +11596,7 @@ The nac-test framework creates a sophisticated directory structure to organize t
 When nac-test executes, it creates this directory hierarchy:
 
 ```
-{base_output_dir}/                           # User-specified output directory (--output-dir)
+{base_output_dir}/                           # User-specified output directory (-o, --output)
 │
 ├── merged_data_model_test_variables.yaml    # Merged data model from all input YAMLs
 │
@@ -18836,20 +19653,23 @@ def run(
 **CLI Usage:**
 
 ```bash
-# Default: CRITICAL (show almost nothing except critical errors)
-nac-test run --data base.yaml
+# Default: WARNING (show warnings and above)
+nac-test -d base.yaml -t templates/ -o output/
 
 # INFO: Show high-level operational info
-nac-test run --data base.yaml --verbosity INFO
+nac-test -d base.yaml -t templates/ -o output/ --loglevel INFO
 
 # DEBUG: Show everything (very verbose)
-nac-test run --data base.yaml --verbosity DEBUG
+nac-test -d base.yaml -t templates/ -o output/ --loglevel DEBUG
 
 # Short form
-nac-test run --data base.yaml -v DEBUG
+nac-test -d base.yaml -t templates/ -o output/ -l DEBUG
+
+# --verbose flag (implies DEBUG + enables pabot/PyATS console output)
+nac-test -d base.yaml -t templates/ -o output/ --verbose
 
 # Environment variable
-NAC_TEST_LOGLEVEL=DEBUG nac-test run --data base.yaml
+NAC_TEST_LOGLEVEL=DEBUG nac-test -d base.yaml -t templates/ -o output/
 ```
 
 **`is_eager=True`:**
@@ -22843,7 +23663,7 @@ required_vars = [
 **Enforcement Mechanisms**:
 
 1. **Type Hints + mypy**: TypedDict contracts validated by mypy static analysis
-2. **Runtime Checks**: Environment variable validation in orchestrator preflight checks
+2. **Runtime Checks**: Environment variable validation in orchestrator pre-flight checks
 3. **Base Class `__init_subclass__`**: Class variable enforcement (currently commented out)
 4. **Documentation**: This document + inline docstrings
 
@@ -24603,11 +25423,11 @@ output_dir/
 **Typical Development Workflow**:
 ```bash
 # Iteration 1: Run test to see baseline behavior
-nac-test -d data/ -t templates/ -o output/ --pyats -v INFO
+nac-test -d data/ -t templates/ -o output/ --pyats -l INFO
 
 # Iteration 2: Fix test code based on failures
 # (edit test file, modify verification logic)
-nac-test -d data/ -t templates/ -o output/ --pyats -v DEBUG
+nac-test -d data/ -t templates/ -o output/ --pyats -l DEBUG
 
 # Iteration 3: Verify fix works
 nac-test -d data/ -t templates/ -o output/ --pyats
@@ -24954,7 +25774,7 @@ output_dir/
 **Initial Run (Combined - Baseline)**:
 ```bash
 # Full run to establish baseline (20 minutes)
-nac-test -d data/aci/ -t templates/aci/ -o output/ -v INFO
+nac-test -d data/aci/ -t templates/aci/ -o output/ -l INFO
 
 # Output shows:
 # ✅ PyATS tests: Completed (5 minutes)
@@ -24965,13 +25785,13 @@ nac-test -d data/aci/ -t templates/aci/ -o output/ -v INFO
 **Development Iterations (PyATS Only)**:
 ```bash
 # Iteration 1: Run with --pyats flag (30 seconds)
-nac-test -d data/aci/ -t templates/aci/ -o output/ --pyats -v DEBUG
+nac-test -d data/aci/ -t templates/aci/ -o output/ --pyats -l DEBUG
 
 # Observe: Test fails due to incorrect JMESPath query
 # Fix: Update JMESPath expression in test file
 
 # Iteration 2: Re-run with --pyats (30 seconds)
-nac-test -d data/aci/ -t templates/aci/ -o output/ --pyats -v DEBUG
+nac-test -d data/aci/ -t templates/aci/ -o output/ --pyats -l DEBUG
 
 # Observe: JMESPath works, but context linking broken
 # Fix: Add test_context parameter to API calls
@@ -25425,6 +26245,44 @@ These are documented improvement areas found in the code:
 
 ---
 
+## GitHub Templates and Developer Experience
+
+nac-test provides structured GitHub templates (PR #510) to standardize contributions and issue reporting across the project.
+
+### Pull Request Template
+
+**Location:** `.github/pull_request_template.md`
+
+The PR template guides contributors through a structured review process with checkboxes for:
+
+| Section | Purpose |
+|---------|---------|
+| **Description** | Brief summary of changes |
+| **Closes / Related Issues** | GitHub closing keywords and related issue links |
+| **Type of Change** | Bug fix, feature, breaking change, refactoring, docs, chore |
+| **Test Framework Affected** | PyATS, Robot Framework, or both |
+| **NaC Architecture Affected** | Full list of supported architectures (ACI, SD-WAN, CC, etc.) |
+| **Platform Tested** | macOS and/or Linux with version |
+| **Testing Done** | Unit tests, integration tests, manual testing, HTML report verification |
+| **Checklist** | Code style, self-review, documentation, cross-platform |
+
+### Issue Templates
+
+**Location:** `.github/ISSUE_TEMPLATE/`
+
+| Template | File | Purpose |
+|----------|------|---------|
+| **Bug Report** | `bug_report.yml` | Structured bug reporting with environment details, reproduction steps |
+| **Feature Request** | `feature_request.yml` | New functionality proposals with use case justification |
+| **Architecture Adapter** | `architecture_adapter_issue.yml` | Issues specific to nac-test-pyats-common adapter implementations |
+| **HTML Reporting** | `html_reporting_issue.yml` | Issues with HTML report generation, templates, or rendering |
+| **Documentation Update** | `documentation_update.yml` | Documentation improvements and corrections |
+| **Question** | `question.yml` | Technical questions about nac-test usage or architecture |
+
+Blank issues are disabled (`config.yml: blank_issues_enabled: false`), ensuring all issues follow a structured format. The config also links to the [NaC documentation site](https://netascode.cisco.com/) for general questions.
+
+---
+
 ## Contributor Guide
 
 ### Post-Migration: Where to Make Changes
@@ -25537,7 +26395,61 @@ with FileLock(str(lock_file)):
 - [ ] Consider Redis/memcached for distributed environments with high concurrency
 - [ ] Add CI environment detection to warn about potential NFS locking issues
 
-### macOS Fork Safety: SSL and HTTP Client Considerations
+### Platform Safety Gates and macOS Considerations
+
+nac-test implements multiple platform safety gates to prevent cryptic runtime failures on macOS. These gates operate at different layers of the stack, from early CLI hard-exits to runtime configuration injections.
+
+#### Gate 1: macOS Python Version Hard-Exit
+
+**Location:** `nac_test/utils/platform.py` → `check_and_exit_if_unsupported_macos_python()`
+**Constant:** `IS_UNSUPPORTED_MACOS_PYTHON` in `nac_test/core/constants.py`
+
+macOS with Python < 3.12 exhibits a class of fork+SSL crashes that cannot be worked around reliably. Rather than allowing users to encounter cryptic segmentation faults, nac-test **hard-exits at startup** with a clear error message:
+
+```python
+# core/constants.py
+IS_MACOS: bool = platform.system() == "Darwin"
+IS_UNSUPPORTED_MACOS_PYTHON: bool = IS_MACOS and sys.version_info < (3, 12)
+```
+
+```python
+# utils/platform.py
+def check_and_exit_if_unsupported_macos_python() -> None:
+    if IS_UNSUPPORTED_MACOS_PYTHON:
+        typer.secho(
+            f"Error: Python {sys.version_info.major}.{sys.version_info.minor} "
+            "on macOS is not supported.",
+            fg=typer.colors.RED, bold=True, err=True,
+        )
+        typer.echo(
+            "Please use Python 3.12 or higher on macOS.\n"
+            "Some common ways to install it:\n"
+            "  • brew install python@3.12\n"
+            "  • uv python install 3.12\n"
+            "  • pyenv install 3.12",
+            err=True,
+        )
+        raise typer.Exit(1)
+```
+
+This gate is called **in the CLI's main callback** (Typer eager processing phase), ensuring it fires before any data merging, orchestrator initialization, or test execution.
+
+**Why Python 3.12 specifically:** Python 3.12 changed the default `multiprocessing` start method on macOS from `fork` to `forkserver`, which avoids the CoreFoundation deadlocks that cause silent crashes on earlier Python versions.
+
+#### Gate 2: PyATS git_info Disable
+
+**Location:** `nac_test/pyats_core/execution/subprocess_runner.py`
+
+PyATS collects git repository information (`git_info`) during report generation by default. On macOS with Python 3.12+, this triggers CoreFoundation lock corruption when the git subprocess runs after fork(). The SubprocessRunner injects a temporary PyATS configuration file that disables this collection:
+
+```python
+# Injected into every PyATS subprocess
+pyats_config = "[report]\ngit_info = false\n"
+```
+
+This gate is **transparent to the user** — no flag or configuration is needed. It applies unconditionally to all PyATS subprocesses.
+
+#### Gate 3: SSL and HTTP Client Fork Safety (Runtime)
 
 **Problem**: On macOS, certain HTTP libraries (notably `httpx`) crash silently when used after `fork()` due to OpenSSL threading primitive initialization issues.
 
@@ -25885,6 +26797,6 @@ nac-test provides a comprehensive framework for network infrastructure testing, 
 
 ---
 
-*Document Version: 1.1*
-*Last Updated: 2025-01*
-*nac-test Version: 1.1.0*
+*Document Version: 2.0*
+*Last Updated: 2026-03*
+*nac-test Version: 2.0.0a1*
