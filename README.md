@@ -118,6 +118,46 @@ When working with feature branches or pre-release versions that aren't yet publi
 - `uv` installed ([Installation Guide](https://docs.astral.sh/uv/getting-started/installation/))
 - Local clones of the required repositories
 
+### Artifactory Authentication (Cisco Developers)
+
+Dependencies are resolved through Cisco's Artifactory instance for supply-chain safety. You need to configure credentials for `artifactory.devhub-cloud.cisco.com`.
+
+**Getting your credentials:**
+
+1. Navigate to <https://artifactory.devhub-cloud.cisco.com/ui/user_profile> and authenticate via SAML SSO.
+2. Click **"Generate An Identity Token"** (tokens are valid for 90 days).
+3. Your username is your CEC ID **without** `@cisco.com`
+
+Then configure uv using **one** of the following methods:
+
+**Option 1: `uv auth login` (recommended)**
+
+```bash
+uv auth login artifactory.devhub-cloud.cisco.com --username <cec-id>
+# Paste your identity token when prompted for the password
+```
+
+Credentials are stored in uv's [credentials store](https://docs.astral.sh/uv/concepts/authentication/http/#the-uv-credentials-store) and used automatically.
+
+**Option 2: `~/.netrc`**
+
+Add an entry to your `~/.netrc` file:
+
+```
+machine artifactory.devhub-cloud.cisco.com
+  login <cec-id>
+  password <identity-token>
+```
+
+**Option 3: Environment variables**
+
+Export the credentials derived from the index name in `pyproject.toml`:
+
+```bash
+export UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME=<cec-id>
+export UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD=<identity-token>
+```
+
 ### Required Packages for PyATS Testing
 
 For PyATS-based testing, you need **both** packages:
