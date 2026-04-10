@@ -47,7 +47,7 @@ dependencies = [
     "pyats>=25.5 ; sys_platform != 'win32'",
     "genie>=25.5 ; sys_platform != 'win32'",
     "psutil>=7.0.0",
-    "httpx>=0.28",
+    "httpx~=0.28",
     "aiofiles>=24.1",
     "colorama>=0.4.6",
     "markdown>=3.8.2",
