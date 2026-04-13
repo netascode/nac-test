@@ -9,8 +9,10 @@ by the v2.0 module restructuring.
 """
 
 import importlib
+import inspect
 import sys
 import warnings
+from pathlib import Path
 
 import pytest
 
@@ -18,6 +20,22 @@ import pytest
 SHIMS = [
     ("nac_test.pabot", "nac_test.robot.pabot", "run_pabot"),
     ("nac_test.robot_writer", "nac_test.robot.robot_writer", "RobotWriter"),
+]
+
+# Expected required (no-default) parameters for exported callables.
+# Guards against signature changes that would break downstream callers.
+# Format: (module, attr, {param_name: annotation, ...})
+EXPECTED_SIGNATURES = [
+    ("nac_test.robot.pabot", "run_pabot", {"path": Path}),
+    (
+        "nac_test.robot.robot_writer",
+        "RobotWriter",
+        {
+            "data_paths": list[Path],
+            "filters_path": Path | None,
+            "tests_path": Path | None,
+        },
+    ),
 ]
 
 
@@ -46,3 +64,22 @@ def test_shim_emits_deprecation_warning(
     assert len(shim_warnings) == 1
     assert canonical_module in str(shim_warnings[0].message)
     assert getattr(mod, attr) is canonical
+
+
+@pytest.mark.parametrize(
+    "module, attr, expected_params",
+    EXPECTED_SIGNATURES,
+    ids=[s[1] for s in EXPECTED_SIGNATURES],
+)
+def test_signature_contract(
+    module: str, attr: str, expected_params: dict[str, type]
+) -> None:
+    """Guard against required-arg changes that would break downstream callers."""
+    obj = getattr(importlib.import_module(module), attr)
+    sig = inspect.signature(obj)
+    required = {
+        name: p.annotation
+        for name, p in sig.parameters.items()
+        if p.default is inspect.Parameter.empty
+    }
+    assert required == expected_params
