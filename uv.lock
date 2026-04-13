@@ -1806,7 +1806,7 @@ wheels = [
 
 [[package]]
 name = "nac-test"
-version = "2.0.0b2"
+version = "2.0.0b3"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1867,7 +1867,7 @@ requires-dist = [
     { name = "filelock", specifier = ">=3.0.0" },
     { name = "flask", marker = "extra == 'dev'", specifier = ">=3.1" },
     { name = "genie", marker = "sys_platform != 'win32'", specifier = ">=25.5" },
-    { name = "httpx", specifier = ">=0.28" },
+    { name = "httpx", specifier = "~=0.28" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "jmespath", specifier = ">=1.0.1" },
     { name = "jsonpath-ng", specifier = "!=1.8.0" },
