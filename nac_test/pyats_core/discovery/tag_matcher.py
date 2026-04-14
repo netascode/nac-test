@@ -90,7 +90,12 @@ class TagMatcher:
         return bool(self._include_patterns.match(tags_list))
 
     def __str__(self) -> str:
-        """Return human-readable filter description using Robot's pattern formatting."""
+        """Return human-readable filter description using Robot's pattern formatting.
+
+        Deliberately iterates TagPatterns objects (not the raw _include_list/_exclude_list)
+        because TagPatterns yields the canonical formatted form, e.g. "bgpORospf" becomes
+        "bgp OR ospf".  The raw input form is available via __repr__.
+        """
         parts = []
         if self._include_patterns:
             include_str = ", ".join(f"'{p}'" for p in self._include_patterns)
