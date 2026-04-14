@@ -34,6 +34,11 @@ DEFAULT_TEST_TYPE: str = "api"
 class TestFileMetadata:
     """Metadata extracted from a PyATS test file.
 
+    Uses ``slots=True`` to reduce per-instance memory overhead -- there can be
+    thousands of these during discovery of large test repositories.
+    ``PyatsDiscoveryResult`` uses a plain ``@dataclass`` because only one
+    instance exists per discovery run.
+
     Attributes:
         path: Absolute path to the test file
         test_type: The test type ("api" or "d2d")
