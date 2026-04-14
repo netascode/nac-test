@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from ...utils import get_or_create_event_loop
+from ..constants import MAX_BROKER_MESSAGE_BYTES
 from ..ssh.command_cache import CommandCache
 
 logger = logging.getLogger(__name__)
@@ -145,6 +146,13 @@ class ConnectionBroker:
                 message_length = int.from_bytes(length_data, byteorder="big")
 
                 if message_length == 0:
+                    break
+
+                if message_length > MAX_BROKER_MESSAGE_BYTES:
+                    logger.warning(
+                        f"Client {client_addr} sent oversized frame "
+                        f"({message_length} bytes, limit {MAX_BROKER_MESSAGE_BYTES})"
+                    )
                     break
 
                 # Read message data

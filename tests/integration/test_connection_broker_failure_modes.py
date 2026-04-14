@@ -30,6 +30,7 @@ import pytest
 
 from nac_test.pyats_core.broker.broker_client import BrokerClient
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
+from nac_test.pyats_core.constants import MAX_BROKER_MESSAGE_BYTES
 
 pytestmark = pytest.mark.integration
 
@@ -456,6 +457,32 @@ class TestMalformedRequests:
                 else:
                     writer.write(payload)
 
+                await writer.drain()
+                writer.write_eof()
+
+                data = await asyncio.wait_for(reader.read(), timeout=1.0)
+                assert data == b""
+
+                writer.close()
+                await writer.wait_closed()
+
+            await _run_broker(broker, _body())
+
+        asyncio.run(_run())
+
+    def test_oversized_frame_closes_connection(self, make_broker: Any) -> None:
+        """Frames exceeding MAX_BROKER_MESSAGE_BYTES are rejected before read."""
+        broker: ConnectionBroker = make_broker({})
+
+        async def _run() -> None:
+            async def _body() -> None:
+                reader, writer = await asyncio.open_unix_connection(
+                    str(broker.socket_path)
+                )
+
+                # Send a length prefix just over the limit (don't send the body)
+                oversized_len = MAX_BROKER_MESSAGE_BYTES + 1
+                writer.write(oversized_len.to_bytes(4, byteorder="big"))
                 await writer.drain()
                 writer.write_eof()
 
