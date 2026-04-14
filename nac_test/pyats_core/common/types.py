@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import (
     Any,
     Generic,
+    Literal,
     Protocol,
     TypeVar,
 )
@@ -27,7 +28,9 @@ else:
 
 from nac_test.pyats_core.reporting.types import ResultStatus
 
-DEFAULT_TEST_TYPE: str = "api"
+TestType = Literal["api", "d2d"]
+
+DEFAULT_TEST_TYPE: TestType = "api"
 
 
 @dataclass(slots=True)
@@ -47,7 +50,7 @@ class TestFileMetadata:
     """
 
     path: Path
-    test_type: str
+    test_type: TestType
     groups: list[str] = field(default_factory=list)
 
 

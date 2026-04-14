@@ -88,16 +88,17 @@ from typing import Final
 from nac_test.pyats_core.common.types import (
     DEFAULT_TEST_TYPE,
     TestFileMetadata,
+    TestType,
 )
 
 logger = logging.getLogger(__name__)
 
 # Module-level constants
-VALID_TEST_TYPES: Final[set[str]] = {"api", "d2d"}
+VALID_TEST_TYPES: Final[set[TestType]] = {"api", "d2d"}
 
 # Base class to test type mapping
 # This dictionary maps known PyATS test base class names to their test types
-BASE_CLASS_MAPPING: Final[dict[str, str]] = {
+BASE_CLASS_MAPPING: Final[dict[str, TestType]] = {
     # API test bases (controller/REST tests)
     "NACTestBase": "api",  # Generic base, defaults to API
     "APICTestBase": "api",  # ACI/APIC controller tests
@@ -192,7 +193,7 @@ class TestMetadataResolver:
         tree = ast.parse(content, filename=str(file_path))
 
         found_bases: list[str] = []
-        detected_test_type: str | None = None
+        detected_test_type: TestType | None = None
         detected_groups: list[str] = []
 
         for node in tree.body:
@@ -337,7 +338,7 @@ class TestMetadataResolver:
         return TestFileMetadata(path=test_file, test_type=test_type, groups=[])
 
     @staticmethod
-    def _detect_via_directory(test_file: Path) -> str:
+    def _detect_via_directory(test_file: Path) -> TestType:
         """Detect test type from directory structure.
 
         This is the fallback detection method when AST analysis fails to
