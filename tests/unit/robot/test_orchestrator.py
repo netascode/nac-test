@@ -234,28 +234,21 @@ class TestRobotOrchestrator:
         self, mock_generator, mock_pabot, orchestrator, temp_output_dir
     ) -> None:
         """Test run_tests executes full test lifecycle."""
-        orchestrator.robot_writer.write = MagicMock()
-
-        mock_pabot.return_value = 0
-
-        mock_generator_instance = MagicMock()
+        self._setup_run_tests_mocks(
+            mock_generator, mock_pabot, orchestrator, temp_output_dir
+        )
+        # Override default TestResults() with specific pass counts
         mock_stats = TestResults(passed=1, failed=0, skipped=0)
-        mock_generator_instance.generate_summary_report.return_value = (
+        mock_generator.return_value.generate_summary_report.return_value = (
             temp_output_dir / ROBOT_RESULTS_DIRNAME / SUMMARY_REPORT_FILENAME,
             mock_stats,
         )
-        mock_generator.return_value = mock_generator_instance
-
-        robot_results_dir = temp_output_dir / ROBOT_RESULTS_DIRNAME
-        robot_results_dir.mkdir()
-        for filename in [LOG_HTML, OUTPUT_XML, REPORT_HTML, XUNIT_XML]:
-            (robot_results_dir / filename).write_text(f"Mock {filename}")
 
         stats = orchestrator.run_tests()
 
         orchestrator.robot_writer.write.assert_called_once()
         mock_pabot.assert_called_once()
-        mock_generator_instance.generate_summary_report.assert_called_once()
+        mock_generator.return_value.generate_summary_report.assert_called_once()
 
         assert stats.total == 1
         assert stats.passed == 1
