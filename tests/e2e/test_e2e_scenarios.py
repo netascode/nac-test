@@ -1646,6 +1646,12 @@ class TestE2EPreflightAuthFailure(E2ECombinedTestBase):
 # =============================================================================
 
 
+def _get_robot_test_names(results: E2EResults) -> list[str]:
+    """Extract Robot test names from output.xml."""
+    xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
+    return [t.get("name", "") for t in ET.parse(xml_path).getroot().findall(".//test")]
+
+
 class TestE2ETagFilterInclude(E2ECombinedTestBase):
     """E2E tests for tag filtering with --include bgp.
 
@@ -1664,16 +1670,11 @@ class TestE2ETagFilterInclude(E2ECombinedTestBase):
 
     def test_only_bgp_robot_test_in_output_xml(self, results: E2EResults) -> None:
         """Verify output.xml contains only the bgp-tagged Robot test."""
-        from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
+        test_names = _get_robot_test_names(results)
 
-        xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
-
-        tests = root.findall(".//test")
-        test_names = [t.get("name", "") for t in tests]
-
-        assert len(tests) == 1, f"Expected 1 Robot test, got {len(tests)}: {test_names}"
+        assert len(test_names) == 1, (
+            f"Expected 1 Robot test, got {len(test_names)}: {test_names}"
+        )
         assert "bgp" in test_names[0].lower(), (
             f"Expected bgp-related test, got: {test_names[0]}"
         )
@@ -1708,16 +1709,11 @@ class TestE2ETagFilterExclude(E2ECombinedTestBase):
         self, results: E2EResults
     ) -> None:
         """Verify output.xml does not contain the ospf-tagged Robot test."""
-        from nac_test.core.constants import ROBOT_RESULTS_DIRNAME
+        test_names = _get_robot_test_names(results)
 
-        xml_path = results.output_dir / ROBOT_RESULTS_DIRNAME / "output.xml"
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
-
-        tests = root.findall(".//test")
-        test_names = [t.get("name", "") for t in tests]
-
-        assert len(tests) == 1, f"Expected 1 Robot test, got {len(tests)}: {test_names}"
+        assert len(test_names) == 1, (
+            f"Expected 1 Robot test, got {len(test_names)}: {test_names}"
+        )
         assert "ospf" not in test_names[0].lower(), (
             f"Expected ospf test to be excluded, got: {test_names[0]}"
         )
