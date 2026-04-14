@@ -380,8 +380,7 @@ class TestMalformedRequests:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> str:
-            await broker._start_socket_server()
-            try:
+            async def _body() -> str:
                 async with BrokerClient(socket_path=broker.socket_path) as client:
                     try:
                         await asyncio.wait_for(
@@ -392,10 +391,9 @@ class TestMalformedRequests:
                         return str(e)
 
                     raise AssertionError("Expected ConnectionError")
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+
+            result: str = await _run_broker(broker, _body())
+            return result
 
         err = asyncio.run(_run())
         assert "Unknown command" in err
@@ -404,8 +402,7 @@ class TestMalformedRequests:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> str:
-            await broker._start_socket_server()
-            try:
+            async def _body() -> str:
                 async with BrokerClient(socket_path=broker.socket_path) as client:
                     try:
                         await asyncio.wait_for(
@@ -416,10 +413,9 @@ class TestMalformedRequests:
                         return str(e)
 
                     raise AssertionError("Expected ConnectionError")
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+
+            result: str = await _run_broker(broker, _body())
+            return result
 
         err = asyncio.run(_run())
         assert "Unknown command" in err
@@ -479,8 +475,7 @@ class TestMalformedRequests:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> dict[str, Any]:
-            await broker._start_socket_server()
-            try:
+            async def _body() -> dict[str, Any]:
                 reader, writer = await asyncio.open_unix_connection(
                     str(broker.socket_path)
                 )
@@ -489,26 +484,14 @@ class TestMalformedRequests:
                 writer.write(len(payload).to_bytes(4, byteorder="big") + payload)
                 await writer.drain()
 
-                response_len = int.from_bytes(
-                    await asyncio.wait_for(reader.readexactly(4), timeout=1.0),
-                    byteorder="big",
-                )
-                response: dict[str, Any] = json.loads(
-                    (
-                        await asyncio.wait_for(
-                            reader.readexactly(response_len), timeout=1.0
-                        )
-                    ).decode("utf-8")
-                )
+                response = await _read_framed_json(reader)
 
                 writer.close()
                 await writer.wait_closed()
                 return response
 
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+            result: dict[str, Any] = await _run_broker(broker, _body())
+            return result
 
         result = asyncio.run(_run())
         assert result["status"] == "error"
@@ -602,45 +585,32 @@ class TestMalformedRequests:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> None:
-            await broker._start_socket_server()
-            try:
+            async def _body() -> None:
                 reader, writer = await asyncio.open_unix_connection(
                     str(broker.socket_path)
                 )
 
-                def _frame(obj: dict[str, Any]) -> bytes:
-                    data = json.dumps(obj).encode("utf-8")
-                    return len(data).to_bytes(4, byteorder="big") + data
-
-                async def _read_response() -> dict[str, Any]:
-                    resp_len = int.from_bytes(
-                        await asyncio.wait_for(reader.readexactly(4), timeout=1.0),
-                        byteorder="big",
-                    )
-                    resp: dict[str, Any] = json.loads(
-                        (
-                            await asyncio.wait_for(
-                                reader.readexactly(resp_len), timeout=1.0
-                            )
-                        ).decode("utf-8")
-                    )
-                    return resp
-
                 # 1) ping
                 writer.write(_frame({"command": "ping"}))
                 await writer.drain()
-                assert await _read_response() == {"status": "success", "result": "pong"}
+                assert await _read_framed_json(reader) == {
+                    "status": "success",
+                    "result": "pong",
+                }
 
                 # 2) handled error response (missing hostname)
                 writer.write(_frame({"command": "connect"}))
                 await writer.drain()
-                resp2 = await _read_response()
+                resp2 = await _read_framed_json(reader)
                 assert resp2["status"] == "error"
 
                 # 3) ping still works after a handled error
                 writer.write(_frame({"command": "ping"}))
                 await writer.drain()
-                assert await _read_response() == {"status": "success", "result": "pong"}
+                assert await _read_framed_json(reader) == {
+                    "status": "success",
+                    "result": "pong",
+                }
 
                 # 4) invalid protocol closes connection (send bad JSON)
                 bad = b"not json"
@@ -654,10 +624,7 @@ class TestMalformedRequests:
                 writer.close()
                 await writer.wait_closed()
 
-            finally:
-                assert broker.server is not None
-                broker.server.close()
-                await broker.server.wait_closed()
+            await _run_broker(broker, _body())
 
         asyncio.run(_run())
 
