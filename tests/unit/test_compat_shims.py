@@ -22,8 +22,10 @@ SHIMS = [
     ("nac_test.robot_writer", "nac_test.robot.robot_writer", "RobotWriter"),
 ]
 
-# Expected required (no-default) parameters for exported callables.
-# Guards against signature changes that would break downstream callers.
+# Required (no-default) parameters for exported callables at the time the
+# shims were written.  When a test below fails, the canonical signature has
+# changed — review and, if needed, update the shim layer to keep the legacy
+# API working for downstream callers.
 # Format: (module, attr, {param_name: annotation, ...})
 EXPECTED_SIGNATURES = [
     ("nac_test.robot.pabot", "run_pabot", {"path": Path}),
@@ -70,10 +72,10 @@ def test_shim_emits_deprecation_warning(
     EXPECTED_SIGNATURES,
     ids=[s[1] for s in EXPECTED_SIGNATURES],
 )
-def test_signature_contract(
+def test_shim_signature_reminder(
     module: str, attr: str, expected_params: dict[str, type]
 ) -> None:
-    """Guard against required-arg changes that would break downstream callers."""
+    """Fail when the canonical signature changes so developers review the shim layer."""
     obj = getattr(importlib.import_module(module), attr)
     sig = inspect.signature(obj)
     required = {
