@@ -118,3 +118,7 @@ class TestRunDiagnostic:
 
             assert exc_info.value.exit_code == 42  # type: ignore[unreachable]
             mock_run.assert_called_once()
+            call_args = mock_run.call_args[0][0]
+            assert call_args[0] == "bash"
+            assert "nac-test-diagnostic.sh" in call_args[1]
+            assert call_args[2:4] == ["-o", str(Path("./out"))]
