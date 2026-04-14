@@ -5,7 +5,6 @@
 
 import pytest
 
-from nac_test.pyats_core.common.types import TestFileMetadata
 from nac_test.pyats_core.discovery.test_type_resolver import TestMetadataResolver
 
 from .conftest import create_mock_path
@@ -101,6 +100,4 @@ class TestGroupsExtraction:
 
         result = TestMetadataResolver.resolve(mock_path)
 
-        assert isinstance(result, TestFileMetadata)
-        assert hasattr(result, "groups")
         assert result.groups == ["health", "bgp"]
