@@ -45,7 +45,14 @@ def _find_diagnostic_script() -> Path:
 
 
 def _reconstruct_command(argv: list[str]) -> str:
-    """Reconstruct the original command without the --diagnostic flag."""
+    """Reconstruct the original command without the --diagnostic flag.
+
+    Args:
+        argv: The original sys.argv list (may include --diagnostic).
+
+    Returns:
+        A shell-safe command string with --diagnostic removed.
+    """
     filtered_args = [arg for arg in argv if arg != "--diagnostic"]
     return shlex.join(filtered_args)
 
