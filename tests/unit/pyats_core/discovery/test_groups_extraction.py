@@ -8,7 +8,7 @@ import pytest
 from nac_test.pyats_core.common.types import TestFileMetadata
 from nac_test.pyats_core.discovery.test_type_resolver import TestMetadataResolver
 
-from .helpers import create_mock_path
+from .conftest import create_mock_path
 
 
 class TestGroupsExtraction:

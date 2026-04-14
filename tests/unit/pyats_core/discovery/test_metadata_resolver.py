@@ -29,7 +29,7 @@ from nac_test.pyats_core.discovery.test_type_resolver import (
     TestMetadataResolver,
 )
 
-from .helpers import FIXTURES_DIR, create_mock_path
+from .conftest import FIXTURES_DIR, create_mock_path
 
 
 class TestStaticAnalysisDetection:
