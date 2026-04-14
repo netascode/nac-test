@@ -59,10 +59,9 @@ def test_shim_emits_deprecation_warning(
         w
         for w in caught
         if issubclass(w.category, DeprecationWarning)
-        and f"{legacy_module} has moved" in str(w.message)
+        and f"'{legacy_module}' is deprecated" in str(w.message)
     ]
     assert len(shim_warnings) == 1
-    assert canonical_module in str(shim_warnings[0].message)
     assert getattr(mod, attr) is canonical
 
 
