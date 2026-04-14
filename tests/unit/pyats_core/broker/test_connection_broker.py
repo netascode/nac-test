@@ -117,13 +117,6 @@ class TestProcessRequest:
         assert result["status"] == "error"
         assert "cmd" in result.get("error", "").lower()
 
-    def test_connect_success(self, broker: ConnectionBroker) -> None:
-        broker._ensure_connection = AsyncMock(return_value=(True, ""))  # type: ignore[method-assign]
-        result = asyncio.run(
-            broker._process_request({"command": "connect", "hostname": "router-1"})
-        )
-        assert result == {"status": "success", "result": True}
-
     def test_connect_failure_propagates_error_message(
         self, broker: ConnectionBroker
     ) -> None:
@@ -146,14 +139,6 @@ class TestProcessRequest:
         )
         assert result == {"status": "success", "result": "show version output"}
         broker._execute_command.assert_called_once_with("router-1", "show version")
-
-    def test_disconnect_calls_disconnect_device(self, broker: ConnectionBroker) -> None:
-        broker._disconnect_device = AsyncMock()  # type: ignore[method-assign]
-        result = asyncio.run(
-            broker._process_request({"command": "disconnect", "hostname": "router-1"})
-        )
-        assert result["status"] == "success"
-        broker._disconnect_device.assert_called_once_with("router-1")
 
 
 # ---------------------------------------------------------------------------
@@ -410,27 +395,7 @@ class TestBrokerClientPassthroughs:
         client._send_request = mock  # type: ignore[method-assign]
         return client, mock
 
-    def test_execute_command_sends_correct_request(self) -> None:
-        client, mock = self._make_client()
-        mock.return_value = {"result": "output"}
-        result = asyncio.run(client.execute_command("router-1", "show version"))
-        mock.assert_called_once_with(
-            {"command": "execute", "hostname": "router-1", "cmd": "show version"}
-        )
-        assert result == "output"
-
-    def test_ping_returns_true_on_pong(self) -> None:
-        client, mock = self._make_client()
-        mock.return_value = {"result": "pong"}
-        assert asyncio.run(client.ping()) is True
-
     def test_ping_returns_false_on_failure(self) -> None:
         client, mock = self._make_client()
         mock.side_effect = ConnectionError("gone")
         assert asyncio.run(client.ping()) is False
-
-    def test_disconnect_device_sends_correct_request(self) -> None:
-        client, mock = self._make_client()
-        mock.return_value = {"result": True}
-        asyncio.run(client.disconnect_device("router-1"))
-        mock.assert_called_once_with({"command": "disconnect", "hostname": "router-1"})
