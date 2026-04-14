@@ -335,7 +335,7 @@ def main(
     """
 
     if diagnostic:
-        run_diagnostic(output, argv=[ctx.command_path, *sys.argv[1:]])
+        run_diagnostic(output, argv=sys.argv)
 
     # Handle deprecated --verbosity option
     if verbosity is not None:
