@@ -89,7 +89,7 @@ class BrokerClient:
                 await self._send_request({"command": "ping"})
 
             except Exception as e:
-                logger.error(f"Failed to connect to broker: {e}")
+                logger.debug(f"Failed to connect to broker: {e}")
                 self._teardown_connection()
                 raise ConnectionError(f"Cannot connect to broker: {e}") from e
 
