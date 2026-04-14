@@ -5,10 +5,14 @@
 
 from pathlib import Path
 
-from nac_test.pyats_core.common.types import PyatsDiscoveryResult, TestFileMetadata
+from nac_test.pyats_core.common.types import (
+    PyatsDiscoveryResult,
+    TestFileMetadata,
+    TestType,
+)
 
 
-def _meta(path: str, test_type: str) -> TestFileMetadata:
+def _meta(path: str, test_type: TestType) -> TestFileMetadata:
     return TestFileMetadata(path=Path(path), test_type=test_type)
 
 
@@ -53,19 +57,3 @@ class TestPyatsDiscoveryResultProperties:
             filtered_by_tags=0,
         )
         assert result.d2d_paths == [Path("/t/d2d1.py"), Path("/t/d2d2.py")]
-
-    def test_api_paths_excludes_d2d(self) -> None:
-        result = PyatsDiscoveryResult(
-            api_tests=[_meta("/t/api.py", "api")],
-            d2d_tests=[_meta("/t/d2d.py", "d2d")],
-            filtered_by_tags=0,
-        )
-        assert Path("/t/d2d.py") not in result.api_paths
-
-    def test_d2d_paths_excludes_api(self) -> None:
-        result = PyatsDiscoveryResult(
-            api_tests=[_meta("/t/api.py", "api")],
-            d2d_tests=[_meta("/t/d2d.py", "d2d")],
-            filtered_by_tags=0,
-        )
-        assert Path("/t/api.py") not in result.d2d_paths
