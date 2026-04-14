@@ -44,7 +44,7 @@ dependencies = [
     "scrapli-netconf>=2026.1.12",
     "asyncssh>=2.22.0",
     # PyATS & Genie Ecosystem — not supported on Windows
-    "pyats>=25.5 ; sys_platform != 'win32'",
+    "pyats>=26.3 ; sys_platform != 'win32'",
     "genie>=25.5 ; sys_platform != 'win32'",
     "psutil>=7.0.0",
     "httpx~=0.28",
