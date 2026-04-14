@@ -31,6 +31,8 @@ import pytest
 from nac_test.pyats_core.broker.broker_client import BrokerClient
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def socket_dir() -> Any:
