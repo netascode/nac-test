@@ -64,6 +64,7 @@ class RobotWriter:
         include_tags: list[str] | None = None,
         exclude_tags: list[str] | None = None,
     ) -> None:
+        # nac-yaml 2.0+ guarantees plain dict/list — no CommentedMap conversion needed
         self.data = merged_data
         self.filters: dict[str, Any] = {}
         self.include_tags = include_tags or []
