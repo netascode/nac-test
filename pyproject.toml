@@ -33,7 +33,7 @@ dependencies = [
     "jmespath>=1.0.1",
     "nac-test-pyats-common>=0.3.0",
     "nac-yaml==2.0.0a0",
-    "robotframework>=7.3.2",
+    "robotframework>=7.4.2",
     "robotframework-jmespath",
     "robotframework-jsonlibrary>=0.5",
     "jsonpath-ng!=1.8.0",  # Exclude broken version (h2non/jsonpath-ng#216)
