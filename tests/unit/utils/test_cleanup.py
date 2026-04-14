@@ -135,25 +135,6 @@ class TestCleanupManagerCleanup:
         fresh_cleanup_manager.run_cleanup()  # second call must not raise
         assert fresh_cleanup_manager._cleanup_done
 
-    def test_register_after_cleanup_deletes_immediately(
-        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
-    ) -> None:
-        """Files registered after cleanup has run are deleted immediately."""
-        late_file = tmp_path / "late_registration.txt"
-        late_file.write_text("should be deleted immediately")
-
-        # Run cleanup first (no files registered yet)
-        fresh_cleanup_manager.run_cleanup()
-        assert fresh_cleanup_manager._cleanup_done is True
-
-        # Register a file after cleanup — should be deleted immediately
-        fresh_cleanup_manager.register(late_file)
-        assert not late_file.exists(), (
-            "File registered after cleanup should be deleted immediately"
-        )
-        # File should NOT be in the internal registry
-        assert late_file.resolve() not in fresh_cleanup_manager._files
-
     def test_cleanup_handles_already_deleted_file(
         self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
     ) -> None:

@@ -117,28 +117,17 @@ class CleanupManager:
     def register(self, path: Path, keep_if_debug: bool = False) -> None:
         """Register a file path for cleanup on exit.
 
-        If cleanup has already run (e.g. during shutdown), the file is
-        deleted immediately instead of being queued — this prevents late
-        registrations from being silently lost.
-
         Args:
             path: Path to file that should be removed on exit.
                   Directories are not supported (use shutil.rmtree directly).
             keep_if_debug: If True, the file will not be deleted when
                   NAC_TEST_DEBUG is set — useful for intermediate files
-                  (job scripts, testbed YAMLs) that aid debugging.
+                  (job scripts, testbed YAMLs, merged data) that aid debugging.
         """
         with self._lock:
             # resolve() canonicalises symlinks (e.g. macOS /tmp → /private/tmp)
             # so registration and cleanup always refer to the same inode.
             resolved = path.resolve()
-
-            if self._cleanup_done:
-                # Cleanup already ran — delete immediately instead of
-                # silently dropping the file.
-                self._delete_file(resolved, keep_if_debug)
-                return
-
             self._files[resolved] = keep_if_debug
             logger.debug(
                 f"Registered for cleanup: {resolved} (keep_if_debug={keep_if_debug})"
@@ -155,29 +144,13 @@ class CleanupManager:
             self._files.pop(resolved, None)
             logger.debug(f"Unregistered from cleanup: {resolved}")
 
-    def _delete_file(self, path: Path, keep_if_debug: bool) -> bool:
-        """Delete a single file, respecting the keep_if_debug flag.
-
-        Returns True if the file was kept for debugging, False otherwise.
-        """
-        if keep_if_debug and DEBUG_MODE:
-            return True
-        try:
-            if path.exists():
-                path.unlink()
-                logger.debug(f"Cleaned up: {path}")
-        except Exception as e:
-            logger.warning(f"Failed to clean up {path}: {e}")
-        return False
-
     def run_cleanup(self) -> None:
         """Delete all registered files. Safe to call multiple times.
 
         Called automatically on normal exit (atexit), SIGTERM, and SIGINT.
         Can also be called manually before an explicit exit.
         After the first call, registered files are cleared and subsequent
-        calls are no-ops.  Files registered after cleanup has run are
-        deleted immediately by ``register()`` instead.
+        calls are no-ops.
         """
         with self._lock:
             if self._cleanup_done:
@@ -186,8 +159,15 @@ class CleanupManager:
 
             debug_kept: list[Path] = []
             for path, keep_if_debug in self._files.items():
-                if self._delete_file(path, keep_if_debug):
+                if keep_if_debug and DEBUG_MODE:
                     debug_kept.append(path)
+                    continue
+                try:
+                    if path.exists():
+                        path.unlink()
+                        logger.debug(f"Cleaned up: {path}")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up {path}: {e}")
 
             if debug_kept:
                 logger.info(
