@@ -29,7 +29,7 @@ def test_deploy_template_rendering_via_shim(tmp_path: Path) -> None:
     fixtures = "tests/integration/fixtures/compat"
     data_dir = f"{fixtures}/data"
     deploy_dir = f"{fixtures}/deploy"
-    output_dir = str(tmp_path / "rendered")
+    output_dir = f"{tmp_path}/rendered"
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
@@ -60,7 +60,7 @@ def test_robot_render_and_run_via_shim(tmp_path: Path) -> None:
     fixtures = "tests/integration/fixtures/compat"
     data_dir = f"{fixtures}/data"
     tests_dir = f"{fixtures}/tests"
-    output_dir = str(tmp_path / "robot_output")
+    output_dir = f"{tmp_path}/robot_output"
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
