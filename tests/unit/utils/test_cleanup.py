@@ -28,7 +28,6 @@ def fresh_cleanup_manager() -> Generator[CleanupManager, None, None]:
     ):
         cm = CleanupManager()
         cm._files.clear()
-        cm._cleanup_done = False
         yield cm
 
 
@@ -130,10 +129,29 @@ class TestCleanupManagerCleanup:
         fresh_cleanup_manager.run_cleanup()
 
         assert not test_file.exists()  # deleted on first call
-        assert fresh_cleanup_manager._cleanup_done
 
         fresh_cleanup_manager.run_cleanup()  # second call must not raise
-        assert fresh_cleanup_manager._cleanup_done
+
+    def test_files_registered_between_cleanups_are_deleted(
+        self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
+    ) -> None:
+        """Files registered after a cleanup run are deleted by the next cleanup."""
+        file1 = tmp_path / "first.txt"
+        file2 = tmp_path / "second.txt"
+        file1.touch()
+        file2.touch()
+
+        # First cycle: register file1, clean up
+        fresh_cleanup_manager.register(file1)
+        assert file1.exists()
+        fresh_cleanup_manager.run_cleanup()
+        assert not file1.exists()
+
+        # Second cycle: register file2 after cleanup, clean up again
+        fresh_cleanup_manager.register(file2)
+        assert file2.exists()
+        fresh_cleanup_manager.run_cleanup()
+        assert not file2.exists()
 
     def test_cleanup_handles_already_deleted_file(
         self, fresh_cleanup_manager: CleanupManager, tmp_path: Path
@@ -165,8 +183,6 @@ class TestCleanupManagerCleanup:
 
         # file2 should still be cleaned up despite file1 error
         assert not file2.exists()
-        # Cleanup completed
-        assert fresh_cleanup_manager._cleanup_done
 
 
 class TestCleanupManagerSkipIfDebug:
@@ -284,8 +300,6 @@ class TestCleanupManagerThreadSafety:
                     f"{f.name} still exists but is no longer tracked — silently lost"
                 )
 
-        # Reset idempotency guard so we can clean up remaining files
-        fresh_cleanup_manager._cleanup_done = False
         fresh_cleanup_manager.run_cleanup()
 
         assert all(not f.exists() for f in all_files), (

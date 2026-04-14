@@ -68,7 +68,6 @@ class CleanupManager:
         self._lock = threading.RLock()
         self._original_sigterm: Any = None
         self._original_sigint: Any = None
-        self._cleanup_done = False
 
         # Register atexit handler
         atexit.register(self.run_cleanup)
@@ -149,14 +148,13 @@ class CleanupManager:
 
         Called automatically on normal exit (atexit), SIGTERM, and SIGINT.
         Can also be called manually before an explicit exit.
-        After the first call, registered files are cleared and subsequent
-        calls are no-ops.
+
+        Idempotent: registered files are cleared after processing, so
+        subsequent calls are no-ops unless new files are registered
+        between calls (e.g. signal handler runs cleanup, then atexit
+        picks up files registered after the signal).
         """
         with self._lock:
-            if self._cleanup_done:
-                return
-            self._cleanup_done = True
-
             debug_kept: list[Path] = []
             for path, keep_if_debug in self._files.items():
                 if keep_if_debug and DEBUG_MODE:
