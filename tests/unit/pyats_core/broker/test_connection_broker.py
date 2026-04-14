@@ -399,3 +399,69 @@ class TestBrokerClientPassthroughs:
         client, mock = self._make_client()
         mock.side_effect = ConnectionError("gone")
         assert asyncio.run(client.ping()) is False
+
+
+# ---------------------------------------------------------------------------
+# Connection health recovery (relocated from integration tests — no socket involved)
+# ---------------------------------------------------------------------------
+
+
+class TestConnectionHealthRecovery:
+    def test_reconnects_when_cached_connection_is_unhealthy(
+        self, broker: ConnectionBroker
+    ) -> None:
+        """When a cached connection is unhealthy, _get_connection replaces it."""
+        stale_device = MagicMock()
+        stale_device.connected = False
+        stale_device.spawn = False
+
+        broker.connected_devices["router-1"] = stale_device
+
+        async def _run() -> Any:
+            loop = asyncio.get_event_loop()
+            with patch(
+                "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
+                return_value=loop,
+            ):
+
+                async def fake_executor(executor: Any, func: Any, *args: Any) -> Any:
+                    return func(*args)
+
+                with patch.object(loop, "run_in_executor", side_effect=fake_executor):
+                    return await broker._get_connection("router-1")
+
+        result = asyncio.run(_run())
+        assert broker.testbed is not None
+        assert result is broker.testbed.devices["router-1"]
+
+
+# ---------------------------------------------------------------------------
+# Disconnect cleanup (relocated from integration tests — no socket involved)
+# ---------------------------------------------------------------------------
+
+
+class TestDisconnectCleanup:
+    def test_disconnect_cleans_up_even_when_device_disconnect_raises(
+        self, broker: ConnectionBroker
+    ) -> None:
+        """_disconnect_device removes the device even if device.disconnect() raises."""
+        device = MagicMock()
+        device.disconnect.side_effect = Exception("device hung")
+        broker.connected_devices["router-1"] = device
+
+        async def _run() -> None:
+            loop = asyncio.get_event_loop()
+            with patch(
+                "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
+                return_value=loop,
+            ):
+
+                async def fake_executor(executor: Any, func: Any, *args: Any) -> Any:
+                    return func(*args)
+
+                with patch.object(loop, "run_in_executor", side_effect=fake_executor):
+                    await broker._disconnect_device("router-1")
+
+        asyncio.run(_run())
+
+        assert "router-1" not in broker.connected_devices

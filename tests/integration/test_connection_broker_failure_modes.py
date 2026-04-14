@@ -194,30 +194,6 @@ class TestDeviceConnection:
         assert result.get("error", "") != "Unknown broker error"
         assert "bad-router" in result.get("error", "")
 
-    def test_reconnects_when_cached_connection_is_unhealthy(
-        self,
-        make_broker: Any,
-        good_device: MagicMock,
-    ) -> None:
-        stale_device = MagicMock()
-        stale_device.connected = False
-        stale_device.spawn = False
-
-        broker: ConnectionBroker = make_broker({"router-1": good_device})
-        broker.connected_devices["router-1"] = stale_device
-
-        async def _run() -> None:
-            loop = asyncio.get_event_loop()
-            with patch(
-                "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
-                return_value=loop,
-            ):
-                with _patch_executor(loop):
-                    conn = await broker._get_connection("router-1")
-                    assert conn is good_device
-
-        asyncio.run(_run())
-
 
 class TestBrokerClientSocketPathValidation:
     def test_broker_client_fails_for_socket_path_that_is_a_directory(
@@ -687,29 +663,6 @@ class TestMalformedRequests:
 
 
 class TestCleanup:
-    def test_disconnect_cleans_up_even_when_device_disconnect_raises(
-        self,
-        make_broker: Any,
-        good_device: MagicMock,
-    ) -> None:
-        """_disconnect_device_internal removes the device even if device.disconnect() raises."""
-        broker: ConnectionBroker = make_broker({"router-1": good_device})
-        broker.connected_devices["router-1"] = good_device
-        good_device.disconnect.side_effect = Exception("device hung")
-
-        async def _run() -> None:
-            loop = asyncio.get_event_loop()
-            with patch(
-                "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
-                return_value=loop,
-            ):
-                with _patch_executor(loop):
-                    await broker._disconnect_device("router-1")
-
-        asyncio.run(_run())
-
-        assert "router-1" not in broker.connected_devices
-
     def test_shutdown_disconnects_all_connected_devices(
         self,
         make_broker: Any,
