@@ -583,7 +583,7 @@ def e2e_tag_filter_exclude_results(
         None,
         tmp_path_factory,
         class_mocker,
-        extra_cli_args=["--exclude", "ospf"],
+        extra_cli_args=["--exclude", "osp*"],
     )
 
 

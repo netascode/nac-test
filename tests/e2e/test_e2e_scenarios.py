@@ -1690,9 +1690,9 @@ class TestE2ETagFilterInclude(E2ECombinedTestBase):
 
 
 class TestE2ETagFilterExclude(E2ECombinedTestBase):
-    """E2E tests for tag filtering with --exclude ospf.
+    """E2E tests for tag filtering with --exclude osp* (wildcard pattern).
 
-    Scenario: --exclude ospf
+    Scenario: --exclude osp*
     Expected: 1 Robot test (bgp-tagged, ospf excluded), 1 PyATS test (verify_bgp_api.py)
     """
 
@@ -1724,7 +1724,7 @@ class TestE2ETagFilterExclude(E2ECombinedTestBase):
             "Expected verify_bgp_api in output"
         )
         assert "verify_ospf_api" not in results.filtered_stdout, (
-            "Did not expect verify_ospf_api (should be filtered out by --exclude ospf)"
+            "Did not expect verify_ospf_api (should be filtered out by --exclude osp*)"
         )
 
 
