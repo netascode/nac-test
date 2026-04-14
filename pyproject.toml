@@ -62,7 +62,6 @@ repository = "https://github.com/netascode/nac-test"
 documentation = "https://github.com/netascode/nac-test"
 
 [project.scripts]
-iac-test = "nac_test.cli.main:app"
 nac-test = "nac_test.cli.main:app"
 
 [project.optional-dependencies]
