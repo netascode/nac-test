@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import time
+from collections.abc import Mapping
 from typing import Any
 
 from nac_test.pyats_core.common.types import DEFAULT_TEST_TYPE
@@ -49,7 +50,7 @@ class OutputProcessor:
         test_status: dict[str, Any] | None = None,
         verbose: bool = False,
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
-        test_type_by_path: dict[str, str] | None = None,
+        test_type_by_path: Mapping[str, str] | None = None,
     ):
         """Initialize output processor.
 
