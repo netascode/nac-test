@@ -233,13 +233,15 @@ class TestExecuteCommand:
         cache.set.assert_called_once_with("show version", "live output")
         assert broker.stats_command_cache_misses == 1
 
-    def test_cache_miss_raises_when_no_connection(
+    def test_cache_miss_raises_when_connection_fails(
         self, broker: ConnectionBroker
     ) -> None:
         cache = MagicMock()
         cache.get.return_value = None
         broker.command_cache["router-1"] = cache
-        broker._get_connection = AsyncMock(return_value=None)  # type: ignore[method-assign]
+        broker._get_connection = AsyncMock(  # type: ignore[method-assign]
+            side_effect=ConnectionError("No testbed loaded for router-1")
+        )
 
         with pytest.raises(ConnectionError):
             asyncio.run(broker._execute_command("router-1", "show version"))

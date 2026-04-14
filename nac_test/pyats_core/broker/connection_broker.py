@@ -255,8 +255,6 @@ class ConnectionBroker:
 
         # Ensure device is connected
         connection = await self._get_connection(hostname)
-        if not connection:
-            raise ConnectionError(f"Failed to connect to device: {hostname}")
 
         # Execute command in thread pool (since Unicon is synchronous)
         loop = get_or_create_event_loop()
@@ -277,7 +275,7 @@ class ConnectionBroker:
             await self._disconnect_device(hostname)
             raise
 
-    async def _get_connection(self, hostname: str) -> Any | None:
+    async def _get_connection(self, hostname: str) -> Any:
         """Get or create connection to device."""
         if hostname not in self.connection_locks:
             self.connection_locks[hostname] = asyncio.Lock()
@@ -308,14 +306,12 @@ class ConnectionBroker:
             )
             return await self._create_connection(hostname)
 
-    async def _create_connection(self, hostname: str) -> Any | None:
+    async def _create_connection(self, hostname: str) -> Any:
         """Create new connection to device using testbed."""
         if not self.testbed:
-            logger.error("No testbed loaded")
-            return None
+            raise ConnectionError(f"No testbed loaded for {hostname}")
         if hostname not in self.testbed.devices:
-            logger.error(f"Device {hostname} not found in testbed")
-            return None
+            raise ConnectionError(f"Device {hostname} not found in testbed")
 
         async with self.connection_semaphore:
             try:
@@ -355,8 +351,8 @@ class ConnectionBroker:
     async def _ensure_connection(self, hostname: str) -> tuple[bool, str]:
         """Ensure device is connected, return (success, error_message)."""
         try:
-            connection = await self._get_connection(hostname)
-            return connection is not None, ""
+            await self._get_connection(hostname)
+            return True, ""
         except Exception as e:
             return False, str(e)
 
