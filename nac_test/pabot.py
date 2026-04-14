@@ -9,6 +9,8 @@
 """
 
 import warnings
+from pathlib import Path
+from typing import Any
 
 warnings.warn(
     "'nac_test.pabot' is deprecated and will be removed in a future release. "
@@ -18,6 +20,22 @@ warnings.warn(
     stacklevel=2,
 )
 
-from nac_test.robot.pabot import run_pabot  # noqa: E402, F401
+from nac_test.robot.pabot import run_pabot as _canonical_run_pabot  # noqa: E402
+
+
+def run_pabot(path: str | Path, **kwargs: Any) -> int:
+    """Backward-compatible wrapper for run_pabot with str→Path coercion.
+
+    Args:
+        path: Robot output directory (str or Path).
+        **kwargs: Forwarded to canonical run_pabot.
+
+    Returns:
+        int: Pabot exit code.
+    """
+    if isinstance(path, str):
+        path = Path(path)
+    return _canonical_run_pabot(path, **kwargs)
+
 
 __all__ = ["run_pabot"]

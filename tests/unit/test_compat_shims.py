@@ -64,7 +64,13 @@ def test_shim_emits_deprecation_warning(
         and f"'{legacy_module}' is deprecated" in str(w.message)
     ]
     assert len(shim_warnings) == 1
-    assert getattr(mod, attr) is canonical
+
+    # Shim objects are now wrappers/subclasses, not identical to canonical
+    shim_obj = getattr(mod, attr)
+    if inspect.isclass(shim_obj):
+        assert issubclass(shim_obj, canonical)
+    else:
+        assert callable(shim_obj)
 
 
 @pytest.mark.parametrize(
@@ -84,3 +90,52 @@ def test_shim_signature_reminder(
         if p.default is inspect.Parameter.empty
     }
     assert required == expected_params
+
+
+def test_run_pabot_coerces_str_to_path() -> None:
+    """Verify run_pabot shim coerces str to Path before delegating."""
+    from unittest.mock import patch
+
+    import nac_test.pabot
+
+    with patch("nac_test.pabot._canonical_run_pabot") as mock_canonical:
+        mock_canonical.return_value = 0
+
+        # Test str input → coerced to Path
+        result = nac_test.pabot.run_pabot("some/string/path")
+        assert result == 0
+        mock_canonical.assert_called_once()
+        call_args = mock_canonical.call_args
+        assert call_args[0][0] == Path("some/string/path")
+
+        mock_canonical.reset_mock()
+
+        # Test Path input → passed through unchanged
+        path_input = Path("another/path")
+        result = nac_test.pabot.run_pabot(path_input)
+        assert result == 0
+        mock_canonical.assert_called_once()
+        call_args = mock_canonical.call_args
+        assert call_args[0][0] is path_input
+
+
+def test_robot_writer_coerces_str_args() -> None:
+    """Verify RobotWriter shim coerces str args to Path before delegating."""
+    from unittest.mock import patch
+
+    import nac_test.robot_writer
+
+    with patch(
+        "nac_test.robot_writer._CanonicalRobotWriter.__init__"
+    ) as mock_canonical_init:
+        mock_canonical_init.return_value = None
+
+        # Test str inputs → coerced to Path, empty str → None
+        nac_test.robot_writer.RobotWriter(["data/path1", "data/path2"], "filters/", "")
+
+        mock_canonical_init.assert_called_once()
+        call_args = mock_canonical_init.call_args
+        # When patching __init__, self is not included in call_args
+        assert call_args[0][0] == [Path("data/path1"), Path("data/path2")]
+        assert call_args[0][1] == Path("filters/")
+        assert call_args[0][2] is None
