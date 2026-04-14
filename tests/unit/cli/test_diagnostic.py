@@ -85,6 +85,8 @@ class TestFindDiagnosticScript:
 
 
 class TestRunDiagnostic:
+    """Tests for run_diagnostic function."""
+
     def test_windows_errors_without_running_script(self, base_argv: list[str]) -> None:
         with (
             patch("nac_test.cli.diagnostic.IS_WINDOWS", True),
