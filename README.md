@@ -64,6 +64,9 @@ $ nac-test --help
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
+**Breaking changes in nac-test 2.0:**
+- The legacy `iac-test` CLI entrypoint has been removed. Use `nac-test` instead.
+
 ## How It Works
 
 1. **Data Merging**: All YAML files from `--data` paths are merged into a single data model
