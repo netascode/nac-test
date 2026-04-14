@@ -35,15 +35,6 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def socket_dir() -> Any:
-    """Short-path temp dir suitable for Unix socket paths (macOS 104-char limit)."""
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as d:
-        yield Path(d)
-
-
-@pytest.fixture
 def good_device() -> MagicMock:
     """A device whose connect() succeeds."""
     device = MagicMock()

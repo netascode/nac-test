@@ -4,9 +4,6 @@
 """Shared fixtures for unit tests."""
 
 import os
-import tempfile
-from collections.abc import Generator
-from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
@@ -69,13 +66,6 @@ def assert_connection_has_optimizations(connection: dict[str, Any]) -> None:
         connection["settings"]["POST_DISCONNECT_WAIT_SEC"]
         == PYATS_POST_DISCONNECT_WAIT_SECONDS
     )
-
-
-@pytest.fixture()
-def socket_dir() -> Generator[Path, None, None]:
-    """Short-path temp dir suitable for Unix socket paths (macOS 104-char limit)."""
-    with tempfile.TemporaryDirectory() as d:
-        yield Path(d)
 
 
 @pytest.fixture()
