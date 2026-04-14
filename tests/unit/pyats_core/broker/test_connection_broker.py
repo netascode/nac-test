@@ -67,6 +67,23 @@ def test_create_connection_logs_fixed_format_error(
     assert "timed out after 60s" in caplog.records[0].message
 
 
+def test_create_connection_omits_redundant_hostname(
+    broker: ConnectionBroker, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Hostname prefix is suppressed when pyATS already embeds it in the error."""
+    with caplog.at_level(logging.ERROR):
+        _run_failing_connect(
+            broker, "router-1", ConnectionError("failed to connect to router-1")
+        )
+
+    assert len(caplog.records) == 1
+    msg = caplog.records[0].message
+    # The hostname prefix must NOT be prepended (pyATS already includes it)
+    assert not msg.startswith("Failed to connect to router-1:")
+    assert "ConnectionError" in msg
+    assert "failed to connect to router-1" in msg
+
+
 # ---------------------------------------------------------------------------
 # _is_connection_healthy
 # ---------------------------------------------------------------------------

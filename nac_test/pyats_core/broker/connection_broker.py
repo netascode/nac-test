@@ -350,9 +350,14 @@ class ConnectionBroker:
                 return device
 
             except Exception as e:
-                logger.error(
-                    f"Failed to connect to {hostname}: {type(e).__name__}: {e}"
-                )
+                # pyATS exceptions often embed the hostname already
+                # (e.g. "failed to connect to iosxe-r1"), so only prepend
+                # our "Failed to connect to <host>:" prefix when the
+                # hostname is absent — otherwise the log looks redundant.
+                msg = f"{type(e).__name__}: {e}"
+                if hostname not in str(e):
+                    msg = f"Failed to connect to {hostname}: {msg}"
+                logger.error(msg)
                 raise
 
     async def _ensure_connection(self, hostname: str) -> tuple[bool, str]:
