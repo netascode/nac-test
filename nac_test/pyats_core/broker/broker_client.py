@@ -112,8 +112,10 @@ class BrokerClient:
             request_length = len(request_data).to_bytes(4, byteorder="big")
 
             # Send request
-            assert self.writer is not None, "Writer must be connected"
-            assert self.reader is not None, "Reader must be connected"
+            if self.writer is None:
+                raise RuntimeError("Writer must be connected")
+            if self.reader is None:
+                raise RuntimeError("Reader must be connected")
 
             self.writer.write(request_length + request_data)
             await self.writer.drain()
