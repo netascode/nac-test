@@ -65,7 +65,7 @@ class CleanupManager:
             return
 
         self._files: dict[Path, bool] = {}  # path → keep_if_debug
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._original_sigterm: Any = None
         self._original_sigint: Any = None
         self._cleanup_done = False
