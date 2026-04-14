@@ -342,10 +342,9 @@ class ConnectionBroker:
                 return device
 
             except Exception as e:
-                msg = str(e)
-                if hostname not in msg:
-                    msg = f"{hostname}: {msg}"
-                logger.error(msg)
+                logger.error(
+                    f"Failed to connect to {hostname}: {type(e).__name__}: {e}"
+                )
                 raise
 
     async def _ensure_connection(self, hostname: str) -> tuple[bool, str]:

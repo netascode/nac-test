@@ -54,15 +54,16 @@ def _run_failing_connect(
         asyncio.run(_run())
 
 
-def test_create_connection_prepends_hostname_when_missing(
+def test_create_connection_logs_fixed_format_error(
     broker: ConnectionBroker, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Hostname is added to the error log when the exception message omits it."""
+    """Error log uses fixed format: 'Failed to connect to {hostname}: {type}: {msg}'."""
     with caplog.at_level(logging.ERROR):
         _run_failing_connect(broker, "router-1", ConnectionError("timed out after 60s"))
 
     assert len(caplog.records) == 1
-    assert "router-1" in caplog.records[0].message
+    assert "Failed to connect to router-1" in caplog.records[0].message
+    assert "ConnectionError" in caplog.records[0].message
     assert "timed out after 60s" in caplog.records[0].message
 
 
