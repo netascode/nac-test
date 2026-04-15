@@ -4,10 +4,17 @@
 """Shared data merging utilities for both Robot and PyATS test execution."""
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
 from nac_yaml import yaml
+
+from nac_test.core.constants import (
+    IS_WINDOWS,
+    MERGED_DATA_FILE_MODE,
+    MERGED_DATA_FILENAME,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,32 +40,40 @@ class DataMerger:
         return data if isinstance(data, dict) else {}
 
     @staticmethod
+    def merged_data_path(output_directory: Path) -> Path:
+        """Return the path where the merged data model file will be written.
+
+        Single source of truth for locating the merged data file — use this
+        instead of constructing the path manually from the constant.
+
+        Args:
+            output_directory: Base output directory passed to write_merged_data_model()
+
+        Returns:
+            Full path to the merged data model YAML file
+        """
+        return output_directory / MERGED_DATA_FILENAME
+
+    @staticmethod
     def write_merged_data_model(
         data: dict[str, Any],
         output_directory: Path,
-        filename: str = "merged_data_model_test_variables.yaml",
-    ) -> None:
+    ) -> Path:
         """Write merged data model to YAML file.
+
+        The output filename is always MERGED_DATA_FILENAME — the single fixed
+        location used by all consumers (Robot, PyATS subprocesses, cleanup).
 
         Args:
             data: The merged data dictionary to write
             output_directory: Directory where the YAML file will be saved
-            filename: Name of the output YAML file
-        """
-        full_output_path = output_directory / filename
-        logger.info("Writing merged data model to %s", full_output_path)
-        yaml.write_yaml_file(data, full_output_path)
-
-    @staticmethod
-    def load_yaml_file(file_path: Path) -> dict[str, Any]:
-        """Load a single YAML file from the provided path.
-
-        Args:
-            file_path: Path to the YAML file to load
 
         Returns:
-            Loaded dictionary from the YAML file
+            Path to the written file (use this instead of reconstructing the path)
         """
-        logger.info("Loading yaml file from %s", file_path)
-        data = yaml.load_yaml_files([file_path])
-        return data if data is not None else {}
+        full_output_path = DataMerger.merged_data_path(output_directory)
+        logger.info("Writing merged data model to %s", full_output_path)
+        yaml.write_yaml_file(data, full_output_path)
+        if not IS_WINDOWS:
+            os.chmod(full_output_path, MERGED_DATA_FILE_MODE)
+        return full_output_path

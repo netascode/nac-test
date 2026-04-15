@@ -24,7 +24,6 @@ class TestOrchestratorControllerDetection:
             data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
         )
 
         assert orchestrator.controller_type == "ACI"
@@ -38,7 +37,6 @@ class TestOrchestratorControllerDetection:
                 data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
                 test_dir=pyats_test_dirs.test_dir,
                 output_dir=pyats_test_dirs.output_dir,
-                merged_data_filename="merged.yaml",
             )
 
         # Verify it exits with EXIT_ERROR (255) for infrastructure errors
@@ -56,7 +54,6 @@ class TestOrchestratorControllerDetection:
                 data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
                 test_dir=pyats_test_dirs.test_dir,
                 output_dir=pyats_test_dirs.output_dir,
-                merged_data_filename="merged.yaml",
             )
 
         # Verify it exits with EXIT_ERROR (255) for infrastructure errors
@@ -70,7 +67,6 @@ class TestOrchestratorControllerDetection:
             data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
         )
 
         assert orchestrator.controller_type == "SDWAN"
@@ -94,7 +90,6 @@ class TestOrchestratorControllerDetection:
             data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
         )
 
         assert orchestrator.controller_type == "ACI"

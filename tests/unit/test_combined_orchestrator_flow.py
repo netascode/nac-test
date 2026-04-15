@@ -75,7 +75,6 @@ class TestCombinedOrchestratorFlow:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
         )
 
     @pytest.fixture
@@ -294,7 +293,6 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             dev_pyats_only=True,
         )
 
@@ -351,7 +349,6 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             dev_robot_only=True,
         )
 
@@ -407,7 +404,6 @@ class TestDevModeFlow(TestCombinedOrchestratorFlow):
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             dev_pyats_only=True,
         )
 
@@ -463,7 +459,6 @@ class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             render_only=True,
         )
 
@@ -510,7 +505,6 @@ class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             render_only=True,
         )
 
@@ -555,7 +549,6 @@ class TestRenderOnlyMode(TestCombinedOrchestratorFlow):
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             render_only=False,  # Not render-only
         )
 
@@ -728,7 +721,6 @@ class TestExecutionSummary(TestCombinedOrchestratorFlow):
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             render_only=True,
         )
 

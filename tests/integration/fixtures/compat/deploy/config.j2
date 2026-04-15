@@ -1,0 +1,5 @@
+[
+{% for child in root.children %}
+  {"name": "{{ child.name }}", "param": "{{ child.param }}"}{% if not loop.last %},{% endif %}
+{% endfor %}
+]

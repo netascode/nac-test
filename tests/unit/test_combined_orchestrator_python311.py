@@ -39,7 +39,6 @@ class TestOrchestratorUnsupportedPythonExit:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             dev_pyats_only=dev_pyats_only,
         )
 

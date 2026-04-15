@@ -20,6 +20,10 @@ import os
 import re
 from pathlib import Path
 
+from nac_test.pyats_core.common.types import PyatsDiscoveryResult, TestFileMetadata
+from nac_test.pyats_core.discovery.tag_matcher import TagMatcher
+from nac_test.pyats_core.discovery.test_type_resolver import TestMetadataResolver
+
 logger = logging.getLogger(__name__)
 
 
@@ -123,18 +127,36 @@ class TestDiscovery:
                     logger.debug(f"Skipping {rel_path}: {reason}")
         return False
 
-    def discover_pyats_tests(self) -> tuple[list[Path], list[tuple[Path, str]]]:
-        """Find all PyATS test files in the test directory.
+    def discover_pyats_tests(
+        self,
+        include_tags: list[str] | None = None,
+        exclude_tags: list[str] | None = None,
+    ) -> PyatsDiscoveryResult:
+        """Discover, filter, and categorize PyATS tests into an execution plan.
 
-        Searches for Python files and validates them as PyATS tests by checking
-        for nac_test imports and @aetest decorators.
+        This is the primary entry point for test discovery. It performs:
+        1. Discovery: Find all valid PyATS test files
+        2. Filtering: Apply include/exclude tag patterns
+        3. Categorization: Sort tests into API vs D2D based on base class
+
+        The returned PyatsDiscoveryResult carries all information needed for
+        test execution and post-execution result analysis, including a
+        pre-computed path-to-type mapping for O(1) lookups.
+
+        Args:
+            include_tags: Optional tag patterns to include (Robot Framework syntax).
+                         If specified, only tests with matching groups are included.
+            exclude_tags: Optional tag patterns to exclude (Robot Framework syntax).
+                         Tests with matching groups are filtered out.
 
         Returns:
-            Tuple of (test_files, skipped_files) where skipped_files contains
-            tuples of (path, reason) for each skipped file
+            PyatsDiscoveryResult with categorized tests and lookup table
         """
-        test_files: list[Path] = []
-        skipped_files: list[tuple[Path, str]] = []
+        api_tests: list[TestFileMetadata] = []
+        d2d_tests: list[TestFileMetadata] = []
+
+        tag_matcher = TagMatcher(include=include_tags, exclude=exclude_tags)
+        filtered_count = 0
 
         for test_path in self.test_dir.rglob("*.py"):
             if self._should_skip_path(test_path.name, test_path):
@@ -145,69 +167,42 @@ class TestDiscovery:
                 is_valid, skip_reason = self._is_valid_pyats_test(content)
 
                 if not is_valid:
-                    assert (
-                        skip_reason is not None
-                    )  # mypy: skip_reason is set when invalid
+                    assert skip_reason is not None
                     logger.debug(f"Skipping {test_path}: {skip_reason}")
-                    skipped_files.append((test_path, skip_reason))
                     continue
 
-                test_files.append(test_path.absolute())
+                metadata = TestMetadataResolver.resolve(test_path.absolute())
+
+                if not tag_matcher.should_include(metadata.groups):
+                    logger.debug(
+                        f"Filtered out {test_path.name} (groups={metadata.groups})"
+                    )
+                    filtered_count += 1
+                    continue
+
+                if metadata.test_type == "d2d":
+                    d2d_tests.append(metadata)
+                else:
+                    api_tests.append(metadata)
 
             except (OSError, UnicodeDecodeError) as e:
                 rel_path = test_path.relative_to(self.test_dir)
                 reason = f"{type(e).__name__}: {str(e)}"
                 logger.warning(f"Skipping {rel_path}: {reason}")
-                skipped_files.append((test_path, reason))
                 continue
 
-        if skipped_files:
-            logger.info(f"Skipped {len(skipped_files)} file(s) during discovery:")
-            for path, reason in skipped_files[:5]:
-                logger.debug(f"  - {path.name}: {reason}")
-            if len(skipped_files) > 5:
-                logger.debug(f"  ... and {len(skipped_files) - 5} more")
+        if filtered_count:
+            logger.info(f"Filtered out {filtered_count} test(s) by tag patterns")
 
-        return sorted(test_files), skipped_files
-
-    def categorize_tests_by_type(
-        self, test_files: list[Path]
-    ) -> tuple[list[Path], list[Path]]:
-        """Categorize discovered test files into API and D2D tests.
-
-        Uses static analysis with directory fallback for maximum flexibility
-        with zero user configuration.
-
-        Detection Strategy (Priority Order):
-            1. **Static Analysis**: Examines base class inheritance via AST
-               - NACTestBase, APICTestBase, etc. -> 'api'
-               - SSHTestBase, IOSXETestBase, etc. -> 'd2d'
-            2. **Directory Fallback**: Checks for /api/ or /d2d/ in path
-            3. **Default**: Falls back to 'api' with warning
-
-        Args:
-            test_files: List of discovered test file paths
-
-        Returns:
-            Tuple of (api_tests, d2d_tests)
-        """
-        # Lazy import to avoid circular dependencies
-        from .test_type_resolver import TestTypeResolver
-
-        resolver = TestTypeResolver(self.test_dir)
-        api_tests: list[Path] = []
-        d2d_tests: list[Path] = []
-
-        for test_file in test_files:
-            test_type = resolver.resolve(test_file)
-
-            if test_type == "api":
-                api_tests.append(test_file)
-            else:
-                d2d_tests.append(test_file)
+        api_tests.sort(key=lambda m: m.path)
+        d2d_tests.sort(key=lambda m: m.path)
 
         logger.info(
             f"Categorized {len(api_tests)} API tests and {len(d2d_tests)} D2D tests"
         )
 
-        return api_tests, d2d_tests
+        return PyatsDiscoveryResult(
+            api_tests=api_tests,
+            d2d_tests=d2d_tests,
+            filtered_by_tags=filtered_count,
+        )
