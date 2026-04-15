@@ -6,6 +6,7 @@
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -74,7 +75,7 @@ class CombinedOrchestrator:
         data_paths: list[Path],
         templates_dir: Path,
         output_dir: Path,
-        merged_data_filename: str,
+        merged_data: dict[str, Any] | None = None,
         filters_path: Path | None = None,
         tests_path: Path | None = None,
         include_tags: list[str] | None = None,
@@ -97,7 +98,7 @@ class CombinedOrchestrator:
             data_paths: List of paths to data model YAML files
             templates_dir: Directory containing test templates and PyATS test files
             output_dir: Base directory for test output
-            merged_data_filename: Name of the merged data model file
+            merged_data: Already-loaded merged data model dict (avoids re-reading from disk)
             filters_path: Path to Jinja filters (Robot only)
             tests_path: Path to Jinja tests (Robot only)
             include_tags: Tag patterns to include (Robot Framework syntax, applies to both)
@@ -117,7 +118,9 @@ class CombinedOrchestrator:
         self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
         self.output_dir = Path(output_dir)
-        self.merged_data_filename = merged_data_filename
+        self.merged_data: dict[str, Any] = (
+            merged_data if merged_data is not None else {}
+        )
 
         # Robot-specific parameters
         self.filters_path = filters_path
@@ -213,7 +216,6 @@ class CombinedOrchestrator:
                 data_paths=self.data_paths,
                 test_dir=self.templates_dir,
                 output_dir=self.output_dir,
-                merged_data_filename=self.merged_data_filename,
                 minimal_reports=self.minimal_reports,
                 custom_testbed_path=self.custom_testbed_path,
                 controller_type=self.controller_type,
@@ -235,10 +237,9 @@ class CombinedOrchestrator:
             typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")
 
             robot_orchestrator = RobotOrchestrator(
-                data_paths=self.data_paths,
                 templates_dir=self.templates_dir,
                 output_dir=self.output_dir,
-                merged_data_filename=self.merged_data_filename,
+                merged_data=self.merged_data,
                 filters_path=self.filters_path,
                 tests_path=self.tests_path,
                 include_tags=self.include_tags,
@@ -407,7 +408,7 @@ class CombinedOrchestrator:
         if combined_dashboard.exists():
             typer.echo(f"Dashboard:  {combined_dashboard.resolve()}")
         if results.robot is not None and not results.robot.is_empty:
-            robot_log = self.output_dir / ROBOT_RESULTS_DIRNAME / "log.html"
+            robot_log = self.output_dir / ROBOT_RESULTS_DIRNAME / LOG_HTML
             if robot_log.exists():
                 typer.echo(f"Robot:      {robot_log.resolve()}")
         if results.api is not None and not results.api.is_empty:

@@ -15,6 +15,7 @@ from nac_test.pyats_core.constants import ENV_TEST_DIR
 from nac_test.pyats_core.execution.device.testbed_generator import TestbedGenerator
 from nac_test.pyats_core.execution.job_generator import JobGenerator
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
+from nac_test.utils.cleanup import get_cleanup_manager
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class DeviceExecutor:
         test_status: dict[str, Any],
         test_dir: Path,
         base_output_dir: Path,
+        merged_data_path: Path,
         custom_testbed_path: Path | None = None,
     ):
         """Initialize device executor.
@@ -39,6 +41,7 @@ class DeviceExecutor:
             test_status: Dictionary for tracking test status
             test_dir: Directory containing PyATS test files (user-specified)
             base_output_dir: Base output directory for test results
+            merged_data_path: Path to the merged data model YAML file
             custom_testbed_path: Optional path to custom PyATS testbed YAML
         """
         self.job_generator = job_generator
@@ -46,6 +49,7 @@ class DeviceExecutor:
         self.test_status = test_status
         self.test_dir = test_dir
         self.base_output_dir = base_output_dir
+        self.merged_data_path = merged_data_path
         self.custom_testbed_path = custom_testbed_path
 
     async def run_device_job_with_semaphore(
@@ -96,6 +100,11 @@ class DeviceExecutor:
                     testbed_file.write(testbed_content)
                     testbed_file_path = Path(testbed_file.name)
 
+                # Register temp files for deletion on exit (kept when NAC_TEST_DEBUG is set).
+                cleanup = get_cleanup_manager()
+                cleanup.register(job_file_path, keep_if_debug=True)
+                cleanup.register(testbed_file_path, keep_if_debug=True)
+
                 # Set up environment for this device
                 # Always start with a copy of os.environ to preserve PATH and other variables
                 env = os.environ.copy()
@@ -104,8 +113,7 @@ class DeviceExecutor:
                         "HOSTNAME": hostname,
                         "DEVICE_INFO": json.dumps(device),
                         "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
-                            self.base_output_dir
-                            / "merged_data_model_test_variables.yaml"
+                            self.merged_data_path
                         ),
                         "NAC_TEST_TYPE": "d2d",
                         ENV_TEST_DIR: str(self.test_dir),
@@ -146,13 +154,6 @@ class DeviceExecutor:
                     test_name = f"{hostname}::{test_file.stem}"
                     if test_name in self.test_status:
                         self.test_status[test_name]["status"] = status
-
-                # Clean up temporary files -- UNCOMMENT ME
-                # try:
-                #     job_file_path.unlink()
-                #     testbed_file_path.unlink()
-                # except Exception:
-                #     pass
 
                 if archive_path:
                     logger.info(

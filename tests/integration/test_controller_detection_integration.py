@@ -53,7 +53,6 @@ class TestDummy(aetest.Testcase):
             data_paths=[tmp_path / "data.yaml"],
             test_dir=test_dir,
             output_dir=output_dir,
-            merged_data_filename="merged_data.yaml",
         )
 
         # Verify controller type was detected correctly
