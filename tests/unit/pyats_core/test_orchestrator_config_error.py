@@ -10,7 +10,7 @@ import pytest
 
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
-from .conftest import PyATSTestDirs
+from ..conftest import PyATSTestDirs
 
 
 class TestOrchestratorSubprocessRunnerInitError:
