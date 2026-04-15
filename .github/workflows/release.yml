@@ -7,6 +7,17 @@ on:
     tags:
       - "v*"
 
+env:
+  # Artifactory credentials for resolving build dependencies (e.g. hatchling)
+  # via the default index configured in pyproject.toml.
+  # No UV_DEFAULT_INDEX fallback needed here — unlike test.yml, releases only
+  # trigger on tag pushes to the main repo where secrets are always available.
+  UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME: ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME }}
+  UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD: ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD }}
+  UV_HTTP_TIMEOUT: 120
+  UV_HTTP_CONNECT_TIMEOUT: 30
+  UV_HTTP_RETRIES: 10
+
 jobs:
   test:
     uses: ./.github/workflows/test.yml
