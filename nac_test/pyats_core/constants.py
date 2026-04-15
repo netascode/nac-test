@@ -45,6 +45,11 @@ PYATS_CONFIG_FILENAME: str = ".pyats.conf"
 PYATS_POST_DISCONNECT_WAIT_SECONDS: int = 0
 PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS: int = 0
 
+# Connection broker protocol limits
+# A 4-byte unsigned length prefix can represent ~4 GB; without this guard a buggy
+# client could exhaust broker memory via a single oversized frame.
+MAX_BROKER_MESSAGE_BYTES: int = 10 * 1024 * 1024  # 10 MB
+
 # Multi-job execution configuration (to avoid reporter crashes)
 TESTS_PER_JOB: int = 15  # Reduced from 20 for safety margin - each test ~1500 steps
 MAX_PARALLEL_JOBS: int = 2  # Conservative parallelism to avoid resource exhaustion
@@ -140,6 +145,8 @@ __all__ = [
     "AUTH_CACHE_DIR",
     "PYATS_POST_DISCONNECT_WAIT_SECONDS",
     "PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS",
+    # Connection broker protocol limits
+    "MAX_BROKER_MESSAGE_BYTES",
     # Multi-job execution
     "TESTS_PER_JOB",
     "MAX_PARALLEL_JOBS",

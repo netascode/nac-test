@@ -11,6 +11,7 @@ This module provides common fixtures used by both integration and E2E tests:
 
 import os
 import re
+import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
@@ -141,3 +142,15 @@ def mock_api_server_preflight_401() -> Generator[MockAPIServer, None, None]:
     mock_api_server so no mutation of the session-wide server is needed.
     """
     yield from _start_mock_server(MOCK_API_CONFIG_PREFLIGHT_401_PATH)
+
+
+# =============================================================================
+# Shared test fixtures (used by unit, integration, and e2e tests)
+# =============================================================================
+
+
+@pytest.fixture()
+def socket_dir() -> Generator[Path, None, None]:
+    """Short-path temp dir suitable for Unix socket paths (macOS 104-char limit)."""
+    with tempfile.TemporaryDirectory() as d:
+        yield Path(d)
