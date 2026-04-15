@@ -351,25 +351,14 @@ def test_init_raises_runtime_error_on_write_failure(
             SubprocessRunner(temp_output_dir, mock_output_handler)
 
 
-def test_write_failure_leaves_attributes_none_and_cleanup_is_safe(
+def test_write_failure_leaves_attributes_none(
     temp_output_dir: Path,
+    mock_output_handler: Mock,
 ) -> None:
-    """Test that write failure leaves attributes None and cleanup handles it safely."""
-    runner = object.__new__(SubprocessRunner)
-    runner.output_dir = temp_output_dir
-    runner._plugin_config_file = None
-    runner._pyats_config_file = None
-
+    """Test that write failure leaves config file attributes as None."""
     with patch.object(Path, "write_text", side_effect=OSError("disk full")):
         with pytest.raises(RuntimeError):
-            runner._create_config_files()
-
-    assert runner._plugin_config_file is None
-    assert runner._pyats_config_file is None
-
-    with patch.object(Path, "unlink") as mock_unlink:
-        runner.cleanup()
-        mock_unlink.assert_not_called()
+            SubprocessRunner(temp_output_dir, mock_output_handler)
 
 
 def test_partial_write_failure_cleans_up_first_file(
@@ -415,52 +404,46 @@ def test_partial_write_failure_cleans_up_first_file(
     )
 
 
-# --- Cleanup tests ---
+# --- CleanupManager registration tests ---
 
 
-def test_cleanup_removes_config_files(
+def test_init_registers_config_files_with_cleanup_manager(
     temp_output_dir: Path, mock_output_handler: Mock
 ) -> None:
-    """Test that cleanup() removes config files."""
-    runner = SubprocessRunner(temp_output_dir, mock_output_handler)
+    """Test that __init__ registers both config files with CleanupManager."""
+    with patch(
+        "nac_test.pyats_core.execution.subprocess_runner.get_cleanup_manager"
+    ) as mock_get_cm:
+        mock_cm = MagicMock()
+        mock_get_cm.return_value = mock_cm
 
-    assert runner._plugin_config_file is not None
-    assert runner._pyats_config_file is not None
-    assert runner._plugin_config_file.exists()
-    assert runner._pyats_config_file.exists()
+        runner = SubprocessRunner(temp_output_dir, mock_output_handler)
 
-    runner.cleanup()
+    assert mock_cm.register.call_count == 2
+    registered_paths = {call.args[0] for call in mock_cm.register.call_args_list}
+    assert runner._plugin_config_file in registered_paths
+    assert runner._pyats_config_file in registered_paths
+    # Both should use keep_if_debug=True
+    for call in mock_cm.register.call_args_list:
+        assert call.kwargs.get("keep_if_debug") is True or (
+            len(call.args) > 1 and call.args[1] is True
+        )
 
-    assert not runner._plugin_config_file.exists()
-    assert not runner._pyats_config_file.exists()
 
-
-def test_cleanup_is_idempotent(
+def test_write_failure_does_not_register_with_cleanup_manager(
     temp_output_dir: Path, mock_output_handler: Mock
 ) -> None:
-    """Test that cleanup() can be called multiple times safely."""
-    runner = SubprocessRunner(temp_output_dir, mock_output_handler)
-    assert runner._plugin_config_file is not None
-    assert runner._pyats_config_file is not None
+    """Test that write failure does NOT register files with CleanupManager."""
+    with (
+        patch.object(Path, "write_text", side_effect=OSError("disk full")),
+        patch(
+            "nac_test.pyats_core.execution.subprocess_runner.get_cleanup_manager"
+        ) as mock_get_cm,
+    ):
+        mock_cm = MagicMock()
+        mock_get_cm.return_value = mock_cm
 
-    runner.cleanup()
-    assert not runner._plugin_config_file.exists()
-    assert not runner._pyats_config_file.exists()
+        with pytest.raises(RuntimeError):
+            SubprocessRunner(temp_output_dir, mock_output_handler)
 
-    runner.cleanup()  # Second call must not raise
-    assert not runner._plugin_config_file.exists()
-    assert not runner._pyats_config_file.exists()
-
-
-def test_del_calls_cleanup(temp_output_dir: Path, mock_output_handler: Mock) -> None:
-    """Test that __del__ triggers opportunistic cleanup of config files."""
-    runner = SubprocessRunner(temp_output_dir, mock_output_handler)
-    assert runner._plugin_config_file is not None
-    assert runner._pyats_config_file is not None
-    assert runner._plugin_config_file.exists()
-    assert runner._pyats_config_file.exists()
-
-    runner.__del__()
-
-    assert not runner._plugin_config_file.exists()
-    assert not runner._pyats_config_file.exists()
+    mock_cm.register.assert_not_called()

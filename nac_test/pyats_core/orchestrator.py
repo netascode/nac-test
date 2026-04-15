@@ -725,16 +725,6 @@ class PyATSOrchestrator:
 
         return pyats_results
 
-    def _cleanup_subprocess_runner(self, keep_artifacts: bool) -> None:
-        """Explicitly clean up config files created by SubprocessRunner.
-
-        Called after report generation completes (success or failure paths).
-        Unexpected exit paths are handled opportunistically via SubprocessRunner.__del__
-        until a more robust mechanism is implemented as part of #677.
-        """
-        if self.subprocess_runner and not keep_artifacts:
-            self.subprocess_runner.cleanup()
-
     async def _generate_html_reports_async(
         self,
     ) -> PyATSResults:
@@ -834,9 +824,6 @@ class PyATSOrchestrator:
                     except Exception as e:
                         logger.debug(f"Could not remove directory {type_dir}: {e}")
 
-            # Clean up PyATS config files created by SubprocessRunner
-            self._cleanup_subprocess_runner(keep_artifacts)
-
             # Extract and return test statistics
             if result.get("pyats_stats"):
                 return self._extract_pyats_stats(result["pyats_stats"])
@@ -847,6 +834,4 @@ class PyATSOrchestrator:
             print(f"\n{terminal.error('Failed to generate reports')}")
             if result.get("error"):
                 print(f"Error: {result['error']}")
-            # Clean up PyATS config files; report generation failed so no stats to return
-            self._cleanup_subprocess_runner(keep_artifacts)
             return PyATSResults()

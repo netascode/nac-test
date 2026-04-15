@@ -22,6 +22,7 @@ from nac_test.pyats_core.constants import (
     PYATS_OUTPUT_BUFFER_LIMIT,
     PYATS_PLUGIN_CONFIG_FILENAME,
 )
+from nac_test.utils.cleanup import get_cleanup_manager
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 
 logger = logging.getLogger(__name__)
@@ -97,33 +98,15 @@ class SubprocessRunner:
 
         self._plugin_config_file = plugin_config_file
         self._pyats_config_file = pyats_config_file
+
+        # Register for automatic cleanup on exit (atexit, SIGTERM, SIGINT).
+        # keep_if_debug=True retains files when NAC_TEST_DEBUG is set.
+        cleanup_mgr = get_cleanup_manager()
+        cleanup_mgr.register(self._plugin_config_file, keep_if_debug=True)
+        cleanup_mgr.register(self._pyats_config_file, keep_if_debug=True)
+
         logger.debug(f"Created plugin_config {self._plugin_config_file}")
         logger.debug(f"Created pyats_config {self._pyats_config_file}")
-
-    def cleanup(self) -> None:
-        """Remove config files created during initialization.
-
-        Called explicitly by the orchestrator after normal execution. Also called
-        opportunistically from __del__ for unexpected exits (best-effort only).
-        """
-        for config_file in [self._plugin_config_file, self._pyats_config_file]:
-            if config_file is not None:
-                config_file.unlink(missing_ok=True)
-                logger.debug(f"Cleaned up config file: {config_file}")
-
-    def __del__(self) -> None:
-        """Opportunistic cleanup on garbage collection.
-
-        Not guaranteed: CPython-specific, not called on SIGKILL or interpreter shutdown.
-        Handles unexpected exits without complicating call sites in the orchestrator.
-        A more robust cleanup mechanism will be implemented as part of #677 (which
-        primarily targets a different file, but config file cleanup will be included) —
-        until then, leaked config files are acceptable (contents not sensitive, files small).
-        """
-        try:
-            self.cleanup()
-        except Exception:
-            pass  # Best-effort: never raise from __del__
 
     def _build_command(
         self,
