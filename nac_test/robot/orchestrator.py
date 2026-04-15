@@ -10,6 +10,7 @@ pattern as PyATSOrchestrator.
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -46,10 +47,9 @@ class RobotOrchestrator:
 
     def __init__(
         self,
-        data_paths: list[Path],
         templates_dir: Path,
         output_dir: Path,
-        merged_data_filename: str,
+        merged_data: dict[str, Any] | None = None,
         filters_path: Path | None = None,
         tests_path: Path | None = None,
         include_tags: list[str] | None = None,
@@ -64,10 +64,9 @@ class RobotOrchestrator:
         """Initialize the Robot Framework orchestrator.
 
         Args:
-            data_paths: List of paths to data model YAML files
             templates_dir: Directory containing Robot template files
             output_dir: Base output directory (orchestrator uses its robot_results subdirectory)
-            merged_data_filename: Name of the merged data model file
+            merged_data: Already-loaded merged data model dict (avoids re-reading from disk)
             filters_path: Optional path to filter files
             tests_path: Optional path to test files
             include_tags: Optional list of tags to include
@@ -79,11 +78,12 @@ class RobotOrchestrator:
             loglevel: Log level
             verbose: Enable verbose mode - enables verbose output for pabot
         """
-        self.data_paths = data_paths
         self.templates_dir = Path(templates_dir)
         self.base_output_dir = Path(output_dir)
         self.output_dir = self.base_output_dir / ROBOT_RESULTS_DIRNAME
-        self.merged_data_filename = merged_data_filename
+        self.merged_data: dict[str, Any] = (
+            merged_data if merged_data is not None else {}
+        )
 
         # Robot-specific parameters
         self.filters_path = filters_path
@@ -105,7 +105,7 @@ class RobotOrchestrator:
 
         # Initialize Robot Framework components (reuse existing implementations)
         self.robot_writer = RobotWriter(
-            data_paths=self.data_paths,
+            merged_data=self.merged_data,
             filters_path=self.filters_path,
             tests_path=self.tests_path,
             include_tags=self.include_tags,
@@ -118,10 +118,9 @@ class RobotOrchestrator:
         This method:
         1. Creates the Robot Framework working directory under robot_results/
         2. Renders Robot test templates using RobotWriter
-        3. Creates merged data model file in the Robot working directory
-        4. Executes tests using pabot (unless render_only mode)
-        5. Creates backward compatibility symlinks
-        6. Extracts and returns test statistics
+        3. Executes tests using pabot (unless render_only mode)
+        4. Creates backward compatibility symlinks
+        5. Extracts and returns test statistics
 
         Follows the same pattern as PyATSOrchestrator.run_tests().
 
@@ -137,17 +136,10 @@ class RobotOrchestrator:
         logger.info(f"Robot working directory: {self.output_dir}")
         logger.info(f"Templates directory: {self.templates_dir}")
 
-        # Phase 1: Template rendering (delegate to existing RobotWriter)
+        # Phase 2: Template rendering (delegate to existing RobotWriter)
         typer.echo("📝 Rendering Robot Framework templates...")
         self.robot_writer.write(
             self.templates_dir, self.output_dir, ordering_file=self.ordering_file
-        )
-
-        # Phase 2: Create merged data model in Robot working directory
-        # Note: Robot tests expect the merged data file in their working directory
-        logger.info("Creating merged data model for Robot tests")
-        self.robot_writer.write_merged_data_model(
-            self.output_dir, self.merged_data_filename
         )
 
         # Phase 3: Test execution (unless render-only mode)

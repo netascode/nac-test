@@ -22,6 +22,7 @@ from nac_test.core.constants import (
     SUMMARY_SEPARATOR_WIDTH,
 )
 from nac_test.core.types import PyATSResults, TestResults
+from nac_test.data_merger import DataMerger
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
     DEFAULT_CPU_MULTIPLIER,
@@ -30,6 +31,7 @@ from nac_test.pyats_core.constants import (
     MEMORY_PER_WORKER_GB,
 )
 from nac_test.pyats_core.discovery import DeviceInventoryDiscovery, TestDiscovery
+from nac_test.pyats_core.discovery.tag_matcher import TagMatcher
 from nac_test.pyats_core.execution import (
     JobGenerator,
     OutputProcessor,
@@ -65,13 +67,14 @@ class PyATSOrchestrator:
         data_paths: list[Path],
         test_dir: Path,
         output_dir: Path,
-        merged_data_filename: str,
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
         controller_type: str | None = None,
         dry_run: bool = False,
         verbose: bool = False,
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
+        include_tags: list[str] | None = None,
+        exclude_tags: list[str] | None = None,
     ):
         """Initialize the PyATS orchestrator.
 
@@ -79,7 +82,6 @@ class PyATSOrchestrator:
             data_paths: List of paths to data model YAML files
             test_dir: Directory containing PyATS test files
             output_dir: Base output directory (orchestrator creates pyats_results subdirectory)
-            merged_data_filename: Name of the merged data model file
             minimal_reports: Only include command outputs for failed/errored tests in reports
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
             controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
@@ -87,6 +89,8 @@ class PyATSOrchestrator:
             dry_run: If True, validate test structure without executing tests
             verbose: Enable verbose mode - verbose output
             loglevel: Log level for PyATS output filtering
+            include_tags: Tag patterns to include (Robot Framework syntax)
+            exclude_tags: Tag patterns to exclude (Robot Framework syntax)
         """
         self.data_paths = data_paths
         # Use absolute() rather than resolve() to preserve symlinks — resolve() would
@@ -97,12 +101,17 @@ class PyATSOrchestrator:
         self.output_dir = (
             self.base_output_dir / PYATS_RESULTS_DIRNAME
         )  # PyATS works in its own subdirectory
-        self.merged_data_filename = merged_data_filename
+        # Absolute path so child processes can locate it regardless of working directory.
+        self.merged_data_path = DataMerger.merged_data_path(
+            self.base_output_dir
+        ).absolute()
         self.minimal_reports = minimal_reports
         self.custom_testbed_path = custom_testbed_path
         self.dry_run = dry_run
         self.verbose = verbose
         self.loglevel = loglevel
+        self.include_tags = include_tags
+        self.exclude_tags = exclude_tags
 
         # Track test status by type for combined summary
         self.api_test_status: dict[str, dict[str, Any]] = {}
@@ -139,7 +148,7 @@ class PyATSOrchestrator:
         # Initialize discovery components
         self.test_discovery = TestDiscovery(self.test_dir)
         self.device_inventory_discovery = DeviceInventoryDiscovery(
-            self.base_output_dir / self.merged_data_filename
+            self.merged_data_path
         )
 
         # Initialize execution components
@@ -261,10 +270,8 @@ class PyATSOrchestrator:
             # We cannot pass Python objects across process boundaries
             # so we use env vars to communicate
             # configuration (like data file paths) from the orchestrator to the test subprocess.
-            # The merged data file is created by main.py at the base output level.
-            # Pass absolute path so the child process (with cwd set) can locate it.
             env["MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH"] = str(
-                (self.base_output_dir / self.merged_data_filename).absolute()
+                self.merged_data_path
             )
             # Set NAC_TEST_TYPE to differentiate API vs D2D test types for separate temp directories
             # This prevents race conditions where both test types write JSONL files to the same location
@@ -384,6 +391,7 @@ class PyATSOrchestrator:
                 self.d2d_test_status,  # Use d2d_test_status for device tests
                 self.test_dir,
                 self.base_output_dir,
+                self.merged_data_path,
                 self.custom_testbed_path,
             )
 
@@ -568,21 +576,28 @@ class PyATSOrchestrator:
 
         # Note: Merged data file created by main.py (single source of truth)
 
-        # Test Discovery
-        test_files, skipped_files = self.test_discovery.discover_pyats_tests()
+        discovery_result = self.test_discovery.discover_pyats_tests(
+            include_tags=self.include_tags,
+            exclude_tags=self.exclude_tags,
+        )
 
-        if not test_files:
-            print("No PyATS test files (*.py) found in test directory")
+        if not discovery_result.total_count:
+            if discovery_result.filtered_by_tags:
+                filter_desc = str(
+                    TagMatcher(include=self.include_tags, exclude=self.exclude_tags)
+                )
+                print(f"No pyATS tests matching tag filter ({filter_desc})")
+            else:
+                print("No PyATS test files (*.py) found in test directory")
             return PyATSResults()
 
-        # Categorize tests by type (api/ vs d2d/)
-        try:
-            api_tests, d2d_tests = self.test_discovery.categorize_tests_by_type(
-                test_files
-            )
-        except ValueError as e:
-            print(terminal.error(str(e)))
-            raise
+        print(
+            f"Discovered {discovery_result.total_count} PyATS test files"
+            f" ({len(discovery_result.api_tests)} api, {len(discovery_result.d2d_tests)} d2d)"
+        )
+
+        api_tests = discovery_result.api_paths
+        d2d_tests = discovery_result.d2d_paths
 
         # Dry-run mode: print discovered tests and return results without further execution
         if self.dry_run:
@@ -591,21 +606,14 @@ class PyATSOrchestrator:
             d2d_result = TestResults.not_run(DRY_RUN_REASON) if d2d_tests else None
             return PyATSResults(api=api_result, d2d=d2d_result)
 
-        breakdown_parts = []
-        if api_tests:
-            breakdown_parts.append(f"{len(api_tests)} api")
-        if d2d_tests:
-            breakdown_parts.append(f"{len(d2d_tests)} d2d")
-        breakdown = f" ({', '.join(breakdown_parts)})" if breakdown_parts else ""
-        print(f"Discovered {len(test_files)} PyATS test files{breakdown}")
-        print(f"Running with {self.max_workers} parallel workers")
-
         # Create output directory only when actually executing tests (not in dry-run mode)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+        print(f"Running with {self.max_workers} parallel workers")
+
         # Initialize progress reporter for output formatting
         self.progress_reporter = ProgressReporter(
-            total_tests=len(test_files), max_workers=self.max_workers
+            total_tests=discovery_result.total_count, max_workers=self.max_workers
         )
         self.test_status = {}
         self.start_time = datetime.now()
@@ -613,12 +621,22 @@ class PyATSOrchestrator:
         # Set the test_status reference in progress reporter
         self.progress_reporter.test_status = self.test_status
 
+        # Build a path→type lookup so OutputProcessor can stamp test_type into each
+        # test_info entry as results arrive, avoiding a post-hoc path lookup after
+        # execution. The deeper fix would be to run separate OutputProcessor/test_status
+        # instances per execution type (api/d2d), eliminating the need for this map
+        # and the split loop below entirely.
+        test_type_by_path = {
+            str(m.path.absolute()): m.test_type for m in discovery_result.all_tests
+        }
+
         # Initialize execution components now that progress reporter is ready
         self.output_processor = OutputProcessor(
             self.progress_reporter,
             self.test_status,
             verbose=self.verbose,
             loglevel=self.loglevel,
+            test_type_by_path=test_type_by_path,
         )
         # Archives should be stored at base level, not in pyats_results subdirectory
         try:
@@ -674,9 +692,8 @@ class PyATSOrchestrator:
             print("No tests to execute after categorization")
 
         # Split test_status into api_test_status and d2d_test_status based on test type.
-        # OutputProcessor correctly parses results for ALL tests into test_status.
-        # We split them here based on path patterns (.api. vs .d2d.) for accurate
-        # per-type summaries.
+        # test_type was stamped into each test_info entry by OutputProcessor at task_start
+        # time, so no post-hoc path lookup is needed here.
         #
         # IMPORTANT: We must clear d2d_test_status before populating it from test_status.
         # DeviceExecutor also populates d2d_test_status with its own (buggy) entries that
@@ -689,28 +706,15 @@ class PyATSOrchestrator:
         # NOTE: We do NOT remove DeviceExecutor's status tracking entirely because it
         # handles an edge case: if the PyATS subprocess fails to start (e.g., job file
         # generation error), OutputProcessor never sees the test. DeviceExecutor's error
-        # handling (lines 175-179) captures these failures. By clearing here, we discard
-        # DeviceExecutor's buggy success tracking while the error case is still logged.
+        # handling in run_device_job_with_semaphore() captures these failures. By clearing
+        # here, we discard DeviceExecutor's buggy success tracking while the error case
+        # is still logged.
         if self.test_status is not None and self.test_status:
             self.api_test_status.clear()
             self.d2d_test_status.clear()
 
-            # Create resolver for test type detection (uses caching)
-            from nac_test.pyats_core.discovery.test_type_resolver import (
-                TestTypeResolver,
-            )
-
-            resolver = TestTypeResolver(self.test_dir)
-
             for test_name, test_info in self.test_status.items():
-                test_file = test_info.get("test_file")
-                test_type = "api"  # Default
-
-                if test_file:
-                    # Use TestTypeResolver for accurate detection
-                    test_type = resolver.resolve(Path(test_file))
-
-                if test_type == "d2d":
+                if test_info.get("test_type") == "d2d":
                     self.d2d_test_status[test_name] = test_info
                 else:
                     self.api_test_status[test_name] = test_info

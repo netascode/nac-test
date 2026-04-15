@@ -58,13 +58,14 @@ $ nac-test --help
 │    --verbose                            Enables verbose output for nac-test, │
 │                                         Robot and PyATS execution.           |
 │                                         [env var: NAC_TEST_VERBOSE]          │
-│    --merged-data-file… -m   TEXT        Filename for merged data model.      │
-│                                         [default: merged_data_model_test...] │
 │    --loglevel          -l   [DEBUG|...] Log level. [default: WARNING]        │
 │    --version                            Display version number.              │
 │    --help                               Show this message and exit.          │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
+
+**Breaking changes in nac-test 2.0:**
+- The legacy `iac-test` CLI entrypoint has been removed. Use `nac-test` instead.
 
 ## How It Works
 
@@ -372,16 +373,8 @@ Before test execution, `nac-test` merges all YAML data files into a single data 
 
 1. All files from `--data` paths are recursively loaded
 2. YAML structures are deep-merged (later files override earlier ones)
-3. The merged result is written to the output directory
+3. The merged result is written to the output directory as `merged_data_model_test_variables.yaml`
 4. Both Robot and PyATS tests reference this merged data
-
-### Custom Filename
-
-By default, the merged file is named `merged_data_model_test_variables.yaml`. You can customize this:
-
-```bash
-nac-test -d ./data -t ./tests -o ./output -m my_custom_data.yaml
-```
 
 ### Accessing the Merged Data
 
@@ -594,7 +587,36 @@ tests
 
 ## Select Test Cases By Tag
 
-It is possible to include and exclude test cases by tag names with the `--include` and `--exclude` CLI options. These options are directly passed to the Pabot/Robot executor and are documented [here](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#by-tag-names).
+The `--include` and `--exclude` CLI options filter test cases by tag for both Robot Framework and PyATS tests.
+
+**Robot Framework**: Tags are applied to test cases using Robot's standard tagging mechanism. See [Robot Framework documentation](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#by-tag-names) for details.
+
+**PyATS**: Tests are filtered based on their `groups` class attribute:
+
+```python
+class VerifyBgpNeighbors(SDWANTestBase):
+    groups = ["bgp", "routing"]  # Matches --include bgp or --include routing
+```
+
+Both frameworks use Robot Framework's TagPatterns for consistent pattern matching:
+- Simple tags: `bgp`, `health`, `ospf`
+- Wildcards: `bgp*`, `?est`
+- Boolean: `bgpANDrouting`, `bgpORospf`, `bgpNOTnrfu`
+- Case-insensitive, underscores ignored
+
+**Examples:**
+
+```bash
+# Run only tests tagged with 'bgp'
+nac-test -d data/ -t templates/ -o output/ --include bgp
+
+# Exclude tests tagged with 'nrfu'
+nac-test -d data/ -t templates/ -o output/ --exclude nrfu
+
+# Boolean patterns
+nac-test -d data/ -t templates/ -o output/ --include "bgpORospf"
+nac-test -d data/ -t templates/ -o output/ --exclude "bgpANDnrfu"
+```
 
 
 ## Parallel Execution Control
