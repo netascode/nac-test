@@ -88,8 +88,10 @@ done
 
 shift $((OPTIND-1))
 
-# The remaining argument is the nac-test command
-NAC_TEST_COMMAND="$*"
+# The remaining positional argument must be a single shell command string
+# (quoted by the caller). We treat it as an opaque command for `bash -c`.
+[ $# -eq 1 ] || { echo -e "${RED}Error: nac-test command must be passed as a single quoted argument${NC}"; exit 1; }
+NAC_TEST_COMMAND="$1"
 
 # Validate required arguments
 if [ -z "$OUTPUT_DIR" ]; then
@@ -168,6 +170,25 @@ detect_architecture() {
 }
 
 DETECTED_ARCH=$(detect_architecture)
+
+###############################################################################
+# REQUIREMENTS PREFLIGHT
+###############################################################################
+
+if ! command -v zip >/dev/null 2>&1; then
+    echo ""
+    echo -e "${RED}zip command not found${NC}"
+    echo -e "${YELLOW}Install it and re-run diagnostics:${NC}"
+    if $IS_MACOS; then
+        echo "  brew install zip"
+    else
+        echo "  sudo apt-get update && sudo apt-get install -y zip"
+        echo "  # or: sudo dnf install -y zip"
+        echo "  # or: sudo yum install -y zip"
+    fi
+    echo ""
+    exit 1
+fi
 
 ###############################################################################
 # SETUP DIAGNOSTIC DIRECTORY
@@ -352,7 +373,7 @@ collect() {
 log ""
 log "${CYAN}╔══════════════════════════════════════════════════════════════════╗${NC}"
 log "${CYAN}║        NAC-Test Diagnostic Collection v5.0                       ║${NC}"
-log "${CYAN}║              Architecture-Agnostic Edition                        ║${NC}"
+log "${CYAN}║              Architecture-Agnostic Edition                       ║${NC}"
 log "${CYAN}╚══════════════════════════════════════════════════════════════════╝${NC}"
 log ""
 log "${GREEN}=== NAC-Test Diagnostic Collection v5.0 ===${NC}"
@@ -520,7 +541,7 @@ echo '=== NaC-related packages ==='
 "
 
 collect "034_pyats_version" "
-python -c 'import pyats; print(f\"PyATS version: {pyats.__version__}\")' 2>&1 || echo 'PyATS not installed or import failed'
+pyats version check 2>&1 || echo 'pyats CLI not available'
 "
 
 ###############################################################################
@@ -638,6 +659,8 @@ NAC_TEST_START=$(date +%s)
 
 # Execute the user's nac-test command
 log "${YELLOW}Starting nac-test execution...${NC}"
+log "Note: nac-test output is not shown on screen."
+log "  Saved to: $DIAG_DIR/100_nac_test_execution.txt"
 log ""
 
 {
@@ -663,7 +686,6 @@ log ""
     echo "Exit code: $NAC_TEST_EXIT"
 } > "$DIAG_DIR/100_nac_test_execution.txt" 2>&1
 
-NAC_TEST_EXIT=${PIPESTATUS[0]}
 NAC_TEST_END=$(date +%s)
 NAC_TEST_DURATION=$((NAC_TEST_END - NAC_TEST_START))
 
@@ -736,14 +758,16 @@ echo '   review them before sharing if you have concerns about credential exposu
         log "  ${YELLOW}⚠️  WARNING: Archives may contain logs with credentials - review before sharing${NC}"
     fi
 
-    # Collect Robot Framework outputs (if running --robot)
+    # Collect Robot Framework outputs
+    ROBOT_FILES=$(find "$OUTPUT_DIR/robot_results" \( -name 'output.xml' -o -name 'log.html' -o -name 'report.html' \) -mmin -60 2>/dev/null)
+
     collect "120_robot_outputs" "
 echo 'Robot Framework output files:'
-find '$OUTPUT_DIR' -name 'output.xml' -o -name 'log.html' -o -name 'report.html' 2>/dev/null | head -20
+echo \"$ROBOT_FILES\" | head -20
 "
 
     ROBOT_COUNT=0
-    for robot_file in $(find "$OUTPUT_DIR" \( -name 'output.xml' -o -name 'log.html' -o -name 'report.html' \) -mmin -60 2>/dev/null); do
+    for robot_file in $ROBOT_FILES; do
         cp "$robot_file" "$DIAG_DIR/" 2>/dev/null && ROBOT_COUNT=$((ROBOT_COUNT + 1))
     done
     if [ "$ROBOT_COUNT" -gt 0 ]; then
@@ -847,11 +871,14 @@ done
 ZIP_NAME="${DIAG_DIR}.zip"
 log ""
 log "Creating archive: $ZIP_NAME"
-zip -r "$ZIP_NAME" "$DIAG_DIR" > /dev/null
+(
+    cd "$(dirname "$DIAG_DIR")" || exit 1
+    zip -r "$(basename "$ZIP_NAME")" "$(basename "$DIAG_DIR")" > /dev/null
+)
 
 log ""
 log "${GREEN}╔══════════════════════════════════════════════════════════════════╗${NC}"
-log "${GREEN}║              DIAGNOSTIC COLLECTION COMPLETE                       ║${NC}"
+log "${GREEN}║              DIAGNOSTIC COLLECTION COMPLETE                      ║${NC}"
 log "${GREEN}╚══════════════════════════════════════════════════════════════════╝${NC}"
 log ""
 log "Archive: ${GREEN}$ZIP_NAME${NC}"
