@@ -8,6 +8,7 @@ and provides pre-configured scenarios for different test outcomes.
 """
 
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 
@@ -160,6 +161,16 @@ class E2EScenario:
         """True if this scenario includes Robot Framework tests."""
         return self.expected_robot_total > 0
 
+    @cached_property
+    def robot_invoked(self) -> bool:
+        """True if pabot was invoked, regardless of tag filter results.
+
+        Pabot always creates robot_results/ when the fixture contains .robot
+        files, even when tag filters produce zero matching tests. This differs
+        from has_robot_tests, which reflects whether tests actually ran.
+        """
+        return any(Path(self.templates_path).rglob("*.robot"))
+
     @property
     def has_pyats_api_tests(self) -> bool:
         """True if this scenario includes PyATS API tests."""
@@ -177,6 +188,8 @@ class E2EScenario:
 
     def validate(self) -> None:
         """Validate scenario configuration consistency.
+        Only check for basic consistency which is relevant to test execution,
+        not the expected results (which are scenario-specific).
 
         Raises:
             ValueError: If configuration is inconsistent.
@@ -470,4 +483,83 @@ PREFLIGHT_AUTH_FAILURE_SCENARIO = E2EScenario(
     expected_pyats_api_failed=0,
     expected_pyats_d2d_passed=0,
     expected_pyats_d2d_failed=0,
+)
+
+TAG_FILTER_INCLUDE_SCENARIO = E2EScenario(
+    name="tag_filter_include",
+    description="--include bgp: filters to 1 Robot + 1 PyATS (both pass)",
+    data_path=f"{_FIXTURE_BASE}/tag_filtering/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/tag_filtering/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=0,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    # PyATS API: verify_bgp_api.py (groups=["bgp"]) - 1 pass
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
+
+TAG_FILTER_EXCLUDE_SCENARIO = E2EScenario(
+    name="tag_filter_exclude",
+    description="--exclude ospf: filters to 1 Robot + 1 PyATS (both pass)",
+    data_path=f"{_FIXTURE_BASE}/tag_filtering/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/tag_filtering/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=0,
+    expected_robot_passed=1,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    # PyATS API: verify_bgp_api.py (groups=["bgp"]) - 1 pass (ospf excluded)
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
+
+TAG_FILTER_COMBINED_SCENARIO = E2EScenario(
+    name="tag_filter_combined",
+    description="--include api-only: 0 Robot (no match) + 1 PyATS (verify_ospf_api.py) → exit 0",
+    data_path=f"{_FIXTURE_BASE}/tag_filtering/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/tag_filtering/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=0,
+    expected_robot_passed=0,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    # PyATS API: verify_ospf_api.py (groups=["ospf", "api-only"]) - 1 pass
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
+)
+
+TAG_FILTER_NO_MATCH_SCENARIO = E2EScenario(
+    name="tag_filter_no_match",
+    description="--exclude bgpORospf filters out all tests: 0 Robot + 0 PyATS → exit 252",
+    data_path=f"{_FIXTURE_BASE}/tag_filtering/data.yaml",
+    templates_path=f"{_FIXTURE_BASE}/tag_filtering/templates",
+    requires_testbed=False,
+    architecture="ACI",
+    expected_exit_code=252,
+    expected_robot_passed=0,
+    expected_robot_failed=0,
+    expected_robot_skipped=0,
+    expected_pyats_api_passed=0,
+    expected_pyats_api_failed=0,
+    expected_pyats_api_skipped=0,
+    expected_pyats_d2d_passed=0,
+    expected_pyats_d2d_failed=0,
+    expected_pyats_d2d_skipped=0,
 )

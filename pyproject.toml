@@ -159,7 +159,12 @@ exclude = ["^tests/fixtures/", "^tests/integration/fixtures/", "^tests/e2e/fixtu
 [tool.pytest.ini_options]
 markers = ["unit", "integration", "e2e", "windows"]
 # Exclude fixture files from test collection - they are sample files for testing the resolver
-norecursedirs = ["tests/fixtures", "tests/e2e/fixtures"]
+# Exclude nac_test source directory - prevents pytest from trying to collect Test* classes
+norecursedirs = ["tests/fixtures", "tests/e2e/fixtures", "nac_test"]
+# Suppress PytestCollectionWarning for source classes named Test* that are imported by tests
+filterwarnings = [
+    "ignore:cannot collect test class 'Test(FileMetadata|Discovery|MetadataResolver|ResultCollector|Results|Result|Collector|DataCollector|Status|Error)':pytest.PytestCollectionWarning",
+]
 
 [build-system]
 requires = ["hatchling"]
