@@ -842,29 +842,19 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
   nac-test -d config/ -t templates/ --tests custom_tests/ -o output/
   ```
 
-**`-m, --merged-data-filename`** (OPTIONAL)
-- **Type**: `str`
-- **Default**: `"merged_data_model_test_variables.yaml"`
-- **Environment Variable**: None (CLI only)
-- **Purpose**: Custom filename for merged data model YAML (SOT shared across frameworks)
-- **Behavior**:
-  - Written to `{output_dir}/{merged_data_filename}`
-  - Passed to CombinedOrchestrator constructor
-  - Both PyATS and Robot read from this shared file
-- **Example**:
-  ```bash
-  nac-test -d config/ -t templates/ -o output/ -m merged_data_prod.yaml
-  ```
-
 ##### Execution Control Flags
 
 **`-i, --include`** (OPTIONAL)
 - **Type**: `list[str]`
 - **Default**: `[]` (all tests)
 - **Environment Variable**: `NAC_TEST_INCLUDE`
-- **Purpose**: Select test cases by tag (include filter for Robot Framework)
+- **Purpose**: Select test cases by tag (include filter for Robot Framework and PyATS)
 - **Behavior**:
-  - Passed to Robot Framework via Pabot's tag filtering
+  - **Robot Framework**: Passed to Pabot's tag filtering
+  - **PyATS**: Filters tests based on their `groups` class attribute
+  - Uses Robot Framework's TagPatterns for consistent matching across both frameworks
+  - Tag pattern syntax: simple tags (`health`), wildcards (`bgp*`), boolean (`healthANDbgp`, `healthORbgp`, `healthNOTnrfu`)
+  - Case-insensitive, underscores ignored
   - Multiple tags: logical OR (test must match ANY tag)
   - Combined with `--exclude` (exclude takes precedence)
 - **Examples**:
@@ -884,8 +874,11 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 - **Type**: `list[str]`
 - **Default**: `[]` (no exclusions)
 - **Environment Variable**: `NAC_TEST_EXCLUDE`
-- **Purpose**: Exclude test cases by tag (exclude filter for Robot Framework)
+- **Purpose**: Exclude test cases by tag (exclude filter for Robot Framework and PyATS)
 - **Behavior**:
+  - **Robot Framework**: Passed to Pabot's tag filtering
+  - **PyATS**: Filters tests based on their `groups` class attribute
+  - Uses Robot Framework's TagPatterns for consistent matching across both frameworks
   - Takes precedence over `--include` (excluded tests never run)
   - Multiple tags: logical OR (test excluded if it matches ANY tag)
 - **Example**:
@@ -1296,7 +1289,7 @@ exit()  # Checks error_handler.fired for exit code
 
 #### Environment Variable Support
 
-Every CLI flag (except `--version` and `--merged-data-filename`) supports environment variable configuration for CI/CD and containerized environments.
+Every CLI flag (except `--version`) supports environment variable configuration for CI/CD and containerized environments.
 
 **Environment Variable Mapping Table**:
 
@@ -6072,15 +6065,62 @@ class SystemResourceCalculator:
 
 ### Cleanup Utilities (`utils/cleanup.py`)
 
-Resource cleanup on exit:
+#### CleanupManager
+
+`CleanupManager` is a process-wide singleton that ensures registered files
+are deleted when the process exits, regardless of how it exits.
+
+**Triggers covered:**
+- Normal exit via `atexit` (including `typer.Exit`)
+- `SIGTERM` (e.g. `docker stop`, `kill`) — Unix only
+- `SIGINT` (Ctrl+C / `KeyboardInterrupt`) — Unix only
+
+`SIGKILL` cannot be intercepted; files may remain if the process is killed
+with `-9`.
+
+**Key methods:**
 
 ```python
-def cleanup_temp_files(patterns: List[str]) -> None:
-    """Remove temporary files matching patterns."""
+cleanup = get_cleanup_manager()           # always returns the singleton
 
-def cleanup_output_directory(output_dir: Path) -> None:
-    """Clean up output directory before run."""
+cleanup.register(path)                    # delete path on exit
+cleanup.register(path, keep_if_debug=True)  # skip deletion when NAC_TEST_DEBUG=true
+cleanup.unregister(path)                  # cancel a previously registered path
+cleanup.run_cleanup()                     # trigger cleanup immediately (idempotent)
 ```
+
+**`keep_if_debug` flag**
+
+Files registered with `keep_if_debug=True` are retained when
+`NAC_TEST_DEBUG=true` is set. Use this for intermediate files that are
+useful for debugging (job scripts, per-device testbed YAMLs, merged data
+model). Sensitive files (e.g. files containing credentials) should always
+be registered without this flag so they are unconditionally removed.
+
+**Thread safety:** all operations are protected by an internal lock.
+
+**Fork safety:** the singleton must not be used in forked child processes.
+If a process is forked while `CleanupManager` is initialised, the child
+inherits the lock in an undefined state and cleanup behaviour is
+unpredictable. Subprocesses spawned via `subprocess.Popen` are unaffected
+— they start a fresh interpreter with no inherited singleton state.
+
+**Signal handler behaviour:** on SIGTERM the original handler is restored
+and the signal is re-raised via `signal.raise_signal()` so upstream
+process managers (Docker, systemd) see the expected exit status. On SIGINT
+the original handler is restored and `KeyboardInterrupt` is raised so the
+normal Python exception handling chain proceeds.
+
+#### PyATS runtime cleanup helpers
+
+Three standalone functions handle CI/CD-specific directory hygiene (not
+related to `CleanupManager`):
+
+| Function | Purpose |
+|---|---|
+| `cleanup_pyats_runtime(workspace_path)` | Removes the `.pyats/` runtime directory before a run to prevent disk exhaustion |
+| `cleanup_old_test_outputs(output_dir, days)` | Removes `.jsonl` result files older than `days` days |
+| `cleanup_stale_test_artifacts(output_dir)` | Removes `api/`, `d2d/`, and `default/` subdirectories containing stale JSONL files from interrupted runs |
 
 ### Environment Utilities (`utils/environment.py`)
 

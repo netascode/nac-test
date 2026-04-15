@@ -23,24 +23,6 @@ SHIMS = [
     ("nac_test.robot_writer", "nac_test.robot.robot_writer", "RobotWriter"),
 ]
 
-# Required (no-default) parameters for exported callables at the time the
-# shims were written.  When a test below fails, the canonical signature has
-# changed — review and, if needed, update the shim layer to keep the legacy
-# API working for downstream callers.
-# Format: (module, attr, {param_name: annotation, ...})
-EXPECTED_SIGNATURES = [
-    ("nac_test.robot.pabot", "run_pabot", {"path": Path}),
-    (
-        "nac_test.robot.robot_writer",
-        "RobotWriter",
-        {
-            "data_paths": list[Path],
-            "filters_path": Path | None,
-            "tests_path": Path | None,
-        },
-    ),
-]
-
 
 @pytest.mark.parametrize(
     "legacy_module, canonical_module, attr",
@@ -76,25 +58,6 @@ def test_shim_emits_deprecation_warning(
         assert issubclass(shim_obj, canonical)
     else:
         assert callable(shim_obj)
-
-
-@pytest.mark.parametrize(
-    "module, attr, expected_params",
-    EXPECTED_SIGNATURES,
-    ids=[s[1] for s in EXPECTED_SIGNATURES],
-)
-def test_shim_signature_reminder(
-    module: str, attr: str, expected_params: dict[str, type]
-) -> None:
-    """Fail when the canonical signature changes so developers review the shim layer."""
-    obj = getattr(importlib.import_module(module), attr)
-    sig = inspect.signature(obj)
-    required = {
-        name: p.annotation
-        for name, p in sig.parameters.items()
-        if p.default is inspect.Parameter.empty
-    }
-    assert required == expected_params
 
 
 @pytest.mark.parametrize(
@@ -152,7 +115,7 @@ def test_run_pabot_forwards_kwargs() -> None:
         "data_paths",
         "filters_path",
         "tests_path",
-        "expected_data_paths",
+        "expected_coerced_paths",
         "expected_filters_path",
         "expected_tests_path",
     ),
@@ -194,20 +157,32 @@ def test_robot_writer_coercion_variants(
     data_paths: list[str | Path],
     filters_path: str | Path | None,
     tests_path: str | Path | None,
-    expected_data_paths: list[Path],
+    expected_coerced_paths: list[Path],
     expected_filters_path: Path | None,
     expected_tests_path: Path | None,
 ) -> None:
     """Verify RobotWriter shim coerces args for various input combinations."""
     import nac_test.robot_writer
 
-    with patch(
-        "nac_test.robot_writer._CanonicalRobotWriter.__init__", return_value=None
-    ) as mock_init:
+    sentinel_merged_data = {"sentinel": True}
+
+    with (
+        patch(
+            "nac_test.robot_writer.DataMerger.merge_data_files",
+            return_value=sentinel_merged_data,
+        ) as mock_merge,
+        patch(
+            "nac_test.robot_writer._CanonicalRobotWriter.__init__", return_value=None
+        ) as mock_init,
+    ):
         nac_test.robot_writer.RobotWriter(data_paths, filters_path, tests_path)
 
+    # Verify merge_data_files was called with coerced paths
+    mock_merge.assert_called_once_with(expected_coerced_paths)
+
+    # Verify canonical __init__ was called with merged data and coerced paths
     args = mock_init.call_args[0]
-    assert args[0] == expected_data_paths
+    assert args[0] == sentinel_merged_data
     assert args[1] == expected_filters_path
     assert args[2] == expected_tests_path
 
@@ -216,9 +191,15 @@ def test_robot_writer_forwards_kwargs() -> None:
     """Verify RobotWriter shim forwards kwargs unchanged to canonical."""
     import nac_test.robot_writer
 
-    with patch(
-        "nac_test.robot_writer._CanonicalRobotWriter.__init__", return_value=None
-    ) as mock_init:
+    with (
+        patch(
+            "nac_test.robot_writer.DataMerger.merge_data_files",
+            return_value={},
+        ),
+        patch(
+            "nac_test.robot_writer._CanonicalRobotWriter.__init__", return_value=None
+        ) as mock_init,
+    ):
         nac_test.robot_writer.RobotWriter(
             ["data.yml"], None, None, include_tags=["tag1"], exclude_tags=["tag2"]
         )

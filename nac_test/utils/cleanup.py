@@ -3,14 +3,187 @@
 
 """Cleanup utilities for nac-test framework."""
 
+import atexit
 import logging
 import shutil
+import signal
+import threading
 import time
 from pathlib import Path
+from types import FrameType
+from typing import Any
 
+from nac_test.core.constants import DEBUG_MODE, IS_WINDOWS
 from nac_test.pyats_core.discovery.test_type_resolver import VALID_TEST_TYPES
 
 logger = logging.getLogger(__name__)
+
+
+class CleanupManager:
+    """Thread-safe manager for registering files to be cleaned up on exit.
+
+    Ensures registered files are removed on:
+    - Normal program exit (atexit)
+    - SIGTERM signal (e.g., docker stop, kill)
+    - SIGINT signal (Ctrl+C / KeyboardInterrupt)
+
+    Note: SIGKILL cannot be caught - files may remain if process is killed with -9.
+
+    Usage:
+        cleanup_manager = CleanupManager()
+        cleanup_manager.register(Path("/tmp/sensitive_file.yaml"))
+        # File will be automatically removed on exit
+
+        # Skip deletion when NAC_TEST_DEBUG is set (useful for debugging):
+        cleanup_manager.register(Path("/tmp/temp_job.py"), keep_if_debug=True)
+
+    Thread Safety:
+        All operations are thread-safe via internal locking.
+
+    Fork Safety:
+        Not safe to use in forked child processes. If a process is forked
+        while the singleton is initialised, the child inherits the lock in
+        an undefined state. Subprocesses spawned via subprocess.Popen are
+        unaffected (they get a fresh interpreter).
+    """
+
+    _instance: "CleanupManager | None" = None
+    _instance_lock = threading.Lock()
+    _initialized: bool = False
+
+    def __new__(cls) -> "CleanupManager":
+        """Singleton pattern - only one cleanup manager per process."""
+        with cls._instance_lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
+
+    def __init__(self) -> None:
+        """Initialize the cleanup manager (only runs once due to singleton)."""
+        if self._initialized:
+            return
+
+        self._files: dict[Path, bool] = {}  # path → keep_if_debug
+        self._lock = threading.RLock()
+        self._original_sigterm: Any = None
+        self._original_sigint: Any = None
+
+        # Register atexit handler
+        atexit.register(self.run_cleanup)
+
+        # Install signal handlers (Unix only - Windows doesn't support SIGTERM properly)
+        if not IS_WINDOWS:
+            self._install_signal_handlers()
+
+        self._initialized = True
+        logger.debug("CleanupManager initialized")
+
+    def _install_signal_handlers(self) -> None:
+        """Install signal handlers for SIGTERM and SIGINT."""
+        try:
+            self._original_sigterm = signal.signal(signal.SIGTERM, self._signal_handler)
+            self._original_sigint = signal.signal(signal.SIGINT, self._signal_handler)
+            logger.debug("Signal handlers installed for SIGTERM and SIGINT")
+        except (ValueError, OSError) as e:
+            # Can fail if not in main thread or signal not supported
+            logger.debug(f"Could not install signal handlers: {e}")
+
+    def _signal_handler(self, signum: int, frame: FrameType | None) -> None:
+        """Handle SIGTERM/SIGINT by cleaning up and re-raising."""
+        sig_name = signal.Signals(signum).name
+        logger.debug(f"Received {sig_name}, performing cleanup")
+
+        # Perform cleanup
+        self.run_cleanup()
+
+        # Re-raise the signal with original handler or default behavior
+        if signum == signal.SIGTERM:
+            original = self._original_sigterm
+        else:
+            original = self._original_sigint
+
+        # Restore original handler and re-raise
+        signal.signal(signum, original if original is not None else signal.SIG_DFL)
+
+        # For SIGINT, raise KeyboardInterrupt to allow normal exception handling
+        if signum == signal.SIGINT:
+            raise KeyboardInterrupt
+
+        # For SIGTERM, re-send the signal
+        signal.raise_signal(signum)
+
+    def register(self, path: Path, keep_if_debug: bool = False) -> None:
+        """Register a file path for cleanup on exit.
+
+        Args:
+            path: Path to file that should be removed on exit.
+                  Directories are not supported (use shutil.rmtree directly).
+            keep_if_debug: If True, the file will not be deleted when
+                  NAC_TEST_DEBUG is set — useful for intermediate files
+                  (job scripts, testbed YAMLs, merged data) that aid debugging.
+        """
+        with self._lock:
+            # resolve() canonicalises symlinks (e.g. macOS /tmp → /private/tmp)
+            # so registration and cleanup always refer to the same inode.
+            resolved = path.resolve()
+            self._files[resolved] = keep_if_debug
+            logger.debug(
+                f"Registered for cleanup: {resolved} (keep_if_debug={keep_if_debug})"
+            )
+
+    def unregister(self, path: Path) -> None:
+        """Unregister a file path from cleanup.
+
+        Args:
+            path: Path to file that should no longer be cleaned up.
+        """
+        with self._lock:
+            resolved = path.resolve()
+            self._files.pop(resolved, None)
+            logger.debug(f"Unregistered from cleanup: {resolved}")
+
+    def run_cleanup(self) -> None:
+        """Delete all registered files. Safe to call multiple times.
+
+        Called automatically on normal exit (atexit), SIGTERM, and SIGINT.
+        Can also be called manually before an explicit exit.
+
+        Idempotent: registered files are cleared after processing, so
+        subsequent calls are no-ops unless new files are registered
+        between calls (e.g. signal handler runs cleanup, then atexit
+        picks up files registered after the signal).
+        """
+        with self._lock:
+            debug_kept: list[Path] = []
+            for path, keep_if_debug in self._files.items():
+                if keep_if_debug and DEBUG_MODE:
+                    debug_kept.append(path)
+                    continue
+                try:
+                    if path.exists():
+                        path.unlink()
+                        logger.debug(f"Cleaned up: {path}")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up {path}: {e}")
+
+            if debug_kept:
+                logger.info(
+                    "Keeping %d file(s) for debugging (NAC_TEST_DEBUG is set): %s",
+                    len(debug_kept),
+                    ", ".join(str(p) for p in debug_kept),
+                )
+
+            self._files.clear()
+
+
+def get_cleanup_manager() -> CleanupManager:
+    """Get the singleton CleanupManager instance.
+
+    Returns:
+        The global CleanupManager instance.
+    """
+    return CleanupManager()
 
 
 def cleanup_pyats_runtime(workspace_path: Path | None = None) -> None:

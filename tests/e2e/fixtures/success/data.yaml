@@ -1,6 +1,7 @@
 
 sdwan:
   management_ip_variable: vpn0_ip
+  test_credential: !env TEST_CREDENTIAL_SENTINEL
   sites:
     - name: SITE_100
       site_id: "100"

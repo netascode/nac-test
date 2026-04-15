@@ -51,7 +51,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
         )
 
         # Controller detection is now deferred to run_tests()
@@ -76,7 +75,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             dev_pyats_only=True,
         )
 
@@ -125,7 +123,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             dev_pyats_only=True,
         )
 
@@ -190,7 +187,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             dev_pyats_only=True,  # Run PyATS only mode
         )
 
@@ -235,13 +231,14 @@ class TestCombinedOrchestratorController:
                     data_paths=[data_dir],
                     test_dir=templates_dir,
                     output_dir=output_dir,
-                    merged_data_filename="merged.yaml",
                     minimal_reports=False,
                     custom_testbed_path=None,
                     controller_type="SDWAN",
                     dry_run=False,
                     verbose=False,
                     loglevel=DEFAULT_LOGLEVEL,
+                    include_tags=[],
+                    exclude_tags=[],
                 )
 
                 # Verify run_tests was called on the instance
@@ -291,7 +288,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
             render_only=True,  # Critical: render-only mode
         )
 
@@ -362,7 +358,6 @@ class TestCombinedOrchestratorController:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=output_dir,
-            merged_data_filename="merged.yaml",
         )
 
         # Controller type should be None after init (deferred to run_tests)
@@ -375,15 +370,12 @@ class TestCombinedOrchestratorController:
             mock_instance.run_tests.return_value = PyATSResults()
             mock_pyats.return_value = mock_instance
 
-            # Mock TestDiscovery to return PyATS files
+            # Mock TestDiscovery so CombinedOrchestrator sees PyATS files
             with patch(
                 "nac_test.combined_orchestrator.TestDiscovery"
             ) as mock_discovery:
                 mock_discovery_instance = MagicMock()
-                mock_discovery_instance.discover_pyats_tests.return_value = (
-                    [Path(test_file)],
-                    [],
-                )
+                mock_discovery_instance.has_pyats_tests.return_value = True
                 mock_discovery.return_value = mock_discovery_instance
 
                 # Mock preflight auth and typer functions
@@ -404,13 +396,14 @@ class TestCombinedOrchestratorController:
                     data_paths=[data_dir],
                     test_dir=templates_dir,
                     output_dir=output_dir,
-                    merged_data_filename="merged.yaml",
                     minimal_reports=False,
                     custom_testbed_path=None,
                     controller_type="CC",
                     dry_run=False,
                     verbose=False,
                     loglevel=DEFAULT_LOGLEVEL,
+                    include_tags=[],
+                    exclude_tags=[],
                 )
 
                 # Verify run_tests was called on the instance
