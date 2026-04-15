@@ -4,7 +4,7 @@
 """Tests for PyATSOrchestrator handling of SubprocessRunner init failures."""
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -32,28 +32,39 @@ class TestOrchestratorSubprocessRunnerInitError:
         has_d2d: bool,
     ) -> None:
         """OSError in SubprocessRunner._create_config_files raises RuntimeError, returns from_error results."""
-        api_tests = [Path("/fake/tests/api/test_one.py")] if has_api else []
-        d2d_tests = [Path("/fake/tests/d2d/test_two.py")] if has_d2d else []
+        api_test_paths = [Path("/fake/tests/api/test_one.py")] if has_api else []
+        d2d_test_paths = [Path("/fake/tests/d2d/test_two.py")] if has_d2d else []
 
         orchestrator = PyATSOrchestrator(
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
         )
+
+        # Build a mock DiscoveryResult
+        mock_discovery_result = MagicMock()
+        mock_discovery_result.total_count = len(api_test_paths) + len(d2d_test_paths)
+        mock_discovery_result.api_tests = [MagicMock(path=p) for p in api_test_paths]
+        mock_discovery_result.d2d_tests = [MagicMock(path=p) for p in d2d_test_paths]
+        mock_discovery_result.api_paths = api_test_paths
+        mock_discovery_result.d2d_paths = d2d_test_paths
+        mock_discovery_result.all_tests = (
+            mock_discovery_result.api_tests + mock_discovery_result.d2d_tests
+        )
+        mock_discovery_result.filtered_by_tags = False
 
         with (
             patch.object(
-                orchestrator.test_discovery, "discover_pyats_tests"
-            ) as mock_discover,
-            patch.object(
-                orchestrator.test_discovery, "categorize_tests_by_type"
-            ) as mock_categorize,
+                orchestrator.test_discovery,
+                "discover_pyats_tests",
+                return_value=mock_discovery_result,
+            ),
             patch.object(orchestrator, "validate_environment"),
-            patch.object(Path, "write_text", side_effect=OSError("disk full")),
+            patch(
+                "nac_test.pyats_core.execution.subprocess_runner.Path.write_text",
+                side_effect=OSError("disk full"),
+            ),
         ):
-            mock_discover.return_value = (api_tests + d2d_tests, [])
-            mock_categorize.return_value = (api_tests, d2d_tests)
             result = orchestrator.run_tests()
 
         if has_api:

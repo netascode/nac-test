@@ -143,6 +143,8 @@ __all__ = [
     "DEFAULT_CPU_MULTIPLIER",
     "LOAD_AVERAGE_THRESHOLD",
     "AUTH_CACHE_DIR",
+    "PYATS_PLUGIN_CONFIG_FILENAME",
+    "PYATS_CONFIG_FILENAME",
     "PYATS_POST_DISCONNECT_WAIT_SECONDS",
     "PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS",
     # Connection broker protocol limits
@@ -165,4 +167,6 @@ __all__ = [
     "OVERFLOW_QUEUE_SIZE",
     "OVERFLOW_MEMORY_LIMIT_MB",
     "OVERFLOW_DIR_OVERRIDE",
+    # Environment variable name
+    "ENV_TEST_DIR",
 ]

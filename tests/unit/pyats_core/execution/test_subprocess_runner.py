@@ -346,7 +346,10 @@ def test_init_raises_runtime_error_on_write_failure(
     temp_output_dir: Path, mock_output_handler: Mock
 ) -> None:
     """Test that RuntimeError is raised when config file write fails."""
-    with patch.object(Path, "write_text", side_effect=OSError("disk full")):
+    with patch(
+        "nac_test.pyats_core.execution.subprocess_runner.Path.write_text",
+        side_effect=OSError("disk full"),
+    ):
         with pytest.raises(RuntimeError, match="disk full"):
             SubprocessRunner(temp_output_dir, mock_output_handler)
 
@@ -356,25 +359,23 @@ def test_write_failure_leaves_attributes_none(
     mock_output_handler: Mock,
 ) -> None:
     """Test that write failure leaves config file attributes as None."""
-    with patch.object(Path, "write_text", side_effect=OSError("disk full")):
+    with patch(
+        "nac_test.pyats_core.execution.subprocess_runner.Path.write_text",
+        side_effect=OSError("disk full"),
+    ):
         with pytest.raises(RuntimeError):
             SubprocessRunner(temp_output_dir, mock_output_handler)
 
 
 def test_partial_write_failure_cleans_up_first_file(
     temp_output_dir: Path,
+    mock_output_handler: Mock,
 ) -> None:
     """Test that partial write failure cleans up successfully written files.
 
     If the first config file is written successfully but the second fails,
     the first file should be cleaned up to avoid orphaned files.
     """
-    runner = object.__new__(SubprocessRunner)
-    runner.output_dir = temp_output_dir
-    runner._plugin_config_file = None
-    runner._pyats_config_file = None
-
-    # Track which file is being written
     write_count = {"count": 0}
     original_write_text = Path.write_text
 
@@ -383,19 +384,16 @@ def test_partial_write_failure_cleans_up_first_file(
     ) -> None:
         write_count["count"] += 1
         if write_count["count"] == 1:
-            # First write succeeds
             original_write_text(self, content, *args, **kwargs)
         else:
-            # Second write fails
             raise OSError("disk full on second file")
 
-    with patch.object(Path, "write_text", write_text_fail_on_second):
+    with patch(
+        "nac_test.pyats_core.execution.subprocess_runner.Path.write_text",
+        write_text_fail_on_second,
+    ):
         with pytest.raises(RuntimeError, match="disk full"):
-            runner._create_config_files()
-
-    # Attributes should still be None (not set until both writes succeed)
-    assert runner._plugin_config_file is None
-    assert runner._pyats_config_file is None
+            SubprocessRunner(temp_output_dir, mock_output_handler)
 
     # The first file that was successfully written should have been cleaned up
     plugin_config_path = temp_output_dir / PYATS_PLUGIN_CONFIG_FILENAME
@@ -420,14 +418,8 @@ def test_init_registers_config_files_with_cleanup_manager(
         runner = SubprocessRunner(temp_output_dir, mock_output_handler)
 
     assert mock_cm.register.call_count == 2
-    registered_paths = {call.args[0] for call in mock_cm.register.call_args_list}
-    assert runner._plugin_config_file in registered_paths
-    assert runner._pyats_config_file in registered_paths
-    # Both should use keep_if_debug=True
-    for call in mock_cm.register.call_args_list:
-        assert call.kwargs.get("keep_if_debug") is True or (
-            len(call.args) > 1 and call.args[1] is True
-        )
+    mock_cm.register.assert_any_call(runner._plugin_config_file, keep_if_debug=True)
+    mock_cm.register.assert_any_call(runner._pyats_config_file, keep_if_debug=True)
 
 
 def test_write_failure_does_not_register_with_cleanup_manager(
@@ -435,7 +427,10 @@ def test_write_failure_does_not_register_with_cleanup_manager(
 ) -> None:
     """Test that write failure does NOT register files with CleanupManager."""
     with (
-        patch.object(Path, "write_text", side_effect=OSError("disk full")),
+        patch(
+            "nac_test.pyats_core.execution.subprocess_runner.Path.write_text",
+            side_effect=OSError("disk full"),
+        ),
         patch(
             "nac_test.pyats_core.execution.subprocess_runner.get_cleanup_manager"
         ) as mock_get_cm,
