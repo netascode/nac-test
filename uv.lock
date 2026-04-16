@@ -1868,7 +1868,7 @@ requires-dist = [
     { name = "bandit", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=1.8.6" },
     { name = "colorama", specifier = ">=0.4.6" },
     { name = "filelock", specifier = ">=3.25.2" },
-    { name = "flask", marker = "extra == 'dev'", specifier = ">=3.1" },
+    { name = "flask", marker = "extra == 'dev'", specifier = ">=3.1.3" },
     { name = "genie", marker = "sys_platform != 'win32'", specifier = ">=26.3" },
     { name = "httpx", specifier = "~=0.28" },
     { name = "jinja2", specifier = ">=3.1.6" },
