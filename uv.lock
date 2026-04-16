@@ -1875,7 +1875,7 @@ requires-dist = [
     { name = "jmespath", specifier = ">=1.0.1" },
     { name = "jsonpath-ng", specifier = "!=1.8.0" },
     { name = "lxml", specifier = ">=4.5.1" },
-    { name = "markdown", specifier = ">=3.8.2" },
+    { name = "markdown", specifier = ">=3.10.2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
     { name = "nac-test-pyats-common", specifier = ">=0.3.0" },
     { name = "nac-test-pyats-common", marker = "extra == 'dev'", specifier = ">=0.1.0" },
