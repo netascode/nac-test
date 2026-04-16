@@ -20,8 +20,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from ...utils import get_or_create_event_loop
-from ..ssh.command_cache import CommandCache
+from nac_test.pyats_core.constants import MAX_BROKER_MESSAGE_BYTES
+from nac_test.pyats_core.ssh.command_cache import CommandCache
+from nac_test.utils import get_or_create_event_loop
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +148,13 @@ class ConnectionBroker:
                 if message_length == 0:
                     break
 
+                if message_length > MAX_BROKER_MESSAGE_BYTES:
+                    logger.warning(
+                        f"Client {client_addr} sent oversized frame "
+                        f"({message_length} bytes, limit {MAX_BROKER_MESSAGE_BYTES})"
+                    )
+                    break
+
                 # Read message data
                 message_data = await reader.readexactly(message_length)
                 message = json.loads(message_data.decode("utf-8"))
@@ -198,8 +206,14 @@ class ConnectionBroker:
                 if not hostname:
                     return {"status": "error", "error": "Missing hostname parameter"}
 
-                success = await self._ensure_connection(hostname)
-                return {"status": "success" if success else "error", "result": success}
+                success, error_msg = await self._ensure_connection(hostname)
+                if success:
+                    return {"status": "success", "result": True}
+                else:
+                    return {
+                        "status": "error",
+                        "error": error_msg or f"Failed to connect to {hostname}",
+                    }
 
             elif command == "disconnect":
                 hostname = message.get("hostname")
@@ -218,7 +232,7 @@ class ConnectionBroker:
                 return {"status": "error", "error": f"Unknown command: {command}"}
 
         except Exception as e:
-            logger.error(f"Error processing request: {e}", exc_info=True)
+            logger.error(f"Error processing request: {e}")
             return {"status": "error", "error": str(e)}
 
     async def _execute_command(self, hostname: str, cmd: str) -> str:
@@ -249,8 +263,6 @@ class ConnectionBroker:
 
         # Ensure device is connected
         connection = await self._get_connection(hostname)
-        if not connection:
-            raise ConnectionError(f"Failed to connect to device: {hostname}")
 
         # Execute command in thread pool (since Unicon is synchronous)
         loop = get_or_create_event_loop()
@@ -271,7 +283,7 @@ class ConnectionBroker:
             await self._disconnect_device(hostname)
             raise
 
-    async def _get_connection(self, hostname: str) -> Any | None:
+    async def _get_connection(self, hostname: str) -> Any:
         """Get or create connection to device."""
         if hostname not in self.connection_locks:
             self.connection_locks[hostname] = asyncio.Lock()
@@ -302,14 +314,12 @@ class ConnectionBroker:
             )
             return await self._create_connection(hostname)
 
-    async def _create_connection(self, hostname: str) -> Any | None:
+    async def _create_connection(self, hostname: str) -> Any:
         """Create new connection to device using testbed."""
         if not self.testbed:
-            logger.error("No testbed loaded")
-            return None
+            raise ConnectionError(f"No testbed loaded for {hostname}")
         if hostname not in self.testbed.devices:
-            logger.error(f"Device {hostname} not found in testbed")
-            return None
+            raise ConnectionError(f"Device {hostname} not found in testbed")
 
         async with self.connection_semaphore:
             try:
@@ -340,13 +350,23 @@ class ConnectionBroker:
                 return device
 
             except Exception as e:
-                logger.error(f"Failed to connect to {hostname}: {e}", exc_info=True)
-                return None
+                # pyATS exceptions often embed the hostname already
+                # (e.g. "failed to connect to iosxe-r1"), so only prepend
+                # our "Failed to connect to <host>:" prefix when the
+                # hostname is absent — otherwise the log looks redundant.
+                msg = f"{type(e).__name__}: {e}"
+                if hostname not in str(e):
+                    msg = f"Failed to connect to {hostname}: {msg}"
+                logger.error(msg)
+                raise
 
-    async def _ensure_connection(self, hostname: str) -> bool:
-        """Ensure device is connected, return success status."""
-        connection = await self._get_connection(hostname)
-        return connection is not None
+    async def _ensure_connection(self, hostname: str) -> tuple[bool, str]:
+        """Ensure device is connected, return (success, error_message)."""
+        try:
+            await self._get_connection(hostname)
+            return True, ""
+        except Exception as e:
+            return False, str(e)
 
     async def _disconnect_device(self, hostname: str) -> None:
         """Disconnect from device and clean up."""

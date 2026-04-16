@@ -9,9 +9,26 @@ from unittest.mock import patch
 import pytest
 
 from nac_test.core.constants import DRY_RUN_REASON
+from nac_test.pyats_core.common.types import (
+    PyatsDiscoveryResult,
+    TestFileMetadata,
+)
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
 from .conftest import PyATSTestDirs
+
+
+def _make_execution_plan(
+    api_paths: list[Path], d2d_paths: list[Path]
+) -> PyatsDiscoveryResult:
+    """Create a PyatsDiscoveryResult from path lists for test mocking."""
+    api_tests = [TestFileMetadata(path=p, test_type="api") for p in api_paths]
+    d2d_tests = [TestFileMetadata(path=p, test_type="d2d") for p in d2d_paths]
+    return PyatsDiscoveryResult(
+        api_tests=api_tests,
+        d2d_tests=d2d_tests,
+        filtered_by_tags=0,
+    )
 
 
 class TestOrchestratorDryRun:
@@ -32,24 +49,18 @@ class TestOrchestratorDryRun:
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
             dry_run=True,
         )
 
-        mock_api_tests = [api_test]
-        mock_d2d_tests: list[Path] = []
+        mock_plan = _make_execution_plan([api_test], [])
 
         with (
             patch.object(
                 orchestrator.test_discovery, "discover_pyats_tests"
             ) as mock_discover,
-            patch.object(
-                orchestrator.test_discovery, "categorize_tests_by_type"
-            ) as mock_categorize,
             patch.object(orchestrator, "validate_environment"),
         ):
-            mock_discover.return_value = (mock_api_tests, [])
-            mock_categorize.return_value = (mock_api_tests, mock_d2d_tests)
+            mock_discover.return_value = mock_plan
             result = orchestrator.run_tests()
 
         # Verify dry-run output
@@ -80,21 +91,18 @@ class TestOrchestratorDryRun:
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
             dry_run=True,
         )
+
+        mock_plan = _make_execution_plan([api_test], [d2d_test])
 
         with (
             patch.object(
                 orchestrator.test_discovery, "discover_pyats_tests"
             ) as mock_discover,
-            patch.object(
-                orchestrator.test_discovery, "categorize_tests_by_type"
-            ) as mock_categorize,
             patch.object(orchestrator, "validate_environment"),
         ):
-            mock_discover.return_value = ([api_test, d2d_test], [])
-            mock_categorize.return_value = ([api_test], [d2d_test])
+            mock_discover.return_value = mock_plan
             result = orchestrator.run_tests()
 
         # Both API and D2D should have not_run results
@@ -114,22 +122,19 @@ class TestOrchestratorDryRun:
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
             dry_run=True,
         )
+
+        mock_plan = _make_execution_plan([api_test], [])
 
         with (
             patch.object(
                 orchestrator.test_discovery, "discover_pyats_tests"
             ) as mock_discover,
-            patch.object(
-                orchestrator.test_discovery, "categorize_tests_by_type"
-            ) as mock_categorize,
             patch.object(orchestrator, "validate_environment"),
             patch.object(orchestrator, "_execute_api_tests_standard") as mock_execute,
         ):
-            mock_discover.return_value = ([api_test], [])
-            mock_categorize.return_value = ([api_test], [])
+            mock_discover.return_value = mock_plan
             orchestrator.run_tests()
 
         mock_execute.assert_not_called()
@@ -145,9 +150,10 @@ class TestOrchestratorDryRun:
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            merged_data_filename="merged.yaml",
             dry_run=True,
         )
+
+        mock_plan = _make_execution_plan([], [])
 
         with (
             patch.object(
@@ -155,7 +161,7 @@ class TestOrchestratorDryRun:
             ) as mock_discover,
             patch.object(orchestrator, "validate_environment"),
         ):
-            mock_discover.return_value = ([], [])
+            mock_discover.return_value = mock_plan
             result = orchestrator.run_tests()
 
         # Should return empty results (no tests found message)

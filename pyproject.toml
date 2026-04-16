@@ -1,6 +1,6 @@
 [project]
 name = "nac-test"
-version = "2.0.0b2"
+version = "2.0.0b6"
 description = "A CLI tool to render to execute Robot Framework (RF) and PyATS tests for Network as Code (NAC)."
 license = { text = "MPL-2.0" }
 readme = "README.md"
@@ -44,15 +44,15 @@ dependencies = [
     "scrapli-netconf>=2026.1.12",
     "asyncssh>=2.22.0",
     # PyATS & Genie Ecosystem — not supported on Windows
-    "pyats>=25.5 ; sys_platform != 'win32'",
-    "genie>=25.5 ; sys_platform != 'win32'",
-    "psutil>=7.0.0",
+    "pyats>=26.3 ; sys_platform != 'win32'",
+    "genie>=26.3 ; sys_platform != 'win32'",
+    "psutil>=7.2.2",
     "httpx~=0.28",
-    "aiofiles>=24.1",
+    "aiofiles>=23.2.1",  # radkit-client still uses <24.0, so relax to avoid conflicts
     "colorama>=0.4.6",
-    "markdown>=3.8.2",
+    "markdown>=3.10.2",
     "typing_extensions>=4.0; python_version < '3.11'",
-    "filelock>=3.0.0",
+    "filelock>=3.25.2",
     "lxml>=4.5.1",
 ]
 
@@ -62,27 +62,26 @@ repository = "https://github.com/netascode/nac-test"
 documentation = "https://github.com/netascode/nac-test"
 
 [project.scripts]
-iac-test = "nac_test.cli.main:app"
 nac-test = "nac_test.cli.main:app"
 
 [project.optional-dependencies]
 dev = [
     "ansible-core>=2.17.6",
     "bandit[toml]>=1.8.6",
-    "flask>=3.1",
+    "flask>=3.1.3",
     "mypy>=1.17.1",
     "nac-test-pyats-common>=0.1.0",  # Required for integration tests
-    "pre-commit>=4.3.0",
-    "pytest>=8.4.2",
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.3",
     "pytest-cov~=7.1",
     "pytest-httpserver>=1.1.5",
-    "pytest-mock>=3.15.0",
-    "pytest-xdist>=3.5.0",  # Parallel test execution
-    "ruff>=0.12.12",
-    "types-aiofiles>=24.1.0.20250822",
+    "pytest-mock>=3.15.1",
+    "pytest-xdist>=3.8.0",  # Parallel test execution
+    "ruff>=0.15.10",
+    "types-aiofiles>=25.1.0.20260409",
     "types-markdown>=3.8.0.20250809",
     "types-pyyaml>=6.0.12.20250822",
-    "types-requests>=2.32.0.20250809",
+    "types-requests>=2.33.0.20260408",
 ]
 
 [tool.uv]
@@ -91,6 +90,19 @@ dev = [
 override-dependencies = [
     "pytest-cov>=7.1",
 ]
+# Dependency cooldown: ignore packages uploaded less than 3 days ago.
+# wecan't use this because our artifactory doesn't provide upload timestamps
+# but it would be a good idea to enable once they do
+# exclude-newer = "3 days"
+
+[[tool.uv.index]]
+# Install from Artifactory by default for supply-chain-safe dependency resolution.
+# uv derives credential env vars from the index name: UV_INDEX_<NAME>_USERNAME / _PASSWORD.
+# These must be set in .netrc, the environment, or as GitHub Actions secrets.
+# See .github/workflows/test.yml for CI configuration.
+name = "cisco-artifactory-devhub"
+url = "https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/simple"
+default = true
 
 [tool.coverage.run]
 source = ["nac_test"]
@@ -160,7 +172,12 @@ exclude = ["^tests/fixtures/", "^tests/integration/fixtures/", "^tests/e2e/fixtu
 [tool.pytest.ini_options]
 markers = ["unit", "integration", "e2e", "windows"]
 # Exclude fixture files from test collection - they are sample files for testing the resolver
-norecursedirs = ["tests/fixtures", "tests/e2e/fixtures"]
+# Exclude nac_test source directory - prevents pytest from trying to collect Test* classes
+norecursedirs = ["tests/fixtures", "tests/e2e/fixtures", "nac_test"]
+# Suppress PytestCollectionWarning for source classes named Test* that are imported by tests
+filterwarnings = [
+    "ignore:cannot collect test class 'Test(FileMetadata|Discovery|MetadataResolver|ResultCollector|Results|Result|Collector|DataCollector|Status|Error)':pytest.PytestCollectionWarning",
+]
 
 [build-system]
 requires = ["hatchling"]

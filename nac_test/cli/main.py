@@ -4,6 +4,7 @@
 """CLI entry point for nac-test."""
 
 import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -14,7 +15,7 @@ from rich.panel import Panel
 from robot.errors import DataError
 
 import nac_test
-from nac_test.cli.diagnostic import diagnostic_callback
+from nac_test.cli.diagnostic import run_diagnostic
 from nac_test.cli.ui import display_aci_defaults_banner
 from nac_test.cli.validators import validate_aci_defaults, validate_extra_args
 from nac_test.combined_orchestrator import CombinedOrchestrator
@@ -26,6 +27,7 @@ from nac_test.core.constants import (
     EXIT_INVALID_ARGS,
 )
 from nac_test.data_merger import DataMerger
+from nac_test.utils.cleanup import get_cleanup_manager
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import (
     DEFAULT_LOGLEVEL,
@@ -37,6 +39,7 @@ from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 # Pretty exceptions are verbose but helpful for debugging.
 # Enable them when NAC_TEST_DEBUG=true, disable for cleaner output otherwise.
 app = typer.Typer(add_completion=False, pretty_exceptions_enable=DEBUG_MODE)
+
 
 logger = logging.getLogger(__name__)
 
@@ -173,16 +176,6 @@ Exclude = Annotated[
 ]
 
 
-MergedDataFilename = Annotated[
-    str,
-    typer.Option(
-        "-m",
-        "--merged-data-filename",
-        help="Filename for the merged data model YAML file.",
-    ),
-]
-
-
 RenderOnly = Annotated[
     bool,
     typer.Option(
@@ -270,9 +263,7 @@ Diagnostic = Annotated[
     bool,
     typer.Option(
         "--diagnostic",
-        callback=diagnostic_callback,
-        is_eager=True,
-        help="Wrap execution with diagnostic collection. Produces a zip with system info, logs, and artifacts.",
+        help="Wrap execution with diagnostic collection (Linux/macOS only). Produces a zip with system info, logs, and artifacts.",
     ),
 ]
 
@@ -320,10 +311,9 @@ def main(
     testbed: Testbed = None,
     loglevel: LoglevelOption = None,
     verbosity: DeprecatedVerbosity = None,
-    version: Version = False,  # noqa: ARG001
-    diagnostic: Diagnostic = False,  # noqa: ARG001
+    version: Version = False,
+    diagnostic: Diagnostic = False,
     verbose: Verbose = False,
-    merged_data_filename: MergedDataFilename = "merged_data_model_test_variables.yaml",
 ) -> None:
     """A CLI tool to render and execute Robot Framework and PyATS tests using Jinja templating.
 
@@ -333,6 +323,9 @@ def main(
     files/directories, and options controlled by nac-test (like --include, --exclude)
     are not supported and will result in an error.
     """
+
+    if diagnostic:
+        run_diagnostic(output, argv=sys.argv)
 
     # Handle deprecated --verbosity option
     if verbosity is not None:
@@ -394,7 +387,12 @@ def main(
     typer.echo("\n\n📄 Merging data model files...")
 
     merged_data = DataMerger.merge_data_files(data)
-    DataMerger.write_merged_data_model(merged_data, output, merged_data_filename)
+    merged_data_path = DataMerger.write_merged_data_model(merged_data, output)
+
+    # Register merged data file for cleanup — always delete, even in debug mode,
+    # because it may contain credentials resolved from !env references.
+    cleanup_manager = get_cleanup_manager()
+    cleanup_manager.register(merged_data_path)
 
     duration = (datetime.now() - start_time).total_seconds()
     typer.echo(f"✅ Data model merging completed ({format_duration(duration)})")
@@ -403,9 +401,9 @@ def main(
     orchestrator = CombinedOrchestrator(
         data_paths=data,
         templates_dir=templates,
-        custom_testbed_path=testbed,
         output_dir=output,
-        merged_data_filename=merged_data_filename,
+        merged_data=merged_data,
+        custom_testbed_path=testbed,
         filters_path=filters,
         tests_path=tests,
         include_tags=include,
@@ -439,11 +437,11 @@ def main(
         raise typer.Exit(EXIT_INTERRUPTED) from None
     except Exception as e:
         # Infrastructure errors (template rendering, controller detection, etc.)
+        logger.exception("Unexpected error during execution")
         typer.echo(f"Error during execution: {e}")
-        # Progressive disclosure: clean output for customers, full context for developers
-        if DEBUG_MODE:
-            raise typer.Exit(EXIT_ERROR) from e  # Developer: full exception context
-        raise typer.Exit(EXIT_ERROR) from None  # Customer: clean output
+        # Pretty exception display is controlled by pretty_exceptions_enable=DEBUG_MODE
+        # on the Typer app — no need for a separate DEBUG_MODE branch here.
+        raise typer.Exit(EXIT_ERROR) from e
 
     # Display total runtime before exit
     runtime_end = datetime.now()
