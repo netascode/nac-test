@@ -307,6 +307,7 @@ def test_render_only_without_controller_credentials(tmp_path: Path) -> None:
     All other tests in this module implicitly also test this, but this
     is important enough that it warrants an explicit test.
     """
+
     data_file = tmp_path / "data.yaml"
     data_file.write_text("device: Router1\nip: 192.168.1.1")
 
@@ -334,3 +335,28 @@ def test_render_only_without_controller_credentials(tmp_path: Path) -> None:
     output = (tmp_path / "output" / ROBOT_RESULTS_DIRNAME / "test.robot").read_text()
     assert "Verify Router1" in output
     assert "{{" not in output
+
+
+def test_dict_key_attribute_collision_renders_key_values(tmp_path: Path) -> None:
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data_attr_collision_dir"
+    templates_path = "tests/integration/fixtures/templates_test"
+
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            str(tmp_path),
+            "--render-only",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    output = (tmp_path / ROBOT_RESULTS_DIRNAME / "test1.robot").read_text()
+    assert "tag=100" in output
+    assert "items=foo" in output
+    assert "keys=bar" in output
