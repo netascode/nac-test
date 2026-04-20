@@ -32,6 +32,7 @@ class StrictChainableUndefined(ChainableUndefined):
 
 
 class KeyFirstEnvironment(Environment):
+    # Prefer Mapping keys over attributes to avoid ruamel/Jinja dot-notation collisions (e.g. `tag`).
     def getattr(self, obj: Any, attribute: str) -> Any:
         if isinstance(obj, Mapping) and attribute in obj:
             return obj[attribute]
