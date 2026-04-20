@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -1809,7 +1809,7 @@ wheels = [
 
 [[package]]
 name = "nac-test"
-version = "2.0.0b6"
+version = "2.0.0b7"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
