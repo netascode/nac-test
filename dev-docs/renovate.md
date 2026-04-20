@@ -49,9 +49,8 @@ All other packages get individual PRs.
 ## Registry Override
 
 The project's `pyproject.toml` uses an internal Cisco Artifactory index as the default
-pip index. Renovate cannot access this registry, so a `registryUrls` rule redirects
-all Python package lookups to `https://pypi.org/simple/`. Internal packages
-(`nac-yaml`, `nac-test-pyats-common`) that are not on PyPI are disabled in the config.
+pip index. Renovate cannot access this registry, so a `registryUrls` rule (first in
+`packageRules`) redirects all Python package lookups to `https://pypi.org/simple/`.
 
 ## Other Settings
 
