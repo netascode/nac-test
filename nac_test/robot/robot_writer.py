@@ -9,6 +9,7 @@ import pathlib
 import re
 import shutil
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,14 @@ class StrictChainableUndefined(ChainableUndefined):
     __iter__ = __str__ = __len__ = Undefined._fail_with_undefined_error
     __eq__ = __ne__ = __bool__ = __hash__ = Undefined._fail_with_undefined_error
     __contains__ = Undefined._fail_with_undefined_error
+
+
+class KeyFirstEnvironment(Environment):
+    # Prefer Mapping keys over attributes to avoid ruamel/Jinja dot-notation collisions (e.g. `tag`).
+    def getattr(self, obj: Any, attribute: str) -> Any:
+        if isinstance(obj, Mapping) and attribute in obj:
+            return obj[attribute]
+        return super().getattr(obj, attribute)
 
 
 class TestCollector(SuiteVisitor):  # type: ignore[misc]
@@ -294,7 +303,7 @@ class RobotWriter:
         self, templates_path: Path, output_path: Path, ordering_file: Path | None = None
     ) -> None:
         """Render Robot test suites."""
-        env = Environment(  # nosec B701
+        env = KeyFirstEnvironment(  # nosec B701
             loader=FileSystemLoader(templates_path),
             undefined=StrictChainableUndefined,
             lstrip_blocks=True,

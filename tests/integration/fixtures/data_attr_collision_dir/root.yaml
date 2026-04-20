@@ -1,0 +1,8 @@
+---
+root:
+  children:
+    - name: abc
+      param: value
+      tag: 100
+      items: foo
+      keys: bar
