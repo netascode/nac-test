@@ -1,0 +1,54 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["pep621", "github-actions"],
+  "rangeStrategy": "update-lockfile",
+  "minimumReleaseAge": "3 days",
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "minimumReleaseAge": "0 days",
+    "rangeStrategy": "bump"
+  },
+  "osvVulnerabilityAlerts": true,
+  "packageRules": [
+    {
+      "description": "Internal packages not available on PyPI — skip",
+      "matchManagers": ["pep621"],
+      "matchPackageNames": ["nac-yaml", "nac-test-pyats-common"],
+      "enabled": false
+    },
+    {
+      "description": "Track Latest: pyats + genie (lockstep group, always bump pyproject.toml)",
+      "matchManagers": ["pep621"],
+      "matchPackageNames": ["pyats", "genie"],
+      "rangeStrategy": "bump",
+      "groupName": "pyats-genie",
+      "minimumReleaseAge": "0 days"
+    },
+    {
+      "description": "Track Latest: robotframework (always bump pyproject.toml)",
+      "matchManagers": ["pep621"],
+      "matchPackageNames": ["robotframework"],
+      "rangeStrategy": "bump",
+      "minimumReleaseAge": "0 days"
+    },
+    {
+      "description": "Track Latest: robotframework-pabot (always bump pyproject.toml)",
+      "matchManagers": ["pep621"],
+      "matchPackageNames": ["robotframework-pabot"],
+      "rangeStrategy": "bump",
+      "minimumReleaseAge": "0 days"
+    },
+    {
+      "description": "Group all GitHub Actions updates into a single PR",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "Use PyPI for all Python packages (internal Artifactory not accessible to Renovate)",
+      "matchManagers": ["pep621"],
+      "registryUrls": ["https://pypi.org/simple/"]
+    }
+  ]
+}
