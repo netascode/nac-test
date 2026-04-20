@@ -18,12 +18,6 @@
       "registryUrls": ["https://pypi.org/simple/"]
     },
     {
-      "description": "Internal packages not available on PyPI — skip",
-      "matchManagers": ["pep621"],
-      "matchPackageNames": ["nac-yaml", "nac-test-pyats-common"],
-      "enabled": false
-    },
-    {
       "description": "Track Latest: pyats + genie (lockstep group, always bump pyproject.toml)",
       "matchManagers": ["pep621"],
       "matchPackageNames": ["pyats", "genie"],
