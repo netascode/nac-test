@@ -13,6 +13,11 @@
   "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
+      "description": "Use PyPI for all Python packages (internal Artifactory not accessible to Renovate)",
+      "matchManagers": ["pep621"],
+      "registryUrls": ["https://pypi.org/simple/"]
+    },
+    {
       "description": "Internal packages not available on PyPI — skip",
       "matchManagers": ["pep621"],
       "matchPackageNames": ["nac-yaml", "nac-test-pyats-common"],
@@ -44,11 +49,6 @@
       "description": "Group all GitHub Actions updates into a single PR",
       "matchManagers": ["github-actions"],
       "groupName": "github-actions"
-    },
-    {
-      "description": "Use PyPI for all Python packages (internal Artifactory not accessible to Renovate)",
-      "matchManagers": ["pep621"],
-      "registryUrls": ["https://pypi.org/simple/"]
     }
   ]
 }
