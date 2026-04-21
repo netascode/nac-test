@@ -232,7 +232,11 @@ class TestKeyFirstEnvironmentMissingKeyBehavior:
         ).render(obj=hostname_map)
         assert result == "UNDEFINED", f"ruamel attr '{attr}' leaked through"
 
-    @pytest.mark.parametrize("attr", sorted(_RUAMEL_SEQ_ATTRS))
+    @pytest.mark.parametrize(
+        "attr",
+        sorted(_RUAMEL_SEQ_ATTRS)
+        + ["yaml_set_comment_before_after_key", "yaml_set_start_comment"],
+    )
     def test_ruamel_seq_attr_returns_undefined(
         self,
         keyfirst_env: KeyFirstEnvironment,

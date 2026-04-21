@@ -96,7 +96,9 @@ class KeyFirstEnvironment(Environment):
             # 2. Everything else: standard resolution (getattr → getitem)
             return super().getattr(obj, attribute)
         if isinstance(obj, Sequence) and not isinstance(obj, str):
-            # Hide ruamel-only attributes on CommentedSeq
+            # Unlikely in practice — getattr on a sequence container
+            # (e.g. {{ mylist.tag }}) is rare, but needed to hide ruamel
+            # metadata and match plain list behavior.
             if attribute in _RUAMEL_SEQ_ATTRS or attribute.startswith("yaml_"):
                 return self.undefined(name=attribute)
         return super().getattr(obj, attribute)
