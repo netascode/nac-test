@@ -9,7 +9,7 @@ import pathlib
 import re
 import shutil
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -31,13 +31,73 @@ class StrictChainableUndefined(ChainableUndefined):
     __contains__ = Undefined._fail_with_undefined_error
 
 
+# Attributes present on ruamel CommentedMap but NOT on plain dict.
+# These must be hidden from Jinja2 dot-notation to prevent ruamel metadata
+# from leaking through when template authors use e.g. {{ obj.tag }}.
+_RUAMEL_MAP_ATTRS = frozenset(
+    {
+        "anchor",
+        "ca",
+        "copy_attributes",
+        "fa",
+        "insert",
+        "lc",
+        "merge",
+        "mlget",
+        "move_to_end",
+        "non_merged_items",
+        "tag",
+        "update_key_value",
+    }
+)
+
+# Attributes present on ruamel CommentedSeq but NOT on plain list.
+_RUAMEL_SEQ_ATTRS = frozenset(
+    {
+        "anchor",
+        "ca",
+        "fa",
+        "lc",
+        "tag",
+    }
+)
+
+
 class KeyFirstEnvironment(Environment):
-    # Prefer Mapping keys over attributes to avoid ruamel/Jinja dot-notation collisions (e.g. `tag`).
-    def getattr(self, obj: Any, attribute: str) -> Any:
+    """Custom Jinja2 Environment that hides ruamel-specific attrs on CommentedMap/Seq.
+
+    When ruamel.yaml loads YAML, it produces CommentedMap/CommentedSeq objects
+    that have extra attributes (tag, anchor, ca, etc.) not present on plain
+    dict/list.  These collide with YAML key names when accessed via Jinja2
+    dot-notation (e.g. ``{{ obj.tag }}`` could return a ruamel Tag object
+    instead of the value of the ``tag`` key).
+
+    Resolution order for Mappings:
+      1. If *attribute* is a known ruamel-internal name (or starts with ``yaml_``):
+         a. If *attribute* also exists as a mapping key → return the key value
+         b. Otherwise → Undefined  (hides the ruamel metadata)
+      2. Otherwise → standard ``getattr`` (preserves ``.items()``, ``.get()``,
+         etc. and normal key access via Jinja2's default getattr→getitem chain)
+
+    For Sequences, only step 1b applies (hide ruamel-only attrs).
+
+    Contract: CommentedMap/CommentedSeq must behave **identically** to plain
+    dict/list under a standard Jinja2 Environment.  The only job is hiding
+    ruamel-specific metadata attributes that plain dicts don't have.
+    """
+
+    def getattr(self, obj: Any, attribute: str) -> Any:  # noqa: A003
         if isinstance(obj, Mapping):
-            try:
-                return obj[attribute]
-            except KeyError:
+            # 1. Intercept ruamel-internal attributes only
+            if attribute in _RUAMEL_MAP_ATTRS or attribute.startswith("yaml_"):
+                if attribute in obj:
+                    return obj[attribute]
+                return self.undefined(name=attribute)
+            # 2. Everything else: standard resolution (getattr → getitem)
+            return super().getattr(obj, attribute)
+        if isinstance(obj, Sequence) and not isinstance(obj, str):
+            # Hide ruamel-only attributes on CommentedSeq
+            if attribute in _RUAMEL_SEQ_ATTRS or attribute.startswith("yaml_"):
                 return self.undefined(name=attribute)
         return super().getattr(obj, attribute)
 
