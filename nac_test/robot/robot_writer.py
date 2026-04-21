@@ -131,7 +131,6 @@ class RobotWriter:
         template = env.get_template(template_path.as_posix())
         # Use custom_data if provided (for chunked templates), otherwise use template_data
         template_data = custom_data if custom_data is not None else self.data
-
         result = template.render(template_data, **kwargs)
 
         # remove extra empty lines
