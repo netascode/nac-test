@@ -340,7 +340,7 @@ def test_render_only_without_controller_credentials(tmp_path: Path) -> None:
 def test_dict_key_attribute_collision_renders_key_values(tmp_path: Path) -> None:
     runner = CliRunner()
     data_path = "tests/integration/fixtures/data_attr_collision_dir"
-    templates_path = "tests/integration/fixtures/templates_test"
+    templates_path = "tests/integration/fixtures/templates_attr_collision_dir"
 
     result = runner.invoke(
         nac_test.cli.main.app,
@@ -351,12 +351,6 @@ def test_dict_key_attribute_collision_renders_key_values(tmp_path: Path) -> None
             templates_path,
             "-o",
             str(tmp_path),
-            "--render-only",
         ],
     )
     assert result.exit_code == 0, result.output
-
-    output = (tmp_path / ROBOT_RESULTS_DIRNAME / "test1.robot").read_text()
-    assert "tag=100" in output
-    assert "items=foo" in output
-    assert "keys=bar" in output

@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 from jinja2 import Environment, FileSystemLoader
 
-from nac_test.robot.robot_writer import RobotWriter
+from nac_test.robot.robot_writer import KeyFirstEnvironment, RobotWriter
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -97,3 +97,38 @@ class TestRobotWriterRenderTemplate:
         )
         assert output.exists()
         assert output.parent.is_dir()
+
+
+class _MappingWithTagAttr(dict[str, object]):
+    @property
+    def tag(self) -> None:
+        return None
+
+
+class TestKeyFirstEnvironment:
+    def test_missing_key_returns_undefined_instead_of_attribute(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / "t.robot").write_text(
+            "{{ child.tag | default(defaults.tag) }}\n{{ child.tag is defined }}\n"
+        )
+
+        env = KeyFirstEnvironment(loader=FileSystemLoader(str(tmp_path)))  # nosec B701
+        template = env.get_template("t.robot")
+
+        rendered = template.render(
+            child=_MappingWithTagAttr({}),
+            defaults={"tag": "fallback"},
+        )
+        lines = rendered.splitlines()
+        assert lines[0] == "fallback"
+        assert lines[1] == "False"
+
+    def test_existing_key_wins_over_attribute(self, tmp_path: Path) -> None:
+        (tmp_path / "t.robot").write_text("{{ child.tag }}\n")
+
+        env = KeyFirstEnvironment(loader=FileSystemLoader(str(tmp_path)))  # nosec B701
+        template = env.get_template("t.robot")
+
+        rendered = template.render(child=_MappingWithTagAttr({"tag": 100}))
+        assert rendered.strip() == "100"

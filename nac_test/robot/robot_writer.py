@@ -34,8 +34,11 @@ class StrictChainableUndefined(ChainableUndefined):
 class KeyFirstEnvironment(Environment):
     # Prefer Mapping keys over attributes to avoid ruamel/Jinja dot-notation collisions (e.g. `tag`).
     def getattr(self, obj: Any, attribute: str) -> Any:
-        if isinstance(obj, Mapping) and attribute in obj:
-            return obj[attribute]
+        if isinstance(obj, Mapping):
+            try:
+                return obj[attribute]
+            except KeyError:
+                return self.undefined(name=attribute)
         return super().getattr(obj, attribute)
 
 
@@ -128,6 +131,7 @@ class RobotWriter:
         template = env.get_template(template_path.as_posix())
         # Use custom_data if provided (for chunked templates), otherwise use template_data
         template_data = custom_data if custom_data is not None else self.data
+
         result = template.render(template_data, **kwargs)
 
         # remove extra empty lines

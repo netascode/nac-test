@@ -6,3 +6,9 @@ root:
       tag: 100
       items: foo
       keys: bar
+    - name: def
+      param: value
+      items: foo
+      keys: bar
+defaults:
+  tag: fallback
