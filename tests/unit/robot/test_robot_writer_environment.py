@@ -14,8 +14,6 @@ Covers:
 - Collision + method interaction: non-colliding methods work when collision keys exist
 """
 
-from __future__ import annotations
-
 import json
 
 import pytest
@@ -233,6 +231,7 @@ class TestKeyFirstEnvironmentMissingKeyBehavior:
             f"{{{{ obj.{attr} | default('UNDEFINED') }}}}"
         ).render(obj=hostname_map)
         assert result == "UNDEFINED", f"ruamel attr '{attr}' leaked through"
+
     @pytest.mark.parametrize("attr", sorted(_RUAMEL_SEQ_ATTRS))
     def test_ruamel_seq_attr_returns_undefined(
         self,
