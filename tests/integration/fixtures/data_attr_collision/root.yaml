@@ -1,0 +1,32 @@
+---
+root:
+  children:
+    - name: abc
+      param: value
+      tag: 100
+      items: foo
+      keys: bar
+    - name: def
+      param: value
+      items: foo
+      keys: bar
+
+  # Mapping with NO method-name collisions — .items()/.get()/.keys()/.values() should work as methods
+  settings:
+    hostname: router1
+    vlan_id: 100
+    description: "uplink port"
+
+  # Nested structure with collision keys at different levels (also tests CommentedSeq)
+  fabric:
+    spine:
+      node_id: 101
+      interfaces:
+        - name: Ethernet1/1
+          tag: trunk
+        - name: Ethernet1/2
+          tag: access
+
+defaults:
+  tag: fallback
+  description: "default desc"

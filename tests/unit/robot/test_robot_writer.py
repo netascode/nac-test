@@ -97,3 +97,4 @@ class TestRobotWriterRenderTemplate:
         )
         assert output.exists()
         assert output.parent.is_dir()
+        assert output.read_text().strip()  # non-empty content
