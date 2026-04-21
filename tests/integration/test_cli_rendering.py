@@ -339,8 +339,8 @@ def test_render_only_without_controller_credentials(tmp_path: Path) -> None:
 
 def test_dict_key_attribute_collision_renders_key_values(tmp_path: Path) -> None:
     runner = CliRunner()
-    data_path = "tests/integration/fixtures/data_attr_collision_dir"
-    templates_path = "tests/integration/fixtures/templates_attr_collision_dir"
+    data_path = "tests/integration/fixtures/data_attr_collision"
+    templates_path = "tests/integration/fixtures/templates_attr_collision"
 
     result = runner.invoke(
         nac_test.cli.main.app,
