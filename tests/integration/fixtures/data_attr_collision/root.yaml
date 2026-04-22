@@ -1,0 +1,26 @@
+---
+root:
+  children:
+    - name: abc
+      param: value
+      tag: 100
+      items: foo
+      keys: bar
+    - name: def
+      param: value
+      items: foo
+      keys: bar
+
+  # Nested structure with collision keys at different levels (also tests CommentedSeq)
+  fabric:
+    spine:
+      node_id: 101
+      interfaces:
+        - name: Ethernet1/1
+          tag: trunk
+        - name: Ethernet1/2
+          tag: access
+
+defaults:
+  tag: fallback
+  description: "default desc"

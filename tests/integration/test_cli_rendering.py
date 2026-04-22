@@ -9,6 +9,7 @@ chunked rendering, and merged data model output.
 """
 
 import filecmp
+import re
 from pathlib import Path
 
 import pytest
@@ -338,9 +339,16 @@ def test_render_only_without_controller_credentials(tmp_path: Path) -> None:
 
 
 def test_dict_key_attribute_collision_renders_key_values(tmp_path: Path) -> None:
+    """Comprehensive test for key-attribute collision handling.
+
+    Tests three categories with a single data dir + template dir:
+    1. test.robot — collision keys (items, keys) via bracket notation; non-collision (tag) via dot access
+    2. test_methods.robot — .items()/.get()/.keys()/.values() method calls on clean mappings
+    3. test_selectattr.robot — selectattr/rejectattr/map(attribute=) with collision key 'tag'
+    """
     runner = CliRunner()
-    data_path = "tests/integration/fixtures/data_attr_collision_dir"
-    templates_path = "tests/integration/fixtures/templates_test"
+    data_path = "tests/integration/fixtures/data_attr_collision"
+    templates_path = "tests/integration/fixtures/templates_attr_collision"
 
     result = runner.invoke(
         nac_test.cli.main.app,
@@ -351,12 +359,39 @@ def test_dict_key_attribute_collision_renders_key_values(tmp_path: Path) -> None
             templates_path,
             "-o",
             str(tmp_path),
-            "--render-only",
         ],
     )
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 0, f"CLI rendering failed:\n{result.output}"
 
-    output = (tmp_path / ROBOT_RESULTS_DIRNAME / "test1.robot").read_text()
-    assert "tag=100" in output
-    assert "items=foo" in output
-    assert "keys=bar" in output
+    output_dir = tmp_path / ROBOT_RESULTS_DIRNAME
+
+    # --- test.robot: collision keys via bracket notation ---
+    output_collision = (output_dir / "test.robot").read_text()
+    assert re.search(r"Should Be Equal\s+100\s+100\s+msg=tag_abc", output_collision), (
+        "tag key dot-access did not render '100' for child abc"
+    )
+    assert re.search(
+        r"Should Be Equal\s+foo\s+foo\s+msg=items_key_abc", output_collision
+    ), "items collision key did not render 'foo' via bracket notation"
+    assert re.search(
+        r"Should Be Equal\s+bar\s+bar\s+msg=keys_key_abc", output_collision
+    ), "keys collision key did not render 'bar' via bracket notation"
+    assert "{{" not in output_collision, "Unresolved Jinja2 expression in test.robot"
+
+    # --- test_selectattr.robot: selectattr/rejectattr/map ---
+    output_select = (output_dir / "test_selectattr.robot").read_text()
+    assert re.search(
+        r"Should Be Equal\s+Ethernet1/1\s+Ethernet1/1\s+msg=selectattr_name",
+        output_select,
+    ), "selectattr didn't find trunk port Ethernet1/1"
+    assert re.search(
+        r"Should Be Equal\s+Ethernet1/2\s+Ethernet1/2\s+msg=rejectattr_name",
+        output_select,
+    ), "rejectattr didn't find non-trunk port Ethernet1/2"
+    assert re.search(
+        r"Should Be Equal\s+trunk,access\s+trunk,access\s+msg=map_tags",
+        output_select,
+    ), "map(attribute='tag') didn't produce 'trunk,access'"
+    assert "{{" not in output_select, (
+        "Unresolved Jinja2 expression in test_selectattr.robot"
+    )
