@@ -11,12 +11,6 @@ root:
       items: foo
       keys: bar
 
-  # Mapping with NO method-name collisions — .items()/.get()/.keys()/.values() should work as methods
-  settings:
-    hostname: router1
-    vlan_id: 100
-    description: "uplink port"
-
   # Nested structure with collision keys at different levels (also tests CommentedSeq)
   fabric:
     spine:

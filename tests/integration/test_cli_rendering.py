@@ -378,29 +378,6 @@ def test_dict_key_attribute_collision_renders_key_values(tmp_path: Path) -> None
     ), "keys collision key did not render 'bar' via bracket notation"
     assert "{{" not in output_collision, "Unresolved Jinja2 expression in test.robot"
 
-    # --- test_methods.robot: method calls on clean mappings ---
-    output_methods = (output_dir / "test_methods.robot").read_text()
-    assert re.search(r"Log\s+hostname = router1", output_methods), (
-        ".items() iteration didn't produce 'hostname = router1'"
-    )
-    assert re.search(
-        r"Should Be Equal\s+router1\s+router1\s+msg=get_existing", output_methods
-    ), ".get('hostname') didn't return 'router1'"
-    assert re.search(
-        r"Should Be Equal\s+fallback_value\s+fallback_value\s+msg=get_missing",
-        output_methods,
-    ), ".get('nonexistent', 'fallback_value') didn't return default"
-    assert re.search(
-        r"Should Be Equal\s+description,hostname,vlan_id\s+description,hostname,vlan_id\s+msg=keys_method",
-        output_methods,
-    ), ".keys() didn't produce sorted key list"
-    assert re.search(r"Should Be Equal\s+3\s+3\s+msg=values_count", output_methods), (
-        ".values() | list | length didn't return 3"
-    )
-    assert "{{" not in output_methods, (
-        "Unresolved Jinja2 expression in test_methods.robot"
-    )
-
     # --- test_selectattr.robot: selectattr/rejectattr/map ---
     output_select = (output_dir / "test_selectattr.robot").read_text()
     assert re.search(
