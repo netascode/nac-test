@@ -82,7 +82,21 @@ jobs:
         # Only run for dependabot on same-repo PRs (not forks)
         if: github.actor == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
+          set -euo pipefail
+
+          echo "=== uv lock diagnostics ==="
+          pwd
+          ls -la
+          test -f pyproject.toml && echo "pyproject.toml: present" || (echo "pyproject.toml: MISSING" >&2; exit 1)
+          uv --version
+
+          echo "actor=$GITHUB_ACTOR ref=$GITHUB_REF head_ref=${GITHUB_HEAD_REF:-<unset>}"
+          echo "UV_DEFAULT_INDEX=${UV_DEFAULT_INDEX:-<unset>}"
+          echo "UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME set? $([[ -n ${UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME:-} ]] && echo yes || echo no)"
+          echo "UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD set? $([[ -n ${UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD:-} ]] && echo yes || echo no)"
+
           uv lock
+
           if [[ -n $(git status --porcelain uv.lock) ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
