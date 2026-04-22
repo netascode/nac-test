@@ -9,7 +9,6 @@ Covers:
 """
 
 from pathlib import Path
-from typing import Any
 
 from nac_yaml import yaml
 from ruamel.yaml import CommentedMap, CommentedSeq
@@ -50,7 +49,7 @@ class TestWriteMergedDataModel:
         assert list(reloaded["tags"]) == ["a", "b"]
 
 
-def _assert_no_ruamel_types(value: Any, path: str = "root") -> None:
+def _assert_no_ruamel_types(value: object, path: str = "root") -> None:
     """Recursively assert no CommentedMap/CommentedSeq anywhere in the tree."""
     assert not isinstance(value, CommentedMap), f"{path} is CommentedMap"
     assert not isinstance(value, CommentedSeq), f"{path} is CommentedSeq"
