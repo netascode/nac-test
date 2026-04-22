@@ -32,7 +32,7 @@ dependencies = [
     "Jinja2>=3.1.6",
     "jmespath>=1.0.1",
     "nac-test-pyats-common>=0.3.0",
-    "nac-yaml @ git+https://github.com/oboehmer/nac-yaml.git@load-typ",
+    "nac-yaml==2.0.0b2",
     "robotframework>=7.3.2",
     "robotframework-jmespath",
     "robotframework-jsonlibrary>=0.5",
@@ -182,9 +182,6 @@ filterwarnings = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["nac_test"]

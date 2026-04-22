@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -1879,7 +1879,7 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
     { name = "nac-test-pyats-common", specifier = ">=0.3.0" },
     { name = "nac-test-pyats-common", marker = "extra == 'dev'", specifier = ">=0.1.0" },
-    { name = "nac-yaml", specifier = "==2.0.0a0" },
+    { name = "nac-yaml", specifier = "==2.0.0b2" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.5.1" },
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "pyats", marker = "sys_platform != 'win32'", specifier = ">=26.3" },
@@ -1921,14 +1921,14 @@ wheels = [
 
 [[package]]
 name = "nac-yaml"
-version = "2.0.0a0"
+version = "2.0.0b2"
 source = { registry = "https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/simple" }
 dependencies = [
     { name = "ruamel-yaml" },
 ]
-sdist = { url = "https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/packages/packages/a6/0e/c9ccec9707bcd18a5a4feea304bba982e2ea9f4f9c09f794e3deaf1b2ca9/nac_yaml-2.0.0a0.tar.gz", hash = "sha256:4c3d81035d2a1635b97548293dfa944c566ff221552231e03dffcfc0c707d051" }
+sdist = { url = "https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/packages/packages/aa/8c/a66cbcb3856a7865b667aa9c0f9037f77a528b34a907417daf68e6dbbbc7/nac_yaml-2.0.0b2.tar.gz", hash = "sha256:811ad28d4fb789eecd861fbc363193989ba65dd4f5c7fd4c0fca75be2a0c5237" }
 wheels = [
-    { url = "https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/packages/packages/05/15/c8cac560f03fa6744ddd942422167773c36e351629cdf353afafb87c0f85/nac_yaml-2.0.0a0-py3-none-any.whl", hash = "sha256:d641843618362808f38c656303f6a77fc5bfcaf0ddfd336709cdaf18d39a21cd" },
+    { url = "https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/packages/packages/aa/81/4b538bdaeae7a0152187c2320b7be80fcce6383510ea3d1f3d7b1f910206/nac_yaml-2.0.0b2-py3-none-any.whl", hash = "sha256:2d3b206b674c054991dfd69382264a247f018faf9b04effce86e7718f37ebd5d" },
 ]
 
 [[package]]
