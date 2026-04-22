@@ -6,40 +6,15 @@
 import logging
 import os
 from pathlib import Path
-from typing import Any, TypeVar, cast
+from typing import Any
 
 from nac_yaml import yaml
-from ruamel.yaml import CommentedMap, CommentedSeq
 
 from nac_test.core.constants import (
     IS_WINDOWS,
     MERGED_DATA_FILE_MODE,
     MERGED_DATA_FILENAME,
 )
-
-T = TypeVar("T")
-
-
-def _to_builtin_types(value: T) -> T:
-    """Recursively convert ruamel CommentedMap/CommentedSeq to plain dict/list.
-
-    This strips all ruamel-specific metadata (tag, anchor, ca, etc.) so that
-    downstream consumers (Jinja2 templates) see only standard Python types
-    and never encounter ruamel-internal attributes via dot-notation.
-    """
-    v: Any = value
-    if isinstance(v, CommentedMap):
-        v = dict(v)
-    elif isinstance(v, CommentedSeq):
-        v = list(v)
-
-    if isinstance(v, dict):
-        v = {k: _to_builtin_types(vv) for k, vv in v.items()}
-    elif isinstance(v, list):
-        v = [_to_builtin_types(vv) for vv in v]
-
-    return cast(T, v)
-
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +35,9 @@ class DataMerger:
         logger.info(
             "Loading yaml files from %s", ", ".join([str(path) for path in data_paths])
         )
-        data = yaml.load_yaml_files(data_paths)
+        data = yaml.load_yaml_files(data_paths, typ="safe")
         # Ensure we always return a dict, even if yaml returns None
-        if not isinstance(data, dict):
-            return {}
-        # Strip ruamel metadata (CommentedMap/CommentedSeq → dict/list) so
-        # Jinja2 templates never see ruamel-internal attributes via dot-notation.
-        return _to_builtin_types(data)
+        return data if isinstance(data, dict) else {}
 
     @staticmethod
     def merged_data_path(output_directory: Path) -> Path:

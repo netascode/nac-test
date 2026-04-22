@@ -4,19 +4,17 @@
 """Unit tests for DataMerger.
 
 Covers:
-- merge_data_files: empty input edge case, ruamel type stripping
+- merge_data_files: empty input edge case, ruamel type stripping contract
 - write_merged_data_model: output filename, YAML roundtrip
-- _to_builtin_types: recursive conversion contract
 """
 
 from pathlib import Path
 from typing import Any
 
-import pytest
 from nac_yaml import yaml
 from ruamel.yaml import CommentedMap, CommentedSeq
 
-from nac_test.data_merger import DataMerger, _to_builtin_types
+from nac_test.data_merger import DataMerger
 
 
 class TestMergeDataFiles:
@@ -62,53 +60,6 @@ def _assert_no_ruamel_types(value: Any, path: str = "root") -> None:
     elif isinstance(value, list):
         for i, v in enumerate(value):
             _assert_no_ruamel_types(v, f"{path}[{i}]")
-
-
-class TestToBuiltinTypes:
-    """Contract: _to_builtin_types strips all ruamel metadata types."""
-
-    @pytest.mark.parametrize(
-        ("ruamel_obj", "expected_type", "expected_value"),
-        [
-            (CommentedMap({"a": 1}), dict, {"a": 1}),
-            (CommentedSeq([1, 2, 3]), list, [1, 2, 3]),
-        ],
-        ids=["CommentedMap", "CommentedSeq"],
-    )
-    def test_converts_ruamel_type_to_builtin(
-        self,
-        ruamel_obj: Any,
-        expected_type: type,
-        expected_value: Any,
-    ) -> None:
-        result = _to_builtin_types(ruamel_obj)
-        assert type(result) is expected_type
-        assert result == expected_value
-
-    def test_nested_conversion(self) -> None:
-        inner = CommentedMap({"tag": "vlan100", "anchor": "anc1"})
-        seq = CommentedSeq(["a", "b"])
-        data = CommentedMap({"host": "router1", "inner": inner, "items": seq})
-        result = _to_builtin_types(data)
-        _assert_no_ruamel_types(result)
-        assert result == {
-            "host": "router1",
-            "inner": {"tag": "vlan100", "anchor": "anc1"},
-            "items": ["a", "b"],
-        }
-
-    @pytest.mark.parametrize(
-        "scalar",
-        [42, "hello", True, None],
-        ids=["int", "str", "bool", "None"],
-    )
-    def test_preserves_scalars(self, scalar: Any) -> None:
-        assert _to_builtin_types(scalar) == scalar
-
-    def test_plain_dict_unchanged(self) -> None:
-        data: dict[str, Any] = {"a": [1, 2], "b": {"c": 3}}
-        result = _to_builtin_types(data)
-        assert result == data
 
 
 class TestMergeDataFilesContract:
