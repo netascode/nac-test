@@ -52,7 +52,7 @@ dependencies = [
     "colorama>=0.4.6",
     "markdown>=3.10.2",
     "typing_extensions>=4.0; python_version < '3.11'",
-    "filelock>=3.25.2",
+    "filelock>=3.29.0",
     "lxml>=4.5.1",
 ]
 
