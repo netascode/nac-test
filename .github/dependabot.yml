@@ -15,3 +15,5 @@ updates:
     # The workflow will auto-update uv.lock when pyproject.toml changes
     allow:
       - dependency-type: 'all'
+    cooldown:
+      default-days: 3

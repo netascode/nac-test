@@ -91,18 +91,7 @@ override-dependencies = [
     "pytest-cov>=7.1",
 ]
 # Dependency cooldown: ignore packages uploaded less than 3 days ago.
-# wecan't use this because our artifactory doesn't provide upload timestamps
-# but it would be a good idea to enable once they do
-# exclude-newer = "3 days"
-
-[[tool.uv.index]]
-# Install from Artifactory by default for supply-chain-safe dependency resolution.
-# uv derives credential env vars from the index name: UV_INDEX_<NAME>_USERNAME / _PASSWORD.
-# These must be set in .netrc, the environment, or as GitHub Actions secrets.
-# See .github/workflows/test.yml for CI configuration.
-name = "cisco-artifactory-devhub"
-url = "https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/simple"
-default = true
+exclude-newer = "3 days"
 
 [tool.coverage.run]
 source = ["nac_test"]
