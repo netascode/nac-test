@@ -67,7 +67,7 @@ nac-test = "nac_test.cli.main:app"
 [project.optional-dependencies]
 dev = [
     "ansible-core>=2.17.6",
-    "bandit[toml]>=1.8.6",
+    "bandit[toml]>=1.9.4",
     "flask>=3.1.3",
     "mypy>=1.17.1",
     "nac-test-pyats-common>=0.1.0",  # Required for integration tests
