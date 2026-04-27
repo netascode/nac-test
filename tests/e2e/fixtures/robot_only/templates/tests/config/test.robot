@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation    Robot Framework test that always passes (robot-only scenario) — Ü ö 日本語
+Documentation    Robot Framework test that always passes (robot-only scenario)
 
 *** Test Cases ***
 {% for site in sdwan.sites %}

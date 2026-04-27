@@ -1,4 +1,3 @@
-# UTF-8: Ü ö ä ñ 日本語 中文
 # Minimal data for dry-run failing robot test scenario
 # This test uses a non-existent keyword which fails during Robot dry-run mode
 

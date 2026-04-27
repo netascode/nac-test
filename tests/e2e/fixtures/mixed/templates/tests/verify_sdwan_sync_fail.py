@@ -17,10 +17,11 @@ from pyats import aetest
 
 from nac_test.pyats_core.reporting.types import ResultStatus
 
-TITLE = "Verify SD-WAN Controllers (Failure Test)"
+TITLE = "Verify SD-WAN Controllers (Failure Test) — 日本語テスト"
 
 DESCRIPTION = """This test is designed to fail for integration testing.
-It queries a different API endpoint expecting vedges data structure."""
+It queries a different API endpoint expecting vedges data structure.
+テスト説明: Unicode文字を含むテストケース。"""
 
 SETUP = "* This is a test designed to fail.\n"
 

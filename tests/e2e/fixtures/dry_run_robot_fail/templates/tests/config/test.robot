@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation    Robot test that fails during dry-run due to non-existent keyword — Ü ö 日本語
+Documentation    Robot test that fails during dry-run due to non-existent keyword
 
 *** Test Cases ***
 Failing Dryrun Test

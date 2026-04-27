@@ -1,4 +1,3 @@
-# UTF-8: Ü ö 日本語 verificação
 *** Test Cases ***
 Verify Log Level
     [Documentation]    Verifies log level set to the value in env var EXPECTED_ROBOT_LOG_LEVEL (set by fixture)

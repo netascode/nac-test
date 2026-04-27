@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation    Robot Framework test that always fails — Ü ö 日本語
+Documentation    Robot Framework test that always fails
 
 *** Test Cases ***
 {% for site in sdwan.sites %}
