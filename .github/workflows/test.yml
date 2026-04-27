@@ -229,7 +229,7 @@ jobs:
       - name: Smoke test uv tool install (Windows)
         if: runner.os == 'Windows'
         env:
-          PYTHONIOENCODING: utf-8  # Workaround for #723: cp1252 can't encode emoji in nac-test output
+          PYTHONUTF8: 1  # CI stdout is piped/captured → falls back to cp1252 (#723)
         run: |
           $TMPDIR = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
           nac-test -d tests/integration/fixtures/data -t tests/integration/fixtures/templates -o "$TMPDIR"

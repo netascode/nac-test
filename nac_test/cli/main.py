@@ -324,11 +324,7 @@ def main(
     files/directories, and options controlled by nac-test (like --include, --exclude)
     are not supported and will result in an error.
     """
-    # Ensure all child processes (PyATS jobs, auth scripts, HTTP subprocess
-    # clients) default to UTF-8 regardless of the OS locale.  This does NOT
-    # affect the *current* process (sys.flags.utf8_mode is frozen at startup),
-    # but os.environ is inherited by every subprocess we spawn.
-    # See: https://github.com/netascode/nac-test/issues/630
+    # Default child processes to UTF-8 regardless of OS locale (#630)
     os.environ.setdefault("PYTHONUTF8", "1")
 
     if diagnostic:
