@@ -7,17 +7,6 @@ on:
   push:
   workflow_call:
 
-env:
-  # Artifactory credentials — empty on fork PRs, triggering pypi.org fallback below.
-  UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME: ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME }}
-  UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD: ${{ secrets.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD }}
-  # Named default index so `uv tool install` also routes through Artifactory
-  # (tool.uv.index in pyproject.toml only applies to project-scoped commands).
-  UV_DEFAULT_INDEX: cisco-artifactory-devhub=https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/simple
-  # Generous timeouts and retries for Artifactory resilience.
-  UV_HTTP_TIMEOUT: 120
-  UV_HTTP_CONNECT_TIMEOUT: 30
-  UV_HTTP_RETRIES: 10
 
 jobs:
   security:
@@ -35,9 +24,6 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure package index  # fall back to pypi.org for fork PRs
-        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
-        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
       - name: Install bandit
         run: uv tool install bandit[toml]
@@ -71,12 +57,16 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure package index  # fall back to pypi.org for fork PRs
-        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
-        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
       - name: Install mypy
         run: uv tool install mypy
+
+      - name: Verify uv.lock is up to date
+        if: github.actor != 'dependabot[bot]'
+        run: |
+          set -euo pipefail
+          uv lock
+          git diff --exit-code uv.lock
 
       - name: Update lock file
         # Only run for dependabot on same-repo PRs (not forks)
@@ -91,9 +81,6 @@ jobs:
           uv --version
 
           echo "actor=$GITHUB_ACTOR ref=$GITHUB_REF head_ref=${GITHUB_HEAD_REF:-<unset>}"
-          echo "UV_DEFAULT_INDEX=${UV_DEFAULT_INDEX:-<unset>}"
-          echo "UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME set? $([[ -n ${UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME:-} ]] && echo yes || echo no)"
-          echo "UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD set? $([[ -n ${UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD:-} ]] && echo yes || echo no)"
 
           uv lock
 
@@ -133,16 +120,13 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure package index  # fall back to pypi.org for fork PRs
-        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
-        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
 
       - name: Set up Python ${{ matrix.python }}
         run: uv python install ${{ matrix.python }}
 
       - name: Test
         run: |
-          uv sync --extra dev
+          uv sync --frozen --extra dev
           # Run tests in parallel (--dist loadscope keeps test classes together, this is critical for e2e tests)
           uv run pytest -n auto --dist loadscope tests/
 
@@ -168,17 +152,13 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure package index  # fall back to pypi.org for fork PRs
-        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == ''
-        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> $env:GITHUB_ENV
-        shell: pwsh
 
       - name: Set up Python ${{ matrix.python }}
         run: uv python install ${{ matrix.python }}
 
       - name: Test
         run: |
-          uv sync --extra dev
+          uv sync --frozen --extra dev
           # Explicit file list: Windows shell doesn't expand globs, and other integration
           # tests import pyats which isn't available on Windows
           uv run pytest -m windows -n auto --dist loadscope tests/e2e tests/integration/test_cli_basic.py tests/integration/test_cli_rendering.py tests/integration/test_cli_ordering.py tests/integration/test_cli_extra_args.py
@@ -202,14 +182,6 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure package index (Linux)  # fall back to pypi.org for fork PRs
-        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == '' && runner.os == 'Linux'
-        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> "$GITHUB_ENV"
-
-      - name: Configure package index (Windows)
-        if: env.UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME == '' && runner.os == 'Windows'
-        run: echo "UV_DEFAULT_INDEX=https://pypi.org/simple" >> $env:GITHUB_ENV
-        shell: pwsh
 
       - name: Set up Python 3.12
         run: uv python install 3.12
