@@ -218,7 +218,7 @@ def execute_auth_subprocess(
     try:
         # Create input temp file with auth parameters
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix="_auth_input.json", delete=False
+            mode="w", suffix="_auth_input.json", delete=False, encoding="utf-8"
         ) as f_in:
             json.dump(auth_params, f_in)
             input_path = f_in.name
@@ -226,7 +226,7 @@ def execute_auth_subprocess(
 
         # Create output temp file
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix="_auth_output.json", delete=False
+            mode="w", suffix="_auth_output.json", delete=False, encoding="utf-8"
         ) as f_out:
             output_path = f_out.name
         _set_secure_permissions(output_path)
@@ -243,11 +243,11 @@ import sys
 
 # Read auth params from input file (handled by executor)
 try:
-    with open({input_path_escaped}) as f:
+    with open({input_path_escaped}, encoding="utf-8") as f:
         params = json.load(f)
 except Exception as e:
     result = {{"error": f"Failed to read input params: {{e}}"}}
-    with open({output_path_escaped}, "w") as f:
+    with open({output_path_escaped}, "w", encoding="utf-8") as f:
         json.dump(result, f)
     sys.exit(0)
 
@@ -263,13 +263,13 @@ except Exception as e:
     result = {{"error": str(e), "traceback": traceback.format_exc()}}
 
 # Write result to output file (handled by executor)
-with open({output_path_escaped}, "w") as f:
+with open({output_path_escaped}, "w", encoding="utf-8") as f:
     json.dump(result, f)
 """
 
         # Create script temp file
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix="_auth_script.py", delete=False
+            mode="w", suffix="_auth_script.py", delete=False, encoding="utf-8"
         ) as f_script:
             f_script.write(full_script)
             script_path = f_script.name
@@ -301,7 +301,7 @@ with open({output_path_escaped}, "w") as f:
                 "Authentication subprocess did not produce output file"
             )
 
-        with open(output_path) as f:
+        with open(output_path, encoding="utf-8") as f:
             output_content = f.read()
 
         # Parse JSON result

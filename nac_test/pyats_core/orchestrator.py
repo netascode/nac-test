@@ -298,7 +298,7 @@ class PyATSOrchestrator:
         job_file_path = None
         try:
             with tempfile.NamedTemporaryFile(
-                mode="w", suffix="_api_job.py", delete=False
+                mode="w", suffix="_api_job.py", delete=False, encoding="utf-8"
             ) as f:
                 f.write(job_content)
                 job_file_path = Path(f.name)
