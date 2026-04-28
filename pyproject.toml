@@ -48,7 +48,7 @@ dependencies = [
     "genie>=26.3 ; sys_platform != 'win32'",
     "psutil>=7.2.2",
     "httpx~=0.28",
-    "aiofiles>=23.2.1",  # radkit-client still uses <24.0, so relax to avoid conflicts
+    "aiofiles>=24.1.0",  # radkit-client still uses <24.0, so relax to avoid conflicts
     "colorama>=0.4.6",
     "markdown>=3.10.2",
     "typing_extensions>=4.0; python_version < '3.11'",
