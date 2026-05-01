@@ -13,11 +13,6 @@
   "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
-      "description": "Use PyPI for all Python packages (internal Artifactory not accessible to Renovate)",
-      "matchManagers": ["pep621"],
-      "registryUrls": ["https://pypi.org/simple/"]
-    },
-    {
       "description": "Track Latest: pyats + genie (lockstep group, always bump pyproject.toml)",
       "matchManagers": ["pep621"],
       "matchPackageNames": ["pyats", "genie"],
