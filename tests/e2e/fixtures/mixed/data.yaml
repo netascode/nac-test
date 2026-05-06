@@ -1,8 +1,8 @@
-
+# UTF-8 in data fields exercises the full YAML → template → report pipeline (#630)
 sdwan:
   management_ip_variable: vpn0_ip
   sites:
-    - name: SITE_100
+    - name: SITE_日本_100
       site_id: "100"
       routers:
         - chassis_id: CHI24330K5V

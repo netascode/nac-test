@@ -146,7 +146,7 @@ class SubprocessRunner:
             """)
 
             with tempfile.NamedTemporaryFile(
-                mode="w", suffix="_plugin_config.yaml", delete=False
+                mode="w", suffix="_plugin_config.yaml", delete=False, encoding="utf-8"
             ) as f:
                 f.write(plugin_config)
                 plugin_config_file = f.name
@@ -159,7 +159,7 @@ class SubprocessRunner:
             # CoreFoundation lock corruption in get_git_info()
             pyats_config = "[report]\ngit_info = false\n"
             with tempfile.NamedTemporaryFile(
-                mode="w", suffix="_pyats_config.conf", delete=False
+                mode="w", suffix="_pyats_config.conf", delete=False, encoding="utf-8"
             ) as f:
                 f.write(pyats_config)
                 pyats_config_file = f.name
@@ -256,7 +256,7 @@ class SubprocessRunner:
             """)
 
             with tempfile.NamedTemporaryFile(
-                mode="w", suffix="_plugin_config.yaml", delete=False
+                mode="w", suffix="_plugin_config.yaml", delete=False, encoding="utf-8"
             ) as f:
                 f.write(plugin_config)
                 plugin_config_file = f.name
@@ -266,7 +266,7 @@ class SubprocessRunner:
             # CoreFoundation lock corruption in get_git_info()
             pyats_config = "[report]\ngit_info = false\n"
             with tempfile.NamedTemporaryFile(
-                mode="w", suffix="_pyats_config.conf", delete=False
+                mode="w", suffix="_pyats_config.conf", delete=False, encoding="utf-8"
             ) as f:
                 f.write(pyats_config)
                 pyats_config_file = f.name

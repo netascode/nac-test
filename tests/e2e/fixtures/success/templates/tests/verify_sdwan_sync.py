@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
+# UTF-8: Ü ö ä 日本語 中文
 
 """
 [NRFU]: Verify All SD-WAN Edge Configurations Are In-Sync
@@ -16,12 +17,13 @@ from pyats import aetest
 
 from nac_test.pyats_core.reporting.types import ResultStatus
 
-TITLE = "Verify All SD-WAN Edge Configurations Are In-Sync"
+TITLE = "Verify All SD-WAN Edge Configurations Are In-Sync — Überprüfung"
 
 DESCRIPTION = """This test validates configuration synchronization status for all managed SD-WAN edge devices
 by querying the SD-WAN Manager REST API. SD-WAN edge devices must have a configured system IP and be in a managed
 state to ensure that intended configurations are properly applied and running. Configuration synchronization is
-critical for device stability, security policy enforcement, and consistent application performance across the SD-WAN fabric."""
+critical for device stability, security policy enforcement, and consistent application performance across the SD-WAN fabric.
+Netzwerk-Überprüfung für Geräte mit Sonderzeichen: ä ö ü ß."""
 
 SETUP = (
     "* Access to an active SD-WAN Manager controller is available via HTTPS API.\n"

@@ -181,7 +181,7 @@ class ReportGenerator:
         summary = {}
 
         try:
-            async with aiofiles.open(jsonl_path) as f:
+            async with aiofiles.open(jsonl_path, encoding="utf-8") as f:
                 async for line in f:
                     line = line.strip()
                     if not line:
@@ -301,7 +301,7 @@ class ReportGenerator:
 
         # Write HTML report
         report_path = self.report_dir / f"{test_data['test_id']}.html"
-        async with aiofiles.open(report_path, "w") as f:
+        async with aiofiles.open(report_path, "w", encoding="utf-8") as f:
             await f.write(html_content)
 
         logger.debug(f"Generated report: {report_path}")
@@ -440,7 +440,7 @@ class ReportGenerator:
             )
 
             summary_file = self.report_dir / SUMMARY_REPORT_FILENAME
-            async with aiofiles.open(summary_file, "w") as f:
+            async with aiofiles.open(summary_file, "w", encoding="utf-8") as f:
                 await f.write(html_content)
 
             logger.info(f"Generated summary report: {summary_file}")

@@ -14,7 +14,7 @@ def extend_mock_data(mock_data: dict[str, Any], mock_data_dir: str) -> dict[str,
     for file in os.listdir(mock_data_dir):
         if file.endswith(".yaml"):
             # for file named: <OS>_mock_data_<state_name>.yaml, get the state name
-            with open(os.path.join(mock_data_dir, file)) as f:
+            with open(os.path.join(mock_data_dir, file), encoding="utf-8") as f:
                 states = yaml.safe_load(f) or []
             for state in states:
                 if state in mock_data:
