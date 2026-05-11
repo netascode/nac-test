@@ -32,7 +32,7 @@ dependencies = [
     "Jinja2>=3.1.6",
     "jmespath>=1.0.1",
     "nac-test-pyats-common>=0.3.0",
-    "nac-yaml==2.0.0b2",
+    "nac-yaml==2.0.0b3",
     "robotframework>=7.4.2",
     "robotframework-jmespath",
     "robotframework-jsonlibrary>=0.5",
