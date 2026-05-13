@@ -44,8 +44,8 @@ dependencies = [
     "scrapli-netconf>=2026.1.12",
     "asyncssh>=2.22.0",
     # PyATS & Genie Ecosystem — not supported on Windows
-    "pyats>=26.3 ; sys_platform != 'win32'",
-    "genie>=26.3 ; sys_platform != 'win32'",
+    "pyats>=26.4; sys_platform != 'win32'",
+    "genie>=26.4; sys_platform != 'win32'",
     "psutil>=7.2.2",
     "httpx~=0.28",
     "aiofiles>=23.2.1",  # radkit-client still uses <24.0, so relax to avoid conflicts
