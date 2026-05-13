@@ -92,6 +92,7 @@ override-dependencies = [
 ]
 # Dependency cooldown: ignore packages uploaded less than 3 days ago.
 exclude-newer = "3 days"
+exclude-newer-package = { nac-yaml = false }
 
 [tool.coverage.run]
 source = ["nac_test"]
