@@ -199,6 +199,19 @@ class ConnectionBroker:
 
                 result = await self._execute_command(hostname, cmd_string)
                 return {"status": "success", "result": result}
+            elif command == "parse":
+                hostname = message.get("hostname")
+                return_raw = message.get("return_raw", False)
+                cmd = message.get("cmd")
+
+                if not hostname or not cmd:
+                    return {
+                        "status": "error",
+                        "error": "Missing hostname or cmd parameter",
+                    }
+
+                result = await self._parse_command(hostname, cmd, return_raw)
+                return {"status": "success", "result": result}
 
             elif command == "connect":
                 hostname = message.get("hostname")
@@ -253,9 +266,10 @@ class ConnectionBroker:
         # Check cache first
         cached_output = cache.get(cmd)
         if cached_output is not None:
-            self.stats_command_cache_hits += 1
-            logger.debug(f"Broker cache hit for '{cmd}' on {hostname}")
-            return cached_output
+            if cached_output.output is not None:
+                self.stats_command_cache_hits += 1
+                logger.debug(f"Broker cache hit for '{cmd}' on {hostname}")
+                return cached_output.output
 
         # Command not in cache, need to execute
         self.stats_command_cache_misses += 1
@@ -271,7 +285,7 @@ class ConnectionBroker:
             output_str = str(output)
 
             # Cache the output for future requests
-            cache.set(cmd, output_str)
+            cache.set(cmd, output=output_str)
             logger.info(
                 f"Cached command output for '{cmd}' on {hostname} ({len(output_str)} chars)"
             )
@@ -281,6 +295,58 @@ class ConnectionBroker:
             logger.error(f"Command execution failed on {hostname}: {e}")
             # Try to reconnect on failure
             await self._disconnect_device(hostname)
+            raise
+
+    async def _parse_command(self, hostname: str, cmd: str, return_raw: bool) -> Any:
+        """Execute command and return parsed output using Genie parsers."""
+        # Get or create cache for this device
+        if hostname not in self.command_cache:
+            self.command_cache[hostname] = CommandCache(
+                hostname, ttl=3600
+            )  # 1 hour TTL
+            logger.info(f"Created command cache for device: {hostname}")
+
+        cache = self.command_cache[hostname]
+        cache_entry = cache.get(cmd)
+        if cache_entry is not None:
+            if cache_entry.parsed_output is not None:
+                self.stats_command_cache_hits += 1
+                logger.debug(f"Broker cache hit for parsed '{cmd}' on {hostname}")
+                return {
+                    "parsed": cache_entry.parsed_output,
+                    "raw": cache_entry.output if return_raw else None,
+                }
+
+        # Command not in cache, need to execute and parse
+        self.stats_command_cache_misses += 1
+        logger.debug(
+            f"Broker cache miss for parsed '{cmd}' on {hostname}, executing..."
+        )
+
+        # Ensure device is connected
+        connection = await self._get_connection(hostname)
+
+        # Execute command in thread pool (since Unicon is synchronous)
+        loop = get_or_create_event_loop()
+        if return_raw:
+            try:
+                output = await loop.run_in_executor(None, connection.execute, cmd)
+            except Exception as e:
+                logger.error(f"Command execution failed on {hostname}: {e}")
+                # Try to reconnect on failure
+                await self._disconnect_device(hostname)
+                raise
+        else:
+            output = None  # Don't retrieve raw output if not requested
+        try:
+            parsed_output = await loop.run_in_executor(None, connection.parse, cmd)
+            cache.set(cmd, output=output, parsed_output=parsed_output)
+            return {
+                "parsed": dict(parsed_output),
+                "raw": output if return_raw else None,
+            }
+        except Exception as e:
+            logger.error(f"Command parsing failed on {hostname}: {e}")
             raise
 
     async def _get_connection(self, hostname: str) -> Any:

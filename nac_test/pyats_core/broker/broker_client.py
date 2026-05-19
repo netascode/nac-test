@@ -126,6 +126,7 @@ class BrokerClient:
 
             # Read response data
             response_data = await self.reader.readexactly(response_length)
+            logger.debug(f"Received response of length: {response_length} bytes")
             response = json.loads(response_data.decode("utf-8"))
 
             # Check for errors
@@ -164,6 +165,37 @@ class BrokerClient:
         logger.debug(f"Command output length: {len(result)} characters")
 
         return result  # type: ignore[no-any-return]
+
+    async def parse_command(
+        self, hostname: str, command: str, return_raw: bool = False
+    ) -> dict[str, Any]:
+        """Parse command output on device through broker.
+
+        Args:
+            hostname: Device hostname
+            command: Command to parse
+            return_raw: Whether to return raw output along with parsed result
+
+        Returns:
+            Tuple containing parsed output dictionary and optionally raw output
+
+        Raises:
+            ConnectionError: If broker communication fails
+        """
+        logger.debug(
+            f"Parsing command on {hostname}: {command} (return_raw={return_raw})"
+        )
+
+        response = await self._send_request(
+            {
+                "command": "parse",
+                "hostname": hostname,
+                "cmd": command,
+                "return_raw": return_raw,
+            }
+        )
+
+        return response.get("result", {})  # type: ignore[no-any-return]
 
     async def ensure_connection(self, hostname: str) -> bool:
         """Ensure device is connected through broker.
@@ -257,6 +289,23 @@ class BrokerCommandExecutor:
             Command output
         """
         return await self.broker_client.execute_command(self.hostname, command)
+
+    async def parse(
+        self, command: str, return_raw: bool = False
+    ) -> tuple[dict[str, Any], str | None]:
+        """Parse command output on device via broker.
+
+        Args:
+            command: Command to parse
+            return_raw: Whether to return raw output along with parsed result
+
+        Returns:
+            Dictionary containing parsed output and optionally raw output
+        """
+        result = await self.broker_client.parse_command(
+            self.hostname, command, return_raw
+        )
+        return result.get("parsed", {}), result.get("raw", None)
 
     async def connect(self) -> None:
         """Ensure device connection via broker."""

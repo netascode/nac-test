@@ -17,6 +17,7 @@ import pytest
 
 from nac_test.pyats_core.broker.broker_client import BrokerClient, BrokerCommandExecutor
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
+from nac_test.pyats_core.ssh.command_cache import CacheEntry
 
 
 @pytest.fixture
@@ -158,6 +159,26 @@ class TestProcessRequest:
         assert result == {"status": "success", "result": "show version output"}
         broker._execute_command.assert_called_once_with("router-1", "show version")
 
+    def test_parse_calls_parse_command(self, broker: ConnectionBroker) -> None:
+        broker._parse_command = AsyncMock(  # type: ignore[method-assign]
+            return_value={"parsed": {"parsed_data": {}}, "raw": "show version output"}
+        )
+        result = asyncio.run(
+            broker._process_request(
+                {
+                    "command": "parse",
+                    "hostname": "router-1",
+                    "return_raw": True,
+                    "cmd": "show version",
+                }
+            )
+        )
+        assert result == {
+            "status": "success",
+            "result": {"parsed": {"parsed_data": {}}, "raw": "show version output"},
+        }
+        broker._parse_command.assert_called_once_with("router-1", "show version", True)
+
 
 # ---------------------------------------------------------------------------
 # _get_connection — cache hit/miss and stats
@@ -213,7 +234,7 @@ class TestGetConnection:
 class TestExecuteCommand:
     def test_cache_hit_skips_device(self, broker: ConnectionBroker) -> None:
         cache = MagicMock()
-        cache.get.return_value = "cached output"
+        cache.get.return_value = CacheEntry(output="cached output")
         broker.command_cache["router-1"] = cache
         broker._get_connection = AsyncMock()  # type: ignore[method-assign]
 
@@ -248,7 +269,7 @@ class TestExecuteCommand:
         result = asyncio.run(_run())
 
         assert result == "live output"
-        cache.set.assert_called_once_with("show version", "live output")
+        cache.set.assert_called_once_with("show version", output="live output")
         assert broker.stats_command_cache_misses == 1
 
     def test_cache_miss_raises_when_connection_fails(
@@ -263,6 +284,72 @@ class TestExecuteCommand:
 
         with pytest.raises(ConnectionError):
             asyncio.run(broker._execute_command("router-1", "show version"))
+
+
+# ---------------------------------------------------------------------------
+# _parse_command — command cache hit/miss
+# ---------------------------------------------------------------------------
+
+
+class TestParseCommand:
+    def test_cache_hit_skips_device(self, broker: ConnectionBroker) -> None:
+        cache = MagicMock()
+        cache.get.return_value = CacheEntry(
+            parsed_output={"output:": "cached parsed"}, output=None
+        )
+        broker.command_cache["router-1"] = cache
+        broker._get_connection = AsyncMock()  # type: ignore[method-assign]
+
+        result = asyncio.run(broker._parse_command("router-1", "show version", False))
+
+        assert result == {"parsed": {"output:": "cached parsed"}, "raw": None}
+        broker._get_connection.assert_not_called()
+        assert broker.stats_command_cache_hits == 1
+
+    def test_cache_miss_executes_and_stores(self, broker: ConnectionBroker) -> None:
+        cache = MagicMock()
+        cache.get.return_value = None
+        broker.command_cache["router-1"] = cache
+
+        conn = MagicMock()
+        broker._get_connection = AsyncMock(return_value=conn)  # type: ignore[method-assign]
+
+        async def _run() -> str:
+            loop = asyncio.get_event_loop()
+            with patch(
+                "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
+                return_value=loop,
+            ):
+                with patch.object(
+                    loop,
+                    "run_in_executor",
+                    new_callable=AsyncMock,
+                    return_value={"output:": "cached parsed"},
+                ):
+                    return await broker._parse_command(  # type: ignore[no-any-return]
+                        "router-1", "show version", False
+                    )
+
+        result = asyncio.run(_run())
+
+        assert result == {"parsed": {"output:": "cached parsed"}, "raw": None}
+        cache.set.assert_called_once_with(
+            "show version", parsed_output={"output:": "cached parsed"}, output=None
+        )
+        assert broker.stats_command_cache_misses == 1
+
+    def test_cache_miss_raises_when_connection_fails(
+        self, broker: ConnectionBroker
+    ) -> None:
+        cache = MagicMock()
+        cache.get.return_value = None
+        broker.command_cache["router-1"] = cache
+        broker._get_connection = AsyncMock(  # type: ignore[method-assign]
+            side_effect=ConnectionError("No testbed loaded for router-1")
+        )
+
+        with pytest.raises(ConnectionError):
+            asyncio.run(broker._parse_command("router-1", "show version", False))
 
 
 # ---------------------------------------------------------------------------

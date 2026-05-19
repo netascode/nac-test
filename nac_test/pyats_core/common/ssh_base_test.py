@@ -247,9 +247,9 @@ class SSHTestBase(NACTestBase):
         self.device_data = self.device_info
         # hostname already set in setup_ssh_context
 
-    def parse_output(
-        self, command: str, output: str | None = None
-    ) -> dict[str, Any] | None:
+    async def parse_output(
+        self, command: str, return_raw: bool = False
+    ) -> tuple[dict[str, Any] | None, str | None]:
         """Parse command output using Genie parser if available.
 
         This method attempts to use Genie parsers when a PyATS testbed is available.
@@ -257,28 +257,18 @@ class SSHTestBase(NACTestBase):
 
         Args:
             command: The command whose output should be parsed
-            output: Optional pre-fetched command output. If not provided,
-                   the command will be executed.
 
         Returns:
-            Parsed output dictionary if successful, None otherwise.
+            Tuple containing parsed output dictionary and optionally raw output if successful, None otherwise.
         """
-        # If we have a testbed device, use its parse method
-        if self.testbed_device:
-            try:
-                if output is not None:
-                    # Parse provided output
-                    result = self.testbed_device.parse(command, output=output)
-                    return dict(result) if result is not None else None
-                else:
-                    # Execute and parse in one step
-                    result = self.testbed_device.parse(command)
-                    return dict(result) if result is not None else None
-            except Exception as e:
-                self.logger.warning(f"Genie parser failed for '{command}': {e}")
-                return None
+
+        if self.connection is not None:
+            return await self.connection.parse(command, return_raw=return_raw)
+        elif self.testbed_device:
+            parsed_output = dict(self.testbed_device.parse(command))
+            return parsed_output, None
         else:
-            return None
+            return None, None
 
     def _create_execute_command_method(
         self, connection: Any, command_cache: CommandCache
@@ -307,10 +297,11 @@ class SSHTestBase(NACTestBase):
             # Check cache first
             cached_output = command_cache.get(command)
             if cached_output is not None:
-                logging.debug(f"Using cached output for command: {command}")
-                # Track cached command execution for reporting
-                test_instance._track_ssh_command(command, cached_output)
-                return cached_output
+                if cached_output.output is not None:
+                    logging.debug(f"Using cached output for command: {command}")
+                    # Track cached command execution for reporting
+                    test_instance._track_ssh_command(command, cached_output.output)
+                    return cached_output.output
 
             # Execute command via connection (broker or testbed device)
             logging.debug(f"Executing command: {command}")
@@ -329,7 +320,7 @@ class SSHTestBase(NACTestBase):
             output_str = str(output)
 
             # Cache the output
-            command_cache.set(command, output_str)
+            command_cache.set(command, output=output_str)
 
             # Track the command execution for reporting
             test_instance._track_ssh_command(command, output_str)

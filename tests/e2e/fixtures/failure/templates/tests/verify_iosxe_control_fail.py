@@ -80,12 +80,8 @@ class VerifySdwanTunnelStatistics(IOSXETestBase):
                 start_time = time.time()
 
                 try:
-                    with self.test_context(api_context):
-                        output = await self.execute_command(command)
-                    command_duration = time.time() - start_time
-
                     parse_start = time.time()
-                    parsed_output = self.parse_output(command, output=output)
+                    parsed_output, _ = await self.parse_output(command)
                     parse_duration = time.time() - parse_start
 
                 except Exception as e:
@@ -101,7 +97,7 @@ class VerifySdwanTunnelStatistics(IOSXETestBase):
                         api_duration=api_duration,
                     )
 
-                api_duration = command_duration + parse_duration
+                api_duration = parse_duration
                 context["api_context"] = api_context
 
                 # Check if parsed output is empty or None

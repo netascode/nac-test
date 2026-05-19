@@ -14,6 +14,15 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+class CacheEntry:
+    """Represents a single cache entry for a command output."""
+
+    def __init__(self, output: str | None = None, parsed_output: Any | None = None):
+        self.output: str | None = output
+        self.parsed_output: Any | None = parsed_output
+        self.timestamp: float = time.time()
+
+
 class CommandCache:
     """Per-device command output cache with TTL support.
 
@@ -34,11 +43,11 @@ class CommandCache:
         """
         self.hostname = hostname
         self.ttl = ttl
-        self.cache: dict[str, dict[str, Any]] = {}  # command -> {output, timestamp}
+        self.cache: dict[str, CacheEntry] = {}  # command -> CacheEntry
 
         logger.debug(f"Initialized command cache for device {hostname} with TTL {ttl}s")
 
-    def get(self, command: str) -> str | None:
+    def get(self, command: str) -> CacheEntry | None:
         """Get cached command output if valid.
 
         Args:
@@ -49,9 +58,9 @@ class CommandCache:
         """
         if command in self.cache:
             entry = self.cache[command]
-            if time.time() - entry["timestamp"] < self.ttl:
+            if time.time() - entry.timestamp < self.ttl:
                 logger.debug(f"Cache hit for '{command}' on {self.hostname}")
-                return str(entry["output"])
+                return entry
             else:
                 # Entry has expired, remove it
                 del self.cache[command]
@@ -59,17 +68,23 @@ class CommandCache:
 
         return None
 
-    def set(self, command: str, output: str) -> None:
+    def set(
+        self, command: str, output: str | None = None, parsed_output: Any | None = None
+    ) -> None:
         """Cache command output with current timestamp.
 
         Args:
             command: The command that was executed
             output: The command output to cache
+            parsed_output: The parsed command output to cache (optional)
         """
-        self.cache[command] = {"output": output, "timestamp": time.time()}
-        logger.debug(
-            f"Cached '{command}' output for {self.hostname} ({len(output)} chars)"
-        )
+        self.cache[command] = CacheEntry(output, parsed_output)
+        if output is not None:
+            logger.debug(
+                f"Cached '{command}' output for {self.hostname} ({len(output)} chars)"
+            )
+        if parsed_output is not None:
+            logger.debug(f"Cached '{command}' parsed output for {self.hostname}")
 
     def clear(self) -> None:
         """Clear all cached entries for this device."""
@@ -91,7 +106,7 @@ class CommandCache:
         valid_count = 0
 
         for entry in self.cache.values():
-            if current_time - entry["timestamp"] >= self.ttl:
+            if current_time - entry.timestamp >= self.ttl:
                 expired_count += 1
             else:
                 valid_count += 1
