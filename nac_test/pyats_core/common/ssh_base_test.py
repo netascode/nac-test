@@ -6,6 +6,7 @@ import json
 import logging
 import os
 from collections.abc import Callable, Coroutine
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,7 @@ from pyats import aetest
 
 from nac_test.pyats_core.broker.broker_client import BrokerClient, BrokerCommandExecutor
 from nac_test.pyats_core.common.base_test import NACTestBase
+from nac_test.pyats_core.constants import DEVICE_EXECUTE_TIMEOUT
 from nac_test.pyats_core.ssh.command_cache import CommandCache
 from nac_test.utils import get_or_create_event_loop
 from nac_test.utils.device_validation import validate_device_inventory
@@ -213,6 +215,12 @@ class SSHTestBase(NACTestBase):
 
                 # Ensure device connection through broker
                 await self.connection.connect()
+
+                # Patch testbed device execute so Genie's supplementary calls
+                # (e.g. 'show vrf', 'show running-config | section router ospf N')
+                # route through the broker to the connected device.
+                if self.testbed_device:
+                    self._patch_device_execute_for_broker()
             elif self.testbed_device:
                 # Connect via testbed to enable Genie features
                 self.logger.info(f"Connecting to device {hostname} via PyATS testbed")
@@ -247,7 +255,7 @@ class SSHTestBase(NACTestBase):
         self.device_data = self.device_info
         # hostname already set in setup_ssh_context
 
-    def parse_output(
+    async def parse_output(
         self, command: str, output: str | None = None
     ) -> dict[str, Any] | None:
         """Parse command output using Genie parser if available.
@@ -255,30 +263,71 @@ class SSHTestBase(NACTestBase):
         This method attempts to use Genie parsers when a PyATS testbed is available.
         If no testbed is available or parsing fails, it returns None.
 
+        Runs Genie's synchronous parse() in a worker thread so that any
+        supplementary device.execute() calls (patched to route through the
+        broker) can safely use run_coroutine_threadsafe without deadlocking.
+
         Args:
             command: The command whose output should be parsed
             output: Optional pre-fetched command output. If not provided,
-                   the command will be executed.
+                   the command will be executed by Genie directly.
 
         Returns:
             Parsed output dictionary if successful, None otherwise.
         """
-        # If we have a testbed device, use its parse method
-        if self.testbed_device:
-            try:
-                if output is not None:
-                    # Parse provided output
-                    result = self.testbed_device.parse(command, output=output)
-                    return dict(result) if result is not None else None
-                else:
-                    # Execute and parse in one step
-                    result = self.testbed_device.parse(command)
-                    return dict(result) if result is not None else None
-            except Exception as e:
-                self.logger.warning(f"Genie parser failed for '{command}': {e}")
-                return None
-        else:
+        if not self.testbed_device:
             return None
+        try:
+            loop = get_or_create_event_loop()
+            if output is not None:
+                result = await loop.run_in_executor(
+                    None, partial(self.testbed_device.parse, command, output=output)
+                )
+            else:
+                result = await loop.run_in_executor(
+                    None, partial(self.testbed_device.parse, command)
+                )
+            return dict(result) if result is not None else None
+        except Exception as e:
+            self.logger.warning(f"Genie parser failed for '{command}': {e}")
+            return None
+
+    def _patch_device_execute_for_broker(self) -> None:
+        """Patch testbed_device.execute so Genie's internal calls route through the broker.
+
+        Genie parsers may call device.execute() for supplementary commands
+        (e.g. 'show vrf', 'show running-config | section router ospf N') during
+        parsing. In broker mode, the testbed device is not connected locally —
+        the broker holds the live connection. This patch ensures those calls
+        reach the device via the broker.
+
+        Must be called from an async context (the event loop must be running)
+        so we can capture a reference to it for run_coroutine_threadsafe.
+        """
+        assert self.testbed_device is not None, (
+            "testbed_device must be set before patching"
+        )
+        assert self.hostname is not None, "hostname must be set before patching"
+
+        broker_client = self.broker_client
+        hostname: str = self.hostname
+        loop = get_or_create_event_loop()
+
+        def broker_execute(cmd: str, *args: Any, **kwargs: Any) -> str:
+            """Sync execute that routes through the connection broker.
+
+            Called from a worker thread (via run_in_executor in parse_output),
+            not from the event loop thread, to avoid deadlock.
+            """
+            future = asyncio.run_coroutine_threadsafe(
+                broker_client.execute_command(hostname, cmd), loop
+            )
+            return future.result(timeout=DEVICE_EXECUTE_TIMEOUT)
+
+        self.testbed_device.execute = broker_execute
+        self.logger.debug(
+            f"Patched testbed_device.execute for {hostname} to route through broker"
+        )
 
     def _create_execute_command_method(
         self, connection: Any, command_cache: CommandCache

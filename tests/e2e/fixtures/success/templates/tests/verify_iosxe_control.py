@@ -129,7 +129,7 @@ class VerifySdwanControlConnectionsState(IOSXETestBase):
                     command_duration = time.time() - start_time
 
                     parse_start = time.time()
-                    parsed_output = self.parse_output(command, output=output)
+                    parsed_output = await self.parse_output(command, output=output)
                     parse_duration = time.time() - parse_start
 
                 except Exception as e:

@@ -34,6 +34,9 @@ MEMORY_PER_WORKER_GB: float = 0.35
 DEFAULT_CPU_MULTIPLIER: int = 2
 LOAD_AVERAGE_THRESHOLD: float = 0.8
 
+# PyATS-specific timeouts
+DEVICE_EXECUTE_TIMEOUT: int = 120  # seconds, for broker-routed device commands
+
 # PyATS-specific file paths
 AUTH_CACHE_DIR: str = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
 

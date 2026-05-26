@@ -13,6 +13,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
+from nac_test.pyats_core.constants import DEVICE_EXECUTE_TIMEOUT
 
 
 @pytest.fixture()
@@ -217,3 +218,195 @@ class TestAsyncSetupBrokerSocketValidation:
         ):
             with pytest.raises(ConnectionError):
                 asyncio.run(ssh_instance._async_setup("router-1"))
+
+
+class TestPatchDeviceExecuteForBroker:
+    """Test _patch_device_execute_for_broker method."""
+
+    def test_patches_testbed_device_execute(self, ssh_instance: Any) -> None:
+        """After calling the method, testbed_device.execute is replaced with the broker_execute closure."""
+        mock_device = Mock()
+        original_execute = mock_device.execute
+        ssh_instance.hostname = "router-1"
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: mock_device),
+            ),
+            patch("nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop"),
+        ):
+            ssh_instance._patch_device_execute_for_broker()
+
+        assert mock_device.execute is not original_execute
+        assert callable(mock_device.execute)
+
+    def test_patched_execute_calls_broker(self, ssh_instance: Any) -> None:
+        """The patched execute calls broker_client.execute_command via run_coroutine_threadsafe."""
+        mock_device = Mock()
+        ssh_instance.hostname = "router-1"
+        ssh_instance.broker_client.execute_command = AsyncMock(
+            return_value="command output"
+        )
+
+        mock_future = Mock()
+        mock_future.result = Mock(return_value="command output")
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: mock_device),
+            ),
+            patch("nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop"),
+            patch(
+                "nac_test.pyats_core.common.ssh_base_test.asyncio.run_coroutine_threadsafe",
+                return_value=mock_future,
+            ) as mock_run_coro,
+        ):
+            ssh_instance._patch_device_execute_for_broker()
+            result = mock_device.execute("show version")
+
+        assert result == "command output"
+        mock_run_coro.assert_called_once()
+        mock_future.result.assert_called_once_with(timeout=DEVICE_EXECUTE_TIMEOUT)
+
+    def test_asserts_without_testbed_device(self, ssh_instance: Any) -> None:
+        """Raises AssertionError when testbed_device is None."""
+        ssh_instance.hostname = "router-1"
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: None),
+            ),
+            pytest.raises(AssertionError, match="testbed_device must be set"),
+        ):
+            ssh_instance._patch_device_execute_for_broker()
+
+    def test_asserts_without_hostname(self, ssh_instance: Any) -> None:
+        """Raises AssertionError when hostname is None."""
+        mock_device = Mock()
+        ssh_instance.hostname = None
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: mock_device),
+            ),
+            pytest.raises(AssertionError, match="hostname must be set"),
+        ):
+            ssh_instance._patch_device_execute_for_broker()
+
+
+class TestParseOutput:
+    """Test parse_output method."""
+
+    def test_returns_none_without_testbed_device(self, ssh_instance: Any) -> None:
+        """When testbed_device is None/falsy, returns None immediately."""
+        with patch.object(
+            SSHTestBase,
+            "testbed_device",
+            new_callable=lambda: property(lambda self: None),
+        ):
+            result = asyncio.run(ssh_instance.parse_output("show version"))
+
+        assert result is None
+
+    def test_parses_with_output(self, ssh_instance: Any) -> None:
+        """Calls testbed_device.parse(cmd, output=output) via executor, returns dict result."""
+        mock_device = Mock()
+        mock_loop = Mock()
+        parsed_result = {"key": "value"}
+        mock_loop.run_in_executor = AsyncMock(return_value=parsed_result)
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: mock_device),
+            ),
+            patch(
+                "nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop",
+                return_value=mock_loop,
+            ),
+        ):
+            result = asyncio.run(
+                ssh_instance.parse_output("show version", output="raw output")
+            )
+
+        assert result == parsed_result
+        mock_loop.run_in_executor.assert_called_once()
+        # Verify the partial was called with output parameter
+        call_args = mock_loop.run_in_executor.call_args
+        assert call_args[0][0] is None  # executor=None
+
+    def test_parses_without_output(self, ssh_instance: Any) -> None:
+        """Calls testbed_device.parse(cmd) via executor, returns dict result."""
+        mock_device = Mock()
+        mock_loop = Mock()
+        parsed_result = {"key": "value"}
+        mock_loop.run_in_executor = AsyncMock(return_value=parsed_result)
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: mock_device),
+            ),
+            patch(
+                "nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop",
+                return_value=mock_loop,
+            ),
+        ):
+            result = asyncio.run(ssh_instance.parse_output("show version"))
+
+        assert result == parsed_result
+        mock_loop.run_in_executor.assert_called_once()
+
+    def test_returns_none_on_exception(self, ssh_instance: Any) -> None:
+        """When parse raises, logs warning and returns None."""
+        mock_device = Mock()
+        mock_loop = Mock()
+        mock_loop.run_in_executor = AsyncMock(side_effect=Exception("Parser error"))
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: mock_device),
+            ),
+            patch(
+                "nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop",
+                return_value=mock_loop,
+            ),
+        ):
+            result = asyncio.run(ssh_instance.parse_output("show version"))
+
+        assert result is None
+        ssh_instance.logger.warning.assert_called_once()
+        assert "Genie parser failed" in ssh_instance.logger.warning.call_args[0][0]
+
+    def test_returns_none_when_parse_returns_none(self, ssh_instance: Any) -> None:
+        """When parse() returns None, returns None."""
+        mock_device = Mock()
+        mock_loop = Mock()
+        mock_loop.run_in_executor = AsyncMock(return_value=None)
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: mock_device),
+            ),
+            patch(
+                "nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop",
+                return_value=mock_loop,
+            ),
+        ):
+            result = asyncio.run(ssh_instance.parse_output("show version"))
+
+        assert result is None
