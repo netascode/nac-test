@@ -8,6 +8,7 @@ command execution when multiple tests need the same show command outputs.
 """
 
 import logging
+import threading
 import time
 from typing import Any
 
@@ -35,6 +36,7 @@ class CommandCache:
         self.hostname = hostname
         self.ttl = ttl
         self.cache: dict[str, dict[str, Any]] = {}  # command -> {output, timestamp}
+        self._lock = threading.Lock()
 
         logger.debug(f"Initialized command cache for device {hostname} with TTL {ttl}s")
 
@@ -47,17 +49,18 @@ class CommandCache:
         Returns:
             Cached command output if valid, None if not cached or expired
         """
-        if command in self.cache:
-            entry = self.cache[command]
-            if time.time() - entry["timestamp"] < self.ttl:
-                logger.debug(f"Cache hit for '{command}' on {self.hostname}")
-                return str(entry["output"])
-            else:
-                # Entry has expired, remove it
-                del self.cache[command]
-                logger.debug(f"Cache expired for '{command}' on {self.hostname}")
+        with self._lock:
+            if command in self.cache:
+                entry = self.cache[command]
+                if time.time() - entry["timestamp"] < self.ttl:
+                    logger.debug(f"Cache hit for '{command}' on {self.hostname}")
+                    return str(entry["output"])
+                else:
+                    # Entry has expired, remove it
+                    del self.cache[command]
+                    logger.debug(f"Cache expired for '{command}' on {self.hostname}")
 
-        return None
+            return None
 
     def set(self, command: str, output: str) -> None:
         """Cache command output with current timestamp.
@@ -66,15 +69,17 @@ class CommandCache:
             command: The command that was executed
             output: The command output to cache
         """
-        self.cache[command] = {"output": output, "timestamp": time.time()}
+        with self._lock:
+            self.cache[command] = {"output": output, "timestamp": time.time()}
         logger.debug(
             f"Cached '{command}' output for {self.hostname} ({len(output)} chars)"
         )
 
     def clear(self) -> None:
         """Clear all cached entries for this device."""
-        entry_count = len(self.cache)
-        self.cache.clear()
+        with self._lock:
+            entry_count = len(self.cache)
+            self.cache.clear()
         logger.debug(f"Cleared {entry_count} cached entries for {self.hostname}")
 
     def get_cache_stats(self) -> dict[str, int]:

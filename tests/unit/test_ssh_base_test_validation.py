@@ -14,6 +14,7 @@ import pytest
 
 from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
 from nac_test.pyats_core.constants import DEVICE_EXECUTE_TIMEOUT
+from nac_test.pyats_core.ssh.command_cache import CommandCache
 
 
 @pytest.fixture()
@@ -228,6 +229,7 @@ class TestPatchDeviceExecuteForBroker:
         mock_device = Mock()
         original_execute = mock_device.execute
         ssh_instance.hostname = "router-1"
+        ssh_instance.command_cache = CommandCache("router-1")
 
         with (
             patch.object(
@@ -246,6 +248,7 @@ class TestPatchDeviceExecuteForBroker:
         """The patched execute calls broker_client.execute_command via run_coroutine_threadsafe."""
         mock_device = Mock()
         ssh_instance.hostname = "router-1"
+        ssh_instance.command_cache = CommandCache("router-1")
         ssh_instance.broker_client.execute_command = AsyncMock(
             return_value="command output"
         )
@@ -272,24 +275,12 @@ class TestPatchDeviceExecuteForBroker:
         mock_run_coro.assert_called_once()
         mock_future.result.assert_called_once_with(timeout=DEVICE_EXECUTE_TIMEOUT)
 
-    def test_asserts_without_testbed_device(self, ssh_instance: Any) -> None:
-        """Raises AssertionError when testbed_device is None."""
-        ssh_instance.hostname = "router-1"
-
-        with (
-            patch.object(
-                SSHTestBase,
-                "testbed_device",
-                new_callable=lambda: property(lambda self: None),
-            ),
-            pytest.raises(AssertionError, match="testbed_device must be set"),
-        ):
-            ssh_instance._patch_device_execute_for_broker()
-
-    def test_asserts_without_hostname(self, ssh_instance: Any) -> None:
-        """Raises AssertionError when hostname is None."""
+    def test_patched_execute_uses_cache_on_hit(self, ssh_instance: Any) -> None:
+        """When command is cached, returns cached output without contacting broker."""
         mock_device = Mock()
-        ssh_instance.hostname = None
+        ssh_instance.hostname = "router-1"
+        ssh_instance.command_cache = CommandCache("router-1")
+        ssh_instance.command_cache.set("show version", "cached output")
 
         with (
             patch.object(
@@ -297,9 +288,117 @@ class TestPatchDeviceExecuteForBroker:
                 "testbed_device",
                 new_callable=lambda: property(lambda self: mock_device),
             ),
-            pytest.raises(AssertionError, match="hostname must be set"),
+            patch("nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop"),
+            patch(
+                "nac_test.pyats_core.common.ssh_base_test.asyncio.run_coroutine_threadsafe"
+            ) as mock_run_coro,
         ):
             ssh_instance._patch_device_execute_for_broker()
+            result = mock_device.execute("show version")
+
+        assert result == "cached output"
+        mock_run_coro.assert_not_called()
+
+    def test_patched_execute_caches_broker_result(self, ssh_instance: Any) -> None:
+        """After executing via broker, result is cached for future calls."""
+        mock_device = Mock()
+        ssh_instance.hostname = "router-1"
+        ssh_instance.command_cache = CommandCache("router-1")
+        ssh_instance.broker_client.execute_command = AsyncMock(
+            return_value="new output"
+        )
+
+        mock_future = Mock()
+        mock_future.result = Mock(return_value="new output")
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: mock_device),
+            ),
+            patch("nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop"),
+            patch(
+                "nac_test.pyats_core.common.ssh_base_test.asyncio.run_coroutine_threadsafe",
+                return_value=mock_future,
+            ),
+        ):
+            ssh_instance._patch_device_execute_for_broker()
+            result = mock_device.execute("show ip route")
+
+        assert result == "new output"
+        assert ssh_instance.command_cache.get("show ip route") == "new output"
+
+
+class TestExecuteCommandUnified:
+    """Test _create_execute_command_method unified execution path."""
+
+    def test_execute_command_routes_through_testbed_device(
+        self, ssh_instance: Any
+    ) -> None:
+        """Execute command routes through testbed_device.execute via run_in_executor."""
+        mock_device = Mock()
+        mock_device.execute = Mock(return_value="device output")
+        ssh_instance.hostname = "router-1"
+        ssh_instance.command_cache = CommandCache("router-1")
+
+        mock_loop = Mock()
+        mock_loop.run_in_executor = AsyncMock(return_value="device output")
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: mock_device),
+            ),
+            patch(
+                "nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop",
+                return_value=mock_loop,
+            ),
+        ):
+            execute_command = ssh_instance._create_execute_command_method(
+                Mock(), ssh_instance.command_cache
+            )
+            result = asyncio.run(execute_command("show version"))
+
+        assert result == "device output"
+        mock_loop.run_in_executor.assert_called_once()
+        call_args = mock_loop.run_in_executor.call_args
+        assert call_args[0][0] is None  # executor=None
+        assert call_args[0][1] == mock_device.execute
+        assert call_args[0][2] == "show version"
+        assert ssh_instance.command_cache.get("show version") == "device output"
+
+    def test_execute_command_returns_cached_without_executing(
+        self, ssh_instance: Any
+    ) -> None:
+        """When command is cached, returns cached result without executing."""
+        mock_device = Mock()
+        ssh_instance.hostname = "router-1"
+        ssh_instance.command_cache = CommandCache("router-1")
+        ssh_instance.command_cache.set("show version", "cached")
+
+        mock_loop = Mock()
+        mock_loop.run_in_executor = AsyncMock()
+
+        with (
+            patch.object(
+                SSHTestBase,
+                "testbed_device",
+                new_callable=lambda: property(lambda self: mock_device),
+            ),
+            patch(
+                "nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop",
+                return_value=mock_loop,
+            ),
+        ):
+            execute_command = ssh_instance._create_execute_command_method(
+                Mock(), ssh_instance.command_cache
+            )
+            result = asyncio.run(execute_command("show version"))
+
+        assert result == "cached"
+        mock_loop.run_in_executor.assert_not_called()
 
 
 class TestParseOutput:

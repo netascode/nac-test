@@ -189,6 +189,9 @@ class SSHTestBase(NACTestBase):
 
     async def _async_setup(self, hostname: str) -> None:
         """Helper for async setup operations with connection error handling."""
+        # 1. Create command cache early (needed by broker patch)
+        self.command_cache = CommandCache(hostname)
+
         try:
             # Check if broker is active (priority over testbed to enable connection pooling)
             broker_socket_env = os.environ.get("NAC_TEST_BROKER_SOCKET")
@@ -216,9 +219,9 @@ class SSHTestBase(NACTestBase):
                 # Ensure device connection through broker
                 await self.connection.connect()
 
-                # Patch testbed device execute so Genie's supplementary calls
-                # (e.g. 'show vrf', 'show running-config | section router ospf N')
-                # route through the broker to the connected device.
+                # Patch testbed device execute so ALL commands (both explicit
+                # test calls and Genie supplementary calls) route through the
+                # broker. This is the unified execution path in broker mode.
                 if self.testbed_device:
                     self._patch_device_execute_for_broker()
             elif self.testbed_device:
@@ -243,15 +246,12 @@ class SSHTestBase(NACTestBase):
             self.logger.error(error_msg)
             raise ConnectionError(error_msg) from e
 
-        # 2. Create and attach the command cache
-        self.command_cache = CommandCache(hostname)
-
-        # 3. Create and attach the execute_command helper method
+        # 2. Create and attach the execute_command helper method
         self.execute_command = self._create_execute_command_method(
             self.connection, self.command_cache
         )
 
-        # 4. Attach device_data for easy access in the test
+        # 3. Attach device_data for easy access in the test
         self.device_data = self.device_info
         # hostname already set in setup_ssh_context
 
@@ -293,38 +293,53 @@ class SSHTestBase(NACTestBase):
             return None
 
     def _patch_device_execute_for_broker(self) -> None:
-        """Patch testbed_device.execute so Genie's internal calls route through the broker.
+        """Patch testbed_device.execute to route all commands through the broker.
 
-        Genie parsers may call device.execute() for supplementary commands
-        (e.g. 'show vrf', 'show running-config | section router ospf N') during
-        parsing. In broker mode, the testbed device is not connected locally —
-        the broker holds the live connection. This patch ensures those calls
-        reach the device via the broker.
+        This makes testbed_device.execute the unified execution engine in broker
+        mode. Both explicit test commands (via execute_command → run_in_executor)
+        and Genie's internal supplementary calls route through the same path.
 
-        Must be called from an async context (the event loop must be running)
-        so we can capture a reference to it for run_coroutine_threadsafe.
+        The patched method includes command caching so that supplementary commands
+        fired by Genie parsers also benefit from the cache (avoiding duplicate
+        round-trips to the device).
+
+        Must be called after command_cache is created and from an async context
+        (the event loop must be running) so we can capture a reference to it
+        for run_coroutine_threadsafe.
         """
-        assert self.testbed_device is not None, (
-            "testbed_device must be set before patching"
-        )
-        assert self.hostname is not None, "hostname must be set before patching"
-
         broker_client = self.broker_client
-        hostname: str = self.hostname
+        hostname: str = self.hostname  # type: ignore[assignment]
+        command_cache: CommandCache = self.command_cache  # type: ignore[assignment]
+        test_instance = self
         loop = get_or_create_event_loop()
 
         def broker_execute(cmd: str, *args: Any, **kwargs: Any) -> str:
             """Sync execute that routes through the connection broker.
 
-            Called from a worker thread (via run_in_executor in parse_output),
-            not from the event loop thread, to avoid deadlock.
+            Called from a worker thread (via run_in_executor in execute_command
+            or parse_output), not from the event loop thread, to avoid deadlock.
+
+            Includes caching so Genie supplementary calls don't re-execute
+            commands already fetched by the test.
             """
+            # Check cache (thread-safe)
+            cached = command_cache.get(cmd)
+            if cached is not None:
+                test_instance.logger.debug(
+                    f"broker_execute cache hit for '{cmd}' on {hostname}"
+                )
+                return cached
+
             future = asyncio.run_coroutine_threadsafe(
                 broker_client.execute_command(hostname, cmd), loop
             )
-            return future.result(timeout=DEVICE_EXECUTE_TIMEOUT)
+            output = future.result(timeout=DEVICE_EXECUTE_TIMEOUT)
 
-        self.testbed_device.execute = broker_execute
+            # Cache the result (thread-safe)
+            command_cache.set(cmd, output)
+            return output
+
+        self.testbed_device.execute = broker_execute  # type: ignore[union-attr]
         self.logger.debug(
             f"Patched testbed_device.execute for {hostname} to route through broker"
         )
@@ -334,15 +349,20 @@ class SSHTestBase(NACTestBase):
     ) -> Callable[[str], Coroutine[Any, Any, str]]:
         """Create an async command execution method for the test.
 
+        In both broker and direct modes, commands are executed via
+        testbed_device.execute (which is patched in broker mode to route
+        through the broker). This eliminates mode-specific branching.
+
         Args:
-            connection: SSH connection to the device.
+            connection: SSH connection to the device (kept for API compatibility).
             command_cache: Command cache for the device.
 
         Returns:
-            Async method for command execution with caching.
+            Async method for command execution with caching and tracking.
         """
         # Capture self reference for use in the closure
         test_instance = self
+        device = test_instance.testbed_device
 
         async def execute_command(command: str) -> str:
             """Execute command with caching and tracking.
@@ -361,18 +381,12 @@ class SSHTestBase(NACTestBase):
                 test_instance._track_ssh_command(command, cached_output)
                 return cached_output
 
-            # Execute command via connection (broker or testbed device)
+            # Execute command via testbed device
+            # In broker mode: patched to route through broker (sync, via run_in_executor)
+            # In direct mode: real pyATS device execute (sync, via run_in_executor)
             logging.debug(f"Executing command: {command}")
-
-            if hasattr(connection, "execute") and asyncio.iscoroutinefunction(
-                connection.execute
-            ):
-                # Broker command executor - already async
-                output = await connection.execute(command)
-            else:
-                # Testbed device or legacy connection - run in thread pool
-                loop = get_or_create_event_loop()
-                output = await loop.run_in_executor(None, connection.execute, command)
+            loop = get_or_create_event_loop()
+            output = await loop.run_in_executor(None, device.execute, command)  # type: ignore[union-attr]
 
             # Convert output to string to ensure consistent type
             output_str = str(output)
