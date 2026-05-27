@@ -65,6 +65,7 @@ $ nac-test --help
 ```
 
 **Breaking changes in nac-test 2.0:**
+- See the [2.0.0 Breaking Changes](CHANGELOG.md#breaking-changes) in the changelog.
 - The legacy `iac-test` CLI entrypoint has been removed. Use `nac-test` instead.
 
 ## How It Works
