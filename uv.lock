@@ -9,7 +9,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-05-24T09:13:57.394402Z"
+exclude-newer = "2026-05-24T17:28:10.029215Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
@@ -1821,7 +1821,7 @@ wheels = [
 
 [[package]]
 name = "nac-test"
-version = "2.0.0rc1"
+version = "2.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1891,7 +1891,7 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
     { name = "nac-test-pyats-common", specifier = ">=0.3.0" },
     { name = "nac-test-pyats-common", marker = "extra == 'dev'", specifier = ">=0.1.0" },
-    { name = "nac-yaml", specifier = "==2.0.0b3" },
+    { name = "nac-yaml", specifier = ">=2.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.6.0" },
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "pyats", marker = "sys_platform != 'win32'", specifier = ">=26.3" },
@@ -1933,14 +1933,14 @@ wheels = [
 
 [[package]]
 name = "nac-yaml"
-version = "2.0.0b3"
+version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ruamel-yaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b2/f8/46bec9136158b5931e35f0be5a528f8c73179d57b2c1b141c7cc6faaad92/nac_yaml-2.0.0b3.tar.gz", hash = "sha256:71055c4fc3440c36e247265d4fcce48ca751a94862dea605874fc854b063ee98", size = 80085, upload-time = "2026-05-11T15:30:14.822Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/f8/0b58a5ad2fd7d40444b77a8b875032143ae0e2a68ed8cd9060cdc48e438e/nac_yaml-2.0.0.tar.gz", hash = "sha256:2d92136f7570d8a87330df28125f1075694d750b3bf73535c5d0a074bfec6cf7", size = 97538, upload-time = "2026-05-27T16:49:19.638Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/15/c0/0829ed3353613e653df73f1d606f5f97100c8546433a1f83f87435d2c6c0/nac_yaml-2.0.0b3-py3-none-any.whl", hash = "sha256:74fbbcbd7caa08f9f0a616d43ea43d14330ca3a36f28c222f4270dec987c7b9a", size = 13178, upload-time = "2026-05-11T15:30:12.774Z" },
+    { url = "https://files.pythonhosted.org/packages/94/ae/888f5d96651c126de84a85776d79a3ba409fcb4e9dbc2043963651e31af2/nac_yaml-2.0.0-py3-none-any.whl", hash = "sha256:5b989a08c6434cbf5f0377a5a746c7b79278bdf1650e8373e476952be9280ecd", size = 13157, upload-time = "2026-05-27T16:49:18.578Z" },
 ]
 
 [[package]]
