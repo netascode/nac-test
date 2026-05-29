@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from nac_test.utils.controller import (
-    CREDENTIAL_PATTERNS,
+    CONTROLLER_REGISTRY,
     _find_credential_sets,
     _format_multiple_credentials_error,
     _format_no_credentials_error,
@@ -28,10 +28,11 @@ class TestControllerDetection:
         # Store original environment
         original_env = os.environ.copy()
 
-        # Remove all controller-related variables
-        for controller_vars in CREDENTIAL_PATTERNS.values():
-            for var in controller_vars:
-                os.environ.pop(var, None)
+        # Remove all controller-related variables (all credential sets)
+        for config in CONTROLLER_REGISTRY.values():
+            for cred_set in config.credential_sets:
+                for var in cred_set.env_vars:
+                    os.environ.pop(var, None)
 
         # Also remove legacy CONTROLLER_TYPE if present
         os.environ.pop("CONTROLLER_TYPE", None)
@@ -82,15 +83,17 @@ class TestControllerDetection:
 
         error_msg = str(exc_info.value)
         assert "Multiple controller credentials detected: ACI, SDWAN" in error_msg
-        assert "unset SDWAN_URL SDWAN_USERNAME SDWAN_PASSWORD" in error_msg
+        # SDWAN has multiple credential sets — unset should include all env vars
+        assert "unset SDWAN_URL SDWAN_API_TOKEN SDWAN_USERNAME SDWAN_PASSWORD" in error_msg
         assert "unset ACI_URL ACI_USERNAME ACI_PASSWORD" in error_msg
 
     def test_no_credentials_error(self) -> None:
         """Test error when no controller credentials are found."""
         # Ensure environment is completely clean
-        for controller_vars in CREDENTIAL_PATTERNS.values():
-            for var in controller_vars:
-                os.environ.pop(var, None)
+        for config in CONTROLLER_REGISTRY.values():
+            for cred_set in config.credential_sets:
+                for var in cred_set.env_vars:
+                    os.environ.pop(var, None)
 
         with pytest.raises(ValueError) as exc_info:
             detect_controller_type()
@@ -166,9 +169,10 @@ class TestHelperFunctions:
         """Clean environment variables before and after each test."""
         original_env = os.environ.copy()
 
-        for controller_vars in CREDENTIAL_PATTERNS.values():
-            for var in controller_vars:
-                os.environ.pop(var, None)
+        for config in CONTROLLER_REGISTRY.values():
+            for cred_set in config.credential_sets:
+                for var in cred_set.env_vars:
+                    os.environ.pop(var, None)
 
         yield
 
@@ -226,10 +230,9 @@ class TestHelperFunctions:
 
         assert "Multiple controller credentials detected: ACI, SDWAN, CC" in error_msg
         assert "To use ACI only:" in error_msg
-        assert (
-            "unset SDWAN_URL SDWAN_USERNAME SDWAN_PASSWORD CC_URL CC_USERNAME CC_PASSWORD"
-            in error_msg
-        )
+        # SDWAN has two credential sets, so all env vars from both sets appear
+        assert "unset SDWAN_URL SDWAN_API_TOKEN SDWAN_USERNAME SDWAN_PASSWORD" in error_msg
+        assert "CC_URL CC_USERNAME CC_PASSWORD" in error_msg
         assert "To use SDWAN only:" in error_msg
         assert (
             "unset ACI_URL ACI_USERNAME ACI_PASSWORD CC_URL CC_USERNAME CC_PASSWORD"
@@ -260,9 +263,10 @@ class TestEdgeCases:
         """Clean environment variables before and after each test."""
         original_env = os.environ.copy()
 
-        for controller_vars in CREDENTIAL_PATTERNS.values():
-            for var in controller_vars:
-                os.environ.pop(var, None)
+        for config in CONTROLLER_REGISTRY.values():
+            for cred_set in config.credential_sets:
+                for var in cred_set.env_vars:
+                    os.environ.pop(var, None)
 
         yield
 
@@ -396,9 +400,10 @@ class TestIOSXEAlternativeURLEnvVar:
         original_env = os.environ.copy()
 
         # Remove all controller-related variables
-        for controller_vars in CREDENTIAL_PATTERNS.values():
-            for var in controller_vars:
-                os.environ.pop(var, None)
+        for config in CONTROLLER_REGISTRY.values():
+            for cred_set in config.credential_sets:
+                for var in cred_set.env_vars:
+                    os.environ.pop(var, None)
 
         # Also remove IOSXE_HOST alternative
         os.environ.pop("IOSXE_HOST", None)
@@ -489,9 +494,10 @@ class TestGetControllerUrl:
         """Clean environment variables before and after each test."""
         original_env = os.environ.copy()
 
-        for controller_vars in CREDENTIAL_PATTERNS.values():
-            for var in controller_vars:
-                os.environ.pop(var, None)
+        for config in CONTROLLER_REGISTRY.values():
+            for cred_set in config.credential_sets:
+                for var in cred_set.env_vars:
+                    os.environ.pop(var, None)
 
         os.environ.pop("IOSXE_HOST", None)
 
@@ -535,3 +541,96 @@ class TestGetControllerUrl:
             get_controller_url("NONEXISTENT")
 
         assert "NONEXISTENT_URL" in str(exc_info.value)
+
+
+class TestSDWANCredentialSets:
+    """Test SDWAN controller detection with multiple credential sets.
+
+    SDWAN supports two credential methods:
+    1. API Token (20.18+): SDWAN_URL + SDWAN_API_TOKEN  (first — wins when both present)
+    2. Username/Password: SDWAN_URL + SDWAN_USERNAME + SDWAN_PASSWORD
+    """
+
+    @pytest.fixture(autouse=True)
+    def clean_environment(self) -> Generator[None, None, None]:
+        """Clean environment variables before and after each test."""
+        original_env = os.environ.copy()
+
+        for config in CONTROLLER_REGISTRY.values():
+            for cred_set in config.credential_sets:
+                for var in cred_set.env_vars:
+                    os.environ.pop(var, None)
+
+        yield
+
+        os.environ.clear()
+        os.environ.update(original_env)
+
+    def test_detect_sdwan_with_api_token(self) -> None:
+        """Test SDWAN detection with API token credentials."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+        os.environ["SDWAN_API_TOKEN"] = "eyJhbGciOiJSUzI1NiJ9.test.sig"
+
+        result = detect_controller_type()
+        assert result == "SDWAN"
+
+    def test_detect_sdwan_with_username_password(self) -> None:
+        """Test SDWAN detection with traditional username/password."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+        os.environ["SDWAN_USERNAME"] = "admin"
+        os.environ["SDWAN_PASSWORD"] = "password"
+
+        result = detect_controller_type()
+        assert result == "SDWAN"
+
+    def test_api_token_takes_priority(self) -> None:
+        """When both credential sets are satisfied, token set wins (listed first)."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+        os.environ["SDWAN_API_TOKEN"] = "eyJhbGciOiJSUzI1NiJ9.test.sig"
+        os.environ["SDWAN_USERNAME"] = "admin"
+        os.environ["SDWAN_PASSWORD"] = "password"
+
+        # Should still detect exactly one SDWAN (not duplicate)
+        result = detect_controller_type()
+        assert result == "SDWAN"
+
+    def test_partial_token_set_falls_back_to_password(self) -> None:
+        """When SDWAN_API_TOKEN is missing but username/password present, detect SDWAN."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+        # No SDWAN_API_TOKEN
+        os.environ["SDWAN_USERNAME"] = "admin"
+        os.environ["SDWAN_PASSWORD"] = "password"
+
+        result = detect_controller_type()
+        assert result == "SDWAN"
+
+    def test_empty_api_token_falls_back_to_password(self) -> None:
+        """Empty SDWAN_API_TOKEN should not satisfy the token credential set."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+        os.environ["SDWAN_API_TOKEN"] = ""
+        os.environ["SDWAN_USERNAME"] = "admin"
+        os.environ["SDWAN_PASSWORD"] = "password"
+
+        result = detect_controller_type()
+        assert result == "SDWAN"
+
+    def test_url_only_is_partial(self) -> None:
+        """SDWAN_URL alone (no token, no username/password) is partial."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+
+        with pytest.raises(ValueError) as exc_info:
+            detect_controller_type()
+
+        error_msg = str(exc_info.value)
+        assert "Incomplete controller credentials detected" in error_msg
+
+    def test_incomplete_error_shows_credential_set_options(self) -> None:
+        """Incomplete SDWAN credentials should list both credential set options."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+
+        with pytest.raises(ValueError) as exc_info:
+            detect_controller_type()
+
+        error_msg = str(exc_info.value)
+        assert "API Token (20.18+)" in error_msg
+        assert "Username/Password" in error_msg

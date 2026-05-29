@@ -39,6 +39,23 @@ class CredentialSetStatus(TypedDict):
 
 
 @dataclass(frozen=True)
+class CredentialSet:
+    """A single credential combination that can authenticate to a controller.
+
+    Each set is self-contained: if ALL env_vars are present and non-empty,
+    the controller is considered fully configured. When a controller has
+    multiple CredentialSets, the first satisfied set wins (order matters).
+
+    Attributes:
+        env_vars: Environment variable names required for this credential method.
+        label: Human-readable label for error messages (e.g., "API Token (20.18+)").
+    """
+
+    env_vars: list[str]
+    label: str
+
+
+@dataclass(frozen=True)
 class ControllerConfig:
     """Configuration metadata for a supported controller type.
 
@@ -46,7 +63,9 @@ class ControllerConfig:
         display_name: User-facing name (e.g., "APIC", "Catalyst Center").
         url_env_var: Environment variable name for the controller URL.
         env_var_prefix: Prefix for credential env vars (e.g., "ACI" → ACI_USERNAME).
-        required_env_vars: List of environment variables required for this controller.
+        credential_sets: Ordered list of credential combinations. The first set
+            whose env_vars are all present and non-empty wins. Every controller
+            must have at least one CredentialSet.
         defaults_prefix: JMESPath prefix for the defaults block in NAC data models
             (e.g., "defaults.apic", "defaults.sdwan").
         cache_key: The controller_type string passed to AuthCache by the auth adapter.
@@ -58,7 +77,7 @@ class ControllerConfig:
     display_name: str
     url_env_var: str
     env_var_prefix: str
-    required_env_vars: list[str]
+    credential_sets: list[CredentialSet]
     defaults_prefix: str
     cache_key: str | None = None
     alt_url_env_vars: list[str] | None = None
@@ -71,7 +90,12 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="APIC",
         url_env_var="ACI_URL",
         env_var_prefix="ACI",
-        required_env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
+        credential_sets=[
+            CredentialSet(
+                env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
+                label="Username/Password",
+            ),
+        ],
         defaults_prefix="defaults.apic",
         cache_key="ACI",
     ),
@@ -79,7 +103,16 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="SDWAN Manager",
         url_env_var="SDWAN_URL",
         env_var_prefix="SDWAN",
-        required_env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
+        credential_sets=[
+            CredentialSet(
+                env_vars=["SDWAN_URL", "SDWAN_API_TOKEN"],
+                label="API Token (20.18+)",
+            ),
+            CredentialSet(
+                env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
+                label="Username/Password",
+            ),
+        ],
         defaults_prefix="defaults.sdwan",
         cache_key="SDWAN_MANAGER",
     ),
@@ -87,7 +120,12 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="Catalyst Center",
         url_env_var="CC_URL",
         env_var_prefix="CC",
-        required_env_vars=["CC_URL", "CC_USERNAME", "CC_PASSWORD"],
+        credential_sets=[
+            CredentialSet(
+                env_vars=["CC_URL", "CC_USERNAME", "CC_PASSWORD"],
+                label="Username/Password",
+            ),
+        ],
         defaults_prefix="defaults.catc",
         cache_key="CC",
     ),
@@ -95,38 +133,58 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="Meraki",
         url_env_var="MERAKI_URL",
         env_var_prefix="MERAKI",
-        required_env_vars=["MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"],
+        credential_sets=[
+            CredentialSet(
+                env_vars=["MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"],
+                label="Username/Password",
+            ),
+        ],
         defaults_prefix="defaults.meraki",
     ),
     "FMC": ControllerConfig(
         display_name="Firepower Management Center",
         url_env_var="FMC_URL",
         env_var_prefix="FMC",
-        required_env_vars=["FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"],
+        credential_sets=[
+            CredentialSet(
+                env_vars=["FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"],
+                label="Username/Password",
+            ),
+        ],
         defaults_prefix="defaults.fmc",
     ),
     "ISE": ControllerConfig(
         display_name="ISE",
         url_env_var="ISE_URL",
         env_var_prefix="ISE",
-        required_env_vars=["ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"],
+        credential_sets=[
+            CredentialSet(
+                env_vars=["ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"],
+                label="Username/Password",
+            ),
+        ],
         defaults_prefix="defaults.ise",
     ),
     "IOSXE": ControllerConfig(
         display_name="IOS XE",
         url_env_var="IOSXE_URL",
         env_var_prefix="IOSXE",
-        required_env_vars=[
-            "IOSXE_URL"
-        ],  # Direct device access, no controller credentials
+        # Direct device access, no controller credentials required
+        credential_sets=[
+            CredentialSet(
+                env_vars=["IOSXE_URL"],
+                label="Device URL",
+            ),
+        ],
         defaults_prefix="defaults.iosxe",
         alt_url_env_vars=["IOSXE_HOST"],  # Alternative env var for URL
     ),
 }
 
 # Backward compatibility - remove in future version
+# Uses the first credential set's env_vars as the "primary" pattern
 CREDENTIAL_PATTERNS: dict[str, list[str]] = {
-    controller_type: config.required_env_vars
+    controller_type: config.credential_sets[0].env_vars
     for controller_type, config in CONTROLLER_REGISTRY.items()
 }
 
@@ -158,7 +216,7 @@ def detect_controller_type() -> ControllerTypeKey:
         "ACI"
     """
     logger.debug("Starting controller type detection")
-    logger.debug(f"Checking for credentials: {list(CREDENTIAL_PATTERNS.keys())}")
+    logger.debug(f"Checking for credentials: {list(CONTROLLER_REGISTRY.keys())}")
 
     complete_sets, partial_sets = _find_credential_sets()
 
@@ -179,10 +237,19 @@ def detect_controller_type() -> ControllerTypeKey:
 
     # Check for incomplete credentials
     if not complete_sets and partial_sets:
-        incomplete_info = [
-            f"{controller}: missing {', '.join(info['missing'])}"
-            for controller, info in partial_sets.items()
-        ]
+        incomplete_info = []
+        for controller, info in partial_sets.items():
+            line = f"{controller}: missing {', '.join(info['missing'])}"
+            # Show all credential set options for this controller
+            config = CONTROLLER_REGISTRY.get(controller)
+            if config and len(config.credential_sets) > 1:
+                set_descriptions = [
+                    f"{cs.label}: {' + '.join(cs.env_vars)}"
+                    for cs in config.credential_sets
+                ]
+                line += "\n    Accepted credential sets:\n"
+                line += "\n".join(f"      - {desc}" for desc in set_descriptions)
+            incomplete_info.append(line)
         lines = "\n".join(f"  - {info}" for info in incomplete_info)
         error_message = (
             f"Incomplete controller credentials detected:\n"
@@ -206,6 +273,11 @@ def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
     Examines environment variables to identify which controller types have
     complete credentials configured and which have partial/incomplete credentials.
 
+    For each controller, iterates through its credential_sets in order. The first
+    set whose env_vars are all present and non-empty marks the controller as
+    complete. If no set is fully satisfied but at least one variable from any set
+    is present, the controller is reported as partial (using the best partial match).
+
     This function also handles alternative URL environment variables (e.g., IOSXE_HOST
     as an alternative to IOSXE_URL) when configured in the ControllerConfig.
 
@@ -226,45 +298,58 @@ def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
     partial_sets: dict[str, CredentialSetStatus] = {}
 
     for controller_type, config in CONTROLLER_REGISTRY.items():
-        required_vars = config.required_env_vars
-        present_vars = []
-        missing_vars = []
+        best_present: list[str] = []
+        best_missing: list[str] = []
+        found_complete = False
 
-        for var in required_vars:
-            # Check if variable exists AND is not empty
-            value = os.environ.get(var)
-            if value and value.strip():  # Non-empty value
-                present_vars.append(var)
-                logger.debug(f"  {controller_type}: Found {var}")
-            else:
-                # Check alternative URL env vars if this is the URL variable
-                alt_found = False
-                if var == config.url_env_var and config.alt_url_env_vars:
-                    for alt_var in config.alt_url_env_vars:
-                        alt_value = os.environ.get(alt_var)
-                        if alt_value and alt_value.strip():
-                            present_vars.append(alt_var)
-                            logger.debug(
-                                f"  {controller_type}: Found {alt_var} (alternative)"
-                            )
-                            alt_found = True
-                            break
+        for cred_set in config.credential_sets:
+            present_vars: list[str] = []
+            missing_vars: list[str] = []
 
-                if not alt_found:
-                    missing_vars.append(var)
-                    if var in os.environ:
-                        logger.debug(f"  {controller_type}: Empty {var}")
-                    else:
-                        logger.debug(f"  {controller_type}: Missing {var}")
+            for var in cred_set.env_vars:
+                value = os.environ.get(var)
+                if value and value.strip():
+                    present_vars.append(var)
+                    logger.debug(f"  {controller_type}: Found {var}")
+                else:
+                    # Check alternative URL env vars if this is the URL variable
+                    alt_found = False
+                    if var == config.url_env_var and config.alt_url_env_vars:
+                        for alt_var in config.alt_url_env_vars:
+                            alt_value = os.environ.get(alt_var)
+                            if alt_value and alt_value.strip():
+                                present_vars.append(alt_var)
+                                logger.debug(
+                                    f"  {controller_type}: Found {alt_var} (alternative)"
+                                )
+                                alt_found = True
+                                break
 
-        if present_vars and not missing_vars:
-            # All required variables present and non-empty
-            complete_sets.append(controller_type)
-        elif present_vars:
-            # Some but not all variables present
+                    if not alt_found:
+                        missing_vars.append(var)
+                        if var in os.environ:
+                            logger.debug(f"  {controller_type}: Empty {var}")
+                        else:
+                            logger.debug(f"  {controller_type}: Missing {var}")
+
+            if present_vars and not missing_vars:
+                # This credential set is fully satisfied — first wins
+                complete_sets.append(controller_type)
+                logger.debug(
+                    f"  {controller_type}: Complete via {cred_set.label}"
+                )
+                found_complete = True
+                break
+
+            # Track the best partial match (most present vars)
+            if len(present_vars) > len(best_present):
+                best_present = present_vars
+                best_missing = missing_vars
+
+        if not found_complete and best_present:
             partial_sets[controller_type] = {
-                "present": present_vars,
-                "missing": missing_vars,
+                "present": best_present,
+                "missing": best_missing,
             }
 
     return complete_sets, partial_sets
@@ -290,11 +375,6 @@ def _format_multiple_credentials_error(controllers: list[str]) -> str:
     """
     controller_list = ", ".join(controllers)
 
-    # Build list of all environment variables that should be unset
-    vars_to_unset: list[str] = []
-    for controller in controllers:
-        vars_to_unset.extend(CREDENTIAL_PATTERNS[controller])
-
     message = (
         f"Multiple controller credentials detected: {controller_list}\n\n"
         f"The test framework requires exactly one controller type to be configured.\n\n"
@@ -302,12 +382,26 @@ def _format_multiple_credentials_error(controllers: list[str]) -> str:
         f"1. Keep only one controller's credentials and unset the others:\n"
     )
 
+    # Collect all env vars per controller (union of all credential sets)
+    def _all_env_vars(controller: str) -> list[str]:
+        config = CONTROLLER_REGISTRY.get(controller)
+        if not config:
+            return CREDENTIAL_PATTERNS.get(controller, [])
+        seen: set[str] = set()
+        result: list[str] = []
+        for cs in config.credential_sets:
+            for v in cs.env_vars:
+                if v not in seen:
+                    seen.add(v)
+                    result.append(v)
+        return result
+
     # Add specific unset commands for each controller
     for controller in controllers:
         other_controllers = [c for c in controllers if c != controller]
         vars_to_remove = []
         for other in other_controllers:
-            vars_to_remove.extend(CREDENTIAL_PATTERNS[other])
+            vars_to_remove.extend(_all_env_vars(other))
 
         unset_command = f"   unset {' '.join(vars_to_remove)}"
         message += f"\n   To use {controller} only:\n{unset_command}\n"
@@ -342,10 +436,15 @@ def _format_no_credentials_error() -> str:
         "Please set environment variables for ONE of the following controller types:\n\n"
     )
 
-    for controller_type, required_vars in CREDENTIAL_PATTERNS.items():
+    for controller_type, config in CONTROLLER_REGISTRY.items():
         message += f"{controller_type}:\n"
-        for var in required_vars:
-            message += f"  export {var}=<value>\n"
+        for i, cred_set in enumerate(config.credential_sets):
+            if i > 0:
+                message += "  Or\n"
+            if len(config.credential_sets) > 1:
+                message += f"  ({cred_set.label}):\n"
+            for var in cred_set.env_vars:
+                message += f"  export {var}=<value>\n"
         message += "\n"
 
     message += (

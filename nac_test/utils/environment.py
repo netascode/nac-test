@@ -122,19 +122,36 @@ class EnvironmentValidator:
     def validate_controller_env(controller_type: str = "ACI") -> None:
         """Validate controller-specific environment variables.
 
-        This is a convenience method for validating controller credentials.
+        Iterates through the controller's credential_sets. If any set is fully
+        satisfied (all env vars present and non-empty), validation passes.
+        Otherwise falls back to checking the first credential set's vars and
+        reports missing ones.
 
         Args:
-            controller_type: Type of controller (ACI, CC, etc.)
+            controller_type: Type of controller (ACI, CC, SDWAN, etc.)
 
         Raises:
-            SystemExit: If required variables are missing
+            SystemExit: If no credential set is fully satisfied
         """
-        required_vars = [
-            f"{controller_type}_URL",
-            f"{controller_type}_USERNAME",
-            f"{controller_type}_PASSWORD",
-        ]
+        from nac_test.utils.controller import CONTROLLER_REGISTRY
+
+        config = CONTROLLER_REGISTRY.get(controller_type)
+        if config:
+            # Check each credential set — first fully satisfied wins
+            for cred_set in config.credential_sets:
+                if all(os.environ.get(v, "").strip() for v in cred_set.env_vars):
+                    return  # Credentials satisfied
+
+            # No set fully satisfied — report missing vars from first set
+            # (the "default" credential method)
+            required_vars = config.credential_sets[0].env_vars
+        else:
+            # Fallback for unknown controller types
+            required_vars = [
+                f"{controller_type}_URL",
+                f"{controller_type}_USERNAME",
+                f"{controller_type}_PASSWORD",
+            ]
 
         # Use terminal's controller-specific formatter
         def controller_formatter(missing: list[str]) -> str:
