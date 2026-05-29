@@ -14,6 +14,7 @@ _Note: This changelog covers all 2.0.0 alpha and beta releases._
 - **Merged xUnit Output**: Robot and pyATS results merged into single `xunit.xml` for CI/CD integration
 - **Diagnostic Collection**: `--diagnostic` flag wraps execution to collect troubleshooting info (env, packages, logs)
 - **Fail-Fast Authentication**: Controller authentication validated before pyATS test execution starts
+- **Credential Sets with `auth_method`**: Controllers now define ordered `credential_sets` instead of flat env var lists. Each `CredentialSet` carries an `auth_method` attribute (e.g., `"token"`, `"session"`) so downstream auth adapters can determine which mechanism to use. SD-WAN supports API Token (20.18+) and Username/Password — the first satisfied set wins and is remembered via `get_matched_credential_set()` API.
 
 ## Breaking Changes
 

@@ -87,7 +87,9 @@ class TestControllerDetection:
         error_msg = str(exc_info.value)
         assert "Multiple controller credentials detected: ACI, SDWAN" in error_msg
         # SDWAN has multiple credential sets — unset should include all env vars
-        assert "unset SDWAN_URL SDWAN_API_TOKEN SDWAN_USERNAME SDWAN_PASSWORD" in error_msg
+        assert (
+            "unset SDWAN_URL SDWAN_API_TOKEN SDWAN_USERNAME SDWAN_PASSWORD" in error_msg
+        )
         assert "unset ACI_URL ACI_USERNAME ACI_PASSWORD" in error_msg
 
     def test_no_credentials_error(self) -> None:
@@ -238,7 +240,9 @@ class TestHelperFunctions:
         assert "Multiple controller credentials detected: ACI, SDWAN, CC" in error_msg
         assert "To use ACI only:" in error_msg
         # SDWAN has two credential sets, so all env vars from both sets appear
-        assert "unset SDWAN_URL SDWAN_API_TOKEN SDWAN_USERNAME SDWAN_PASSWORD" in error_msg
+        assert (
+            "unset SDWAN_URL SDWAN_API_TOKEN SDWAN_USERNAME SDWAN_PASSWORD" in error_msg
+        )
         assert "CC_URL CC_USERNAME CC_PASSWORD" in error_msg
         assert "To use SDWAN only:" in error_msg
         assert (

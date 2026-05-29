@@ -356,9 +356,7 @@ def _find_credential_sets() -> tuple[
                 # This credential set is fully satisfied — first wins
                 complete_sets.append(controller_type)
                 matched_creds[controller_type] = cred_set
-                logger.debug(
-                    f"  {controller_type}: Complete via {cred_set.label}"
-                )
+                logger.debug(f"  {controller_type}: Complete via {cred_set.label}")
                 found_complete = True
                 break
 
