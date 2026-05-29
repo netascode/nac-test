@@ -11,11 +11,14 @@ import pytest
 
 from nac_test.utils.controller import (
     CONTROLLER_REGISTRY,
+    CredentialSet,
     _find_credential_sets,
     _format_multiple_credentials_error,
     _format_no_credentials_error,
+    _matched_credential_sets,
     detect_controller_type,
     get_controller_url,
+    get_matched_credential_set,
 )
 
 
@@ -186,10 +189,12 @@ class TestHelperFunctions:
         os.environ["CC_USERNAME"] = "admin"
         os.environ["CC_PASSWORD"] = "password"
 
-        complete, partial = _find_credential_sets()
+        complete, partial, matched = _find_credential_sets()
 
         assert complete == ["CC"]
         assert partial == {}
+        assert "CC" in matched
+        assert matched["CC"].auth_method == "session"
 
     def test_find_credential_sets_partial(self) -> None:
         """Test finding partial credential sets."""
@@ -198,12 +203,13 @@ class TestHelperFunctions:
         os.environ["FMC_USERNAME"] = "admin"
         # No FMC_PASSWORD
 
-        complete, partial = _find_credential_sets()
+        complete, partial, matched = _find_credential_sets()
 
         assert complete == []
         assert "FMC" in partial
         assert partial["FMC"]["present"] == ["FMC_URL", "FMC_USERNAME"]
         assert partial["FMC"]["missing"] == ["FMC_PASSWORD"]
+        assert matched == {}
 
     def test_find_credential_sets_multiple_partial(self) -> None:
         """Test finding multiple partial credential sets."""
@@ -215,7 +221,7 @@ class TestHelperFunctions:
         os.environ["MERAKI_USERNAME"] = "meraki_user"
         # Missing MERAKI_URL and MERAKI_PASSWORD
 
-        complete, partial = _find_credential_sets()
+        complete, partial, matched = _find_credential_sets()
 
         assert complete == []
         assert len(partial) == 2
@@ -223,6 +229,7 @@ class TestHelperFunctions:
         assert "MERAKI" in partial
         assert partial["ISE"]["missing"] == ["ISE_USERNAME", "ISE_PASSWORD"]
         assert partial["MERAKI"]["missing"] == ["MERAKI_URL", "MERAKI_PASSWORD"]
+        assert matched == {}
 
     def test_format_multiple_credentials_error(self) -> None:
         """Test formatting error message for multiple controllers."""
@@ -561,8 +568,12 @@ class TestSDWANCredentialSets:
                 for var in cred_set.env_vars:
                     os.environ.pop(var, None)
 
+        # Clear matched credential set cache
+        _matched_credential_sets.clear()
+
         yield
 
+        _matched_credential_sets.clear()
         os.environ.clear()
         os.environ.update(original_env)
 
@@ -574,6 +585,12 @@ class TestSDWANCredentialSets:
         result = detect_controller_type()
         assert result == "SDWAN"
 
+        # Token set should be matched with auth_method="token"
+        cred = get_matched_credential_set("SDWAN")
+        assert cred is not None
+        assert cred.auth_method == "token"
+        assert cred.label == "API Token (20.18+)"
+
     def test_detect_sdwan_with_username_password(self) -> None:
         """Test SDWAN detection with traditional username/password."""
         os.environ["SDWAN_URL"] = "https://vmanage.example.com"
@@ -582,6 +599,12 @@ class TestSDWANCredentialSets:
 
         result = detect_controller_type()
         assert result == "SDWAN"
+
+        # Password set should be matched with auth_method="session"
+        cred = get_matched_credential_set("SDWAN")
+        assert cred is not None
+        assert cred.auth_method == "session"
+        assert cred.label == "Username/Password"
 
     def test_api_token_takes_priority(self) -> None:
         """When both credential sets are satisfied, token set wins (listed first)."""
@@ -594,6 +617,11 @@ class TestSDWANCredentialSets:
         result = detect_controller_type()
         assert result == "SDWAN"
 
+        # Token set wins because it's listed first
+        cred = get_matched_credential_set("SDWAN")
+        assert cred is not None
+        assert cred.auth_method == "token"
+
     def test_partial_token_set_falls_back_to_password(self) -> None:
         """When SDWAN_API_TOKEN is missing but username/password present, detect SDWAN."""
         os.environ["SDWAN_URL"] = "https://vmanage.example.com"
@@ -604,6 +632,11 @@ class TestSDWANCredentialSets:
         result = detect_controller_type()
         assert result == "SDWAN"
 
+        # Password set matched because token set was incomplete
+        cred = get_matched_credential_set("SDWAN")
+        assert cred is not None
+        assert cred.auth_method == "session"
+
     def test_empty_api_token_falls_back_to_password(self) -> None:
         """Empty SDWAN_API_TOKEN should not satisfy the token credential set."""
         os.environ["SDWAN_URL"] = "https://vmanage.example.com"
@@ -613,6 +646,11 @@ class TestSDWANCredentialSets:
 
         result = detect_controller_type()
         assert result == "SDWAN"
+
+        # Should fall back to session auth
+        cred = get_matched_credential_set("SDWAN")
+        assert cred is not None
+        assert cred.auth_method == "session"
 
     def test_url_only_is_partial(self) -> None:
         """SDWAN_URL alone (no token, no username/password) is partial."""
@@ -634,3 +672,25 @@ class TestSDWANCredentialSets:
         error_msg = str(exc_info.value)
         assert "API Token (20.18+)" in error_msg
         assert "Username/Password" in error_msg
+
+    def test_get_matched_credential_set_before_detection(self) -> None:
+        """get_matched_credential_set returns None before detect_controller_type runs."""
+        assert get_matched_credential_set("SDWAN") is None
+
+    def test_credential_set_auth_method_default(self) -> None:
+        """CredentialSet.auth_method defaults to 'session'."""
+        cs = CredentialSet(env_vars=["X_URL", "X_USER", "X_PASS"], label="test")
+        assert cs.auth_method == "session"
+
+    def test_aci_matched_credential_set(self) -> None:
+        """ACI detection stores matched credential set with session auth."""
+        os.environ["ACI_URL"] = "https://apic.example.com"
+        os.environ["ACI_USERNAME"] = "admin"
+        os.environ["ACI_PASSWORD"] = "password"
+
+        detect_controller_type()
+
+        cred = get_matched_credential_set("ACI")
+        assert cred is not None
+        assert cred.auth_method == "session"
+        assert cred.label == "Username/Password"

@@ -49,10 +49,13 @@ class CredentialSet:
     Attributes:
         env_vars: Environment variable names required for this credential method.
         label: Human-readable label for error messages (e.g., "API Token (20.18+)").
+        auth_method: Identifier consumed by auth adapters in nac-test-pyats-common
+            to select the authentication mechanism (e.g., "token", "session").
     """
 
     env_vars: list[str]
     label: str
+    auth_method: str = "session"
 
 
 @dataclass(frozen=True)
@@ -107,6 +110,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
             CredentialSet(
                 env_vars=["SDWAN_URL", "SDWAN_API_TOKEN"],
                 label="API Token (20.18+)",
+                auth_method="token",
             ),
             CredentialSet(
                 env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
@@ -188,6 +192,10 @@ CREDENTIAL_PATTERNS: dict[str, list[str]] = {
     for controller_type, config in CONTROLLER_REGISTRY.items()
 }
 
+# Module-level cache for the credential set that was matched during detection.
+# Populated by detect_controller_type(), consumed by get_matched_credential_set().
+_matched_credential_sets: dict[str, CredentialSet] = {}
+
 
 def detect_controller_type() -> ControllerTypeKey:
     """Detect the controller type based on environment variables.
@@ -218,7 +226,7 @@ def detect_controller_type() -> ControllerTypeKey:
     logger.debug("Starting controller type detection")
     logger.debug(f"Checking for credentials: {list(CONTROLLER_REGISTRY.keys())}")
 
-    complete_sets, partial_sets = _find_credential_sets()
+    complete_sets, partial_sets, matched_creds = _find_credential_sets()
 
     logger.debug(f"Complete credential sets found: {complete_sets}")
     logger.debug(f"Partial credential sets found: {list(partial_sets.keys())}")
@@ -263,11 +271,21 @@ def detect_controller_type() -> ControllerTypeKey:
     # complete_sets come from CONTROLLER_REGISTRY keys, which are always valid
     # ControllerTypeKey values, but mypy can't infer this from dict iteration.
     controller_type = cast(ControllerTypeKey, complete_sets[0])
-    logger.info(f"Detected controller type: {controller_type}")
+    # Store the winning credential set for retrieval by auth adapters
+    if controller_type in matched_creds:
+        _matched_credential_sets[controller_type] = matched_creds[controller_type]
+        logger.info(
+            f"Detected controller type: {controller_type} "
+            f"(auth_method={matched_creds[controller_type].auth_method})"
+        )
+    else:
+        logger.info(f"Detected controller type: {controller_type}")
     return controller_type
 
 
-def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
+def _find_credential_sets() -> tuple[
+    list[str], dict[str, CredentialSetStatus], dict[str, CredentialSet]
+]:
     """Find complete and partial credential sets in environment.
 
     Examines environment variables to identify which controller types have
@@ -285,10 +303,11 @@ def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
         A tuple containing:
             - List of controller types with complete credentials
             - Dictionary mapping controller types to CredentialSetStatus
+            - Dictionary mapping controller types to the winning CredentialSet
 
     Example:
         >>> os.environ.update({"ACI_URL": "https://apic.local", "ACI_USERNAME": "admin"})
-        >>> complete, partial = _find_credential_sets()
+        >>> complete, partial, matched = _find_credential_sets()
         >>> print(complete)
         []
         >>> print(partial)
@@ -296,6 +315,7 @@ def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
     """
     complete_sets: list[str] = []
     partial_sets: dict[str, CredentialSetStatus] = {}
+    matched_creds: dict[str, CredentialSet] = {}
 
     for controller_type, config in CONTROLLER_REGISTRY.items():
         best_present: list[str] = []
@@ -335,6 +355,7 @@ def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
             if present_vars and not missing_vars:
                 # This credential set is fully satisfied — first wins
                 complete_sets.append(controller_type)
+                matched_creds[controller_type] = cred_set
                 logger.debug(
                     f"  {controller_type}: Complete via {cred_set.label}"
                 )
@@ -352,7 +373,7 @@ def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
                 "missing": best_missing,
             }
 
-    return complete_sets, partial_sets
+    return complete_sets, partial_sets, matched_creds
 
 
 def _format_multiple_credentials_error(controllers: list[str]) -> str:
@@ -565,3 +586,30 @@ def get_controller_url(controller_type: str) -> str:
 
     # No URL found - raise KeyError with the primary var name
     raise KeyError(config.url_env_var)
+
+
+def get_matched_credential_set(controller_type: str) -> CredentialSet | None:
+    """Get the credential set that was matched during controller detection.
+
+    Returns the CredentialSet that satisfied detection for the given controller
+    type. This is populated by detect_controller_type() and is intended for use
+    by auth adapters in nac-test-pyats-common to determine which authentication
+    mechanism to use (via the auth_method attribute).
+
+    Args:
+        controller_type: The controller type key (e.g., "SDWAN", "ACI").
+
+    Returns:
+        The matched CredentialSet, or None if detect_controller_type() has not
+        been called or the controller type was not detected.
+
+    Example:
+        >>> detect_controller_type()  # populates the cache
+        'SDWAN'
+        >>> cred = get_matched_credential_set("SDWAN")
+        >>> cred.auth_method
+        'token'
+        >>> cred.label
+        'API Token (20.18+)'
+    """
+    return _matched_credential_sets.get(controller_type)
