@@ -4,7 +4,7 @@ version = "2.0.0"
 description = "A CLI tool to render to execute Robot Framework (RF) and PyATS tests for Network as Code (NAC)."
 license = { text = "MPL-2.0" }
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.15"
 authors = [
     { name = "Daniel Schmidt", email = "danischm@cisco.com" },
     { name = "Andrea Testino", email = "atestini@cisco.com" },
