@@ -40,3 +40,12 @@ repos:
       - id: bandit
         args: ['-c', 'pyproject.toml', '-r', 'nac_test/']
         exclude: ^tests/
+
+  - repo: local
+    hooks:
+      - id: uv-lock-up-to-date
+        name: Check uv.lock is up-to-date
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|uv\.lock)$
