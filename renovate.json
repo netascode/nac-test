@@ -7,7 +7,6 @@
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security"],
-    "minimumReleaseAge": "0 days",
     "rangeStrategy": "bump"
   },
   "osvVulnerabilityAlerts": true,
@@ -17,22 +16,19 @@
       "matchManagers": ["pep621"],
       "matchPackageNames": ["pyats", "genie"],
       "rangeStrategy": "bump",
-      "groupName": "pyats-genie",
-      "minimumReleaseAge": "0 days"
+      "groupName": "pyats-genie"
     },
     {
       "description": "Track Latest: robotframework (always bump pyproject.toml)",
       "matchManagers": ["pep621"],
       "matchPackageNames": ["robotframework"],
-      "rangeStrategy": "bump",
-      "minimumReleaseAge": "0 days"
+      "rangeStrategy": "bump"
     },
     {
       "description": "Track Latest: robotframework-pabot (always bump pyproject.toml)",
       "matchManagers": ["pep621"],
       "matchPackageNames": ["robotframework-pabot"],
-      "rangeStrategy": "bump",
-      "minimumReleaseAge": "0 days"
+      "rangeStrategy": "bump"
     },
     {
       "description": "Group all GitHub Actions updates into a single PR",
