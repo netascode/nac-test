@@ -9,7 +9,8 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2030-01-01T23:00:00Z"
+exclude-newer = "2026-05-28T20:00:10.780941Z"
+exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
 nac-yaml = false
