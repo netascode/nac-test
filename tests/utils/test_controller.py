@@ -121,7 +121,7 @@ class TestControllerDetection:
 
         error_msg = str(exc_info.value)
         assert "Incomplete controller credentials detected" in error_msg
-        assert "ACI: missing ACI_PASSWORD" in error_msg
+        assert "ACI: incomplete credentials" in error_msg
 
     def test_empty_string_handling(self) -> None:
         """Test that empty string values are treated as missing."""
@@ -135,7 +135,7 @@ class TestControllerDetection:
 
         error_msg = str(exc_info.value)
         assert "Incomplete controller credentials detected" in error_msg
-        assert "ACI: missing ACI_PASSWORD" in error_msg
+        assert "ACI: incomplete credentials" in error_msg
 
     def test_whitespace_handling(self) -> None:
         """Test that whitespace-only values are treated as missing."""
@@ -149,7 +149,7 @@ class TestControllerDetection:
 
         error_msg = str(exc_info.value)
         assert "Incomplete controller credentials detected" in error_msg
-        assert "SDWAN: missing SDWAN_PASSWORD" in error_msg
+        assert "SDWAN: incomplete credentials" in error_msg
 
     def test_d2d_scenario_with_dummy_credentials(self) -> None:
         """Test D2D scenario where controller credentials are still required."""
@@ -194,7 +194,7 @@ class TestHelperFunctions:
         complete, partial, matched = _find_credential_sets()
 
         assert complete == ["CC"]
-        assert partial == {}
+        assert partial == []
         assert "CC" in matched
         assert matched["CC"].auth_method == "session"
 
@@ -209,8 +209,6 @@ class TestHelperFunctions:
 
         assert complete == []
         assert "FMC" in partial
-        assert partial["FMC"]["present"] == ["FMC_URL", "FMC_USERNAME"]
-        assert partial["FMC"]["missing"] == ["FMC_PASSWORD"]
         assert matched == {}
 
     def test_find_credential_sets_multiple_partial(self) -> None:
@@ -229,8 +227,6 @@ class TestHelperFunctions:
         assert len(partial) == 2
         assert "ISE" in partial
         assert "MERAKI" in partial
-        assert partial["ISE"]["missing"] == ["ISE_USERNAME", "ISE_PASSWORD"]
-        assert partial["MERAKI"]["missing"] == ["MERAKI_URL", "MERAKI_PASSWORD"]
         assert matched == {}
 
     def test_format_multiple_credentials_error(self) -> None:

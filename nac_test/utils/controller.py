@@ -19,23 +19,11 @@ the merged NAC data model.
 import logging
 import os
 from dataclasses import dataclass
-from typing import TypedDict, cast
+from typing import cast
 
 from nac_test.core.types import ControllerTypeKey
 
 logger = logging.getLogger(__name__)
-
-
-class CredentialSetStatus(TypedDict):
-    """Status of a controller credential set.
-
-    Attributes:
-        present: List of environment variable names that are set.
-        missing: List of environment variable names that are not set.
-    """
-
-    present: list[str]
-    missing: list[str]
 
 
 @dataclass(frozen=True)
@@ -219,10 +207,10 @@ def detect_controller_type() -> ControllerTypeKey:
     logger.debug("Starting controller type detection")
     logger.debug(f"Checking for credentials: {list(CONTROLLER_REGISTRY.keys())}")
 
-    complete_sets, partial_sets, matched_creds = _find_credential_sets()
+    complete_sets, partial_controllers, matched_creds = _find_credential_sets()
 
     logger.debug(f"Complete credential sets found: {complete_sets}")
-    logger.debug(f"Partial credential sets found: {list(partial_sets.keys())}")
+    logger.debug(f"Partial credential sets found: {partial_controllers}")
 
     # Check for multiple complete credential sets
     if len(complete_sets) > 1:
@@ -231,33 +219,31 @@ def detect_controller_type() -> ControllerTypeKey:
         raise ValueError(error_message)
 
     # Check for no credentials at all
-    if not complete_sets and not partial_sets:
+    if not complete_sets and not partial_controllers:
         error_message = _format_no_credentials_error()
         logger.error("No controller credentials found in environment")
         raise ValueError(error_message)
 
     # Check for incomplete credentials
-    if not complete_sets and partial_sets:
-        incomplete_info = []
-        for controller, info in partial_sets.items():
-            line = f"{controller}: missing {', '.join(info['missing'])}"
-            # Show all credential set options for this controller
-            config = CONTROLLER_REGISTRY.get(controller)
-            if config and len(config.credential_sets) > 1:
-                set_descriptions = [
-                    f"{cs.label}: {' + '.join(cs.env_vars)}"
-                    for cs in config.credential_sets
-                ]
-                line += "\n    Accepted credential sets:\n"
-                line += "\n".join(f"      - {desc}" for desc in set_descriptions)
-            incomplete_info.append(line)
-        lines = "\n".join(f"  - {info}" for info in incomplete_info)
+    if not complete_sets and partial_controllers:
+        lines_parts: list[str] = []
+        for controller in partial_controllers:
+            config = CONTROLLER_REGISTRY[controller]
+            set_descriptions = [
+                f"{cs.label}: {' + '.join(cs.env_vars)}"
+                for cs in config.credential_sets
+            ]
+            line = f"{controller}: incomplete credentials"
+            line += "\n    Accepted credential sets:\n"
+            line += "\n".join(f"      - {desc}" for desc in set_descriptions)
+            lines_parts.append(line)
+        lines = "\n".join(f"  - {info}" for info in lines_parts)
         error_message = (
             f"Incomplete controller credentials detected:\n"
             f"{lines}\n\n"
             f"Please provide ALL required environment variables for your controller type."
         )
-        logger.error(f"Incomplete credentials: {partial_sets}")
+        logger.error(f"Incomplete credentials: {partial_controllers}")
         raise ValueError(error_message)
 
     # Exactly one complete set found - success
@@ -276,18 +262,13 @@ def detect_controller_type() -> ControllerTypeKey:
     return controller_type
 
 
-def _find_credential_sets() -> tuple[
-    list[str], dict[str, CredentialSetStatus], dict[str, CredentialSet]
-]:
+def _find_credential_sets() -> tuple[list[str], list[str], dict[str, CredentialSet]]:
     """Find complete and partial credential sets in environment.
-
-    Examines environment variables to identify which controller types have
-    complete credentials configured and which have partial/incomplete credentials.
 
     For each controller, iterates through its credential_sets in order. The first
     set whose env_vars are all present and non-empty marks the controller as
     complete. If no set is fully satisfied but at least one variable from any set
-    is present, the controller is reported as partial (using the best partial match).
+    is present, the controller is reported as partial.
 
     This function also handles alternative URL environment variables (e.g., IOSXE_HOST
     as an alternative to IOSXE_URL) when configured in the ControllerConfig.
@@ -295,34 +276,24 @@ def _find_credential_sets() -> tuple[
     Returns:
         A tuple containing:
             - List of controller types with complete credentials
-            - Dictionary mapping controller types to CredentialSetStatus
+            - List of controller types with partial credentials
             - Dictionary mapping controller types to the winning CredentialSet
-
-    Example:
-        >>> os.environ.update({"ACI_URL": "https://apic.local", "ACI_USERNAME": "admin"})
-        >>> complete, partial, matched = _find_credential_sets()
-        >>> print(complete)
-        []
-        >>> print(partial)
-        {"ACI": {"present": ["ACI_URL", "ACI_USERNAME"], "missing": ["ACI_PASSWORD"]}}
     """
     complete_sets: list[str] = []
-    partial_sets: dict[str, CredentialSetStatus] = {}
+    partial_controllers: list[str] = []
     matched_creds: dict[str, CredentialSet] = {}
 
     for controller_type, config in CONTROLLER_REGISTRY.items():
-        best_present: list[str] = []
-        best_missing: list[str] = []
         found_complete = False
+        has_any_var = False
 
         for cred_set in config.credential_sets:
-            present_vars: list[str] = []
-            missing_vars: list[str] = []
+            all_present = True
 
             for var in cred_set.env_vars:
                 value = os.environ.get(var)
                 if value and value.strip():
-                    present_vars.append(var)
+                    has_any_var = True
                     logger.debug(f"  {controller_type}: Found {var}")
                 else:
                     # Check alternative URL env vars if this is the URL variable
@@ -331,7 +302,7 @@ def _find_credential_sets() -> tuple[
                         for alt_var in config.alt_url_env_vars:
                             alt_value = os.environ.get(alt_var)
                             if alt_value and alt_value.strip():
-                                present_vars.append(alt_var)
+                                has_any_var = True
                                 logger.debug(
                                     f"  {controller_type}: Found {alt_var} (alternative)"
                                 )
@@ -339,32 +310,19 @@ def _find_credential_sets() -> tuple[
                                 break
 
                     if not alt_found:
-                        missing_vars.append(var)
-                        if var in os.environ:
-                            logger.debug(f"  {controller_type}: Empty {var}")
-                        else:
-                            logger.debug(f"  {controller_type}: Missing {var}")
+                        all_present = False
 
-            if present_vars and not missing_vars:
-                # This credential set is fully satisfied — first wins
+            if all_present:
                 complete_sets.append(controller_type)
                 matched_creds[controller_type] = cred_set
                 logger.debug(f"  {controller_type}: Complete via {cred_set.label}")
                 found_complete = True
                 break
 
-            # Track the best partial match (most present vars)
-            if len(present_vars) > len(best_present):
-                best_present = present_vars
-                best_missing = missing_vars
+        if not found_complete and has_any_var:
+            partial_controllers.append(controller_type)
 
-        if not found_complete and best_present:
-            partial_sets[controller_type] = {
-                "present": best_present,
-                "missing": best_missing,
-            }
-
-    return complete_sets, partial_sets, matched_creds
+    return complete_sets, partial_controllers, matched_creds
 
 
 def _format_multiple_credentials_error(controllers: list[str]) -> str:

@@ -141,4 +141,4 @@ class TestIOSXEOptionalCredentials:
             instance.setup()
 
         assert "Incomplete controller credentials" in str(exc_info.value)
-        assert "ACI: missing ACI_USERNAME" in str(exc_info.value)
+        assert "ACI: incomplete credentials" in str(exc_info.value)
