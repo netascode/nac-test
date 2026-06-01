@@ -5781,12 +5781,6 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
     ),
     # CC, MERAKI, FMC, ISE, IOSXE follow the same pattern...
 }
-
-# Backward compatibility (uses first credential set per controller)
-CREDENTIAL_PATTERNS: dict[str, list[str]] = {
-    ct: config.credential_sets[0].env_vars
-    for ct, config in CONTROLLER_REGISTRY.items()
-}
 ```
 
 #### Detection Algorithm
@@ -5811,7 +5805,7 @@ def detect_controller_type() -> str:
         detect_controller_type() → "SDWAN"
         get_matched_credential_set("SDWAN").auth_method → "token"
     """
-    complete_sets, partial_sets, matched_creds = _find_credential_sets()
+    complete_sets, partial_controllers, matched_creds = _find_credential_sets()
     # ... validation logic (multiple, none, incomplete) ...
     controller_type = complete_sets[0]
     _matched_credential_sets[controller_type] = matched_creds[controller_type]
@@ -5840,7 +5834,7 @@ flowchart TB
         StoreMatch --> ReturnType[Return controller type]
         CheckSet -->|No| NextSet{More credential_sets?}
         NextSet -->|Yes| IterCreds
-        NextSet -->|No| TrackPartial[Track best partial match]
+        NextSet -->|No| TrackPartial[Track as partial if<br/>any env_var was set]
         TrackPartial --> NextCtrl{More controllers?}
         NextCtrl -->|Yes| ForEach
         NextCtrl -->|No| Validate{Any complete?}
