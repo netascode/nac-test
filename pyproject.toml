@@ -1,6 +1,6 @@
 [project]
 name = "nac-test"
-version = "2.0.0b9"
+version = "2.0.0"
 description = "A CLI tool to render to execute Robot Framework (RF) and PyATS tests for Network as Code (NAC)."
 license = { text = "MPL-2.0" }
 readme = "README.md"
@@ -32,7 +32,7 @@ dependencies = [
     "Jinja2>=3.1.6",
     "jmespath>=1.0.1",
     "nac-test-pyats-common>=0.3.0",
-    "nac-yaml==2.0.0b3",
+    "nac-yaml>=2.0.0",
     "robotframework>=7.4.2",
     "robotframework-jmespath",
     "robotframework-jsonlibrary>=0.5",
