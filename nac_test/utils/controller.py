@@ -87,7 +87,7 @@ class ControllerConfig:
 
 
 # Single source of truth for all controller configurations
-# Replaces both CREDENTIAL_PATTERNS and the registry from controller_auth.py
+# Replaces the registry from controller_auth.py
 CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
     "ACI": ControllerConfig(
         display_name="APIC",
@@ -183,13 +183,6 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         defaults_prefix="defaults.iosxe",
         alt_url_env_vars=["IOSXE_HOST"],  # Alternative env var for URL
     ),
-}
-
-# Backward compatibility - remove in future version
-# Uses the first credential set's env_vars as the "primary" pattern
-CREDENTIAL_PATTERNS: dict[str, list[str]] = {
-    controller_type: config.credential_sets[0].env_vars
-    for controller_type, config in CONTROLLER_REGISTRY.items()
 }
 
 # Module-level cache for the credential set that was matched during detection.
@@ -403,9 +396,7 @@ def _format_multiple_credentials_error(controllers: list[str]) -> str:
 
     # Collect all env vars per controller (union of all credential sets)
     def _all_env_vars(controller: str) -> list[str]:
-        config = CONTROLLER_REGISTRY.get(controller)
-        if not config:
-            return CREDENTIAL_PATTERNS.get(controller, [])
+        config = CONTROLLER_REGISTRY[controller]
         seen: set[str] = set()
         result: list[str] = []
         for cs in config.credential_sets:
