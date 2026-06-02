@@ -397,8 +397,8 @@ class TestEdgeCases:
 class TestIOSXEAlternativeURLEnvVar:
     """Test IOSXE controller detection with alternative URL environment variables.
 
-    IOSXE supports both IOSXE_URL and IOSXE_HOST as the URL environment variable.
-    This was introduced to support alternative connection methods in XE-as-code.
+    IOSXE supports both IOSXE_URL and IOSXE_HOST as the URL environment variable
+    via separate credential sets. The first matching credential set wins.
     """
 
     @pytest.fixture(autouse=True)
@@ -411,9 +411,6 @@ class TestIOSXEAlternativeURLEnvVar:
             for cred_set in config.credential_sets:
                 for var in cred_set.env_vars:
                     os.environ.pop(var, None)
-
-        # Also remove IOSXE_HOST alternative
-        os.environ.pop("IOSXE_HOST", None)
 
         yield
 
@@ -505,8 +502,6 @@ class TestGetControllerUrl:
             for cred_set in config.credential_sets:
                 for var in cred_set.env_vars:
                     os.environ.pop(var, None)
-
-        os.environ.pop("IOSXE_HOST", None)
 
         yield
 

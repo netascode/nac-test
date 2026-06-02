@@ -61,8 +61,6 @@ class ControllerConfig:
             (e.g., "defaults.apic", "defaults.sdwan").
         cache_key: The controller_type string passed to AuthCache by the auth adapter.
             None for controllers that don't have an auth adapter in nac-test-pyats-common.
-        alt_url_env_vars: Alternative environment variable names for the URL.
-            Used when a controller supports multiple URL env var names (e.g., IOSXE_HOST).
     """
 
     display_name: str
@@ -71,7 +69,6 @@ class ControllerConfig:
     credential_sets: list[CredentialSet]
     defaults_prefix: str
     cache_key: str | None = None
-    alt_url_env_vars: list[str] | None = None
 
 
 # Single source of truth for all controller configurations
@@ -167,9 +164,12 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
                 env_vars=["IOSXE_URL"],
                 label="Device URL",
             ),
+            CredentialSet(
+                env_vars=["IOSXE_HOST"],
+                label="Device Host",
+            ),
         ],
         defaults_prefix="defaults.iosxe",
-        alt_url_env_vars=["IOSXE_HOST"],  # Alternative env var for URL
     ),
 }
 
@@ -270,9 +270,6 @@ def _find_credential_sets() -> tuple[list[str], list[str], dict[str, CredentialS
     complete. If no set is fully satisfied but at least one variable from any set
     is present, the controller is reported as partial.
 
-    This function also handles alternative URL environment variables (e.g., IOSXE_HOST
-    as an alternative to IOSXE_URL) when configured in the ControllerConfig.
-
     Returns:
         A tuple containing:
             - List of controller types with complete credentials
@@ -296,21 +293,7 @@ def _find_credential_sets() -> tuple[list[str], list[str], dict[str, CredentialS
                     has_any_var = True
                     logger.debug(f"  {controller_type}: Found {var}")
                 else:
-                    # Check alternative URL env vars if this is the URL variable
-                    alt_found = False
-                    if var == config.url_env_var and config.alt_url_env_vars:
-                        for alt_var in config.alt_url_env_vars:
-                            alt_value = os.environ.get(alt_var)
-                            if alt_value and alt_value.strip():
-                                has_any_var = True
-                                logger.debug(
-                                    f"  {controller_type}: Found {alt_var} (alternative)"
-                                )
-                                alt_found = True
-                                break
-
-                    if not alt_found:
-                        all_present = False
+                    all_present = False
 
             if all_present:
                 complete_sets.append(controller_type)
@@ -491,9 +474,8 @@ def get_defaults_prefix(controller_type: str) -> str:
 def get_controller_url(controller_type: str) -> str:
     """Get the controller URL from environment variables.
 
-    Looks up the primary URL environment variable from CONTROLLER_REGISTRY, and
-    also checks alternative URL env vars if configured (e.g., IOSXE_HOST as an
-    alternative to IOSXE_URL).
+    Iterates through credential sets in order, returning the first env var value
+    found. This follows the same first-match-wins pattern as _find_credential_sets.
 
     Args:
         controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "IOSXE").
@@ -502,7 +484,7 @@ def get_controller_url(controller_type: str) -> str:
         The controller URL value from the environment.
 
     Raises:
-        KeyError: If neither the primary nor any alternative URL env var is set.
+        KeyError: If no credential set env var has a URL value set.
 
     Example:
         >>> os.environ["ACI_URL"] = "https://apic.example.com"
@@ -519,17 +501,12 @@ def get_controller_url(controller_type: str) -> str:
         # Fallback for unknown controller types
         return os.environ[f"{controller_type}_URL"]
 
-    # Try primary URL env var first
-    url_value = os.environ.get(config.url_env_var)
-    if url_value and url_value.strip():
-        return url_value.strip()
-
-    # Try alternative URL env vars if configured
-    if config.alt_url_env_vars:
-        for alt_var in config.alt_url_env_vars:
-            alt_value = os.environ.get(alt_var)
-            if alt_value and alt_value.strip():
-                return alt_value.strip()
+    # Iterate credential sets — first env var with a value wins
+    for cred_set in config.credential_sets:
+        for var in cred_set.env_vars:
+            value = os.environ.get(var)
+            if value and value.strip():
+                return value.strip()
 
     # No URL found - raise KeyError with the primary var name
     raise KeyError(config.url_env_var)

@@ -5752,7 +5752,6 @@ class ControllerConfig:
     credential_sets: list[CredentialSet]  # Ordered — first satisfied wins
     defaults_prefix: str
     cache_key: str | None = None
-    alt_url_env_vars: list[str] | None = None
 
 CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
     "ACI": ControllerConfig(
@@ -5779,7 +5778,17 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         defaults_prefix="defaults.sdwan",
         cache_key="SDWAN_MANAGER",
     ),
-    # CC, MERAKI, FMC, ISE, IOSXE follow the same pattern...
+    "IOSXE": ControllerConfig(
+        display_name="IOS XE",
+        url_env_var="IOSXE_URL",
+        env_var_prefix="IOSXE",
+        credential_sets=[
+            CredentialSet(env_vars=["IOSXE_URL"], label="Device URL"),
+            CredentialSet(env_vars=["IOSXE_HOST"], label="Device Host"),
+        ],
+        defaults_prefix="defaults.iosxe",
+    ),
+    # CC, MERAKI, FMC, ISE follow the same pattern...
 }
 ```
 
