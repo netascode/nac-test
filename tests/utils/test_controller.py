@@ -22,29 +22,28 @@ from nac_test.utils.controller import (
 )
 
 
+@pytest.fixture(autouse=True)
+def clean_environment() -> Generator[None, None, None]:
+    """Clean controller env vars and matched-credential cache for every test."""
+    original_env = os.environ.copy()
+
+    for config in CONTROLLER_REGISTRY.values():
+        for cred_set in config.credential_sets:
+            for var in cred_set.env_vars:
+                os.environ.pop(var, None)
+
+    os.environ.pop("CONTROLLER_TYPE", None)
+    _matched_credential_sets.clear()
+
+    yield
+
+    _matched_credential_sets.clear()
+    os.environ.clear()
+    os.environ.update(original_env)
+
+
 class TestControllerDetection:
     """Test controller type detection functionality."""
-
-    @pytest.fixture(autouse=True)
-    def clean_environment(self) -> Generator[None, None, None]:
-        """Clean environment variables before and after each test."""
-        # Store original environment
-        original_env = os.environ.copy()
-
-        # Remove all controller-related variables (all credential sets)
-        for config in CONTROLLER_REGISTRY.values():
-            for cred_set in config.credential_sets:
-                for var in cred_set.env_vars:
-                    os.environ.pop(var, None)
-
-        # Also remove legacy CONTROLLER_TYPE if present
-        os.environ.pop("CONTROLLER_TYPE", None)
-
-        yield
-
-        # Restore original environment
-        os.environ.clear()
-        os.environ.update(original_env)
 
     @pytest.mark.parametrize(
         "controller_type,env_vars",
@@ -169,21 +168,6 @@ class TestControllerDetection:
 class TestHelperFunctions:
     """Test helper functions for credential detection."""
 
-    @pytest.fixture(autouse=True)
-    def clean_environment(self) -> Generator[None, None, None]:
-        """Clean environment variables before and after each test."""
-        original_env = os.environ.copy()
-
-        for config in CONTROLLER_REGISTRY.values():
-            for cred_set in config.credential_sets:
-                for var in cred_set.env_vars:
-                    os.environ.pop(var, None)
-
-        yield
-
-        os.environ.clear()
-        os.environ.update(original_env)
-
     def test_find_credential_sets_complete(self) -> None:
         """Test finding complete credential sets."""
         # Set complete credentials for CC
@@ -264,21 +248,6 @@ class TestHelperFunctions:
 
 class TestEdgeCases:
     """Test edge cases and special scenarios."""
-
-    @pytest.fixture(autouse=True)
-    def clean_environment(self) -> Generator[None, None, None]:
-        """Clean environment variables before and after each test."""
-        original_env = os.environ.copy()
-
-        for config in CONTROLLER_REGISTRY.values():
-            for cred_set in config.credential_sets:
-                for var in cred_set.env_vars:
-                    os.environ.pop(var, None)
-
-        yield
-
-        os.environ.clear()
-        os.environ.update(original_env)
 
     def test_case_sensitivity(self) -> None:
         """Test that environment variable names are case-sensitive."""
@@ -401,22 +370,6 @@ class TestIOSXEAlternativeURLEnvVar:
     via separate credential sets. The first matching credential set wins.
     """
 
-    @pytest.fixture(autouse=True)
-    def clean_environment(self) -> Generator[None, None, None]:
-        """Clean environment variables before and after each test."""
-        original_env = os.environ.copy()
-
-        # Remove all controller-related variables
-        for config in CONTROLLER_REGISTRY.values():
-            for cred_set in config.credential_sets:
-                for var in cred_set.env_vars:
-                    os.environ.pop(var, None)
-
-        yield
-
-        os.environ.clear()
-        os.environ.update(original_env)
-
     def test_detect_iosxe_with_url(self) -> None:
         """Test IOSXE detection with standard IOSXE_URL env var."""
         os.environ["IOSXE_URL"] = "https://iosxe.example.com"
@@ -493,21 +446,6 @@ class TestIOSXEAlternativeURLEnvVar:
 class TestGetControllerUrl:
     """Tests for get_controller_url function."""
 
-    @pytest.fixture(autouse=True)
-    def clean_environment(self) -> Generator[None, None, None]:
-        """Clean environment variables before and after each test."""
-        original_env = os.environ.copy()
-
-        for config in CONTROLLER_REGISTRY.values():
-            for cred_set in config.credential_sets:
-                for var in cred_set.env_vars:
-                    os.environ.pop(var, None)
-
-        yield
-
-        os.environ.clear()
-        os.environ.update(original_env)
-
     @pytest.mark.parametrize(
         "controller_type,url_env_var",
         [
@@ -552,25 +490,6 @@ class TestSDWANCredentialSets:
     1. API Token (20.18+): SDWAN_URL + SDWAN_API_TOKEN  (first — wins when both present)
     2. Username/Password: SDWAN_URL + SDWAN_USERNAME + SDWAN_PASSWORD
     """
-
-    @pytest.fixture(autouse=True)
-    def clean_environment(self) -> Generator[None, None, None]:
-        """Clean environment variables before and after each test."""
-        original_env = os.environ.copy()
-
-        for config in CONTROLLER_REGISTRY.values():
-            for cred_set in config.credential_sets:
-                for var in cred_set.env_vars:
-                    os.environ.pop(var, None)
-
-        # Clear matched credential set cache
-        _matched_credential_sets.clear()
-
-        yield
-
-        _matched_credential_sets.clear()
-        os.environ.clear()
-        os.environ.update(original_env)
 
     def test_detect_sdwan_with_api_token(self) -> None:
         """Test SDWAN detection with API token credentials."""
