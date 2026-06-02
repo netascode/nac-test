@@ -656,6 +656,9 @@ class TestSDWANCredentialSets:
 
         error_msg = str(exc_info.value)
         assert "Incomplete controller credentials detected" in error_msg
+        assert "SDWAN: incomplete credentials" in error_msg
+        assert "API Token (20.18+)" in error_msg
+        assert "Username/Password" in error_msg
 
     def test_incomplete_error_shows_credential_set_options(self) -> None:
         """Incomplete SDWAN credentials should list both credential set options."""
