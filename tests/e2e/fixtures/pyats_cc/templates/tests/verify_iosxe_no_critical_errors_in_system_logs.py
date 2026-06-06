@@ -35,8 +35,8 @@ SETUP = (
 
 PROCEDURE = (
     "* Establish SSH connection to the IOS-XE network device.\n"
-    "* Execute the CLI command: *show logging* to retrieve the device system log buffer.\n"
-    "* Parse the command output using the Genie parser to obtain structured log entries.\n"
+    "* Parse the CLI command *show logging* using the Genie parser, which internally\n"
+    "  executes the command on the device via the connection broker.\n"
     "* For EACH log entry discovered in the parsed output:\n"
     "    * Extract the log message severity from the syslog header (e.g., %FAC-SEV-CODE).\n"
     "    * Check for the following:\n"
@@ -74,6 +74,10 @@ PASS_FAIL_CRITERIA = (
 class VerifyNoCriticalErrorsInSystemLogs(IOSXETestBase):
     """
     [IOS-XE] Verify No Critical Errors in System Logs
+
+    Uses Genie-driven execution: parse_output() is called without pre-fetched
+    output, so Genie internally executes 'show logging' on the device via the
+    patched device.execute() (routed through the connection broker).
 
     Checks all log entries in 'logs' (from Genie-parsed 'show logging') for:
     - No critical syslog messages (severity 0, 1, or 2)
@@ -124,6 +128,10 @@ class VerifyNoCriticalErrorsInSystemLogs(IOSXETestBase):
         - No severity 0, 1, 2 log entries
         - No messages indicating hardware failure, config rollback, AAA failure, software exception
         - No persistent/recurrent severity 3 errors
+
+        Uses Genie-driven execution: parse_output(command) is called WITHOUT
+        pre-fetched output, so Genie executes 'show logging' on the device
+        internally via device.execute() (routed through the connection broker).
         """
         async with semaphore:
             try:
@@ -138,15 +146,12 @@ class VerifyNoCriticalErrorsInSystemLogs(IOSXETestBase):
 
                 start_time = time.time()
 
-                with self.test_context(api_context):
-                    output = await self.execute_command(command)
-                command_duration = time.time() - start_time
+                # Genie-driven execution: let Genie call device.execute()
+                # internally (routed through the connection broker).
+                parsed_output = await self.parse_output(command)
+                parse_duration = time.time() - start_time
 
-                parse_start = time.time()
-                parsed_output = await self.parse_output(command, output=output)
-                parse_duration = time.time() - parse_start
-
-                api_duration = command_duration + parse_duration
+                api_duration = parse_duration
 
                 context["api_context"] = api_context
 
