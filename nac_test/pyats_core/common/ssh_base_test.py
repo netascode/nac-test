@@ -6,7 +6,6 @@ import json
 import logging
 import os
 from collections.abc import Callable, Coroutine
-from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -279,14 +278,10 @@ class SSHTestBase(NACTestBase):
             return None
         try:
             loop = get_or_create_event_loop()
-            if output is not None:
-                result = await loop.run_in_executor(
-                    None, partial(self.testbed_device.parse, command, output=output)
-                )
-            else:
-                result = await loop.run_in_executor(
-                    None, partial(self.testbed_device.parse, command)
-                )
+            device = self.testbed_device
+            result = await loop.run_in_executor(
+                None, lambda: device.parse(command, output=output)
+            )
             return dict(result) if result is not None else None
         except Exception as e:
             self.logger.warning(f"Genie parser failed for '{command}': {e}")
