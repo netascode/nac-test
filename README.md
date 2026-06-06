@@ -1,5 +1,5 @@
 [![Tests](https://github.com/netascode/nac-test/actions/workflows/test.yml/badge.svg)](https://github.com/netascode/nac-test/actions/workflows/test.yml)
-![Python Support](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-informational "Python Support: 3.10, 3.11, 3.12, 3.13")
+![Python Support](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-informational "Python Support: 3.10, 3.11, 3.12, 3.13, 3.14")
 
 # nac-test
 
@@ -65,6 +65,7 @@ $ nac-test --help
 ```
 
 **Breaking changes in nac-test 2.0:**
+- See the [2.0.0 Breaking Changes](CHANGELOG.md#breaking-changes) in the changelog.
 - The legacy `iac-test` CLI entrypoint has been removed. Use `nac-test` instead.
 
 ## How It Works
@@ -81,9 +82,9 @@ For Robot Framework tests, [Pabot](https://pabot.org/) executes test suites in p
 
 **Platform Requirements:**
 
-- **Linux**: Python 3.10 or higher
-- **macOS**: Python 3.12 or higher (earlier versions have known incompatibilities)
-- **Windows**: Python 3.10 or higher, Robot tests only
+- **Linux**: Python 3.10–3.14
+- **macOS**: Python 3.12–3.14 (earlier versions have known incompatibilities)
+- **Windows**: Python 3.10–3.14, Robot tests only
 
 Don't have the right Python version? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/), or install using:
 - `brew install python@3.12`
@@ -115,7 +116,7 @@ When working with feature branches or pre-release versions that aren't yet publi
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.10–3.14
 - `uv` installed ([Installation Guide](https://docs.astral.sh/uv/getting-started/installation/))
 - Local clones of the required repositories
 
