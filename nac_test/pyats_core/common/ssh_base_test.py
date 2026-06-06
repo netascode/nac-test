@@ -340,6 +340,22 @@ class SSHTestBase(NACTestBase):
             return output
 
         self.testbed_device.execute = broker_execute  # type: ignore[union-attr]
+        # Mark device as "connected" so Genie's parse() will use device.execute()
+        # instead of requiring pre-fetched output. The actual connection is managed
+        # by the broker, but Genie checks device.connected before executing.
+        self.testbed_device.connected = True  # type: ignore[union-attr]
+        # Also patch connectionmgr.is_connected since Genie may check that
+        self.testbed_device.connectionmgr.is_connected = lambda *args, **kwargs: True  # type: ignore[union-attr]
+
+        # Genie's _get_parser_output accesses device.cli as a connection handle
+        # that has an execute() method. Create a thin shim that delegates to our
+        # broker_execute so parsers calling device.cli.execute() work correctly.
+        class _BrokerCliShim:
+            """Shim that mimics a Unicon connection for Genie parser dispatch."""
+
+            execute = staticmethod(broker_execute)
+
+        self.testbed_device.cli = _BrokerCliShim()  # type: ignore[union-attr]
         self.logger.debug(
             f"Patched testbed_device.execute for {hostname} to route through broker"
         )
