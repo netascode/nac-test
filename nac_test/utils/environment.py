@@ -133,13 +133,13 @@ class EnvironmentValidator:
         Raises:
             SystemExit: If no credential set is fully satisfied
         """
-        from nac_test.utils.controller import CONTROLLER_REGISTRY
+        from nac_test.utils.controller import CONTROLLER_REGISTRY, _is_env_var_set
 
         config = CONTROLLER_REGISTRY.get(controller_type)
         if config:
             # Check each credential set — first fully satisfied wins
             for cred_set in config.credential_sets:
-                if all(os.environ.get(v, "").strip() for v in cred_set.env_vars):
+                if all(_is_env_var_set(v) for v in cred_set.env_vars):
                     return  # Credentials satisfied
 
             # No set fully satisfied — report missing vars from first set

@@ -240,6 +240,12 @@ def detect_controller_type() -> ControllerTypeKey:
     return controller_type
 
 
+def _is_env_var_set(var: str) -> bool:
+    """Check if env var exists and has a non-whitespace value."""
+    value = os.environ.get(var)
+    return bool(value and value.strip())
+
+
 def _find_credential_sets() -> tuple[
     dict[ControllerTypeKey, CredentialSet],
     list[ControllerTypeKey],
@@ -268,8 +274,7 @@ def _find_credential_sets() -> tuple[
             all_present = True
 
             for var in cred_set.env_vars:
-                value = os.environ.get(var)
-                if value and value.strip():
+                if _is_env_var_set(var):
                     has_any_var = True
                     logger.debug(f"  {controller_type}: Found {var}")
                 else:
@@ -522,9 +527,8 @@ def get_controller_url(controller_type: str) -> str:
     # Iterate credential sets — first env var with a value wins
     for cred_set in config.credential_sets:
         for var in cred_set.env_vars:
-            value = os.environ.get(var)
-            if value and value.strip():
-                return value.strip()
+            if _is_env_var_set(var):
+                return os.environ[var].strip()
 
     # No URL found - raise KeyError with the primary var name
     raise KeyError(config.url_env_var)
