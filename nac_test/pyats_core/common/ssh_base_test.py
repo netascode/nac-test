@@ -188,7 +188,16 @@ class SSHTestBase(NACTestBase):
 
     async def _async_setup(self, hostname: str) -> None:
         """Helper for async setup operations with connection error handling."""
-        # 1. Create command cache early (needed by broker patch)
+        # 1. Enforce testbed invariant: both broker mode (needs testbed for Genie
+        # parser support) and direct mode (connects via testbed) require it.
+        if not self.testbed_device:
+            raise ConnectionError(
+                f"No testbed device available for {hostname}. "
+                "SSHTestBase requires a PyATS testbed device in both broker "
+                "and direct connection modes."
+            )
+
+        # 2. Create command cache early (needed by broker patch)
         self.command_cache = CommandCache(hostname)
 
         try:
@@ -205,7 +214,6 @@ class SSHTestBase(NACTestBase):
 
             if broker_socket is not None:
                 # Use broker client for connection management
-                # Testbed may still be available for Genie parsers
                 self.logger.info(
                     f"Connecting to device {hostname} via connection broker"
                 )
@@ -221,20 +229,14 @@ class SSHTestBase(NACTestBase):
                 # Patch testbed device execute so ALL commands (both explicit
                 # test calls and Genie supplementary calls) route through the
                 # broker. This is the unified execution path in broker mode.
-                if self.testbed_device:
-                    self._patch_device_execute_for_broker()
-            elif self.testbed_device:
+                self._patch_device_execute_for_broker()
+            else:
                 # Connect via testbed to enable Genie features
                 self.logger.info(f"Connecting to device {hostname} via PyATS testbed")
                 loop = get_or_create_event_loop()
                 await loop.run_in_executor(None, self.testbed_device.connect)
                 # Store the testbed device connection for command execution
                 self.connection = self.testbed_device
-            else:
-                raise ConnectionError(
-                    f"No connection method available for device {hostname}: "
-                    "broker not active and testbed not available"
-                )
 
         except ConnectionError:
             # Already logged at source (broker or testbed layer) — just re-raise
@@ -245,12 +247,10 @@ class SSHTestBase(NACTestBase):
             self.logger.error(error_msg)
             raise ConnectionError(error_msg) from e
 
-        # 2. Create and attach the execute_command helper method
-        self.execute_command = self._create_execute_command_method(
-            self.connection, self.command_cache
-        )
+        # 3. Create and attach the execute_command helper method
+        self.execute_command = self._create_execute_command_method(self.command_cache)
 
-        # 3. Attach device_data for easy access in the test
+        # 4. Attach device_data for easy access in the test
         self.device_data = self.device_info
         # hostname already set in setup_ssh_context
 
@@ -358,7 +358,7 @@ class SSHTestBase(NACTestBase):
         )
 
     def _create_execute_command_method(
-        self, connection: Any, command_cache: CommandCache
+        self, command_cache: CommandCache
     ) -> Callable[[str], Coroutine[Any, Any, str]]:
         """Create an async command execution method for the test.
 
@@ -366,12 +366,10 @@ class SSHTestBase(NACTestBase):
         testbed_device.execute (which is patched in broker mode to route
         through the broker). This eliminates mode-specific branching.
 
-        Note: testbed_device is guaranteed non-None here because broker mode
-        requires a testbed for Genie parser support, and direct mode always
-        has a testbed by definition (see _async_setup).
+        Precondition: testbed_device is guaranteed non-None — enforced by the
+        invariant check at the top of _async_setup().
 
         Args:
-            connection: SSH connection to the device (kept for API compatibility).
             command_cache: Command cache for the device.
 
         Returns:

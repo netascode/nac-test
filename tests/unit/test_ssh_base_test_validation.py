@@ -130,12 +130,13 @@ class TestAsyncSetupBrokerSocketValidation:
 
         mock_executor = Mock()
         mock_executor.connect = AsyncMock()
+        mock_testbed_device = Mock()
 
         with (
             patch.object(
                 SSHTestBase,
                 "testbed_device",
-                new_callable=lambda: property(lambda self: None),
+                new_callable=lambda: property(lambda self: mock_testbed_device),
             ),
             patch(
                 "nac_test.pyats_core.common.ssh_base_test.BrokerCommandExecutor",
@@ -145,6 +146,7 @@ class TestAsyncSetupBrokerSocketValidation:
             patch.object(
                 ssh_instance, "_create_execute_command_method", return_value=Mock()
             ),
+            patch.object(ssh_instance, "_patch_device_execute_for_broker"),
         ):
             ssh_instance.device_info = {"hostname": "router-1"}
             asyncio.run(ssh_instance._async_setup("router-1"))
@@ -205,11 +207,24 @@ class TestAsyncSetupBrokerSocketValidation:
         ssh_instance.broker_client.connect.assert_not_called()
         assert ssh_instance.connection is mock_testbed_device
 
-    def test_raises_when_socket_missing_and_no_testbed(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, ssh_instance: Any
+    def test_raises_when_no_testbed_device(self, ssh_instance: Any) -> None:
+        """When no testbed device is available, ConnectionError is raised immediately."""
+        with patch.object(
+            SSHTestBase,
+            "testbed_device",
+            new_callable=lambda: property(lambda self: None),
+        ):
+            with pytest.raises(ConnectionError, match="requires a PyATS testbed"):
+                asyncio.run(ssh_instance._async_setup("router-1"))
+
+    def test_raises_when_no_testbed_device_with_invalid_socket(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        ssh_instance: Any,
     ) -> None:
-        """When socket is absent and no testbed device is available, ConnectionError
-        is raised."""
+        """When socket is invalid and no testbed device, ConnectionError is raised
+        (testbed invariant fires before socket validation)."""
         monkeypatch.setenv("NAC_TEST_BROKER_SOCKET", str(tmp_path / "no_such.sock"))
 
         with patch.object(
@@ -217,7 +232,7 @@ class TestAsyncSetupBrokerSocketValidation:
             "testbed_device",
             new_callable=lambda: property(lambda self: None),
         ):
-            with pytest.raises(ConnectionError):
+            with pytest.raises(ConnectionError, match="requires a PyATS testbed"):
                 asyncio.run(ssh_instance._async_setup("router-1"))
 
 
@@ -427,7 +442,7 @@ class TestExecuteCommandUnified:
             ),
         ):
             execute_command = ssh_instance._create_execute_command_method(
-                Mock(), ssh_instance.command_cache
+                ssh_instance.command_cache
             )
             result = asyncio.run(execute_command("show version"))
 
@@ -463,7 +478,7 @@ class TestExecuteCommandUnified:
             ),
         ):
             execute_command = ssh_instance._create_execute_command_method(
-                Mock(), ssh_instance.command_cache
+                ssh_instance.command_cache
             )
             result = asyncio.run(execute_command("show version"))
 
