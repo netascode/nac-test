@@ -26,7 +26,7 @@ class PyATSTestDirs(NamedTuple):
     merged_file: Path
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def clean_controller_env(monkeypatch: MonkeyPatch) -> None:
     """Clear all controller-related environment variables.
 
