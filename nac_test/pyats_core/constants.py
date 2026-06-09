@@ -146,6 +146,8 @@ __all__ = [
     "PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS",
     # Connection broker protocol limits
     "MAX_BROKER_MESSAGE_BYTES",
+    # Device execution
+    "DEVICE_EXECUTE_TIMEOUT",
     # Multi-job execution
     "TESTS_PER_JOB",
     "MAX_PARALLEL_JOBS",
