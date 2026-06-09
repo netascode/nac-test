@@ -175,12 +175,12 @@ class TestHelperFunctions:
         os.environ["CC_USERNAME"] = "admin"
         os.environ["CC_PASSWORD"] = "password"
 
-        complete, partial, matched = _find_credential_sets()
+        complete, partial = _find_credential_sets()
 
-        assert complete == ["CC"]
+        assert list(complete.keys()) == ["CC"]
         assert partial == []
-        assert "CC" in matched
-        assert matched["CC"].auth_method == "session"
+        assert "CC" in complete
+        assert complete["CC"].auth_method == "session"
 
     def test_find_credential_sets_partial(self) -> None:
         """Test finding partial credential sets."""
@@ -189,11 +189,10 @@ class TestHelperFunctions:
         os.environ["FMC_USERNAME"] = "admin"
         # No FMC_PASSWORD
 
-        complete, partial, matched = _find_credential_sets()
+        complete, partial = _find_credential_sets()
 
-        assert complete == []
+        assert complete == {}
         assert "FMC" in partial
-        assert matched == {}
 
     def test_find_credential_sets_multiple_partial(self) -> None:
         """Test finding multiple partial credential sets."""
@@ -205,13 +204,12 @@ class TestHelperFunctions:
         os.environ["MERAKI_USERNAME"] = "meraki_user"
         # Missing MERAKI_URL and MERAKI_PASSWORD
 
-        complete, partial, matched = _find_credential_sets()
+        complete, partial = _find_credential_sets()
 
-        assert complete == []
+        assert complete == {}
         assert len(partial) == 2
         assert "ISE" in partial
         assert "MERAKI" in partial
-        assert matched == {}
 
     def test_format_multiple_credentials_error(self) -> None:
         """Test formatting error message for multiple controllers."""

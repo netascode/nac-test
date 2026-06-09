@@ -207,46 +207,43 @@ def detect_controller_type() -> ControllerTypeKey:
     logger.debug("Starting controller type detection")
     logger.debug(f"Checking for credentials: {list(CONTROLLER_REGISTRY.keys())}")
 
-    complete_sets, partial_controllers, matched_creds = _find_credential_sets()
+    complete, partial = _find_credential_sets()
 
-    logger.debug(f"Complete credential sets found: {complete_sets}")
-    logger.debug(f"Partial credential sets found: {partial_controllers}")
+    logger.debug(f"Complete credential sets found: {list(complete.keys())}")
+    logger.debug(f"Partial credential sets found: {partial}")
 
     # Check for multiple complete credential sets
-    if len(complete_sets) > 1:
-        error_message = _format_multiple_credentials_error(complete_sets)
-        logger.error(f"Multiple controller credentials detected: {complete_sets}")
+    if len(complete) > 1:
+        error_message = _format_multiple_credentials_error(list(complete.keys()))
+        logger.error(f"Multiple controller credentials detected: {list(complete.keys())}")
         raise ValueError(error_message)
 
     # Check for no credentials at all
-    if not complete_sets and not partial_controllers:
+    if not complete and not partial:
         error_message = _format_no_credentials_error()
         logger.error("No controller credentials found in environment")
         raise ValueError(error_message)
 
     # Check for incomplete credentials
-    if not complete_sets and partial_controllers:
-        error_message = _format_incomplete_credentials_error(partial_controllers)
-        logger.error(f"Incomplete credentials: {partial_controllers}")
+    if not complete and partial:
+        error_message = _format_incomplete_credentials_error(partial)
+        logger.error(f"Incomplete credentials: {partial}")
         raise ValueError(error_message)
 
     # Exactly one complete set found - success
-    # complete_sets come from CONTROLLER_REGISTRY keys, which are always valid
-    # ControllerTypeKey values, but mypy can't infer this from dict iteration.
-    controller_type = cast(ControllerTypeKey, complete_sets[0])
-    # Store the winning credential set for retrieval by auth adapters
-    if controller_type in matched_creds:
-        _matched_credential_sets[controller_type] = matched_creds[controller_type]
-        logger.info(
-            f"Detected controller type: {controller_type} "
-            f"(auth_method={matched_creds[controller_type].auth_method})"
-        )
-    else:
-        logger.info(f"Detected controller type: {controller_type}")
+    controller_type = next(iter(complete))
+    _matched_credential_sets[controller_type] = complete[controller_type]
+    logger.info(
+        f"Detected controller type: {controller_type} "
+        f"(auth_method={complete[controller_type].auth_method})"
+    )
     return controller_type
 
 
-def _find_credential_sets() -> tuple[list[str], list[str], dict[str, CredentialSet]]:
+def _find_credential_sets() -> tuple[
+    dict[ControllerTypeKey, CredentialSet],
+    list[ControllerTypeKey],
+]:
     """Find complete and partial credential sets in environment.
 
     For each controller, iterates through its credential_sets in order. The first
@@ -256,17 +253,16 @@ def _find_credential_sets() -> tuple[list[str], list[str], dict[str, CredentialS
 
     Returns:
         A tuple containing:
-            - List of controller types with complete credentials
+            - Dictionary mapping complete controller types to the winning CredentialSet
             - List of controller types with partial credentials
-            - Dictionary mapping controller types to the winning CredentialSet
     """
-    complete_sets: list[str] = []
-    partial_controllers: list[str] = []
-    matched_creds: dict[str, CredentialSet] = {}
+    complete: dict[ControllerTypeKey, CredentialSet] = {}
+    partial: list[ControllerTypeKey] = []
 
     for controller_type, config in CONTROLLER_REGISTRY.items():
         found_complete = False
         has_any_var = False
+        ct_key = cast(ControllerTypeKey, controller_type)
 
         for cred_set in config.credential_sets:
             all_present = True
@@ -280,16 +276,15 @@ def _find_credential_sets() -> tuple[list[str], list[str], dict[str, CredentialS
                     all_present = False
 
             if all_present:
-                complete_sets.append(controller_type)
-                matched_creds[controller_type] = cred_set
+                complete[ct_key] = cred_set
                 logger.debug(f"  {controller_type}: Complete via {cred_set.label}")
                 found_complete = True
                 break
 
         if not found_complete and has_any_var:
-            partial_controllers.append(controller_type)
+            partial.append(ct_key)
 
-    return complete_sets, partial_controllers, matched_creds
+    return complete, partial
 
 
 def _format_incomplete_credentials_error(partial_controllers: list[str]) -> str:
