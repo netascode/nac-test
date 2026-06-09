@@ -41,7 +41,7 @@ class CredentialSet:
             to select the authentication mechanism (e.g., "token", "session").
     """
 
-    env_vars: list[str]
+    env_vars: tuple[str, ...]
     label: str
     auth_method: str = "session"
 
@@ -66,7 +66,7 @@ class ControllerConfig:
     display_name: str
     url_env_var: str
     env_var_prefix: str
-    credential_sets: list[CredentialSet]
+    credential_sets: tuple[CredentialSet, ...]
     defaults_prefix: str
     cache_key: str | None = None
 
@@ -78,12 +78,12 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="APIC",
         url_env_var="ACI_URL",
         env_var_prefix="ACI",
-        credential_sets=[
+        credential_sets=(
             CredentialSet(
-                env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
+                env_vars=("ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"),
                 label="Username/Password",
             ),
-        ],
+        ),
         defaults_prefix="defaults.apic",
         cache_key="ACI",
     ),
@@ -91,17 +91,17 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="SDWAN Manager",
         url_env_var="SDWAN_URL",
         env_var_prefix="SDWAN",
-        credential_sets=[
+        credential_sets=(
             CredentialSet(
-                env_vars=["SDWAN_URL", "SDWAN_API_TOKEN"],
+                env_vars=("SDWAN_URL", "SDWAN_API_TOKEN"),
                 label="API Token (20.18+)",
                 auth_method="token",
             ),
             CredentialSet(
-                env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
+                env_vars=("SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"),
                 label="Username/Password",
             ),
-        ],
+        ),
         defaults_prefix="defaults.sdwan",
         cache_key="SDWAN_MANAGER",
     ),
@@ -109,12 +109,12 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="Catalyst Center",
         url_env_var="CC_URL",
         env_var_prefix="CC",
-        credential_sets=[
+        credential_sets=(
             CredentialSet(
-                env_vars=["CC_URL", "CC_USERNAME", "CC_PASSWORD"],
+                env_vars=("CC_URL", "CC_USERNAME", "CC_PASSWORD"),
                 label="Username/Password",
             ),
-        ],
+        ),
         defaults_prefix="defaults.catc",
         cache_key="CC",
     ),
@@ -122,36 +122,36 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="Meraki",
         url_env_var="MERAKI_URL",
         env_var_prefix="MERAKI",
-        credential_sets=[
+        credential_sets=(
             CredentialSet(
-                env_vars=["MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"],
+                env_vars=("MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"),
                 label="Username/Password",
             ),
-        ],
+        ),
         defaults_prefix="defaults.meraki",
     ),
     "FMC": ControllerConfig(
         display_name="Firepower Management Center",
         url_env_var="FMC_URL",
         env_var_prefix="FMC",
-        credential_sets=[
+        credential_sets=(
             CredentialSet(
-                env_vars=["FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"],
+                env_vars=("FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"),
                 label="Username/Password",
             ),
-        ],
+        ),
         defaults_prefix="defaults.fmc",
     ),
     "ISE": ControllerConfig(
         display_name="ISE",
         url_env_var="ISE_URL",
         env_var_prefix="ISE",
-        credential_sets=[
+        credential_sets=(
             CredentialSet(
-                env_vars=["ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"],
+                env_vars=("ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"),
                 label="Username/Password",
             ),
-        ],
+        ),
         defaults_prefix="defaults.ise",
     ),
     "IOSXE": ControllerConfig(
@@ -159,16 +159,16 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="IOSXE_URL",
         env_var_prefix="IOSXE",
         # Direct device access, no controller credentials required
-        credential_sets=[
+        credential_sets=(
             CredentialSet(
-                env_vars=["IOSXE_URL"],
+                env_vars=("IOSXE_URL",),
                 label="Device URL",
             ),
             CredentialSet(
-                env_vars=["IOSXE_HOST"],
+                env_vars=("IOSXE_HOST",),
                 label="Device Host",
             ),
-        ],
+        ),
         defaults_prefix="defaults.iosxe",
     ),
 }

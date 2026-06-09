@@ -596,7 +596,7 @@ class TestSDWANCredentialSets:
 
     def test_credential_set_auth_method_default(self) -> None:
         """CredentialSet.auth_method defaults to 'session'."""
-        cs = CredentialSet(env_vars=["X_URL", "X_USER", "X_PASS"], label="test")
+        cs = CredentialSet(env_vars=("X_URL", "X_USER", "X_PASS"), label="test")
         assert cs.auth_method == "session"
 
     def test_aci_matched_credential_set(self) -> None:
