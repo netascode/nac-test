@@ -24,7 +24,7 @@ from pyats import aetest
 
 from nac_test.pyats_core.reporting.types import ResultStatus
 
-TITLE = "Verify OSPF MPLS TE Links via Genie-Driven Execution (1)"
+TITLE = "Verify OSPF MPLS TE Links via Genie-Driven Execution (2)"
 
 DESCRIPTION = """This test validates that Genie parsers work correctly when the
 connection broker manages all device communication. By NOT providing pre-fetched
