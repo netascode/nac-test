@@ -1,3 +1,13 @@
+# Unreleased
+
+## Fixes
+
+- Genie parsers that fire supplementary commands (e.g. VRF resolution) now work in broker mode
+
+## Breaking Changes
+
+- SSHTestBase.parse_output() is now async — test cases must use await self.parse_output(...)
+
 # 2.0.0
 
 ## Major Features
