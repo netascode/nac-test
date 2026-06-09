@@ -95,14 +95,17 @@ class CommandCache:
         expired_count = 0
         valid_count = 0
 
-        for entry in self.cache.values():
+        with self._lock:
+            entries = list(self.cache.values())
+
+        for entry in entries:
             if current_time - entry["timestamp"] >= self.ttl:
                 expired_count += 1
             else:
                 valid_count += 1
 
         return {
-            "total_entries": len(self.cache),
+            "total_entries": expired_count + valid_count,
             "expired_entries": expired_count,
             "valid_entries": valid_count,
         }
