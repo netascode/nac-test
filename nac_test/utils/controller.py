@@ -226,23 +226,7 @@ def detect_controller_type() -> ControllerTypeKey:
 
     # Check for incomplete credentials
     if not complete_sets and partial_controllers:
-        lines_parts: list[str] = []
-        for controller in partial_controllers:
-            config = CONTROLLER_REGISTRY[controller]
-            set_descriptions = [
-                f"{cs.label}: {' + '.join(cs.env_vars)}"
-                for cs in config.credential_sets
-            ]
-            line = f"{controller}: incomplete credentials"
-            line += "\n    Accepted credential sets:\n"
-            line += "\n".join(f"      - {desc}" for desc in set_descriptions)
-            lines_parts.append(line)
-        lines = "\n".join(f"  - {info}" for info in lines_parts)
-        error_message = (
-            f"Incomplete controller credentials detected:\n"
-            f"{lines}\n\n"
-            f"Please provide ALL required environment variables for your controller type."
-        )
+        error_message = _format_incomplete_credentials_error(partial_controllers)
         logger.error(f"Incomplete credentials: {partial_controllers}")
         raise ValueError(error_message)
 
@@ -306,6 +290,45 @@ def _find_credential_sets() -> tuple[list[str], list[str], dict[str, CredentialS
             partial_controllers.append(controller_type)
 
     return complete_sets, partial_controllers, matched_creds
+
+
+def _format_incomplete_credentials_error(partial_controllers: list[str]) -> str:
+    """Format error message for incomplete controller credentials.
+
+    Creates a detailed error message listing each partially configured
+    controller and its accepted credential sets, so the user knows
+    exactly which variables are needed.
+
+    Args:
+        partial_controllers: List of controller types with partial credentials.
+
+    Returns:
+        Formatted error message with accepted credential sets.
+
+    Example:
+        >>> error = _format_incomplete_credentials_error(["SDWAN"])
+        >>> print(error)
+        Incomplete controller credentials detected:
+        ...
+    """
+    lines_parts: list[str] = []
+    for controller in partial_controllers:
+        config = CONTROLLER_REGISTRY[controller]
+        set_descriptions = [
+            f"{cs.label}: {' + '.join(cs.env_vars)}"
+            for cs in config.credential_sets
+        ]
+        line = f"{controller}: incomplete credentials"
+        line += "\n    Accepted credential sets:\n"
+        line += "\n".join(f"      - {desc}" for desc in set_descriptions)
+        lines_parts.append(line)
+    lines = "\n".join(f"  - {info}" for info in lines_parts)
+    return (
+        f"Incomplete controller credentials detected:\n"
+        f"{lines}\n\n"
+        f"Please provide all required variables for one of the "
+        f"accepted credential sets listed above."
+    )
 
 
 def _format_multiple_credentials_error(controllers: list[str]) -> str:
