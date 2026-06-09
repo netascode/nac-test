@@ -4,6 +4,7 @@
 """Unit tests for SSHTestBase device validation and broker socket handling."""
 
 import asyncio
+import contextlib
 import json
 import socket as _socket
 from pathlib import Path
@@ -239,145 +240,11 @@ class TestAsyncSetupBrokerSocketValidation:
 class TestPatchDeviceExecuteForBroker:
     """Test _patch_device_execute_for_broker method."""
 
-    def test_patches_testbed_device_execute(self, ssh_instance: Any) -> None:
-        """After calling the method, testbed_device.execute is replaced with the broker_execute closure."""
-        mock_device = Mock()
-        original_execute = mock_device.execute
-        ssh_instance.hostname = "router-1"
-        ssh_instance.command_cache = CommandCache("router-1")
+    _RUN_CORO_PATH = (
+        "nac_test.pyats_core.common.ssh_base_test.asyncio.run_coroutine_threadsafe"
+    )
 
-        with (
-            patch.object(
-                SSHTestBase,
-                "testbed_device",
-                new_callable=lambda: property(lambda self: mock_device),
-            ),
-            patch("nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop"),
-        ):
-            ssh_instance._patch_device_execute_for_broker()
-
-        assert mock_device.execute is not original_execute
-        assert callable(mock_device.execute)
-
-    def test_patched_execute_calls_broker(self, ssh_instance: Any) -> None:
-        """The patched execute calls broker_client.execute_command via run_coroutine_threadsafe."""
-        mock_device = Mock()
-        ssh_instance.hostname = "router-1"
-        ssh_instance.command_cache = CommandCache("router-1")
-        ssh_instance.broker_client.execute_command = AsyncMock(
-            return_value="command output"
-        )
-
-        mock_future = Mock()
-        mock_future.result = Mock(return_value="command output")
-
-        with (
-            patch.object(
-                SSHTestBase,
-                "testbed_device",
-                new_callable=lambda: property(lambda self: mock_device),
-            ),
-            patch("nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop"),
-            patch(
-                "nac_test.pyats_core.common.ssh_base_test.asyncio.run_coroutine_threadsafe",
-                return_value=mock_future,
-            ) as mock_run_coro,
-        ):
-            ssh_instance._patch_device_execute_for_broker()
-            result = mock_device.execute("show version")
-
-        assert result == "command output"
-        mock_run_coro.assert_called_once()
-        mock_future.result.assert_called_once_with(timeout=DEVICE_EXECUTE_TIMEOUT)
-
-    def test_patched_execute_uses_cache_on_hit(self, ssh_instance: Any) -> None:
-        """When command is cached, returns cached output without contacting broker."""
-        mock_device = Mock()
-        ssh_instance.hostname = "router-1"
-        ssh_instance.command_cache = CommandCache("router-1")
-        ssh_instance.command_cache.set("show version", "cached output")
-
-        with (
-            patch.object(
-                SSHTestBase,
-                "testbed_device",
-                new_callable=lambda: property(lambda self: mock_device),
-            ),
-            patch("nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop"),
-            patch(
-                "nac_test.pyats_core.common.ssh_base_test.asyncio.run_coroutine_threadsafe"
-            ) as mock_run_coro,
-        ):
-            ssh_instance._patch_device_execute_for_broker()
-            result = mock_device.execute("show version")
-
-        assert result == "cached output"
-        mock_run_coro.assert_not_called()
-
-    def test_patched_execute_caches_broker_result(self, ssh_instance: Any) -> None:
-        """After executing via broker, result is cached for future calls."""
-        mock_device = Mock()
-        ssh_instance.hostname = "router-1"
-        ssh_instance.command_cache = CommandCache("router-1")
-        ssh_instance.broker_client.execute_command = AsyncMock(
-            return_value="new output"
-        )
-
-        mock_future = Mock()
-        mock_future.result = Mock(return_value="new output")
-
-        with (
-            patch.object(
-                SSHTestBase,
-                "testbed_device",
-                new_callable=lambda: property(lambda self: mock_device),
-            ),
-            patch("nac_test.pyats_core.common.ssh_base_test.get_or_create_event_loop"),
-            patch(
-                "nac_test.pyats_core.common.ssh_base_test.asyncio.run_coroutine_threadsafe",
-                return_value=mock_future,
-            ),
-        ):
-            ssh_instance._patch_device_execute_for_broker()
-            result = mock_device.execute("show ip route")
-
-        assert result == "new output"
-        assert ssh_instance.command_cache.get("show ip route") == "new output"
-
-    def test_sets_device_connected_true(self, ssh_instance: Any) -> None:
-        """After patching, testbed_device.connected is set to True for Genie."""
-        mock_device, _ = self._apply_broker_patch(ssh_instance)
-        assert mock_device.connected is True
-
-    def test_sets_connectionmgr_is_connected(self, ssh_instance: Any) -> None:
-        """After patching, connectionmgr.is_connected returns True for any args."""
-        mock_device, _ = self._apply_broker_patch(ssh_instance)
-        assert mock_device.connectionmgr.is_connected() is True
-        assert mock_device.connectionmgr.is_connected("alias", extra=True) is True
-
-    def test_sets_cli_shim_with_broker_execute(self, ssh_instance: Any) -> None:
-        """After patching, device.cli.execute delegates to broker_execute."""
-        ssh_instance.broker_client.execute_command = AsyncMock(
-            return_value="cli output"
-        )
-        mock_future = Mock()
-        mock_future.result = Mock(return_value="cli output")
-
-        mock_device, _ = self._apply_broker_patch(
-            ssh_instance,
-            extra_patches=[
-                patch(
-                    "nac_test.pyats_core.common.ssh_base_test.asyncio.run_coroutine_threadsafe",
-                    return_value=mock_future,
-                )
-            ],
-            call_after_patch=lambda dev: dev.cli.execute("show version"),
-        )
-
-        assert mock_device.cli.execute("show version") == "cli output"
-        mock_future.result.assert_called_with(timeout=DEVICE_EXECUTE_TIMEOUT)
-
-    # --- helpers ---
+    # --- helper ---
 
     @staticmethod
     def _apply_broker_patch(
@@ -404,8 +271,6 @@ class TestPatchDeviceExecuteForBroker:
             *(extra_patches or []),
         ]
 
-        import contextlib
-
         with contextlib.ExitStack() as stack:
             for p in patches:
                 stack.enter_context(p)
@@ -413,6 +278,93 @@ class TestPatchDeviceExecuteForBroker:
             call_result = call_after_patch(mock_device) if call_after_patch else None
 
         return mock_device, call_result
+
+    # --- tests ---
+
+    def test_patches_testbed_device_execute(self, ssh_instance: Any) -> None:
+        """After calling the method, testbed_device.execute is replaced with the broker_execute closure."""
+        mock_device, _ = self._apply_broker_patch(ssh_instance)
+        # execute should be our closure, not the original Mock auto-attribute
+        assert callable(mock_device.execute)
+        assert not isinstance(mock_device.execute, Mock)
+
+    def test_patched_execute_calls_broker(self, ssh_instance: Any) -> None:
+        """The patched execute calls broker_client.execute_command via run_coroutine_threadsafe."""
+        ssh_instance.broker_client.execute_command = AsyncMock(
+            return_value="command output"
+        )
+        mock_future = Mock()
+        mock_future.result = Mock(return_value="command output")
+
+        mock_device, _ = self._apply_broker_patch(
+            ssh_instance,
+            extra_patches=[patch(self._RUN_CORO_PATH, return_value=mock_future)],
+            call_after_patch=lambda dev: dev.execute("show version"),
+        )
+
+        assert mock_device.execute("show version") == "command output"
+        mock_future.result.assert_called_with(timeout=DEVICE_EXECUTE_TIMEOUT)
+
+    def test_patched_execute_uses_cache_on_hit(self, ssh_instance: Any) -> None:
+        """When command is cached, returns cached output without contacting broker."""
+        mock_run_coro = Mock()
+
+        def setup_cache_and_call(dev: Mock) -> Any:
+            ssh_instance.command_cache.set("show version", "cached output")
+            return dev.execute("show version")
+
+        _, result = self._apply_broker_patch(
+            ssh_instance,
+            extra_patches=[patch(self._RUN_CORO_PATH, mock_run_coro)],
+            call_after_patch=setup_cache_and_call,
+        )
+
+        assert result == "cached output"
+        mock_run_coro.assert_not_called()
+
+    def test_patched_execute_caches_broker_result(self, ssh_instance: Any) -> None:
+        """After executing via broker, result is cached for future calls."""
+        ssh_instance.broker_client.execute_command = AsyncMock(
+            return_value="new output"
+        )
+        mock_future = Mock()
+        mock_future.result = Mock(return_value="new output")
+
+        self._apply_broker_patch(
+            ssh_instance,
+            extra_patches=[patch(self._RUN_CORO_PATH, return_value=mock_future)],
+            call_after_patch=lambda dev: dev.execute("show ip route"),
+        )
+
+        assert ssh_instance.command_cache.get("show ip route") == "new output"
+
+    def test_sets_device_connected_true(self, ssh_instance: Any) -> None:
+        """After patching, testbed_device.connected is set to True for Genie."""
+        mock_device, _ = self._apply_broker_patch(ssh_instance)
+        assert mock_device.connected is True
+
+    def test_sets_connectionmgr_is_connected(self, ssh_instance: Any) -> None:
+        """After patching, connectionmgr.is_connected returns True for any args."""
+        mock_device, _ = self._apply_broker_patch(ssh_instance)
+        assert mock_device.connectionmgr.is_connected() is True
+        assert mock_device.connectionmgr.is_connected("alias", extra=True) is True
+
+    def test_sets_cli_shim_with_broker_execute(self, ssh_instance: Any) -> None:
+        """After patching, device.cli.execute delegates to broker_execute."""
+        ssh_instance.broker_client.execute_command = AsyncMock(
+            return_value="cli output"
+        )
+        mock_future = Mock()
+        mock_future.result = Mock(return_value="cli output")
+
+        mock_device, _ = self._apply_broker_patch(
+            ssh_instance,
+            extra_patches=[patch(self._RUN_CORO_PATH, return_value=mock_future)],
+            call_after_patch=lambda dev: dev.cli.execute("show version"),
+        )
+
+        assert mock_device.cli.execute("show version") == "cli output"
+        mock_future.result.assert_called_with(timeout=DEVICE_EXECUTE_TIMEOUT)
 
 
 class TestExecuteCommandUnified:
