@@ -7,7 +7,7 @@ import logging
 import os
 from collections.abc import Callable, Coroutine
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pyats import aetest
 
@@ -303,8 +303,10 @@ class SSHTestBase(NACTestBase):
         for run_coroutine_threadsafe.
         """
         broker_client = self.broker_client
-        hostname: str = self.hostname  # type: ignore[assignment]
-        command_cache: CommandCache = self.command_cache  # type: ignore[assignment]
+        # cast: both are guaranteed non-None — hostname is set in setup_ssh_context
+        # and command_cache is created at the top of _async_setup, before this call.
+        hostname: str = cast(str, self.hostname)
+        command_cache: CommandCache = cast(CommandCache, self.command_cache)
         test_instance = self
         loop = get_or_create_event_loop()
 
@@ -364,6 +366,10 @@ class SSHTestBase(NACTestBase):
         testbed_device.execute (which is patched in broker mode to route
         through the broker). This eliminates mode-specific branching.
 
+        Note: testbed_device is guaranteed non-None here because broker mode
+        requires a testbed for Genie parser support, and direct mode always
+        has a testbed by definition (see _async_setup).
+
         Args:
             connection: SSH connection to the device (kept for API compatibility).
             command_cache: Command cache for the device.
@@ -373,7 +379,9 @@ class SSHTestBase(NACTestBase):
         """
         # Capture self reference for use in the closure
         test_instance = self
-        device = test_instance.testbed_device
+        # cast: testbed_device is guaranteed non-None — broker mode requires a
+        # testbed for Genie support, and direct mode connects via testbed_device.
+        device: Any = cast(Any, test_instance.testbed_device)
 
         async def execute_command(command: str) -> str:
             """Execute command with caching and tracking.
@@ -397,7 +405,7 @@ class SSHTestBase(NACTestBase):
             # In direct mode: real pyATS device execute (sync, via run_in_executor)
             logging.debug(f"Executing command: {command}")
             loop = get_or_create_event_loop()
-            output = await loop.run_in_executor(None, device.execute, command)  # type: ignore[union-attr]
+            output = await loop.run_in_executor(None, device.execute, command)
 
             # Convert output to string to ensure consistent type
             output_str = str(output)
