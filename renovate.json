@@ -7,7 +7,8 @@
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security"],
-    "rangeStrategy": "bump"
+    "rangeStrategy": "bump",
+    "vulnerabilityFixStrategy": "lowest"
   },
   "osvVulnerabilityAlerts": true,
   "packageRules": [
@@ -15,8 +16,7 @@
       "description": "Security vulnerabilities: always bump (override update-lockfile strategy)",
       "matchDatasources": ["pypi"],
       "matchPackageNames": ["pyasn1", "gitpython", "urllib3", "idna", "aiohttp"],
-      "rangeStrategy": "bump",
-      "vulnerabilityFixStrategy": "lowest"
+      "rangeStrategy": "bump"
     },
     {
       "description": "Track Latest: pyats + genie (lockstep group, always bump pyproject.toml)",
