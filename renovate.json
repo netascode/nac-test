@@ -12,6 +12,13 @@
   "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
+      "description": "Security vulnerabilities: always bump (override update-lockfile strategy)",
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": ["pyasn1", "gitpython", "urllib3", "idna", "aiohttp"],
+      "rangeStrategy": "bump",
+      "vulnerabilityFixStrategy": "lowest"
+    },
+    {
       "description": "Track Latest: pyats + genie (lockstep group, always bump pyproject.toml)",
       "matchManagers": ["pep621"],
       "matchPackageNames": ["pyats", "genie"],
