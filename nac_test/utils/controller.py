@@ -524,13 +524,18 @@ def get_controller_url(controller_type: str) -> str:
         # Fallback for unknown controller types
         return os.environ[f"{controller_type}_URL"]
 
-    # Iterate credential sets — first env var with a value wins
-    for cred_set in config.credential_sets:
-        for var in cred_set.env_vars:
-            if _is_env_var_set(var):
-                return os.environ[var].strip()
+    # Primary URL from the explicit url_env_var field
+    value = os.environ.get(config.url_env_var, "").strip()
+    if value:
+        return value
 
-    # No URL found - raise KeyError with the primary var name
+    # Fallback for alternative URL vars (e.g., IOSXE_HOST)
+    for cred_set in config.credential_sets:
+        if cred_set.env_vars[0] != config.url_env_var:
+            alt = os.environ.get(cred_set.env_vars[0], "").strip()
+            if alt:
+                return alt
+
     raise KeyError(config.url_env_var)
 
 
