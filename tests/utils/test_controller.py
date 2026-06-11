@@ -20,6 +20,7 @@ from nac_test.utils.controller import (
     get_controller_url,
     get_matched_credential_set,
 )
+from nac_test.utils.environment import EnvironmentValidator
 
 
 @pytest.fixture(autouse=True)
@@ -609,3 +610,87 @@ class TestSDWANCredentialSets:
         assert cred is not None
         assert cred.auth_method == "session"
         assert cred.label == "Username/Password"
+
+
+class TestGetControllerUrlSDWAN:
+    """Tests for get_controller_url with multi-credential-set controllers (SDWAN)."""
+
+    def test_sdwan_url_returned_when_set(self) -> None:
+        """get_controller_url returns SDWAN_URL directly from url_env_var."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+        os.environ["SDWAN_API_TOKEN"] = "some-token"
+
+        url = get_controller_url("SDWAN")
+        assert url == "https://vmanage.example.com"
+
+    def test_sdwan_does_not_return_token_when_url_empty(self) -> None:
+        """get_controller_url raises KeyError when SDWAN_URL is empty, not returning token."""
+        os.environ["SDWAN_URL"] = ""
+        os.environ["SDWAN_API_TOKEN"] = "eyJhbGciOiJSUzI1NiJ9.test.sig"
+
+        with pytest.raises(KeyError) as exc_info:
+            get_controller_url("SDWAN")
+
+        assert "SDWAN_URL" in str(exc_info.value)
+
+    def test_sdwan_does_not_return_token_when_url_whitespace(self) -> None:
+        """get_controller_url raises KeyError when SDWAN_URL is whitespace-only."""
+        os.environ["SDWAN_URL"] = "   "
+        os.environ["SDWAN_API_TOKEN"] = "some-token"
+
+        with pytest.raises(KeyError) as exc_info:
+            get_controller_url("SDWAN")
+
+        assert "SDWAN_URL" in str(exc_info.value)
+
+    def test_sdwan_does_not_return_username_when_url_missing(self) -> None:
+        """get_controller_url raises KeyError, not returning username/password vars."""
+        os.environ["SDWAN_USERNAME"] = "admin"
+        os.environ["SDWAN_PASSWORD"] = "password"
+
+        with pytest.raises(KeyError) as exc_info:
+            get_controller_url("SDWAN")
+
+        assert "SDWAN_URL" in str(exc_info.value)
+
+
+class TestValidateControllerEnvMultiCredSet:
+    """Tests for validate_controller_env with multi-credential-set controllers."""
+
+    def test_sdwan_passes_with_username_password_only(self) -> None:
+        """validate_controller_env passes when only username/password set (not token)."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+        os.environ["SDWAN_USERNAME"] = "admin"
+        os.environ["SDWAN_PASSWORD"] = "password"
+
+        # Should not raise
+        EnvironmentValidator().validate_controller_env("SDWAN")
+
+    def test_sdwan_passes_with_api_token_only(self) -> None:
+        """validate_controller_env passes when only API token set."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+        os.environ["SDWAN_API_TOKEN"] = "eyJhbGciOiJSUzI1NiJ9.test.sig"
+
+        # Should not raise
+        EnvironmentValidator().validate_controller_env("SDWAN")
+
+    def test_sdwan_exits_when_no_credential_set_satisfied(self) -> None:
+        """validate_controller_env exits with all credential sets listed."""
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+        # No token, no username/password
+
+        with pytest.raises(SystemExit) as exc_info:
+            EnvironmentValidator().validate_controller_env("SDWAN")
+
+        error_msg = str(exc_info.value)
+        assert "SDWAN: incomplete credentials" in error_msg
+        assert "API Token (20.18+)" in error_msg
+        assert "Username/Password" in error_msg
+
+    def test_sdwan_exits_when_nothing_set(self) -> None:
+        """validate_controller_env exits when no SDWAN vars are set at all."""
+        with pytest.raises(SystemExit) as exc_info:
+            EnvironmentValidator().validate_controller_env("SDWAN")
+
+        error_msg = str(exc_info.value)
+        assert "SDWAN" in error_msg
