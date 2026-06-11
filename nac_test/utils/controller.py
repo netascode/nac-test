@@ -18,6 +18,7 @@ the merged NAC data model.
 
 import logging
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
 
@@ -215,7 +216,9 @@ def detect_controller_type() -> ControllerTypeKey:
     # Check for multiple complete credential sets
     if len(complete) > 1:
         error_message = _format_multiple_credentials_error(list(complete.keys()))
-        logger.error(f"Multiple controller credentials detected: {list(complete.keys())}")
+        logger.error(
+            f"Multiple controller credentials detected: {list(complete.keys())}"
+        )
         raise ValueError(error_message)
 
     # Check for no credentials at all
@@ -292,7 +295,7 @@ def _find_credential_sets() -> tuple[
     return complete, partial
 
 
-def _format_incomplete_credentials_error(partial_controllers: list[str]) -> str:
+def _format_incomplete_credentials_error(partial_controllers: Sequence[str]) -> str:
     """Format error message for incomplete controller credentials.
 
     Creates a detailed error message listing each partially configured
@@ -315,8 +318,7 @@ def _format_incomplete_credentials_error(partial_controllers: list[str]) -> str:
     for controller in partial_controllers:
         config = CONTROLLER_REGISTRY[controller]
         set_descriptions = [
-            f"{cs.label}: {' + '.join(cs.env_vars)}"
-            for cs in config.credential_sets
+            f"{cs.label}: {' + '.join(cs.env_vars)}" for cs in config.credential_sets
         ]
         line = f"{controller}: incomplete credentials"
         line += "\n    Accepted credential sets:\n"
