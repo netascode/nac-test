@@ -161,11 +161,11 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         # Direct device access, no controller credentials required
         credential_sets=(
             CredentialSet(
-                env_vars=("IOSXE_URL",),
+                env_vars=("IOSXE_URL", "IOSXE_USERNAME", "IOSXE_PASSWORD"),
                 label="Device URL",
             ),
             CredentialSet(
-                env_vars=("IOSXE_HOST",),
+                env_vars=("IOSXE_HOST", "IOSXE_USERNAME", "IOSXE_PASSWORD"),
                 label="Device Host",
             ),
         ),

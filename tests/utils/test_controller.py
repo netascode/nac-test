@@ -372,6 +372,8 @@ class TestIOSXEAlternativeURLEnvVar:
     def test_detect_iosxe_with_url(self) -> None:
         """Test IOSXE detection with standard IOSXE_URL env var."""
         os.environ["IOSXE_URL"] = "https://iosxe.example.com"
+        os.environ["IOSXE_USERNAME"] = "admin"
+        os.environ["IOSXE_PASSWORD"] = "password"
 
         result = detect_controller_type()
         assert result == "IOSXE"
@@ -379,6 +381,8 @@ class TestIOSXEAlternativeURLEnvVar:
     def test_detect_iosxe_with_host(self) -> None:
         """Test IOSXE detection with alternative IOSXE_HOST env var."""
         os.environ["IOSXE_HOST"] = "192.168.1.1"
+        os.environ["IOSXE_USERNAME"] = "admin"
+        os.environ["IOSXE_PASSWORD"] = "password"
 
         result = detect_controller_type()
         assert result == "IOSXE"
@@ -387,6 +391,8 @@ class TestIOSXEAlternativeURLEnvVar:
         """When both IOSXE_URL and IOSXE_HOST are set, URL takes precedence."""
         os.environ["IOSXE_URL"] = "https://iosxe-url.example.com"
         os.environ["IOSXE_HOST"] = "192.168.1.1"
+        os.environ["IOSXE_USERNAME"] = "admin"
+        os.environ["IOSXE_PASSWORD"] = "password"
 
         result = detect_controller_type()
         assert result == "IOSXE"
