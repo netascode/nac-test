@@ -35,7 +35,11 @@ DEFAULT_CPU_MULTIPLIER: int = 2
 LOAD_AVERAGE_THRESHOLD: float = 0.8
 
 # PyATS-specific timeouts
-DEVICE_EXECUTE_TIMEOUT: int = 120  # seconds, for broker-routed device commands
+# Timeout for broker-routed device commands (e.g. Genie supplementary execute calls).
+# Override via NAC_TEST_DEVICE_EXECUTE_TIMEOUT env var for slow WAN links or large outputs.
+DEVICE_EXECUTE_TIMEOUT: int = get_positive_numeric_env(
+    "NAC_TEST_DEVICE_EXECUTE_TIMEOUT", 120, int
+)
 
 # PyATS-specific file paths
 AUTH_CACHE_DIR: str = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")

@@ -296,13 +296,13 @@ class TestPatchDeviceExecuteForBroker:
         mock_future = Mock()
         mock_future.result = Mock(return_value="command output")
 
-        mock_device, _ = self._apply_broker_patch(
+        mock_device, result = self._apply_broker_patch(
             ssh_instance,
             extra_patches=[patch(self._RUN_CORO_PATH, return_value=mock_future)],
             call_after_patch=lambda dev: dev.execute("show version"),
         )
 
-        assert mock_device.execute("show version") == "command output"
+        assert result == "command output"
         mock_future.result.assert_called_with(timeout=DEVICE_EXECUTE_TIMEOUT)
 
     def test_patched_execute_uses_cache_on_hit(self, ssh_instance: Any) -> None:
@@ -357,13 +357,13 @@ class TestPatchDeviceExecuteForBroker:
         mock_future = Mock()
         mock_future.result = Mock(return_value="cli output")
 
-        mock_device, _ = self._apply_broker_patch(
+        mock_device, result = self._apply_broker_patch(
             ssh_instance,
             extra_patches=[patch(self._RUN_CORO_PATH, return_value=mock_future)],
             call_after_patch=lambda dev: dev.cli.execute("show version"),
         )
 
-        assert mock_device.cli.execute("show version") == "cli output"
+        assert result == "cli output"
         mock_future.result.assert_called_with(timeout=DEVICE_EXECUTE_TIMEOUT)
 
 
