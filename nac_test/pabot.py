@@ -12,6 +12,8 @@ import warnings
 from pathlib import Path
 from typing import Any
 
+from nac_test.robot.pabot import run_pabot as _canonical_run_pabot
+
 warnings.warn(
     "'nac_test.pabot' is deprecated and will be removed in a future release. "
     "The replacement public API is being finalized; "
@@ -19,8 +21,6 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2,
 )
-
-from nac_test.robot.pabot import run_pabot as _canonical_run_pabot  # noqa: E402
 
 
 def run_pabot(path: str | Path, **kwargs: Any) -> int:

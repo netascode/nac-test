@@ -1,5 +1,5 @@
 [![Tests](https://github.com/netascode/nac-test/actions/workflows/test.yml/badge.svg)](https://github.com/netascode/nac-test/actions/workflows/test.yml)
-![Python Support](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-informational "Python Support: 3.10, 3.11, 3.12, 3.13")
+![Python Support](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-informational "Python Support: 3.10, 3.11, 3.12, 3.13, 3.14")
 
 # nac-test
 
@@ -65,6 +65,7 @@ $ nac-test --help
 ```
 
 **Breaking changes in nac-test 2.0:**
+- See the [2.0.0 Breaking Changes](CHANGELOG.md#breaking-changes) in the changelog.
 - The legacy `iac-test` CLI entrypoint has been removed. Use `nac-test` instead.
 
 ## How It Works
@@ -81,9 +82,9 @@ For Robot Framework tests, [Pabot](https://pabot.org/) executes test suites in p
 
 **Platform Requirements:**
 
-- **Linux**: Python 3.10 or higher
-- **macOS**: Python 3.12 or higher (earlier versions have known incompatibilities)
-- **Windows**: Python 3.10 or higher, Robot tests only
+- **Linux**: Python 3.10–3.14
+- **macOS**: Python 3.12–3.14 (earlier versions have known incompatibilities)
+- **Windows**: Python 3.10–3.14, Robot tests only
 
 Don't have the right Python version? See [Python 3 Installation & Setup Guide](https://realpython.com/installing-python/), or install using:
 - `brew install python@3.12`
@@ -115,49 +116,9 @@ When working with feature branches or pre-release versions that aren't yet publi
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.10–3.14
 - `uv` installed ([Installation Guide](https://docs.astral.sh/uv/getting-started/installation/))
 - Local clones of the required repositories
-
-### Artifactory Authentication (Cisco Developers)
-
-Dependencies are resolved through Cisco's Artifactory instance for supply-chain safety. You need to configure credentials for `artifactory.devhub-cloud.cisco.com`.
-
-**Getting your credentials:**
-
-1. Navigate to <https://artifactory.devhub-cloud.cisco.com/ui/user_profile> and authenticate via SAML SSO.
-2. Click **"Generate An Identity Token"** (tokens are valid for 90 days).
-3. Your username is your CEC ID **without** `@cisco.com`
-
-Then configure uv using **one** of the following methods:
-
-**Option 1: `uv auth login` (recommended)**
-
-```bash
-uv auth login artifactory.devhub-cloud.cisco.com --username <cec-id>
-# Paste your identity token when prompted for the password
-```
-
-Credentials are stored in uv's [credentials store](https://docs.astral.sh/uv/concepts/authentication/http/#the-uv-credentials-store) and used automatically.
-
-**Option 2: `~/.netrc`**
-
-Add an entry to your `~/.netrc` file:
-
-```
-machine artifactory.devhub-cloud.cisco.com
-  login <cec-id>
-  password <identity-token>
-```
-
-**Option 3: Environment variables**
-
-Export the credentials derived from the index name in `pyproject.toml`:
-
-```bash
-export UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_USERNAME=<cec-id>
-export UV_INDEX_CISCO_ARTIFACTORY_DEVHUB_PASSWORD=<identity-token>
-```
 
 ### Required Packages for PyATS Testing
 

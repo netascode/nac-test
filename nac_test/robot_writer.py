@@ -12,17 +12,17 @@ import warnings
 from pathlib import Path
 from typing import Any
 
+from nac_test.data_merger import DataMerger
+from nac_test.robot.robot_writer import (
+    RobotWriter as _CanonicalRobotWriter,
+)
+
 warnings.warn(
     "'nac_test.robot_writer' is deprecated and will be removed in a future release. "
     "The replacement public API is being finalized; "
     "monitor the nac-test changelog for migration guidance.",
     DeprecationWarning,
     stacklevel=2,
-)
-
-from nac_test.data_merger import DataMerger  # noqa: E402
-from nac_test.robot.robot_writer import (  # noqa: E402
-    RobotWriter as _CanonicalRobotWriter,
 )
 
 

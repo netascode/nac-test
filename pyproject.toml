@@ -1,10 +1,10 @@
 [project]
 name = "nac-test"
-version = "2.0.0b8"
+version = "2.0.0"
 description = "A CLI tool to render to execute Robot Framework (RF) and PyATS tests for Network as Code (NAC)."
 license = { text = "MPL-2.0" }
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.15"
 authors = [
     { name = "Daniel Schmidt", email = "danischm@cisco.com" },
     { name = "Andrea Testino", email = "atestini@cisco.com" },
@@ -32,8 +32,8 @@ dependencies = [
     "Jinja2>=3.1.6",
     "jmespath>=1.0.1",
     "nac-test-pyats-common>=0.3.0",
-    "nac-yaml==2.0.0b2",
-    "robotframework>=7.3.2",
+    "nac-yaml>=2.0.0",
+    "robotframework>=7.4.2",
     "robotframework-jmespath",
     "robotframework-jsonlibrary>=0.5",
     "jsonpath-ng!=1.8.0",  # Exclude broken version (h2non/jsonpath-ng#216)
@@ -44,8 +44,8 @@ dependencies = [
     "scrapli-netconf>=2026.1.12",
     "asyncssh>=2.22.0",
     # PyATS & Genie Ecosystem — not supported on Windows
-    "pyats>=26.3 ; sys_platform != 'win32'",
-    "genie>=26.3 ; sys_platform != 'win32'",
+    "pyats>=26.5; sys_platform != 'win32'",
+    "genie>=26.5; sys_platform != 'win32'",
     "psutil>=7.2.2",
     "httpx~=0.28",
     "aiofiles>=23.2.1",  # radkit-client still uses <24.0, so relax to avoid conflicts
@@ -53,7 +53,7 @@ dependencies = [
     "markdown>=3.10.2",
     "typing_extensions>=4.0; python_version < '3.11'",
     "filelock>=3.25.2",
-    "lxml>=4.5.1",
+    "lxml>=6.1.0",
 ]
 
 [project.urls]
@@ -67,11 +67,11 @@ nac-test = "nac_test.cli.main:app"
 [project.optional-dependencies]
 dev = [
     "ansible-core>=2.17.6",
-    "bandit[toml]>=1.8.6",
+    "bandit[toml]>=1.9.4",
     "flask>=3.1.3",
     "mypy>=1.17.1",
     "nac-test-pyats-common>=0.1.0",  # Required for integration tests
-    "pre-commit>=4.5.1",
+    "pre-commit>=4.6.0",
     "pytest>=9.0.3",
     "pytest-cov~=7.1",
     "pytest-httpserver>=1.1.5",
@@ -91,18 +91,8 @@ override-dependencies = [
     "pytest-cov>=7.1",
 ]
 # Dependency cooldown: ignore packages uploaded less than 3 days ago.
-# wecan't use this because our artifactory doesn't provide upload timestamps
-# but it would be a good idea to enable once they do
-# exclude-newer = "3 days"
-
-[[tool.uv.index]]
-# Install from Artifactory by default for supply-chain-safe dependency resolution.
-# uv derives credential env vars from the index name: UV_INDEX_<NAME>_USERNAME / _PASSWORD.
-# These must be set in .netrc, the environment, or as GitHub Actions secrets.
-# See .github/workflows/test.yml for CI configuration.
-name = "cisco-artifactory-devhub"
-url = "https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/pypi-public/simple"
-default = true
+exclude-newer = "3 days"
+exclude-newer-package = { nac-yaml = false }
 
 [tool.coverage.run]
 source = ["nac_test"]

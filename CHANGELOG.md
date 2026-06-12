@@ -1,7 +1,5 @@
 # 2.0.0
 
-_Note: This changelog covers all 2.0.0 alpha and beta releases._
-
 ## Major Features
 
 - **pyATS Integration** (EXPERIMENTAL): Full support for pyATS operational test cases
@@ -22,6 +20,10 @@ _Note: This changelog covers all 2.0.0 alpha and beta releases._
 - **RESTinstance removed from core dependencies**: The `RESTinstance` Robot library has been removed. Users who still need RESTinstance can install it separately alongside nac-test.
 - **Robot Framework arguments require `--` separator**: Additional Robot Framework arguments must now be passed after the `--` separator (e.g., `nac-test ... -- --variable X:Y`). Arguments passed directly without the separator are no longer accepted. Certain Robot options (like `--include`, `--exclude`, `--outputdir`) are controlled by nac-test and cannot be passed via `--`; use the corresponding nac-test options instead (e.g., `-i`/`--include`, `-e`/`--exclude`, `-o`/`--output`).
 - **Removed legacy `iac-test` entrypoint**: Use `nac-test` instead.
+- **nac-yaml v2.0**: YAML file merge behavior has changed (can affect data model merging results):
+  - Within-file duplicates now disable merging for that entire list: if any input file contains duplicate dict items in a list, that list is concatenated (no merging) to preserve within-file duplicates. This can result in more items than before.
+  - Relaxed matching logic: list dict items now merge when all shared primitive keys match; unique primitive keys present on only one side no longer prevent merging. Items that previously stayed separate may now be combined.
+  - Details and examples: https://github.com/netascode/nac-yaml/pull/34
 
 ## CLI Changes
 
