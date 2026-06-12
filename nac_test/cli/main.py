@@ -4,6 +4,7 @@
 """CLI entry point for nac-test."""
 
 import logging
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -323,6 +324,8 @@ def main(
     files/directories, and options controlled by nac-test (like --include, --exclude)
     are not supported and will result in an error.
     """
+    # Default child processes to UTF-8 regardless of OS locale (#630)
+    os.environ.setdefault("PYTHONUTF8", "1")
 
     if diagnostic:
         run_diagnostic(output, argv=sys.argv)

@@ -79,7 +79,7 @@ class DeviceInventoryDiscovery:
             logger.error(f"Merged data model not found at {self.merged_data_filepath}")
             return []
 
-        with open(self.merged_data_filepath) as f:
+        with open(self.merged_data_filepath, encoding="utf-8") as f:
             data_model = safe_load(f)
 
         # Import the first D2D test file - all D2D tests in an architecture share the same SSH base class

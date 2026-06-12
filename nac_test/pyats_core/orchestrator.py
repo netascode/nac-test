@@ -252,7 +252,7 @@ class PyATSOrchestrator:
         job_file_path = None
         try:
             with tempfile.NamedTemporaryFile(
-                mode="w", suffix="_api_job.py", delete=False
+                mode="w", suffix="_api_job.py", delete=False, encoding="utf-8"
             ) as f:
                 f.write(job_content)
                 job_file_path = Path(f.name)
@@ -342,7 +342,7 @@ class PyATSOrchestrator:
 
             # Write testbed to temporary file
             testbed_file = self.output_dir / "broker_testbed.yaml"
-            with open(testbed_file, "w") as f:
+            with open(testbed_file, "w", encoding="utf-8") as f:
                 f.write(consolidated_testbed_yaml)
 
             logger.info(f"Consolidated testbed written to: {testbed_file}")

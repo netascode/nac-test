@@ -55,7 +55,7 @@ class AuthCache:
             # Check if valid cached data exists
             if cache_file.exists():
                 try:
-                    with open(cache_file) as f:
+                    with open(cache_file, encoding="utf-8") as f:
                         data = json.load(f)
                         if time.time() < data["expires_at"]:
                             # Return based on what type of data we're working with
@@ -104,7 +104,7 @@ class AuthCache:
                 result = auth_dict
 
             # Cache it
-            with open(cache_file, "w") as f:
+            with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(cache_data, f)
 
             cache_file.chmod(0o600)

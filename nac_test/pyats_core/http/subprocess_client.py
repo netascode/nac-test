@@ -370,7 +370,7 @@ class SubprocessHttpClient:
 
         # Create temp files for input/output (avoid pipes)
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix="_req.json", delete=False
+            mode="w", suffix="_req.json", delete=False, encoding="utf-8"
         ) as f_in:
             json.dump(request_data, f_in)
             input_path = f_in.name
@@ -379,7 +379,7 @@ class SubprocessHttpClient:
 
         # Use NamedTemporaryFile instead of deprecated mktemp() to avoid race conditions
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix="_resp.json", delete=False
+            mode="w", suffix="_resp.json", delete=False, encoding="utf-8"
         ) as f_out:
             output_path = f_out.name
         # Restrict permissions for output file
@@ -393,7 +393,7 @@ import ssl
 import urllib.request
 
 # Read request from input file
-with open("{input_path}") as f:
+with open("{input_path}", encoding="utf-8") as f:
     request_data = json.load(f)
 
 method = request_data["method"]
@@ -440,13 +440,13 @@ except Exception as e:
     result = {{"error": str(e), "traceback": traceback.format_exc()}}
 
 # Write result to output file
-with open("{output_path}", "w") as f:
+with open("{output_path}", "w", encoding="utf-8") as f:
     json.dump(result, f)
 '''
 
         # Write the script to a temp file
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False
+            mode="w", suffix=".py", delete=False, encoding="utf-8"
         ) as f_script:
             f_script.write(http_script_file)
             script_path = f_script.name
@@ -496,7 +496,7 @@ with open("{output_path}", "w") as f:
             if not os.path.exists(output_path):
                 raise RuntimeError("HTTP subprocess did not produce output file")
 
-            with open(output_path) as f:
+            with open(output_path, encoding="utf-8") as f:
                 stdout = f.read()
 
         except OSError as e:

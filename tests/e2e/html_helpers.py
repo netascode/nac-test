@@ -289,7 +289,7 @@ def load_html_file(path: Path) -> str:
     """
     if not path.exists():
         raise FileNotFoundError(f"HTML file not found: {path}")
-    return path.read_text()
+    return path.read_text(encoding="utf-8")
 
 
 # =============================================================================

@@ -283,7 +283,7 @@ class MultiArchiveReportGenerator:
         metadata = {}
 
         try:
-            async with aiofiles.open(jsonl_path) as f:
+            async with aiofiles.open(jsonl_path, encoding="utf-8") as f:
                 async for line in f:
                     line = line.strip()
                     if not line:
