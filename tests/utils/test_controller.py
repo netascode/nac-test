@@ -361,6 +361,29 @@ class TestEdgeCases:
         result = detect_controller_type()
         assert result == "SDWAN"
 
+    def test_iosxe_partial_and_sdwan_partial_are_both_reported(self) -> None:
+        """Regression test: IOSXE_URL + IOSXE_PASSWORD (no IOSXE_USERNAME) combined
+        with SDWAN_URL must NOT detect IOSXE — both controllers should be reported
+        as partial, not complete.
+
+        Before the fix that added IOSXE_USERNAME/IOSXE_PASSWORD to the IOSXE
+        credential sets, setting only IOSXE_URL was enough to satisfy detection,
+        so this combination incorrectly returned 'IOSXE' instead of raising.
+        """
+        os.environ["IOSXE_URL"] = "https://iosxe.example.com"
+        os.environ["IOSXE_PASSWORD"] = "cisco123"
+        # IOSXE_USERNAME deliberately omitted — credential set must not be satisfied
+        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
+        # No SDWAN credentials beyond URL
+
+        with pytest.raises(ValueError) as exc_info:
+            detect_controller_type()
+
+        error_msg = str(exc_info.value)
+        assert "Incomplete controller credentials detected" in error_msg
+        assert "IOSXE: incomplete credentials" in error_msg
+        assert "SDWAN: incomplete credentials" in error_msg
+
 
 class TestIOSXEAlternativeURLEnvVar:
     """Test IOSXE controller detection with alternative URL environment variables.
