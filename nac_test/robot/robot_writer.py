@@ -189,6 +189,22 @@ class RobotWriter:
         elif len(path_parts) == 2:
             # Nested case: collect objects from nested structure
             parent_key, child_key = path_parts
+            parent = data.get(parent_key)
+
+            # Check if parent is a dict
+            if isinstance(parent, dict):
+                objects = parent.get(child_key, [])
+                if not isinstance(objects, list):
+                    return [data]
+                chunked_data = []
+                for i in range(0, len(objects), chunk_size):
+                    chunked_item = copy.deepcopy(data)
+                    chunked_item[parent_key][child_key] = objects[i : i + chunk_size]
+                    chunked_data.append(chunked_item)
+
+                return chunked_data
+
+            # Continue with assumption that parent is a list
             all_objects = []
 
             # Collect all nested objects with their parent context

@@ -12,6 +12,7 @@ Covers:
 """
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from jinja2 import Environment, FileSystemLoader
@@ -98,3 +99,77 @@ class TestRobotWriterRenderTemplate:
         assert output.exists()
         assert output.parent.is_dir()
         assert output.read_text().strip()  # non-empty content
+
+
+# ---------------------------------------------------------------------------
+# _chunk_nested_objects tests
+# ---------------------------------------------------------------------------
+
+
+class TestChunkNestedObjects:
+    """Tests for RobotWriter._chunk_nested_objects()."""
+
+    def test_simple_object_path_chunks_direct_list(self, writer: RobotWriter) -> None:
+        """A single-level object_path chunks a list that is a direct child."""
+        data = {"hosts": [{"name": f"h{i}"} for i in range(3)]}
+        chunks = writer._chunk_nested_objects(data, "hosts", 2)
+        assert [[h["name"] for h in c["hosts"]] for c in chunks] == [
+            ["h0", "h1"],
+            ["h2"],
+        ]
+
+    def test_dict_nested_object_path_chunks_in_place(self, writer: RobotWriter) -> None:
+        """2-level object_path whose parent is a dict"""
+        domain: dict[str, Any] = {
+            "name": "Global",
+            "objects": {
+                "hosts": [{"name": f"h{i}"} for i in range(5)],
+                "networks": [{"name": "n1"}],
+            },
+        }
+        chunks = writer._chunk_nested_objects(domain, "objects.hosts", 2)
+
+        # 5 hosts at chunk size 2 -> 3 chunks of 2, 2, 1.
+        assert [len(c["objects"]["hosts"]) for c in chunks] == [2, 2, 1]
+        # Hosts are partitioned in order with no loss or overlap.
+        flat = [h["name"] for c in chunks for h in c["objects"]["hosts"]]
+        assert flat == [f"h{i}" for i in range(5)]
+        # Sibling object types are preserved untouched in every chunk.
+        assert all(c["objects"]["networks"] == [{"name": "n1"}] for c in chunks)
+        # The original input is not mutated.
+        assert len(domain["objects"]["hosts"]) == 5
+
+    def test_dict_nested_non_list_child_returns_original(
+        self, writer: RobotWriter
+    ) -> None:
+        """A dict parent whose child is not a list yields the item unchanged."""
+        data = {"objects": {"hosts": "not-a-list"}}
+        assert writer._chunk_nested_objects(data, "objects.hosts", 2) == [data]
+
+    def test_list_of_parents_object_path_still_chunks(
+        self, writer: RobotWriter
+    ) -> None:
+        """2-level object_path whose parent is a list"""
+        data = {
+            "services": [
+                {
+                    "name": "s1",
+                    "endpoints": [{"name": "e1"}, {"name": "e2"}, {"name": "e3"}],
+                },
+                {"name": "s2", "endpoints": [{"name": "e4"}]},
+                {"name": "s3", "endpoints": [{"name": "e5"}]},
+            ]
+        }
+        chunks = writer._chunk_nested_objects(data, "services.endpoints", 2)
+
+        assert len(chunks) == 3
+        assert [p["name"] for p in chunks[0]["services"]] == ["s1"]
+        assert [e["name"] for e in chunks[0]["services"][0]["endpoints"]] == [
+            "e1",
+            "e2",
+        ]
+        assert [p["name"] for p in chunks[1]["services"]] == ["s1", "s2"]
+        assert [e["name"] for e in chunks[1]["services"][0]["endpoints"]] == ["e3"]
+        assert [e["name"] for e in chunks[1]["services"][1]["endpoints"]] == ["e4"]
+        assert [p["name"] for p in chunks[2]["services"]] == ["s3"]
+        assert [e["name"] for e in chunks[2]["services"][0]["endpoints"]] == ["e5"]
