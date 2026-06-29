@@ -32,14 +32,26 @@ import os
 from pathlib import Path
 from typing import Any
 
+from pyats import aetest
 
-class LearningModeMixin:
+
+class LearningModeMixin(aetest.Testcase):  # type: ignore[misc]
     """Mixin adding learning mode support to operational test classes.
+
+    Inherits from aetest.Testcase so that PyATS's TestableMeta metaclass
+    processes this class correctly (methods get the required .source attribute).
+    Python's MRO ensures aetest.Testcase appears only once when combined with
+    other base classes that also inherit from it.
 
     Tests that support learning inherit this mixin and override
     capture_learned_state(). The framework detects learn mode via
     the NAC_TEST_LEARN environment variable and calls the capture
     method instead of the normal verify loop.
+
+    Usage:
+        class MyTest(LearningModeMixin, SDWANManagerTestBase):
+            async def capture_learned_state(self, semaphore, client, items):
+                ...
 
     Attributes:
         SUPPORTS_LEARNING: Class-level flag indicating this test supports
