@@ -2137,6 +2137,16 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         learned_state_dir = Path(
             os.environ.get("NAC_TEST_LEARNED_STATE_DIR", "learned_state")
         )
+
+        # If capture returned empty data, write a marker file with the reason
+        # so users know learning ran but found nothing (vs. never ran at all)
+        if not learned_data:
+            config = getattr(self, "TEST_CONFIG", {})
+            command = config.get("api_endpoint", "unknown")
+            learned_data = {
+                "_learned_state_empty": f"No data returned by parser for: {command}"
+            }
+
         output_path = save_learned_state(
             learned_data, learned_state_dir, test_name, hostname
         )
