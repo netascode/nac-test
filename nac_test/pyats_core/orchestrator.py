@@ -283,7 +283,7 @@ class PyATSOrchestrator:
             # Learning mode: propagate flag and set output directory
             if self.learn:
                 env["NAC_TEST_LEARN"] = "1"
-                learned_state_dir = self.base_output_dir / "learned_state"
+                learned_state_dir = Path.cwd() / "learned_state"
                 learned_state_dir.mkdir(parents=True, exist_ok=True)
                 env["NAC_TEST_LEARNED_STATE_DIR"] = str(learned_state_dir)
 
@@ -376,7 +376,7 @@ class PyATSOrchestrator:
                 # Learning mode: propagate to D2D subprocesses via os.environ
                 if self.learn:
                     os.environ["NAC_TEST_LEARN"] = "1"
-                    learned_state_dir = self.base_output_dir / "learned_state"
+                    learned_state_dir = Path.cwd() / "learned_state"
                     learned_state_dir.mkdir(parents=True, exist_ok=True)
                     os.environ["NAC_TEST_LEARNED_STATE_DIR"] = str(learned_state_dir)
 
