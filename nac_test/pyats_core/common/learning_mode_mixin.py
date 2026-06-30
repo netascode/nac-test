@@ -57,9 +57,15 @@ class LearningModeMixin(aetest.Testcase):  # type: ignore[misc]
         SUPPORTS_LEARNING: Class-level flag indicating this test supports
             the --learn mode. Set to True in subclasses that implement
             capture_learned_state().
+        LEARNED_STATE_KEY: Unique string identifying this test's namespace
+            within the learned_state data structure. Must be unique across
+            all tests that support learning. Used as the key under
+            {architecture}.learned_state.{LEARNED_STATE_KEY} in the merged
+            data model. Convention: use the class name.
     """
 
     SUPPORTS_LEARNING: bool = True
+    LEARNED_STATE_KEY: str = ""
 
     @property
     def is_learn_mode(self) -> bool:

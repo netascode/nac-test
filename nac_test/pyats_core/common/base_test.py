@@ -50,6 +50,7 @@ from nac_test.utils.controller import (
     get_defaults_prefix,
 )
 from nac_test.utils.formatting import format_file_timestamp_ms
+from nac_test.utils.learned_state import save_learned_state
 from nac_test.utils.yaml import safe_load
 
 T = TypeVar("T")
@@ -2088,8 +2089,6 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Returns:
             Single-element list with a PASSED result indicating successful capture.
         """
-        from nac_test.utils.learned_state import save_learned_state
-
         # Flatten grouped items to a list for the capture method
         if isinstance(items, dict):
             flat_items = [ctx for group in items.values() for ctx in group]
