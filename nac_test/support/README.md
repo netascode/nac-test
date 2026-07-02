@@ -96,10 +96,12 @@ nac-test -d ./data -f ./filters -t ./tests -o ./out --diagnostic
 
 2. Set your environment variables:
    ```bash
-   # For SD-WAN:
+   # For SD-WAN (token auth - 20.18+):
    export SDWAN_URL=https://your-sdwan-manager.example.com
-   export SDWAN_USERNAME=admin
-   export SDWAN_PASSWORD=your-password
+   export SDWAN_API_TOKEN=your-api-token
+   # Or username/password auth:
+   # export SDWAN_USERNAME=admin
+   # export SDWAN_PASSWORD=your-password
    export IOSXE_USERNAME=admin
    export IOSXE_PASSWORD=device-password
 

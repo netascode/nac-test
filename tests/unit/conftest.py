@@ -78,7 +78,7 @@ def assert_connection_has_optimizations(connection: dict[str, Any]) -> None:
     )
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def clean_controller_env(monkeypatch: MonkeyPatch) -> None:
     """Clear all controller-related environment variables.
 

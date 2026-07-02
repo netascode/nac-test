@@ -5731,46 +5731,103 @@ apic:
 
 nac-test automatically detects the network architecture based on which credential environment variables are set, eliminating the need for users to explicitly set `CONTROLLER_TYPE`.
 
-#### CREDENTIAL_PATTERNS Configuration
+#### CONTROLLER_REGISTRY and CredentialSets
 
 ```python
-# Environment variable patterns for architecture detection
-CREDENTIAL_PATTERNS: dict[str, tuple[str, str, str]] = {
-    # Architecture: (URL_VAR, USERNAME_VAR, PASSWORD_VAR)
-    "aci": ("APIC_URL", "APIC_USERNAME", "APIC_PASSWORD"),
-    "sdwan": ("SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"),
-    "catalyst_center": ("CC_URL", "CC_USERNAME", "CC_PASSWORD"),
-    "meraki": ("MERAKI_URL", "MERAKI_API_KEY", None),  # API key auth
-    "fmc": ("FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"),
-    "ise": ("ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"),
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class CredentialSet:
+    """A single credential combination that can authenticate to a controller."""
+    env_vars: list[str]       # Env vars required for this method
+    label: str                # Human-readable label (e.g., "API Token (20.18+)")
+    auth_method: str = "session"  # Auth mechanism hint for downstream adapters
+
+@dataclass(frozen=True)
+class ControllerConfig:
+    """Configuration metadata for a supported controller type."""
+    display_name: str
+    url_env_var: str
+    env_var_prefix: str
+    credential_sets: list[CredentialSet]  # Ordered — first satisfied wins
+    defaults_prefix: str
+    cache_key: str | None = None
+
+CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
+    "ACI": ControllerConfig(
+        display_name="APIC",
+        url_env_var="ACI_URL",
+        env_var_prefix="ACI",
+        credential_sets=[
+            CredentialSet(env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
+                         label="Username/Password"),
+        ],
+        defaults_prefix="defaults.apic",
+        cache_key="ACI",
+    ),
+    "SDWAN": ControllerConfig(
+        display_name="SDWAN Manager",
+        url_env_var="SDWAN_URL",
+        env_var_prefix="SDWAN",
+        credential_sets=[
+            CredentialSet(env_vars=["SDWAN_URL", "SDWAN_API_TOKEN"],
+                         label="API Token (20.18+)", auth_method="token"),
+            CredentialSet(env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
+                         label="Username/Password"),
+        ],
+        defaults_prefix="defaults.sdwan",
+        cache_key="SDWAN_MANAGER",
+    ),
+    "IOSXE": ControllerConfig(
+        display_name="IOS XE",
+        url_env_var="IOSXE_URL",
+        env_var_prefix="IOSXE",
+        credential_sets=[
+            CredentialSet(env_vars=["IOSXE_URL"], label="Device URL"),
+            CredentialSet(env_vars=["IOSXE_HOST"], label="Device Host"),
+        ],
+        defaults_prefix="defaults.iosxe",
+    ),
+    # CC, MERAKI, FMC, ISE follow the same pattern...
 }
 ```
 
 #### Detection Algorithm
 
 ```python
-def detect_controller_type() -> str | None:
+def detect_controller_type() -> str:
     """Auto-detect controller type from environment variables.
 
-    Iterates through CREDENTIAL_PATTERNS and returns the first
-    architecture where ALL required credentials are set.
+    Iterates through CONTROLLER_REGISTRY. For each controller, iterates its
+    credential_sets in order. The first CredentialSet whose env_vars are ALL
+    present and non-empty marks the controller as detected. The winning
+    CredentialSet is stored for later retrieval via get_matched_credential_set().
 
     Returns:
-        Architecture name (e.g., "aci", "sdwan") or None if no match
+        Controller type key (e.g., "ACI", "SDWAN")
+
+    Raises:
+        ValueError: If no credentials, multiple controllers, or incomplete credentials
 
     Example:
-        # If APIC_URL, APIC_USERNAME, APIC_PASSWORD are all set:
-        detect_controller_type() → "aci"
+        # If SDWAN_URL and SDWAN_API_TOKEN are set:
+        detect_controller_type() → "SDWAN"
+        get_matched_credential_set("SDWAN").auth_method → "token"
     """
-    for arch, (url_var, user_var, pass_var) in CREDENTIAL_PATTERNS.items():
-        required_vars = [url_var, user_var]
-        if pass_var:  # Some architectures use API keys
-            required_vars.append(pass_var)
+    complete_sets, partial_controllers, matched_creds = _find_credential_sets()
+    # ... validation logic (multiple, none, incomplete) ...
+    controller_type = complete_sets[0]
+    _matched_credential_sets[controller_type] = matched_creds[controller_type]
+    return controller_type
 
-        if all(os.environ.get(var) for var in required_vars):
-            return arch
 
-    return None
+def get_matched_credential_set(controller_type: str) -> CredentialSet | None:
+    """Public API for nac-test-pyats-common to retrieve the winning credential set.
+
+    Returns the CredentialSet that was matched during detect_controller_type().
+    The auth_method attribute tells the auth adapter which mechanism to use.
+    """
+    return _matched_credential_sets.get(controller_type)
 ```
 
 #### Detection Flow Diagram
@@ -5778,28 +5835,27 @@ def detect_controller_type() -> str | None:
 ```mermaid
 flowchart TB
     subgraph "Controller Type Detection"
-        Start[Start Detection] --> CheckACI{APIC_URL +<br/>APIC_USERNAME +<br/>APIC_PASSWORD set?}
-        CheckACI -->|Yes| ReturnACI[Return 'aci']
-        CheckACI -->|No| CheckSDWAN{SDWAN_URL +<br/>SDWAN_USERNAME +<br/>SDWAN_PASSWORD set?}
-        CheckSDWAN -->|Yes| ReturnSDWAN[Return 'sdwan']
-        CheckSDWAN -->|No| CheckCC{CC_URL +<br/>CC_USERNAME +<br/>CC_PASSWORD set?}
-        CheckCC -->|Yes| ReturnCC[Return 'catalyst_center']
-        CheckCC -->|No| CheckMeraki{MERAKI_URL +<br/>MERAKI_API_KEY set?}
-        CheckMeraki -->|Yes| ReturnMeraki[Return 'meraki']
-        CheckMeraki -->|No| CheckFMC{FMC_URL +<br/>FMC_USERNAME +<br/>FMC_PASSWORD set?}
-        CheckFMC -->|Yes| ReturnFMC[Return 'fmc']
-        CheckFMC -->|No| CheckISE{ISE_URL +<br/>ISE_USERNAME +<br/>ISE_PASSWORD set?}
-        CheckISE -->|Yes| ReturnISE[Return 'ise']
-        CheckISE -->|No| ReturnNone[Return None]
+        Start[Start Detection] --> IterReg[Iterate CONTROLLER_REGISTRY]
+        IterReg --> ForEach[For each controller]
+        ForEach --> IterCreds[Iterate credential_sets in order]
+        IterCreds --> CheckSet{All env_vars<br/>present & non-empty?}
+        CheckSet -->|Yes| StoreMatch[Store winning CredentialSet<br/>auth_method remembered]
+        StoreMatch --> ReturnType[Return controller type]
+        CheckSet -->|No| NextSet{More credential_sets?}
+        NextSet -->|Yes| IterCreds
+        NextSet -->|No| TrackPartial[Track as partial if<br/>any env_var was set]
+        TrackPartial --> NextCtrl{More controllers?}
+        NextCtrl -->|Yes| ForEach
+        NextCtrl -->|No| Validate{Any complete?}
+        Validate -->|None + no partial| ErrNone[Error: No credentials]
+        Validate -->|None + partial| ErrIncomplete[Error: Incomplete credentials]
+        Validate -->|Multiple| ErrMultiple[Error: Multiple controllers]
     end
 
-    style ReturnACI fill:#90EE90
-    style ReturnSDWAN fill:#90EE90
-    style ReturnCC fill:#90EE90
-    style ReturnMeraki fill:#90EE90
-    style ReturnFMC fill:#90EE90
-    style ReturnISE fill:#90EE90
-    style ReturnNone fill:#FFD700
+    style ReturnType fill:#90EE90
+    style ErrNone fill:#FFD700
+    style ErrIncomplete fill:#FFD700
+    style ErrMultiple fill:#FF6347
 ```
 
 #### D2D Tests and Controller Credentials
