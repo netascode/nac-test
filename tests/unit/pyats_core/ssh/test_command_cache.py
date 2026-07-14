@@ -167,3 +167,52 @@ class TestCommandCacheConcurrency:
             writer_thread.join()
 
         assert stats_errors == [], f"get_cache_stats() raised: {stats_errors}"
+
+    def test_concurrent_get_set_with_immediate_expiry(self) -> None:
+        """Exercise the compound check-read-delete path in get() under contention.
+
+        With ttl=0, every get() that finds an entry will hit the expiry-delete
+        branch (del self.cache[command]).  Concurrent writers re-insert the same
+        key.  This forces the compound check → read → delete sequence in get()
+        to execute while set() modifies the same key.
+
+        The test verifies no exceptions are raised — proving the lock correctly
+        serializes the compound operation.
+
+        Note: see class docstring for the CPython GIL caveat.
+        """
+        cache = CommandCache("expiry-race-test", ttl=0)
+        errors: list[Exception] = []
+        errors_lock = threading.Lock()
+        key = "show version"
+
+        def writer() -> None:
+            for _ in range(500):
+                try:
+                    cache.set(key, "output")
+                except Exception as exc:
+                    with errors_lock:
+                        errors.append(exc)
+
+        def reader() -> None:
+            for _ in range(500):
+                try:
+                    result = cache.get(key)
+                    # Must be None (expired/deleted) or "output" — never partial
+                    if result is not None and result != "output":
+                        with errors_lock:
+                            errors.append(ValueError(f"Unexpected value: {result!r}"))
+                except Exception as exc:
+                    with errors_lock:
+                        errors.append(exc)
+
+        threads = [threading.Thread(target=writer) for _ in range(5)] + [
+            threading.Thread(target=reader) for _ in range(5)
+        ]
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert errors == [], f"Threads raised exceptions: {errors}"

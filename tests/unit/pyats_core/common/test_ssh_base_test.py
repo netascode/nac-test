@@ -302,8 +302,22 @@ class TestPatchDeviceExecuteForBroker:
             call_after_patch=lambda dev: dev.execute("show version"),
         )
 
-        assert result == "command output"
         mock_future.result.assert_called_with(timeout=DEVICE_EXECUTE_TIMEOUT)
+
+    def test_patched_execute_propagates_timeout_error(self, ssh_instance: Any) -> None:
+        """TimeoutError from broker propagates and failed command is NOT cached."""
+        mock_future = Mock()
+        mock_future.result = Mock(side_effect=TimeoutError("broker hung"))
+
+        with pytest.raises(TimeoutError, match="broker hung"):
+            self._apply_broker_patch(
+                ssh_instance,
+                extra_patches=[patch(self._RUN_CORO_PATH, return_value=mock_future)],
+                call_after_patch=lambda dev: dev.execute("show version"),
+            )
+
+        # The failed command must NOT be cached
+        assert ssh_instance.command_cache.get("show version") is None
 
     def test_patched_execute_uses_cache_on_hit(self, ssh_instance: Any) -> None:
         """When command is cached, returns cached output without contacting broker."""

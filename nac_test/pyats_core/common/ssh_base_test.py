@@ -318,6 +318,18 @@ class SSHTestBase(NACTestBase):
 
             Includes caching so Genie supplementary calls don't re-execute
             commands already fetched by the test.
+
+            Args:
+                cmd: CLI command string to execute on the device.
+                *args: Ignored — accepted for Unicon API compatibility.
+                **kwargs: Ignored — accepted for Unicon API compatibility.
+
+            Returns:
+                Command output string from the device (or cache).
+
+            Raises:
+                TimeoutError: If the broker does not respond within
+                    DEVICE_EXECUTE_TIMEOUT seconds.
             """
             # Check cache (thread-safe)
             cached = command_cache.get(cmd)
@@ -348,9 +360,22 @@ class SSHTestBase(NACTestBase):
         # that has an execute() method. Create a thin shim that delegates to our
         # broker_execute so parsers calling device.cli.execute() work correctly.
         class _BrokerCliShim:
-            """Shim that mimics a Unicon connection for Genie parser dispatch."""
+            """Shim that mimics a Unicon connection for Genie parser dispatch.
+
+            Only implements execute() — the single method Genie parsers use
+            for command execution.  If a future pyATS/Genie release accesses
+            additional attributes on device.cli, __getattr__ raises a clear
+            diagnostic instead of a bare AttributeError deep in Genie internals.
+            """
 
             execute = staticmethod(broker_execute)
+
+            def __getattr__(self, name: str) -> Any:
+                raise AttributeError(
+                    f"_BrokerCliShim does not implement '{name}'. "
+                    f"This may indicate an incompatible pyATS/Genie version — "
+                    f"only 'execute' is supported in broker mode."
+                )
 
         self.testbed_device.cli = _BrokerCliShim()  # type: ignore[union-attr]
         self.logger.debug(

@@ -1,6 +1,6 @@
 # Unreleased
 
-## Fixes
+## Bug Fixes
 
 - Genie parsers that fire supplementary commands (e.g. VRF resolution) now work in broker mode
 
