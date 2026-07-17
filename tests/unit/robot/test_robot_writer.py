@@ -118,7 +118,9 @@ class TestChunkNestedObjects:
             ["h2"],
         ]
 
-    def test_nested_object_path_chunks_leaf_under_dict_parent(self, writer: RobotWriter) -> None:
+    def test_nested_object_path_chunks_leaf_under_dict_parent(
+        self, writer: RobotWriter
+    ) -> None:
         """2-level object_path whose parent is a dict"""
         domain: dict[str, Any] = {
             "name": "Global",

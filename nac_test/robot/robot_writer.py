@@ -260,7 +260,7 @@ class RobotWriter:
                     chunked_data.append(chunked_item)
 
                 return chunked_data
-            
+
             else:
                 raise ValueError(
                     f"Parent key '{parent_key}' is neither a list nor a dict in the data structure."
