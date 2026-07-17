@@ -150,6 +150,44 @@ class RobotWriter:
                 return Path(*paths[:-1], "_" + paths[-1])
         return Path(os.path.join(*paths))
 
+    def _chunk_list_at_path(
+        self,
+        data: dict[str, Any],
+        path_parts: list[str],
+        chunk_size: int,
+    ) -> list[dict[str, Any]]:
+        """Split a list found at a known key path into chunks.
+
+        Navigates ``data`` along ``path_parts`` to a list and, for each chunk,
+        creates a deep copy of ``data`` with that list replaced by the chunk.
+
+        Args:
+            data: The full data structure to copy for each chunk
+            path_parts: Keys navigating from ``data`` to the list to chunk
+            chunk_size: Number of objects per chunk
+
+        Returns:
+            List of modified data structures, each containing a subset of
+            objects, or ``[data]`` unchanged if the path does not hold a list
+        """
+        container = data
+        for key in path_parts[:-1]:
+            container = container[key]
+        objects = container.get(path_parts[-1], [])
+        if not isinstance(objects, list):
+            return [data]
+
+        chunked_data = []
+        for i in range(0, len(objects), chunk_size):
+            chunked_item = copy.deepcopy(data)
+            target = chunked_item
+            for key in path_parts[:-1]:
+                target = target[key]
+            target[path_parts[-1]] = objects[i : i + chunk_size]
+            chunked_data.append(chunked_item)
+
+        return chunked_data
+
     def _chunk_nested_objects(
         self, data: dict[str, Any], object_path: str, chunk_size: int
     ) -> list[dict[str, Any]]:
@@ -168,87 +206,65 @@ class RobotWriter:
         # Handle simple path (single level) vs nested path
         if len(path_parts) == 1:
             # Simple case: chunk objects directly from the data
-            objects = data.get(path_parts[0], [])
-            if not isinstance(objects, list):
-                return [data]  # Return original if not a list
-
-            # Split objects into chunks
-            chunks = []
-            for i in range(0, len(objects), chunk_size):
-                chunks.append(objects[i : i + chunk_size])
-
-            # Create modified data for each chunk
-            chunked_data = []
-            for chunk in chunks:
-                chunked_item = copy.deepcopy(data)
-                chunked_item[path_parts[0]] = chunk
-                chunked_data.append(chunked_item)
-
-            return chunked_data
+            return self._chunk_list_at_path(data, path_parts, chunk_size)
 
         elif len(path_parts) == 2:
-            # Nested case: collect objects from nested structure
             parent_key, child_key = path_parts
             parent = data.get(parent_key)
 
-            # Check if parent is a dict
             if isinstance(parent, dict):
-                objects = parent.get(child_key, [])
-                if not isinstance(objects, list):
-                    return [data]
+                return self._chunk_list_at_path(data, path_parts, chunk_size)
+
+            elif isinstance(parent, list):
+                all_objects = []
+
+                # Collect all nested objects with their parent context
+                for parent in data.get(parent_key, []):
+                    parent_name = parent.get("name", "")
+                    for obj in parent.get(child_key, []):
+                        all_objects.append((parent_name, obj))
+
+                # Split into chunks
+                object_chunks = []
+                for i in range(0, len(all_objects), chunk_size):
+                    object_chunks.append(all_objects[i : i + chunk_size])
+
+                # Create modified data for each chunk
                 chunked_data = []
-                for i in range(0, len(objects), chunk_size):
+                for chunk in object_chunks:
                     chunked_item = copy.deepcopy(data)
-                    chunked_item[parent_key][child_key] = objects[i : i + chunk_size]
+
+                    # Group objects by parent for this chunk
+                    parent_objects: dict[str, list[Any]] = {}
+                    for parent_name, obj in chunk:
+                        if parent_name not in parent_objects:
+                            parent_objects[parent_name] = []
+                        parent_objects[parent_name].append(obj)
+
+                    # Update parent objects to only include objects from this chunk
+                    if parent_key in chunked_item:
+                        for parent in chunked_item[parent_key]:
+                            parent_name = parent.get("name", "")
+                            if parent_name in parent_objects:
+                                parent[child_key] = parent_objects[parent_name]
+                            else:
+                                parent[child_key] = []
+
+                        # Remove parents that have no objects in this chunk
+                        chunked_item[parent_key] = [
+                            parent
+                            for parent in chunked_item[parent_key]
+                            if parent.get(child_key, [])
+                        ]
+
                     chunked_data.append(chunked_item)
 
                 return chunked_data
-
-            # Continue with assumption that parent is a list
-            all_objects = []
-
-            # Collect all nested objects with their parent context
-            for parent in data.get(parent_key, []):
-                parent_name = parent.get("name", "")
-                for obj in parent.get(child_key, []):
-                    all_objects.append((parent_name, obj))
-
-            # Split into chunks
-            object_chunks = []
-            for i in range(0, len(all_objects), chunk_size):
-                object_chunks.append(all_objects[i : i + chunk_size])
-
-            # Create modified data for each chunk
-            chunked_data = []
-            for chunk in object_chunks:
-                chunked_item = copy.deepcopy(data)
-
-                # Group objects by parent for this chunk
-                parent_objects: dict[str, list[Any]] = {}
-                for parent_name, obj in chunk:
-                    if parent_name not in parent_objects:
-                        parent_objects[parent_name] = []
-                    parent_objects[parent_name].append(obj)
-
-                # Update parent objects to only include objects from this chunk
-                if parent_key in chunked_item:
-                    for parent in chunked_item[parent_key]:
-                        parent_name = parent.get("name", "")
-                        if parent_name in parent_objects:
-                            parent[child_key] = parent_objects[parent_name]
-                        else:
-                            parent[child_key] = []
-
-                    # Remove parents that have no objects in this chunk
-                    chunked_item[parent_key] = [
-                        parent
-                        for parent in chunked_item[parent_key]
-                        if parent.get(child_key, [])
-                    ]
-
-                chunked_data.append(chunked_item)
-
-            return chunked_data
+            
+            else:
+                raise ValueError(
+                    f"Parent key '{parent_key}' is neither a list nor a dict in the data structure."
+                )
 
         else:
             # More complex nesting not supported yet
