@@ -1,0 +1,27 @@
+---
+fmc:
+  domains:
+    - name: Global
+      objects:
+        hosts:
+          - name: host1
+            ip: 10.0.0.1
+          - name: host2
+            ip: 10.0.0.2
+          - name: host3
+            ip: 10.0.0.3
+          - name: host4
+            ip: 10.0.0.4
+          - name: host5
+            ip: 10.0.0.5
+        networks:
+          - name: net1
+            cidr: 10.0.0.0/24
+    - name: Global/Child
+      objects:
+        hosts:
+          - name: host6
+            ip: 10.1.0.1
+        networks:
+          - name: net2
+            cidr: 10.1.0.0/24

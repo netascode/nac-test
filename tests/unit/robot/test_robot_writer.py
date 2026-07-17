@@ -109,7 +109,7 @@ class TestRobotWriterRenderTemplate:
 class TestChunkNestedObjects:
     """Tests for RobotWriter._chunk_nested_objects()."""
 
-    def test_simple_object_path_chunks_direct_list(self, writer: RobotWriter) -> None:
+    def test_one_level_object_path_chunks(self, writer: RobotWriter) -> None:
         """A single-level object_path chunks a list that is a direct child."""
         data = {"hosts": [{"name": f"h{i}"} for i in range(3)]}
         chunks = writer._chunk_nested_objects(data, "hosts", 2)
@@ -118,7 +118,7 @@ class TestChunkNestedObjects:
             ["h2"],
         ]
 
-    def test_dict_nested_object_path_chunks_in_place(self, writer: RobotWriter) -> None:
+    def test_nested_object_path_chunks_leaf_under_dict_parent(self, writer: RobotWriter) -> None:
         """2-level object_path whose parent is a dict"""
         domain: dict[str, Any] = {
             "name": "Global",
@@ -146,7 +146,7 @@ class TestChunkNestedObjects:
         data = {"objects": {"hosts": "not-a-list"}}
         assert writer._chunk_nested_objects(data, "objects.hosts", 2) == [data]
 
-    def test_list_of_parents_object_path_still_chunks(
+    def test_nested_object_path_chunks_leaf_under_list_parent(
         self, writer: RobotWriter
     ) -> None:
         """2-level object_path whose parent is a list"""
