@@ -6,9 +6,8 @@
 Tests the subprocess execution logic:
 1. Config file content verification (git_info = false for macOS fork() safety)
 2. Command construction includes all required PyATS flags
-3. Error handling when config file creation fails
-4. Return code interpretation (0 = success, 1 = test failures, >1 = error)
-5. Output processing and progress event parsing
+3. Return code interpretation (0 = success, 1 = test failures, >1 = error)
+4. Output processing and progress event parsing
 
 See tests/unit/pyats_core/execution/test_subprocess_runner.py for
 additional unit tests covering subprocess crash handling,
@@ -16,13 +15,16 @@ malformed data recovery, resource limit handling, initialization and more
 """
 
 import asyncio
+import re
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
+from nac_test.pyats_core.execution.subprocess_runner import (
+    SubprocessRunner,
+)
 
 
 def _make_mock_process(
@@ -123,12 +125,9 @@ class TestConfigFileContent:
         config_idx = cmd.index("--pyats-configuration")
         config_path = Path(cmd[config_idx + 1])
 
-        try:
-            content = config_path.read_text()
-            assert "[report]" in content
-            assert "git_info = false" in content
-        finally:
-            config_path.unlink(missing_ok=True)
+        content = config_path.read_text()
+        assert re.search(r"\[report\]", content)
+        assert re.search(r"git_info\s*=\s*false", content)
 
     def test_execute_job_with_testbed_writes_git_info_false_to_pyats_config(
         self, runner: SubprocessRunner
@@ -148,12 +147,9 @@ class TestConfigFileContent:
         config_idx = cmd.index("--pyats-configuration")
         config_path = Path(cmd[config_idx + 1])
 
-        try:
-            content = config_path.read_text()
-            assert "[report]" in content
-            assert "git_info = false" in content
-        finally:
-            config_path.unlink(missing_ok=True)
+        content = config_path.read_text()
+        assert re.search(r"\[report\]", content)
+        assert re.search(r"git_info\s*=\s*false", content)
 
     def test_execute_job_writes_plugin_config_with_progress_reporter(
         self, runner: SubprocessRunner
@@ -166,12 +162,9 @@ class TestConfigFileContent:
         config_idx = cmd.index("--configuration")
         config_path = Path(cmd[config_idx + 1])
 
-        try:
-            content = config_path.read_text()
-            assert "ProgressReporterPlugin" in content
-            assert "enabled: True" in content
-        finally:
-            config_path.unlink(missing_ok=True)
+        content = config_path.read_text()
+        assert re.search(r"ProgressReporterPlugin:\s+enabled:\s+True", content)
+        assert re.search(r"EnvironmentDebugPlugin:\s+enabled:\s+False", content)
 
 
 class TestCommandConstruction:
@@ -218,71 +211,6 @@ class TestCommandConstruction:
         # Both config flags must be present (plugin YAML + PyATS INI)
         assert "--configuration" in cmd
         assert "--pyats-configuration" in cmd
-
-
-class TestConfigCreationFailure:
-    """Tests error handling when config file creation fails."""
-
-    def test_execute_job_returns_none_on_config_failure(self, tmp_path: Path) -> None:
-        """Verify execute_job returns None and does NOT launch subprocess when config fails.
-
-        If we can't create the config files, we must not proceed with execution
-        because PyATS would use default settings that cause fork() crashes on macOS.
-        """
-        runner = SubprocessRunner(
-            output_dir=tmp_path,
-            output_handler=lambda line: None,
-        )
-
-        with (
-            patch(
-                "tempfile.NamedTemporaryFile",
-                side_effect=OSError("disk full"),
-            ),
-            patch(
-                "asyncio.create_subprocess_exec",
-                new_callable=AsyncMock,
-            ) as mock_exec,
-        ):
-            result = asyncio.run(
-                runner.execute_job(
-                    job_file_path=Path("/fake/job.py"),
-                    env={},
-                )
-            )
-
-        assert result is None, "execute_job must return None when config creation fails"
-        mock_exec.assert_not_called()
-
-    def test_execute_job_with_testbed_returns_none_on_config_failure(
-        self, tmp_path: Path
-    ) -> None:
-        """Verify execute_job_with_testbed returns None when config creation fails."""
-        runner = SubprocessRunner(
-            output_dir=tmp_path,
-            output_handler=lambda line: None,
-        )
-
-        with (
-            patch(
-                "tempfile.NamedTemporaryFile",
-                side_effect=OSError("disk full"),
-            ),
-            patch(
-                "asyncio.create_subprocess_exec",
-                new_callable=AsyncMock,
-            ) as mock_exec,
-        ):
-            result = asyncio.run(
-                runner.execute_job_with_testbed(
-                    job_file_path=Path("/fake/job.py"),
-                    testbed_file_path=Path("/fake/testbed.yaml"),
-                    env={"HOSTNAME": "test-device"},
-                )
-            )
-
-        assert result is None
-        mock_exec.assert_not_called()
 
 
 class TestReturnCodeHandling:

@@ -296,11 +296,13 @@ In addition to Robot Framework, `nac-test` supports PyATS-based tests for networ
 
 PyATS tests support multiple Cisco architectures, each requiring specific environment variables:
 
-| Architecture | Controller | Environment Variables |
-|-------------|------------|----------------------|
+| Architecture | Controller | Credential Sets |
+|-------------|------------|----------------|
 | ACI | APIC | `ACI_URL`, `ACI_USERNAME`, `ACI_PASSWORD` |
-| SD-WAN | SD-WAN Manager | `SDWAN_URL`, `SDWAN_USERNAME`, `SDWAN_PASSWORD` |
+| SD-WAN | SD-WAN Manager | **Token (20.18+):** `SDWAN_URL`, `SDWAN_API_TOKEN` <br> **Or Session:** `SDWAN_URL`, `SDWAN_USERNAME`, `SDWAN_PASSWORD` |
 | Catalyst Center | Catalyst Center | `CC_URL`, `CC_USERNAME`, `CC_PASSWORD` |
+
+> **Note:** SD-WAN supports two credential methods. When both are present, token authentication takes priority. The framework remembers which credential set was matched and exposes the `auth_method` attribute for downstream adapters.
 
 For D2D (Direct-to-Device) SSH tests, IOS-XE device credentials are also required:
 
@@ -323,6 +325,11 @@ PyATS tests are organized into two categories:
 ```bash
 # Set environment variables for your architecture (SD-WAN example)
 export SDWAN_URL=https://sdwan-manager.example.com
+
+# Option 1: API Token authentication (SD-WAN 20.18+)
+export SDWAN_API_TOKEN=your-api-token
+
+# Option 2: Username/Password authentication
 export SDWAN_USERNAME=admin
 export SDWAN_PASSWORD=yourpassword
 
@@ -585,6 +592,53 @@ tests
     └── test1_001.robot
 ```
 
+The OBJECT_PATH may be either a single-level path pointing directly at a list, or a two-level dotted path (`<PARENT>.<CHILD>`) where the parent is a list or a dictionary and the child is the list to be chunked. When the parent is a dictionary, only the child list is split by CHUNK_SIZE while sibling keys under the same parent are preserved untouched in every chunk.
+
+When the parent is a list, the child objects are counted across all parent items and chunked globally: each chunk holds up to CHUNK_SIZE child objects, carrying along only the parent items those children belong to (with the child list sliced accordingly). A parent item spanning a chunk boundary appears in both chunks, each time with just its portion of the child list.
+
+For example, given the following input with an OBJECT_PATH of `services.endpoints` and a CHUNK_SIZE of `2`:
+
+```yaml
+services:
+  - name: s1
+    endpoints:
+      - name: e1
+      - name: e2
+      - name: e3
+  - name: s2
+    endpoints:
+      - name: e4
+  - name: s3
+    endpoints:
+      - name: e5
+```
+
+three chunks are produced:
+
+```yaml
+# chunk 1
+services:
+  - name: s1
+    endpoints:
+      - name: e1
+      - name: e2
+
+# chunk 2
+services:
+  - name: s1
+    endpoints:
+      - name: e3
+  - name: s2
+    endpoints:
+      - name: e4
+
+# chunk 3
+services:
+  - name: s3
+    endpoints:
+      - name: e5
+```
+
 
 ## Select Test Cases By Tag
 
@@ -786,10 +840,12 @@ Simply add `--diagnostic` to your existing nac-test command:
 source .venv/bin/activate
 
 # 2. Set your environment variables (as you normally would for nac-test)
-# Example for SD-WAN:
+# Example for SD-WAN (token auth):
 export SDWAN_URL=https://your-sdwan-manager.example.com
-export SDWAN_USERNAME=admin
-export SDWAN_PASSWORD=your-password
+export SDWAN_API_TOKEN=your-api-token
+# Or username/password auth:
+# export SDWAN_USERNAME=admin
+# export SDWAN_PASSWORD=your-password
 
 # 3. Run nac-test with the --diagnostic flag
 nac-test -d ./data -t ./tests -o ./output --pyats --diagnostic

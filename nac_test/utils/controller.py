@@ -18,24 +18,33 @@ the merged NAC data model.
 
 import logging
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import TypedDict, cast
+from typing import cast
 
 from nac_test.core.types import ControllerTypeKey
 
 logger = logging.getLogger(__name__)
 
 
-class CredentialSetStatus(TypedDict):
-    """Status of a controller credential set.
+@dataclass(frozen=True)
+class CredentialSet:
+    """A single credential combination that can authenticate to a controller.
+
+    Each set is self-contained: if ALL env_vars are present and non-empty,
+    the controller is considered fully configured. When a controller has
+    multiple CredentialSets, the first satisfied set wins (order matters).
 
     Attributes:
-        present: List of environment variable names that are set.
-        missing: List of environment variable names that are not set.
+        env_vars: Environment variable names required for this credential method.
+        label: Human-readable label for error messages (e.g., "API Token (20.18+)").
+        auth_method: Identifier consumed by auth adapters in nac-test-pyats-common
+            to select the authentication mechanism (e.g., "token", "session").
     """
 
-    present: list[str]
-    missing: list[str]
+    env_vars: tuple[str, ...]
+    label: str
+    auth_method: str = "session"
 
 
 @dataclass(frozen=True)
@@ -46,32 +55,36 @@ class ControllerConfig:
         display_name: User-facing name (e.g., "APIC", "Catalyst Center").
         url_env_var: Environment variable name for the controller URL.
         env_var_prefix: Prefix for credential env vars (e.g., "ACI" → ACI_USERNAME).
-        required_env_vars: List of environment variables required for this controller.
+        credential_sets: Ordered list of credential combinations. The first set
+            whose env_vars are all present and non-empty wins. Every controller
+            must have at least one CredentialSet.
         defaults_prefix: JMESPath prefix for the defaults block in NAC data models
             (e.g., "defaults.apic", "defaults.sdwan").
         cache_key: The controller_type string passed to AuthCache by the auth adapter.
             None for controllers that don't have an auth adapter in nac-test-pyats-common.
-        alt_url_env_vars: Alternative environment variable names for the URL.
-            Used when a controller supports multiple URL env var names (e.g., IOSXE_HOST).
     """
 
     display_name: str
     url_env_var: str
     env_var_prefix: str
-    required_env_vars: list[str]
+    credential_sets: tuple[CredentialSet, ...]
     defaults_prefix: str
     cache_key: str | None = None
-    alt_url_env_vars: list[str] | None = None
 
 
 # Single source of truth for all controller configurations
-# Replaces both CREDENTIAL_PATTERNS and the registry from controller_auth.py
+# Replaces the registry from controller_auth.py
 CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
     "ACI": ControllerConfig(
         display_name="APIC",
         url_env_var="ACI_URL",
         env_var_prefix="ACI",
-        required_env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
+        credential_sets=(
+            CredentialSet(
+                env_vars=("ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"),
+                label="Username/Password",
+            ),
+        ),
         defaults_prefix="defaults.apic",
         cache_key="ACI",
     ),
@@ -79,7 +92,17 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="SDWAN Manager",
         url_env_var="SDWAN_URL",
         env_var_prefix="SDWAN",
-        required_env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
+        credential_sets=(
+            CredentialSet(
+                env_vars=("SDWAN_URL", "SDWAN_API_TOKEN"),
+                label="API Token (20.18+)",
+                auth_method="token",
+            ),
+            CredentialSet(
+                env_vars=("SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"),
+                label="Username/Password",
+            ),
+        ),
         defaults_prefix="defaults.sdwan",
         cache_key="SDWAN_MANAGER",
     ),
@@ -87,7 +110,12 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="Catalyst Center",
         url_env_var="CC_URL",
         env_var_prefix="CC",
-        required_env_vars=["CC_URL", "CC_USERNAME", "CC_PASSWORD"],
+        credential_sets=(
+            CredentialSet(
+                env_vars=("CC_URL", "CC_USERNAME", "CC_PASSWORD"),
+                label="Username/Password",
+            ),
+        ),
         defaults_prefix="defaults.catc",
         cache_key="CC",
     ),
@@ -95,40 +123,60 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="Meraki",
         url_env_var="MERAKI_URL",
         env_var_prefix="MERAKI",
-        required_env_vars=["MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"],
+        credential_sets=(
+            CredentialSet(
+                env_vars=("MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"),
+                label="Username/Password",
+            ),
+        ),
         defaults_prefix="defaults.meraki",
     ),
     "FMC": ControllerConfig(
         display_name="Firepower Management Center",
         url_env_var="FMC_URL",
         env_var_prefix="FMC",
-        required_env_vars=["FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"],
+        credential_sets=(
+            CredentialSet(
+                env_vars=("FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"),
+                label="Username/Password",
+            ),
+        ),
         defaults_prefix="defaults.fmc",
     ),
     "ISE": ControllerConfig(
         display_name="ISE",
         url_env_var="ISE_URL",
         env_var_prefix="ISE",
-        required_env_vars=["ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"],
+        credential_sets=(
+            CredentialSet(
+                env_vars=("ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"),
+                label="Username/Password",
+            ),
+        ),
         defaults_prefix="defaults.ise",
     ),
     "IOSXE": ControllerConfig(
         display_name="IOS XE",
         url_env_var="IOSXE_URL",
         env_var_prefix="IOSXE",
-        required_env_vars=[
-            "IOSXE_URL"
-        ],  # Direct device access, no controller credentials
+        # Direct device access, no controller credentials required
+        credential_sets=(
+            CredentialSet(
+                env_vars=("IOSXE_URL", "IOSXE_USERNAME", "IOSXE_PASSWORD"),
+                label="Device URL",
+            ),
+            CredentialSet(
+                env_vars=("IOSXE_HOST", "IOSXE_USERNAME", "IOSXE_PASSWORD"),
+                label="Device Host",
+            ),
+        ),
         defaults_prefix="defaults.iosxe",
-        alt_url_env_vars=["IOSXE_HOST"],  # Alternative env var for URL
     ),
 }
 
-# Backward compatibility - remove in future version
-CREDENTIAL_PATTERNS: dict[str, list[str]] = {
-    controller_type: config.required_env_vars
-    for controller_type, config in CONTROLLER_REGISTRY.items()
-}
+# Module-level cache for the credential set that was matched during detection.
+# Populated by detect_controller_type(), consumed by get_matched_credential_set().
+_matched_credential_sets: dict[str, CredentialSet] = {}
 
 
 def detect_controller_type() -> ControllerTypeKey:
@@ -158,116 +206,131 @@ def detect_controller_type() -> ControllerTypeKey:
         "ACI"
     """
     logger.debug("Starting controller type detection")
-    logger.debug(f"Checking for credentials: {list(CREDENTIAL_PATTERNS.keys())}")
+    logger.debug(f"Checking for credentials: {list(CONTROLLER_REGISTRY.keys())}")
 
-    complete_sets, partial_sets = _find_credential_sets()
+    complete, partial = _find_credential_sets()
 
-    logger.debug(f"Complete credential sets found: {complete_sets}")
-    logger.debug(f"Partial credential sets found: {list(partial_sets.keys())}")
+    logger.debug(f"Complete credential sets found: {list(complete.keys())}")
+    logger.debug(f"Partial credential sets found: {partial}")
 
     # Check for multiple complete credential sets
-    if len(complete_sets) > 1:
-        error_message = _format_multiple_credentials_error(complete_sets)
-        logger.error(f"Multiple controller credentials detected: {complete_sets}")
+    if len(complete) > 1:
+        error_message = _format_multiple_credentials_error(list(complete.keys()))
+        logger.error(
+            f"Multiple controller credentials detected: {list(complete.keys())}"
+        )
         raise ValueError(error_message)
 
     # Check for no credentials at all
-    if not complete_sets and not partial_sets:
+    if not complete and not partial:
         error_message = _format_no_credentials_error()
         logger.error("No controller credentials found in environment")
         raise ValueError(error_message)
 
     # Check for incomplete credentials
-    if not complete_sets and partial_sets:
-        incomplete_info = [
-            f"{controller}: missing {', '.join(info['missing'])}"
-            for controller, info in partial_sets.items()
-        ]
-        lines = "\n".join(f"  - {info}" for info in incomplete_info)
-        error_message = (
-            f"Incomplete controller credentials detected:\n"
-            f"{lines}\n\n"
-            f"Please provide ALL required environment variables for your controller type."
-        )
-        logger.error(f"Incomplete credentials: {partial_sets}")
+    if not complete and partial:
+        error_message = _format_incomplete_credentials_error(partial)
+        logger.error(f"Incomplete credentials: {partial}")
         raise ValueError(error_message)
 
     # Exactly one complete set found - success
-    # complete_sets come from CONTROLLER_REGISTRY keys, which are always valid
-    # ControllerTypeKey values, but mypy can't infer this from dict iteration.
-    controller_type = cast(ControllerTypeKey, complete_sets[0])
-    logger.info(f"Detected controller type: {controller_type}")
+    controller_type = next(iter(complete))
+    _matched_credential_sets[controller_type] = complete[controller_type]
+    logger.info(
+        f"Detected controller type: {controller_type} "
+        f"(auth_method={complete[controller_type].auth_method})"
+    )
     return controller_type
 
 
-def _find_credential_sets() -> tuple[list[str], dict[str, CredentialSetStatus]]:
+def _is_env_var_set(var: str) -> bool:
+    """Check if env var exists and has a non-whitespace value."""
+    value = os.environ.get(var)
+    return bool(value and value.strip())
+
+
+def _find_credential_sets() -> tuple[
+    dict[ControllerTypeKey, CredentialSet],
+    list[ControllerTypeKey],
+]:
     """Find complete and partial credential sets in environment.
 
-    Examines environment variables to identify which controller types have
-    complete credentials configured and which have partial/incomplete credentials.
-
-    This function also handles alternative URL environment variables (e.g., IOSXE_HOST
-    as an alternative to IOSXE_URL) when configured in the ControllerConfig.
+    For each controller, iterates through its credential_sets in order. The first
+    set whose env_vars are all present and non-empty marks the controller as
+    complete. If no set is fully satisfied but at least one variable from any set
+    is present, the controller is reported as partial.
 
     Returns:
         A tuple containing:
-            - List of controller types with complete credentials
-            - Dictionary mapping controller types to CredentialSetStatus
-
-    Example:
-        >>> os.environ.update({"ACI_URL": "https://apic.local", "ACI_USERNAME": "admin"})
-        >>> complete, partial = _find_credential_sets()
-        >>> print(complete)
-        []
-        >>> print(partial)
-        {"ACI": {"present": ["ACI_URL", "ACI_USERNAME"], "missing": ["ACI_PASSWORD"]}}
+            - Dictionary mapping complete controller types to the winning CredentialSet
+            - List of controller types with partial credentials
     """
-    complete_sets: list[str] = []
-    partial_sets: dict[str, CredentialSetStatus] = {}
+    complete: dict[ControllerTypeKey, CredentialSet] = {}
+    partial: list[ControllerTypeKey] = []
 
     for controller_type, config in CONTROLLER_REGISTRY.items():
-        required_vars = config.required_env_vars
-        present_vars = []
-        missing_vars = []
+        found_complete = False
+        has_any_var = False
+        ct_key = cast(ControllerTypeKey, controller_type)
 
-        for var in required_vars:
-            # Check if variable exists AND is not empty
-            value = os.environ.get(var)
-            if value and value.strip():  # Non-empty value
-                present_vars.append(var)
-                logger.debug(f"  {controller_type}: Found {var}")
-            else:
-                # Check alternative URL env vars if this is the URL variable
-                alt_found = False
-                if var == config.url_env_var and config.alt_url_env_vars:
-                    for alt_var in config.alt_url_env_vars:
-                        alt_value = os.environ.get(alt_var)
-                        if alt_value and alt_value.strip():
-                            present_vars.append(alt_var)
-                            logger.debug(
-                                f"  {controller_type}: Found {alt_var} (alternative)"
-                            )
-                            alt_found = True
-                            break
+        for cred_set in config.credential_sets:
+            all_present = True
 
-                if not alt_found:
-                    missing_vars.append(var)
-                    if var in os.environ:
-                        logger.debug(f"  {controller_type}: Empty {var}")
-                    else:
-                        logger.debug(f"  {controller_type}: Missing {var}")
+            for var in cred_set.env_vars:
+                if _is_env_var_set(var):
+                    has_any_var = True
+                    logger.debug(f"  {controller_type}: Found {var}")
+                else:
+                    all_present = False
 
-        if present_vars and not missing_vars:
-            # All required variables present and non-empty
-            complete_sets.append(controller_type)
-        elif present_vars:
-            # Some but not all variables present
-            partial_sets[controller_type] = {
-                "present": present_vars,
-                "missing": missing_vars,
-            }
+            if all_present:
+                complete[ct_key] = cred_set
+                logger.debug(f"  {controller_type}: Complete via {cred_set.label}")
+                found_complete = True
+                break
 
-    return complete_sets, partial_sets
+        if not found_complete and has_any_var:
+            partial.append(ct_key)
+
+    return complete, partial
+
+
+def _format_incomplete_credentials_error(partial_controllers: Sequence[str]) -> str:
+    """Format error message for incomplete controller credentials.
+
+    Creates a detailed error message listing each partially configured
+    controller and its accepted credential sets, so the user knows
+    exactly which variables are needed.
+
+    Args:
+        partial_controllers: List of controller types with partial credentials.
+
+    Returns:
+        Formatted error message with accepted credential sets.
+
+    Example:
+        >>> error = _format_incomplete_credentials_error(["SDWAN"])
+        >>> print(error)
+        Incomplete controller credentials detected:
+        ...
+    """
+    lines_parts: list[str] = []
+    for controller in partial_controllers:
+        config = CONTROLLER_REGISTRY[controller]
+        set_descriptions = [
+            f"{cs.label}: {' + '.join(cs.env_vars)}" for cs in config.credential_sets
+        ]
+        line = f"{controller}: incomplete credentials"
+        line += "\n    Accepted credential sets:\n"
+        line += "\n".join(f"      - {desc}" for desc in set_descriptions)
+        lines_parts.append(line)
+    lines = "\n".join(f"  - {info}" for info in lines_parts)
+    return (
+        f"Incomplete controller credentials detected:\n"
+        f"{lines}\n\n"
+        f"Please provide all required variables for one of the "
+        f"accepted credential sets listed above."
+    )
 
 
 def _format_multiple_credentials_error(controllers: list[str]) -> str:
@@ -290,11 +353,6 @@ def _format_multiple_credentials_error(controllers: list[str]) -> str:
     """
     controller_list = ", ".join(controllers)
 
-    # Build list of all environment variables that should be unset
-    vars_to_unset: list[str] = []
-    for controller in controllers:
-        vars_to_unset.extend(CREDENTIAL_PATTERNS[controller])
-
     message = (
         f"Multiple controller credentials detected: {controller_list}\n\n"
         f"The test framework requires exactly one controller type to be configured.\n\n"
@@ -302,12 +360,24 @@ def _format_multiple_credentials_error(controllers: list[str]) -> str:
         f"1. Keep only one controller's credentials and unset the others:\n"
     )
 
+    # Collect all env vars per controller (union of all credential sets)
+    def _all_env_vars(controller: str) -> list[str]:
+        config = CONTROLLER_REGISTRY[controller]
+        seen: set[str] = set()
+        result: list[str] = []
+        for cs in config.credential_sets:
+            for v in cs.env_vars:
+                if v not in seen:
+                    seen.add(v)
+                    result.append(v)
+        return result
+
     # Add specific unset commands for each controller
     for controller in controllers:
         other_controllers = [c for c in controllers if c != controller]
         vars_to_remove = []
         for other in other_controllers:
-            vars_to_remove.extend(CREDENTIAL_PATTERNS[other])
+            vars_to_remove.extend(_all_env_vars(other))
 
         unset_command = f"   unset {' '.join(vars_to_remove)}"
         message += f"\n   To use {controller} only:\n{unset_command}\n"
@@ -342,10 +412,15 @@ def _format_no_credentials_error() -> str:
         "Please set environment variables for ONE of the following controller types:\n\n"
     )
 
-    for controller_type, required_vars in CREDENTIAL_PATTERNS.items():
+    for controller_type, config in CONTROLLER_REGISTRY.items():
         message += f"{controller_type}:\n"
-        for var in required_vars:
-            message += f"  export {var}=<value>\n"
+        for i, cred_set in enumerate(config.credential_sets):
+            if i > 0:
+                message += "  Or\n"
+            if len(config.credential_sets) > 1:
+                message += f"  ({cred_set.label}):\n"
+            for var in cred_set.env_vars:
+                message += f"  export {var}=<value>\n"
         message += "\n"
 
     message += (
@@ -424,9 +499,8 @@ def get_defaults_prefix(controller_type: str) -> str:
 def get_controller_url(controller_type: str) -> str:
     """Get the controller URL from environment variables.
 
-    Looks up the primary URL environment variable from CONTROLLER_REGISTRY, and
-    also checks alternative URL env vars if configured (e.g., IOSXE_HOST as an
-    alternative to IOSXE_URL).
+    Iterates through credential sets in order, returning the first env var value
+    found. This follows the same first-match-wins pattern as _find_credential_sets.
 
     Args:
         controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "IOSXE").
@@ -435,7 +509,7 @@ def get_controller_url(controller_type: str) -> str:
         The controller URL value from the environment.
 
     Raises:
-        KeyError: If neither the primary nor any alternative URL env var is set.
+        KeyError: If no credential set env var has a URL value set.
 
     Example:
         >>> os.environ["ACI_URL"] = "https://apic.example.com"
@@ -452,17 +526,43 @@ def get_controller_url(controller_type: str) -> str:
         # Fallback for unknown controller types
         return os.environ[f"{controller_type}_URL"]
 
-    # Try primary URL env var first
-    url_value = os.environ.get(config.url_env_var)
-    if url_value and url_value.strip():
-        return url_value.strip()
+    # Primary URL from the explicit url_env_var field
+    value = os.environ.get(config.url_env_var, "").strip()
+    if value:
+        return value
 
-    # Try alternative URL env vars if configured
-    if config.alt_url_env_vars:
-        for alt_var in config.alt_url_env_vars:
-            alt_value = os.environ.get(alt_var)
-            if alt_value and alt_value.strip():
-                return alt_value.strip()
+    # Fallback for alternative URL vars (e.g., IOSXE_HOST)
+    for cred_set in config.credential_sets:
+        if cred_set.env_vars[0] != config.url_env_var:
+            alt = os.environ.get(cred_set.env_vars[0], "").strip()
+            if alt:
+                return alt
 
-    # No URL found - raise KeyError with the primary var name
     raise KeyError(config.url_env_var)
+
+
+def get_matched_credential_set(controller_type: str) -> CredentialSet | None:
+    """Get the credential set that was matched during controller detection.
+
+    Returns the CredentialSet that satisfied detection for the given controller
+    type. This is populated by detect_controller_type() and is intended for use
+    by auth adapters in nac-test-pyats-common to determine which authentication
+    mechanism to use (via the auth_method attribute).
+
+    Args:
+        controller_type: The controller type key (e.g., "SDWAN", "ACI").
+
+    Returns:
+        The matched CredentialSet, or None if detect_controller_type() has not
+        been called or the controller type was not detected.
+
+    Example:
+        >>> detect_controller_type()  # populates the cache
+        'SDWAN'
+        >>> cred = get_matched_credential_set("SDWAN")
+        >>> cred.auth_method
+        'token'
+        >>> cred.label
+        'API Token (20.18+)'
+    """
+    return _matched_credential_sets.get(controller_type)

@@ -122,24 +122,47 @@ class EnvironmentValidator:
     def validate_controller_env(controller_type: str = "ACI") -> None:
         """Validate controller-specific environment variables.
 
-        This is a convenience method for validating controller credentials.
+        Iterates through the controller's credential_sets. If any set is fully
+        satisfied (all env vars present and non-empty), validation passes.
+        Otherwise reports all accepted credential sets so the user knows
+        exactly which variables are needed.
 
         Args:
-            controller_type: Type of controller (ACI, CC, etc.)
+            controller_type: Type of controller (ACI, CC, SDWAN, etc.)
 
         Raises:
-            SystemExit: If required variables are missing
+            SystemExit: If no credential set is fully satisfied
         """
-        required_vars = [
-            f"{controller_type}_URL",
-            f"{controller_type}_USERNAME",
-            f"{controller_type}_PASSWORD",
-        ]
-
-        # Use terminal's controller-specific formatter
-        def controller_formatter(missing: list[str]) -> str:
-            return terminal.format_env_var_error(missing, controller_type)
-
-        EnvironmentValidator.check_required_vars(
-            required_vars, exit_on_missing=True, custom_formatter=controller_formatter
+        from nac_test.utils.controller import (
+            CONTROLLER_REGISTRY,
+            _format_incomplete_credentials_error,
+            _is_env_var_set,
         )
+
+        config = CONTROLLER_REGISTRY.get(controller_type)
+        if config:
+            # Check each credential set — first fully satisfied wins
+            for cred_set in config.credential_sets:
+                if all(_is_env_var_set(v) for v in cred_set.env_vars):
+                    return  # Credentials satisfied
+
+            # No set fully satisfied — report all accepted credential sets
+            error_msg = _format_incomplete_credentials_error([controller_type])
+            sys.exit(error_msg)
+        else:
+            # Fallback for unknown controller types
+            required_vars = [
+                f"{controller_type}_URL",
+                f"{controller_type}_USERNAME",
+                f"{controller_type}_PASSWORD",
+            ]
+
+            # Use terminal's controller-specific formatter
+            def controller_formatter(missing: list[str]) -> str:
+                return terminal.format_env_var_error(missing, controller_type)
+
+            EnvironmentValidator.check_required_vars(
+                required_vars,
+                exit_on_missing=True,
+                custom_formatter=controller_formatter,
+            )

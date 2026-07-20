@@ -268,6 +268,46 @@ def test_chunked_list_rendering_produces_expected_content(tmp_path: Path) -> Non
     )
 
 
+def test_chunked_list_rendering_produces_expected_content_with_dict_parent(
+    tmp_path: Path,
+) -> None:
+    """Test chunked rendering for a 2-level object_path whose parent is a dict.
+
+    Verifies that when rendering templates with chunked iteration,
+    with a 2-level object_path whose parent is a dict,
+    the CLI creates output files with content split into the expected
+    chunks matching the expected_content.yaml specification.
+    Test uses object_path = "objects.hosts", where "objects" is a dict and "hosts" is a list.
+
+    Args:
+        tmp_path: Pytest fixture providing a temporary directory.
+    """
+    runner = CliRunner()
+    data_path = "tests/integration/fixtures/data_list_chunked_dict/"
+    templates_path = "tests/integration/fixtures/templates_list_chunked_dict/"
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            data_path,
+            "-t",
+            templates_path,
+            "-o",
+            str(tmp_path),
+            "--render-only",
+        ],
+    )
+    assert result.exit_code == 0, (
+        f"Chunked dict-parent rendering should succeed, got exit code "
+        f"{result.exit_code}: {result.output}"
+    )
+    robot_results_dir = tmp_path / ROBOT_RESULTS_DIRNAME
+    # Verify files and their content match expected content
+    verify_file_content(
+        Path(templates_path) / "expected_content.yaml", robot_results_dir
+    )
+
+
 def test_merged_data_model_creates_default_filename(tmp_path: Path) -> None:
     """Test that the merged data model is written with the expected filename and content."""
     runner = CliRunner()

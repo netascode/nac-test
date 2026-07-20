@@ -40,7 +40,9 @@ class TestResultCollector:
 
         # Open JSONL file for streaming writes
         self.jsonl_path = output_dir / f"{test_id}.jsonl"
-        self.jsonl_file = open(self.jsonl_path, "w", buffering=1)  # Line buffered
+        self.jsonl_file = open(
+            self.jsonl_path, "w", buffering=1, encoding="utf-8"
+        )  # Line buffered
 
         # Write metadata header as first line
         metadata_record = {

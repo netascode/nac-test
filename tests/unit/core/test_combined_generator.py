@@ -555,3 +555,29 @@ class TestHasReportFlag:
             assert "View Detailed Report →" in content
         else:
             assert "View Detailed Report →" not in content
+
+
+def test_combined_report_preserves_unicode_characters(
+    tmp_path: Path, robot_results: TestResults
+) -> None:
+    """Regression test for #630: HTML reports must preserve Unicode characters.
+
+    The combined_report.html.j2 template contains Unicode sort indicators
+    (↕, ↑, ↓) and navigation arrows (→).  On Windows (cp1252 locale),
+    writing these without encoding="utf-8" raises UnicodeEncodeError.
+
+    This test verifies the characters survive the full template-render-write
+    cycle.
+    """
+    generator = CombinedReportGenerator(tmp_path)
+    results = CombinedResults(robot=robot_results)
+    result_path = generator.generate_combined_summary(results)
+
+    assert result_path is not None
+    content = result_path.read_text(encoding="utf-8")
+
+    # These Unicode characters are in the Jinja2 template and must survive
+    # the render → write_text cycle on all platforms.
+    assert "↕" in content, "Sort indicator ↕ missing from rendered HTML"
+    assert "↑" in content, "Sort indicator ↑ missing from rendered HTML"
+    assert "↓" in content, "Sort indicator ↓ missing from rendered HTML"

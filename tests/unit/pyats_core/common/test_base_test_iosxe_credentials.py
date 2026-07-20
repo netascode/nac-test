@@ -1,15 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Tests for NACTestBase setup() with IOSXE controller (optional credentials).
+"""Tests for NACTestBase setup() with IOSXE controller credentials.
 
-IOSXE is unique among supported controllers - it's the only one that doesn't
-require USERNAME/PASSWORD environment variables. This is because D2D tests
-use device-specific credentials from the device inventory, not controller
-credentials.
-
-This test verifies that setup() handles optional credentials correctly for
-IOSXE while still requiring them for other controller types.
+IOSXE supports two URL forms (IOSXE_URL and IOSXE_HOST) via separate
+credential sets, but always requires USERNAME and PASSWORD alongside
+the URL/HOST variable. This test verifies that setup() handles IOSXE
+credentials correctly.
 """
 
 import json
@@ -40,20 +37,19 @@ def temp_data_model_file(
 class TestIOSXEOptionalCredentials:
     """Test that IOSXE controller type handles optional USERNAME/PASSWORD."""
 
-    def test_iosxe_setup_works_without_username_password(
+    def test_iosxe_setup_fails_without_username_password(
         self,
         nac_test_base_class: Any,
         temp_data_model_file: Path,
         iosxe_controller_env: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """setup() should succeed for IOSXE with only URL (no USERNAME/PASSWORD).
+        """setup() should fail for IOSXE without USERNAME/PASSWORD.
 
-        IOSXE is unique - it only requires IOSXE_URL per CONTROLLER_REGISTRY.
-        D2D tests use device-specific credentials from inventory, not controller
-        credentials.
+        IOSXE now requires IOSXE_USERNAME and IOSXE_PASSWORD in addition to
+        IOSXE_URL (or IOSXE_HOST). Detection should report incomplete credentials.
         """
-        # Remove USERNAME and PASSWORD to simulate real IOSXE environment
+        # Remove USERNAME and PASSWORD to simulate incomplete IOSXE environment
         monkeypatch.delenv("IOSXE_USERNAME", raising=False)
         monkeypatch.delenv("IOSXE_PASSWORD", raising=False)
 
@@ -62,16 +58,15 @@ class TestIOSXEOptionalCredentials:
         assert "IOSXE_USERNAME" not in os.environ
         assert "IOSXE_PASSWORD" not in os.environ
 
-        # Create instance
         instance = nac_test_base_class.__new__(nac_test_base_class)
 
-        # setup() should succeed even without USERNAME/PASSWORD
-        instance.setup()
+        # setup() should fail with incomplete credentials
+        with pytest.raises(ValueError) as exc_info:
+            instance.setup()
 
-        assert instance.controller_type == "IOSXE"
-        assert instance.controller_url == "https://test.example.com"
-        assert instance.username is None
-        assert instance.password is None
+        error_msg = str(exc_info.value)
+        assert "Incomplete controller credentials detected" in error_msg
+        assert "IOSXE" in error_msg
 
     def test_iosxe_setup_works_with_username_password(
         self,
@@ -141,4 +136,4 @@ class TestIOSXEOptionalCredentials:
             instance.setup()
 
         assert "Incomplete controller credentials" in str(exc_info.value)
-        assert "ACI: missing ACI_USERNAME" in str(exc_info.value)
+        assert "ACI: incomplete credentials" in str(exc_info.value)

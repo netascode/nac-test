@@ -83,7 +83,7 @@ class DeviceExecutor:
             try:
                 # Create temporary files for job and testbed
                 with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".py", delete=False
+                    mode="w", suffix=".py", delete=False, encoding="utf-8"
                 ) as job_file:
                     job_content = self.job_generator.generate_device_centric_job(
                         device, test_files
@@ -92,7 +92,7 @@ class DeviceExecutor:
                     job_file_path = Path(job_file.name)
 
                 with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".yaml", delete=False
+                    mode="w", suffix=".yaml", delete=False, encoding="utf-8"
                 ) as testbed_file:
                     testbed_content = TestbedGenerator.generate_testbed_yaml(
                         device, base_testbed_path=self.custom_testbed_path
