@@ -1,3 +1,7 @@
+# unreleased
+
+- robot rendering: added support for dicts as parent_key in `iterate_list_chunked` 
+
 # 2.0.0
 
 ## Major Features
