@@ -1,0 +1,77 @@
+# used to verify the actual content of the rendered file
+#
+# Dict-parent chunking (object_path "objects.hosts"): 5 hosts in the Global
+# domain at chunk size 2 -> 3 chunks of 2, 2, 1. The sibling "networks" list
+# under the same dict parent is preserved untouched in every chunk.
+Global/test1_001.robot: |
+  *** Settings ***
+  Documentation   Test1
+
+  *** Test Cases ***
+
+  Test Global
+
+  Test Global Host host1
+      Should Be Equal   10.0.0.1   10.0.0.1
+
+  Test Global Host host2
+      Should Be Equal   10.0.0.2   10.0.0.2
+
+  Test Global Network net1
+      Should Be Equal   10.0.0.0/24   10.0.0.0/24
+
+Global/test1_002.robot: |
+  *** Settings ***
+  Documentation   Test1
+
+  *** Test Cases ***
+
+  Test Global
+
+  Test Global Host host3
+      Should Be Equal   10.0.0.3   10.0.0.3
+
+  Test Global Host host4
+      Should Be Equal   10.0.0.4   10.0.0.4
+
+  Test Global Network net1
+      Should Be Equal   10.0.0.0/24   10.0.0.0/24
+
+Global/test1_003.robot: |
+  *** Settings ***
+  Documentation   Test1
+
+  *** Test Cases ***
+
+  Test Global
+
+  Test Global Host host5
+      Should Be Equal   10.0.0.5   10.0.0.5
+
+  Test Global Network net1
+      Should Be Equal   10.0.0.0/24   10.0.0.0/24
+
+Global/Child/test1_001.robot: |
+  *** Settings ***
+  Documentation   Test1
+
+  *** Test Cases ***
+
+  Test Global/Child
+
+  Test Global/Child Host host6
+      Should Be Equal   10.1.0.1   10.1.0.1
+
+  Test Global/Child Network net2
+      Should Be Equal   10.1.0.0/24   10.1.0.0/24
+
+Global/Child2/test1_001.robot: |
+  *** Settings ***
+  Documentation   Test1
+
+  *** Test Cases ***
+
+  Test Global/Child2
+
+  Test Global/Child2 Network net3
+      Should Be Equal   10.2.0.0/24   10.2.0.0/24
