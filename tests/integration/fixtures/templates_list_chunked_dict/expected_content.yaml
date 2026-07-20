@@ -64,3 +64,14 @@ Global/Child/test1_001.robot: |
 
   Test Global/Child Network net2
       Should Be Equal   10.1.0.0/24   10.1.0.0/24
+
+Global/Child2/test1_001.robot: |
+  *** Settings ***
+  Documentation   Test1
+
+  *** Test Cases ***
+
+  Test Global/Child2
+
+  Test Global/Child2 Network net3
+      Should Be Equal   10.2.0.0/24   10.2.0.0/24

@@ -170,11 +170,13 @@ class RobotWriter:
             List of modified data structures, each containing a subset of
             objects, or ``[data]`` unchanged if the path does not hold a list
         """
-        container = data
+        container: Any = data
         for key in path_parts[:-1]:
-            container = container[key]
-        objects = container.get(path_parts[-1], [])
-        if not isinstance(objects, list):
+            container = container.get(key)
+            if not isinstance(container, dict):
+                return [data]
+        objects = container.get(path_parts[-1])
+        if not isinstance(objects, list) or not objects:
             return [data]
 
         chunked_data = []

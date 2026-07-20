@@ -17,7 +17,7 @@ Test {{ domain.name }} Host {{ host.name }}
 {% for net in domain.objects.networks | default([]) %}
 
 Test {{ domain.name }} Network {{ net.name }}
-    Should Be Equal   {{ net.cidr }}   {{ net.cidr }}
+    Should Be Equal   {{ net.prefix }}   {{ net.prefix }}
 {% endfor %}
 
 {% endif %}
