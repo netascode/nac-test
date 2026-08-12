@@ -172,6 +172,19 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         ),
         defaults_prefix="defaults.iosxe",
     ),
+    "NXOS": ControllerConfig(
+        display_name="NX-OS",
+        url_env_var="NXOS_URL",
+        env_var_prefix="NXOS",
+        # Direct device access, no controller credentials required
+        credential_sets=(
+            CredentialSet(
+                env_vars=("NXOS_URL",),
+                label="Device URL",
+            ),
+        ),
+        defaults_prefix="defaults.nxos",
+    ),
 }
 
 # Module-level cache for the credential set that was matched during detection.
