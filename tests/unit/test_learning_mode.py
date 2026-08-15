@@ -169,6 +169,8 @@ class TestCLILearnFlag:
 
     def test_learn_flag_accepted(self) -> None:
         """CLI accepts --learn flag without error."""
+        import re
+
         from typer.testing import CliRunner
 
         from nac_test.cli.main import app
@@ -176,4 +178,6 @@ class TestCLILearnFlag:
         runner = CliRunner()
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
-        assert "--learn" in result.output
+        # Strip ANSI escape codes before checking (Rich adds them on Linux)
+        plain_output = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+        assert "--learn" in plain_output
