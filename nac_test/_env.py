@@ -98,3 +98,26 @@ def get_positive_numeric_env(
             )
 
     return default
+
+
+def is_env_var_set(var: str) -> bool:
+    """Check if an environment variable exists and has a non-whitespace value.
+
+    Args:
+        var: Environment variable name.
+
+    Returns:
+        True if the variable exists and contains non-whitespace content.
+
+    Example:
+        >>> os.environ["MY_VAR"] = "value"
+        >>> is_env_var_set("MY_VAR")
+        True
+        >>> os.environ["EMPTY"] = "   "
+        >>> is_env_var_set("EMPTY")
+        False
+        >>> is_env_var_set("NOT_SET")
+        False
+    """
+    value = os.environ.get(var)
+    return bool(value and value.strip())

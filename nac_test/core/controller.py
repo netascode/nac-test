@@ -22,6 +22,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
 
+from nac_test._env import is_env_var_set
 from nac_test.core.types import ControllerContext, ControllerTypeKey
 
 logger = logging.getLogger(__name__)
@@ -207,50 +208,6 @@ class IncompleteCredentials(ResolutionError):
         )
 
 
-def detect_controller_type() -> ControllerTypeKey:
-    """Detect the controller type based on environment variables.
-
-    .. deprecated::
-        This function is retained for backwards compatibility with external
-        packages (e.g., ``nac-test-pyats-common``) that have not yet migrated
-        to :func:`resolve_controller`. New code should use ``resolve_controller()``
-        directly and handle :class:`ResolutionError` subtypes. This function
-        will be removed once all consumers have migrated.
-
-    This function examines environment variables to determine which network controller
-    architecture is being targeted. It ensures exactly one controller type has credentials
-    configured to prevent ambiguous test contexts.
-
-    Controller credentials are required for ALL test types:
-    - API tests: Use credentials directly for controller authentication
-    - D2D tests: Use controller type to determine device resolution logic
-
-    Returns:
-        The detected controller type (e.g., "ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE").
-
-    Raises:
-        ValueError: If no controller credentials are found, multiple controllers are
-            configured, or credentials are incomplete.
-
-    Example:
-        >>> os.environ.update({"ACI_URL": "https://apic.local",
-        ...                    "ACI_USERNAME": "admin",
-        ...                    "ACI_PASSWORD": "pass"})
-        >>> controller = detect_controller_type()
-        >>> print(controller)
-        "ACI"
-
-    Note:
-        This function delegates to :func:`resolve_controller` and converts typed
-        exceptions to ``ValueError`` for backwards compatibility with existing callers.
-    """
-    try:
-        ctx = resolve_controller()
-        return ctx.controller_type
-    except ResolutionError as e:
-        raise ValueError(format_resolution_error(e)) from e
-
-
 def resolve_controller() -> ControllerContext:
     """Resolve the active controller from environment variables.
 
@@ -301,6 +258,46 @@ def resolve_controller() -> ControllerContext:
     return ctx
 
 
+def get_controller_context() -> ControllerContext:
+    """Get the resolved controller context in a subprocess.
+
+    This function is designed for use by ``NACTestBase.setup()`` in PyATS
+    subprocesses. The parent process (``CombinedOrchestrator``) resolves the
+    controller via ``resolve_controller()`` and passes the result to
+    ``PyATSOrchestrator``, which serializes it to ``NAC_TEST_CONTROLLER_CONTEXT``
+    before launching subprocesses.
+
+    **Primary path (subprocess):** Deserializes from ``NAC_TEST_CONTROLLER_CONTEXT``
+    environment variable set by ``PyATSOrchestrator``.
+
+    **Fallback (transitional):** If the env var is absent, falls back to
+    ``detect_controller_type()`` for backwards compatibility. This fallback
+    will be removed in Phase 3 once all consumers are migrated.
+
+    Returns:
+        ControllerContext with controller_type and auth_method.
+
+    Raises:
+        ValueError: If no controller credentials are found (via fallback path).
+    """
+    raw = os.environ.get("NAC_TEST_CONTROLLER_CONTEXT")
+    if raw:
+        return ControllerContext.from_json(raw)
+
+    # --- Transitional fallback (remove in Phase 3) -----------------------
+    logging.getLogger(__name__).info(
+        "NAC_TEST_CONTROLLER_CONTEXT not set — falling back to "
+        "detect_controller_type(). This fallback will be removed in a "
+        "future release."
+    )
+
+    controller_type = detect_controller_type()
+    return ControllerContext(
+        controller_type=controller_type,
+        auth_method=_infer_auth_method(controller_type),
+    )
+
+
 def format_resolution_error(error: ResolutionError) -> str:
     """Format a :class:`ResolutionError` into a user-facing message.
 
@@ -316,10 +313,179 @@ def format_resolution_error(error: ResolutionError) -> str:
     return str(error)
 
 
-def _is_env_var_set(var: str) -> bool:
-    """Check if env var exists and has a non-whitespace value."""
-    value = os.environ.get(var)
-    return bool(value and value.strip())
+def get_display_name(controller_type: str) -> str:
+    """Get the user-facing display name for a controller type.
+
+    Looks up the display name from CONTROLLER_REGISTRY. If the controller type
+    is not registered, returns the controller_type string as-is for graceful
+    degradation.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
+
+    Returns:
+        The user-facing display name (e.g., "APIC", "SDWAN Manager", "Catalyst Center"),
+        or the controller_type string if not found in registry.
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    return config.display_name if config else controller_type
+
+
+def get_env_var_prefix(controller_type: str) -> str:
+    """Get the environment variable prefix for a controller type.
+
+    Looks up the env_var_prefix from CONTROLLER_REGISTRY. If the controller type
+    is not registered, returns the controller_type string as-is for graceful
+    degradation.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
+
+    Returns:
+        The environment variable prefix (e.g., "ACI", "SDWAN", "CC"),
+        or the controller_type string if not found in registry.
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    return config.env_var_prefix if config else controller_type
+
+
+def get_defaults_prefix(controller_type: str) -> str:
+    """Get the JMESPath defaults prefix for a controller type.
+
+    Looks up the defaults_prefix from CONTROLLER_REGISTRY. If the controller type
+    is not registered, constructs a default prefix of "defaults.<controller_type_lower>"
+    for graceful degradation.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
+
+    Returns:
+        The JMESPath defaults prefix (e.g., "defaults.apic", "defaults.sdwan"),
+        or "defaults.<controller_type_lower>" if not found in registry.
+
+    Example:
+        >>> get_defaults_prefix("ACI")
+        'defaults.apic'
+        >>> get_defaults_prefix("SDWAN")
+        'defaults.sdwan'
+        >>> get_defaults_prefix("UNKNOWN")
+        'defaults.unknown'
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    return config.defaults_prefix if config else f"defaults.{controller_type.lower()}"
+
+
+def get_controller_url(controller_type: str) -> str:
+    """Get the controller URL from environment variables.
+
+    Iterates through credential sets in order, returning the first env var value
+    found. This follows the same first-match-wins pattern as _find_credential_sets.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "IOSXE").
+
+    Returns:
+        The controller URL value from the environment.
+
+    Raises:
+        KeyError: If no credential set env var has a URL value set.
+
+    Example:
+        >>> os.environ["ACI_URL"] = "https://apic.example.com"
+        >>> get_controller_url("ACI")
+        'https://apic.example.com'
+
+        >>> os.environ["IOSXE_HOST"] = "192.168.1.1"
+        >>> get_controller_url("IOSXE")  # Returns IOSXE_HOST when IOSXE_URL not set
+        '192.168.1.1'
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+
+    if config is None:
+        # Fallback for unknown controller types
+        return os.environ[f"{controller_type}_URL"]
+
+    # Primary URL from the explicit url_env_var field
+    value = os.environ.get(config.url_env_var, "").strip()
+    if value:
+        return value
+
+    # Fallback for alternative URL vars (e.g., IOSXE_HOST)
+    for cred_set in config.credential_sets:
+        if cred_set.env_vars[0] != config.url_env_var:
+            alt = os.environ.get(cred_set.env_vars[0], "").strip()
+            if alt:
+                return alt
+
+    raise KeyError(config.url_env_var)
+
+
+def detect_controller_type() -> ControllerTypeKey:
+    """Detect the controller type based on environment variables.
+
+    .. deprecated::
+        This function is retained for backwards compatibility with external
+        packages (e.g., ``nac-test-pyats-common``) that have not yet migrated
+        to :func:`resolve_controller`. New code should use ``resolve_controller()``
+        directly and handle :class:`ResolutionError` subtypes. This function
+        will be removed once all consumers have migrated.
+
+    This function examines environment variables to determine which network controller
+    architecture is being targeted. It ensures exactly one controller type has credentials
+    configured to prevent ambiguous test contexts.
+
+    Controller credentials are required for ALL test types:
+    - API tests: Use credentials directly for controller authentication
+    - D2D tests: Use controller type to determine device resolution logic
+
+    Returns:
+        The detected controller type (e.g., "ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE").
+
+    Raises:
+        ValueError: If no controller credentials are found, multiple controllers are
+            configured, or credentials are incomplete.
+
+    Example:
+        >>> os.environ.update({"ACI_URL": "https://apic.local",
+        ...                    "ACI_USERNAME": "admin",
+        ...                    "ACI_PASSWORD": "pass"})
+        >>> controller = detect_controller_type()
+        >>> print(controller)
+        "ACI"
+
+    Note:
+        This function delegates to :func:`resolve_controller` and converts typed
+        exceptions to ``ValueError`` for backwards compatibility with existing callers.
+    """
+    try:
+        ctx = resolve_controller()
+        return ctx.controller_type
+    except ResolutionError as e:
+        raise ValueError(format_resolution_error(e)) from e
+
+
+def get_matched_credential_set(controller_type: str) -> CredentialSet | None:
+    """Get the credential set that was matched during controller detection.
+
+    .. deprecated::
+        This function is a transitional API for ``nac-test-pyats-common`` auth
+        adapters. It will be removed in Phase 3 once auth adapters migrate to
+        using ``get_controller_context().auth_method`` directly. New code should
+        not use this function.
+
+    Returns the CredentialSet that satisfied detection for the given controller
+    type. This is populated by detect_controller_type() / resolve_controller()
+    and is intended for use by auth adapters in nac-test-pyats-common to
+    determine which authentication mechanism to use.
+
+    Args:
+        controller_type: The controller type key (e.g., "SDWAN", "ACI").
+
+    Returns:
+        The matched CredentialSet, or None if detection has not been called
+        or the controller type was not detected.
+    """
+    return _matched_credential_sets.get(controller_type)
 
 
 def _find_credential_sets() -> tuple[
@@ -350,7 +516,7 @@ def _find_credential_sets() -> tuple[
             all_present = True
 
             for var in cred_set.env_vars:
-                if _is_env_var_set(var):
+                if is_env_var_set(var):
                     has_any_var = True
                     logger.debug(f"  {controller_type}: Found {var}")
                 else:
@@ -366,6 +532,23 @@ def _find_credential_sets() -> tuple[
             partial.append(ct_key)
 
     return complete, partial
+
+
+def _infer_auth_method(controller_type: str) -> str:
+    """Infer auth_method by scanning env vars for a controller type.
+
+    Used only in the transitional fallback path of
+    ``get_controller_context()`` when ``NAC_TEST_CONTROLLER_CONTEXT``
+    is absent.  Mirrors the logic of ``_find_credential_sets()`` but
+    returns only the auth_method string.
+    """
+    config = CONTROLLER_REGISTRY.get(controller_type)
+    if config is None:
+        return "session"
+    for cred_set in config.credential_sets:
+        if all(is_env_var_set(v) for v in cred_set.env_vars):
+            return cred_set.auth_method
+    return "session"
 
 
 def _format_incomplete_credentials_error(partial_controllers: Sequence[str]) -> str:
@@ -505,182 +688,3 @@ def _format_no_credentials_error() -> str:
     )
 
     return message
-
-
-def get_display_name(controller_type: str) -> str:
-    """Get the user-facing display name for a controller type.
-
-    Looks up the display name from CONTROLLER_REGISTRY. If the controller type
-    is not registered, returns the controller_type string as-is for graceful
-    degradation.
-
-    Args:
-        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
-
-    Returns:
-        The user-facing display name (e.g., "APIC", "SDWAN Manager", "Catalyst Center"),
-        or the controller_type string if not found in registry.
-    """
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    return config.display_name if config else controller_type
-
-
-def get_env_var_prefix(controller_type: str) -> str:
-    """Get the environment variable prefix for a controller type.
-
-    Looks up the env_var_prefix from CONTROLLER_REGISTRY. If the controller type
-    is not registered, returns the controller_type string as-is for graceful
-    degradation.
-
-    Args:
-        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
-
-    Returns:
-        The environment variable prefix (e.g., "ACI", "SDWAN", "CC"),
-        or the controller_type string if not found in registry.
-    """
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    return config.env_var_prefix if config else controller_type
-
-
-def get_defaults_prefix(controller_type: str) -> str:
-    """Get the JMESPath defaults prefix for a controller type.
-
-    Looks up the defaults_prefix from CONTROLLER_REGISTRY. If the controller type
-    is not registered, constructs a default prefix of "defaults.<controller_type_lower>"
-    for graceful degradation.
-
-    Args:
-        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
-
-    Returns:
-        The JMESPath defaults prefix (e.g., "defaults.apic", "defaults.sdwan"),
-        or "defaults.<controller_type_lower>" if not found in registry.
-
-    Example:
-        >>> get_defaults_prefix("ACI")
-        'defaults.apic'
-        >>> get_defaults_prefix("SDWAN")
-        'defaults.sdwan'
-        >>> get_defaults_prefix("UNKNOWN")
-        'defaults.unknown'
-    """
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    return config.defaults_prefix if config else f"defaults.{controller_type.lower()}"
-
-
-def get_controller_url(controller_type: str) -> str:
-    """Get the controller URL from environment variables.
-
-    Iterates through credential sets in order, returning the first env var value
-    found. This follows the same first-match-wins pattern as _find_credential_sets.
-
-    Args:
-        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "IOSXE").
-
-    Returns:
-        The controller URL value from the environment.
-
-    Raises:
-        KeyError: If no credential set env var has a URL value set.
-
-    Example:
-        >>> os.environ["ACI_URL"] = "https://apic.example.com"
-        >>> get_controller_url("ACI")
-        'https://apic.example.com'
-
-        >>> os.environ["IOSXE_HOST"] = "192.168.1.1"
-        >>> get_controller_url("IOSXE")  # Returns IOSXE_HOST when IOSXE_URL not set
-        '192.168.1.1'
-    """
-    config = CONTROLLER_REGISTRY.get(controller_type)
-
-    if config is None:
-        # Fallback for unknown controller types
-        return os.environ[f"{controller_type}_URL"]
-
-    # Primary URL from the explicit url_env_var field
-    value = os.environ.get(config.url_env_var, "").strip()
-    if value:
-        return value
-
-    # Fallback for alternative URL vars (e.g., IOSXE_HOST)
-    for cred_set in config.credential_sets:
-        if cred_set.env_vars[0] != config.url_env_var:
-            alt = os.environ.get(cred_set.env_vars[0], "").strip()
-            if alt:
-                return alt
-
-    raise KeyError(config.url_env_var)
-
-
-def get_matched_credential_set(controller_type: str) -> CredentialSet | None:
-    """Get the credential set that was matched during controller detection.
-
-    Returns the CredentialSet that satisfied detection for the given controller
-    type. This is populated by detect_controller_type() and is intended for use
-    by auth adapters in nac-test-pyats-common to determine which authentication
-    mechanism to use (via the auth_method attribute).
-
-    Args:
-        controller_type: The controller type key (e.g., "SDWAN", "ACI").
-
-    Returns:
-        The matched CredentialSet, or None if detect_controller_type() has not
-        been called or the controller type was not detected.
-
-    Example:
-        >>> detect_controller_type()  # populates the cache
-        'SDWAN'
-        >>> cred = get_matched_credential_set("SDWAN")
-        >>> cred.auth_method
-        'token'
-        >>> cred.label
-        'API Token (20.18+)'
-    """
-    return _matched_credential_sets.get(controller_type)
-
-
-def _infer_auth_method(controller_type: str) -> str:
-    """Infer auth_method by scanning env vars for a controller type.
-
-    Used only in the transitional fallback path of
-    ``get_controller_context()`` when ``NAC_TEST_CONTROLLER_CONTEXT``
-    is absent.  Mirrors the logic of ``_find_credential_sets()`` but
-    returns only the auth_method string.
-    """
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    if config is None:
-        return "session"
-    for cred_set in config.credential_sets:
-        if all(_is_env_var_set(v) for v in cred_set.env_vars):
-            return cred_set.auth_method
-    return "session"
-
-
-def get_controller_context() -> ControllerContext:
-    """Get the resolved controller context.
-
-    Works in both parent and subprocess:
-
-    * **Subprocess:** deserializes from the ``NAC_TEST_CONTROLLER_CONTEXT``
-      environment variable (set by ``PyATSOrchestrator`` before launch).
-    * **Fallback (transitional):** re-derives via ``detect_controller_type()``
-      if the env var is absent. This fallback will be removed in Phase 3.
-    """
-    raw = os.environ.get("NAC_TEST_CONTROLLER_CONTEXT")
-    if raw:
-        return ControllerContext.from_json(raw)
-
-    # --- Transitional fallback (remove in Phase 3) -----------------------
-    logging.getLogger(__name__).info(
-        "NAC_TEST_CONTROLLER_CONTEXT not set — falling back to "
-        "detect_controller_type(). This fallback will be removed in a "
-        "future release."
-    )
-
-    controller_type = detect_controller_type()
-    return ControllerContext(
-        controller_type=controller_type,
-        auth_method=_infer_auth_method(controller_type),
-    )
