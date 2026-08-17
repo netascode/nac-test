@@ -666,28 +666,18 @@ def get_controller_context() -> ControllerContext:
     * **Subprocess:** deserializes from the ``NAC_TEST_CONTROLLER_CONTEXT``
       environment variable (set by ``PyATSOrchestrator`` before launch).
     * **Fallback (transitional):** re-derives via ``detect_controller_type()``
-      if the env var is absent.  Emits a visible ``logging.warning`` because
-      ``DeprecationWarning`` is suppressed by default in production.
-      Set ``NAC_TEST_STRICT_CONTEXT=1`` to make this a hard error during
-      development and CI.  The fallback will be removed in Phase 3.
+      if the env var is absent. This fallback will be removed in Phase 3.
     """
     raw = os.environ.get("NAC_TEST_CONTROLLER_CONTEXT")
     if raw:
         return ControllerContext.from_json(raw)
 
     # --- Transitional fallback (remove in Phase 3) -----------------------
-    logging.getLogger(__name__).warning(
+    logging.getLogger(__name__).info(
         "NAC_TEST_CONTROLLER_CONTEXT not set — falling back to "
         "detect_controller_type(). This fallback will be removed in a "
-        "future release. If both packages are at the same version, this "
-        "indicates a bug in the parent process."
+        "future release."
     )
-
-    if os.environ.get("NAC_TEST_STRICT_CONTEXT") == "1":
-        raise RuntimeError(
-            "NAC_TEST_CONTROLLER_CONTEXT not set and NAC_TEST_STRICT_CONTEXT=1. "
-            "Parent process must call resolve_controller() and serialize context."
-        )
 
     controller_type = detect_controller_type()
     return ControllerContext(

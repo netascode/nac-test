@@ -835,15 +835,6 @@ class TestGetControllerContext:
         finally:
             os.environ.pop("NAC_TEST_CONTROLLER_CONTEXT", None)
 
-    def test_strict_mode_raises(self) -> None:
-        """NAC_TEST_STRICT_CONTEXT=1 makes missing context a hard error."""
-        os.environ["NAC_TEST_STRICT_CONTEXT"] = "1"
-        try:
-            with pytest.raises(RuntimeError, match="NAC_TEST_STRICT_CONTEXT"):
-                get_controller_context()
-        finally:
-            os.environ.pop("NAC_TEST_STRICT_CONTEXT", None)
-
 
 class TestFormatResolutionError:
     """Tests for format_resolution_error()."""
