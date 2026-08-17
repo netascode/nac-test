@@ -4,7 +4,6 @@
 """Tests for controller type detection utilities."""
 
 import os
-from collections.abc import Generator
 from unittest.mock import patch
 
 import pytest
@@ -18,7 +17,6 @@ from nac_test.core.controller import (
     _find_credential_sets,
     _format_multiple_credentials_error,
     _format_no_credentials_error,
-    _matched_credential_sets,
     detect_controller_type,
     format_resolution_error,
     get_controller_context,
@@ -27,37 +25,6 @@ from nac_test.core.controller import (
     resolve_controller,
 )
 from nac_test.core.types import ControllerContext
-
-
-@pytest.fixture(autouse=True)
-def clean_environment() -> Generator[None, None, None]:
-    """Clean controller env vars and matched-credential cache for every test."""
-    import nac_test.core.controller as ctrl_module
-
-    original_env = os.environ.copy()
-
-    for config in CONTROLLER_REGISTRY.values():
-        for cred_set in config.credential_sets:
-            for var in cred_set.env_vars:
-                os.environ.pop(var, None)
-
-    os.environ.pop("CONTROLLER_TYPE", None)
-    os.environ.pop("NAC_TEST_CONTROLLER_CONTEXT", None)
-    os.environ.pop("NAC_TEST_STRICT_CONTEXT", None)
-
-    # Save and clear module-level caches
-    old_matched = dict(ctrl_module._matched_credential_sets)
-    _matched_credential_sets.clear()
-
-    yield
-
-    # Restore module-level caches
-    _matched_credential_sets.clear()
-    ctrl_module._matched_credential_sets.update(old_matched)
-
-    # Restore environment
-    os.environ.clear()
-    os.environ.update(original_env)
 
 
 class TestControllerDetection:

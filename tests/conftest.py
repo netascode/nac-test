@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+from nac_test.core.controller import CONTROLLER_REGISTRY
 from nac_test.core.types import ControllerContext
 from tests.e2e.mocks.mock_server import MockAPIServer
 
@@ -64,6 +65,30 @@ def clear_controller_credentials() -> None:
     keys_to_remove = [key for key in os.environ.keys() if pattern.match(key)]
     for key in keys_to_remove:
         del os.environ[key]
+
+
+# Derive controller env var prefixes from registry - stays in sync automatically
+CONTROLLER_ENV_PREFIXES = tuple(f"{key}_" for key in CONTROLLER_REGISTRY.keys())
+
+
+@pytest.fixture(autouse=True)
+def clean_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Clear all controller-related environment variables and caches.
+
+    Ensures tests run in isolation regardless of env var leakage
+    from other tests when running in parallel with pytest-xdist.
+    """
+    for key in list(os.environ.keys()):
+        if any(prefix in key for prefix in CONTROLLER_ENV_PREFIXES):
+            monkeypatch.delenv(key, raising=False)
+
+    # Clear serialized controller context from previous tests
+    monkeypatch.delenv("NAC_TEST_CONTROLLER_CONTEXT", raising=False)
+
+    # Clear module-level credential cache to prevent cross-test pollution
+    from nac_test.core import controller
+
+    controller._matched_credential_sets.clear()
 
 
 @pytest.fixture(scope="session", autouse=True)
