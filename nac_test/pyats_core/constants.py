@@ -123,6 +123,10 @@ OVERFLOW_DIR_OVERRIDE: str | None = os.environ.get("NAC_TEST_PYATS_OVERFLOW_DIR"
 # relative (dot-notation) test names.
 ENV_TEST_DIR: str = "NAC_TEST_TEST_DIR"
 
+# Valid test types for PyATS test classification
+# Used by discovery and cleanup modules
+VALID_TEST_TYPES: frozenset[str] = frozenset({"api", "d2d"})
+
 # Re-export all constants for backward compatibility
 __all__ = [
     # From core
@@ -169,4 +173,6 @@ __all__ = [
     "OVERFLOW_DIR_OVERRIDE",
     # Environment variable name
     "ENV_TEST_DIR",
+    # Test type classification
+    "VALID_TEST_TYPES",
 ]

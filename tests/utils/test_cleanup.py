@@ -11,7 +11,7 @@ from _pytest.logging import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from nac_test.core.constants import PYATS_RESULTS_DIRNAME
-from nac_test.pyats_core.discovery.test_type_resolver import VALID_TEST_TYPES
+from nac_test.pyats_core.constants import VALID_TEST_TYPES
 from nac_test.utils.cleanup import cleanup_stale_test_artifacts
 
 

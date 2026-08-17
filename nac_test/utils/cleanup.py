@@ -14,7 +14,7 @@ from types import FrameType
 from typing import Any
 
 from nac_test.core.constants import DEBUG_MODE, IS_WINDOWS
-from nac_test.pyats_core.discovery.test_type_resolver import VALID_TEST_TYPES
+from nac_test.pyats_core.constants import VALID_TEST_TYPES
 
 logger = logging.getLogger(__name__)
 

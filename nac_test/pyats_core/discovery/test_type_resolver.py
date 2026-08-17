@@ -93,9 +93,6 @@ from nac_test.pyats_core.common.types import (
 
 logger = logging.getLogger(__name__)
 
-# Module-level constants
-VALID_TEST_TYPES: Final[set[TestType]] = {"api", "d2d"}
-
 # Base class to test type mapping
 # This dictionary maps known PyATS test base class names to their test types
 BASE_CLASS_MAPPING: Final[dict[str, TestType]] = {
