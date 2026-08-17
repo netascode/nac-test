@@ -52,11 +52,11 @@ CLI main()
        ├─ _discover_test_types() → has_pyats, has_robot
        ├─ IF has_pyats AND NOT render_only AND NOT dry_run:
        │    └─ _run_pre_flight_checks()
-       │         ├─ ctx = resolve_controller()               ← SINGLE RESOLUTION
-       │         │    (core/controller.py — raises typed exceptions on failure)
-       │         ├─ except ResolutionError:
-       │         │    format_resolution_error(e, REGISTRY)
-       │         │    → record PreFlightFailure, return
+        │         ├─ ctx = resolve_controller()               ← SINGLE RESOLUTION
+        │         │    (core/controller.py — raises typed exceptions on failure)
+        │         ├─ except ResolutionError:
+        │         │    format_resolution_error(e)
+        │         │    → record PreFlightFailure, return
        │         ├─ result = preflight_auth_check(ctx)       ← AUTH REACHABILITY
        │         │    (core/controller_auth.py — HTTP auth, populates AuthCache)
        │         └─ self.controller_context = ctx             ← SAVED FOR LATER USE
@@ -96,7 +96,7 @@ Resolution returns a `ControllerContext` on success or raises typed exceptions o
 - Render-only: skip resolution entirely
 - Future: any caller can handle resolution errors differently
 
-**Dry-run semantics:** Pre-flight checks (resolution + auth reachability) are gated by `has_pyats AND NOT dry_run`. In dry-run mode, `controller_context` stays `None`, and no subprocess is launched — so the absence of context is never observed by workers.
+**Dry-run semantics:** Pre-flight checks (resolution + auth reachability) are gated by `has_pyats AND NOT dry_run` in `CombinedOrchestrator`. In dry-run mode, `controller_context` stays `None`, and no subprocess is launched. Note: `PyATSOrchestrator` has a transitional fallback that calls `resolve_controller()` if `controller_context` is `None` — this means standalone `PyATSOrchestrator` usage without a parent orchestrator will still attempt resolution. The fallback will be removed in Phase 3.
 
 ### 3. Subprocess Receives, Never Re-derives
 
@@ -142,18 +142,10 @@ def get_controller_context() -> ControllerContext:
     # - This fallback masking a parent bug is a real risk
     # - logging.warning is always visible in test and CI output
     import logging
-    logging.getLogger(__name__).warning(
+    logging.getLogger(__name__).info(
         "NAC_TEST_CONTROLLER_CONTEXT not set — falling back to detect_controller_type(). "
-        "This fallback will be removed in a future release. "
-        "If both packages are at the same version, this indicates a bug in the parent process."
+        "This fallback will be removed in a future release."
     )
-    # Strict mode: set NAC_TEST_STRICT_CONTEXT=1 to make missing context a hard
-    # error during development/CI (catches parent bugs before Phase 3 cleanup).
-    if os.environ.get("NAC_TEST_STRICT_CONTEXT") == "1":
-        raise RuntimeError(
-            "NAC_TEST_CONTROLLER_CONTEXT not set and NAC_TEST_STRICT_CONTEXT=1. "
-            "Parent process must call resolve_controller() and serialize context."
-        )
     controller_type = _detect_controller_type()
     if controller_type:
         _cached_context = ControllerContext(
@@ -276,7 +268,7 @@ Example values:
 | `iosxe/test_base.py` | REFACTOR | Replace `from nac_test.utils.controller import detect_controller_type` with `from nac_test.core.controller import get_controller_context`. Use `get_controller_context().controller_type` where needed. |
 | Tests referencing old imports | REFACTOR | Update mocks/patches to target `nac_test.core.controller.get_controller_context` instead of `nac_test.utils.controller.detect_controller_type` / `get_matched_credential_set`. |
 
-> **Note:** `common/base_test.py` was previously listed here but actually lives in `nac-test` at `nac_test/pyats_core/common/base_test.py`. It has been updated in Phase 1.
+> **Note:** `common/base_test.py` was previously listed here but actually lives in `nac-test` at `nac_test/pyats_core/common/base_test.py`. It should be updated in Phase 1 to call `get_controller_context()` instead of `detect_controller_type()`.
 
 #### Release and CI Strategy
 
@@ -420,7 +412,7 @@ controller_type = get_controller_context().controller_type
 - **Unit tests**: `get_controller_context()` reads from env var in subprocess context, from cache in parent context, falls back to `_detect_controller_type()` with a warning when env var absent (transitional)
 - **Integration**: `resolve_controller()` → `preflight_auth_check()` → serialize → `get_controller_context()` → adapter receives correct `auth_method`
 - **Negative tests**: missing env vars → `NoCredentialsFound`; partial vars → `IncompleteCredentials`; multiple controllers → `MultipleControllersFound`
-- **Strict mode test**: `NAC_TEST_STRICT_CONTEXT=1` causes `RuntimeError` when env var is absent
+- **Fallback test**: Verify fallback to `detect_controller_type()` when `NAC_TEST_CONTROLLER_CONTEXT` is absent (transitional) and emits info log
 - **Malformed JSON test**: corrupt `NAC_TEST_CONTROLLER_CONTEXT` produces clear error (not raw `json.JSONDecodeError`)
 
 ### nac-test-pyats-common
@@ -431,7 +423,6 @@ controller_type = get_controller_context().controller_type
 - **Local validation**: Full integration tested in shared venv where both packages are installed from source (`pip install -e ../nac-test -e .`)
 - **Bridge-release validation**: Verify feature branches against matching branches or local editable installs, but validate `main` against released dependency versions
 - **`base_test.setup()` migration**: Verify `setup()` uses `get_controller_context()` and no longer calls `detect_controller_type()` directly
-- **Strict mode in CI**: Recommend `NAC_TEST_STRICT_CONTEXT=1` in CI after the bridge-release window closes (Phase 3)
 
 ## References
 
