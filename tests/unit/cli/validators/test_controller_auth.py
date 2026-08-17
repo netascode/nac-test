@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 from _pytest.monkeypatch import MonkeyPatch
 
-from nac_test.cli.validators.controller_auth import (
+from nac_test.core.controller_auth import (
     CONTROLLER_REGISTRY,
     AuthOutcome,
     _get_auth_callable,
@@ -20,6 +20,7 @@ from nac_test.cli.validators.controller_auth import (
     preflight_auth_check,
 )
 from nac_test.core.error_classification import extract_http_status_code
+from nac_test.core.types import ControllerContext
 
 
 class TestControllerRegistry:
@@ -206,37 +207,41 @@ class TestPreflightAuthCheck:
         """Returns skipped (not success) when no auth adapter is available."""
         monkeypatch.setenv("IOSXE_URL", "https://device.example.com")
 
-        result = preflight_auth_check("IOSXE")
+        result = preflight_auth_check(
+            ControllerContext(controller_type="IOSXE", auth_method="session")
+        )
 
         assert result.success is True
         assert result.reason == AuthOutcome.SKIPPED
         assert "skipped" in result.detail.lower()
 
     def test_returns_success_when_adapters_not_installed(
-        self, monkeypatch: MonkeyPatch
+        self, monkeypatch: MonkeyPatch, aci_context: ControllerContext
     ) -> None:
         """Returns success when nac-test-pyats-common not installed."""
         monkeypatch.setenv("ACI_URL", "https://apic.example.com")
 
         with patch(
-            "nac_test.cli.validators.controller_auth._get_auth_callable",
+            "nac_test.core.controller_auth._get_auth_callable",
             return_value=None,
         ):
-            result = preflight_auth_check("ACI")
+            result = preflight_auth_check(aci_context)
 
         assert result.success is True
         assert "skipped" in result.detail.lower()
 
-    def test_returns_success_when_auth_succeeds(self, monkeypatch: MonkeyPatch) -> None:
+    def test_returns_success_when_auth_succeeds(
+        self, monkeypatch: MonkeyPatch, aci_context: ControllerContext
+    ) -> None:
         """Returns success when authentication succeeds."""
         monkeypatch.setenv("ACI_URL", "https://apic.example.com")
 
         mock_auth = MagicMock(return_value="token123")
         with patch(
-            "nac_test.cli.validators.controller_auth._get_auth_callable",
+            "nac_test.core.controller_auth._get_auth_callable",
             return_value=mock_auth,
         ):
-            result = preflight_auth_check("ACI")
+            result = preflight_auth_check(aci_context)
 
         assert result.success is True
         assert result.reason == AuthOutcome.SUCCESS
@@ -245,17 +250,17 @@ class TestPreflightAuthCheck:
         mock_auth.assert_called_once()
 
     def test_returns_failure_for_bad_credentials(
-        self, monkeypatch: MonkeyPatch
+        self, monkeypatch: MonkeyPatch, aci_context: ControllerContext
     ) -> None:
         """Returns failure when credentials are rejected."""
         monkeypatch.setenv("ACI_URL", "https://apic.example.com")
 
         mock_auth = MagicMock(side_effect=Exception("HTTP 401: Unauthorized"))
         with patch(
-            "nac_test.cli.validators.controller_auth._get_auth_callable",
+            "nac_test.core.controller_auth._get_auth_callable",
             return_value=mock_auth,
         ):
-            result = preflight_auth_check("ACI")
+            result = preflight_auth_check(aci_context)
 
         assert result.success is False
         assert result.reason == AuthOutcome.BAD_CREDENTIALS
@@ -267,10 +272,12 @@ class TestPreflightAuthCheck:
 
         mock_auth = MagicMock(side_effect=Exception("Connection timed out"))
         with patch(
-            "nac_test.cli.validators.controller_auth._get_auth_callable",
+            "nac_test.core.controller_auth._get_auth_callable",
             return_value=mock_auth,
         ):
-            result = preflight_auth_check("SDWAN")
+            result = preflight_auth_check(
+                ControllerContext(controller_type="SDWAN", auth_method="session")
+            )
 
         assert result.success is False
         assert result.reason == AuthOutcome.UNREACHABLE
@@ -289,38 +296,44 @@ class TestPreflightAuthCheck:
             )
         )
         with patch(
-            "nac_test.cli.validators.controller_auth._get_auth_callable",
+            "nac_test.core.controller_auth._get_auth_callable",
             return_value=mock_auth,
         ):
-            result = preflight_auth_check("CC")
+            result = preflight_auth_check(
+                ControllerContext(controller_type="CC", auth_method="session")
+            )
 
         # Should succeed to let the actual auth call fail with proper error
         assert result.success is True
         assert "skipped" in result.detail.lower()
 
-    def test_includes_controller_url_in_result(self, monkeypatch: MonkeyPatch) -> None:
+    def test_includes_controller_url_in_result(
+        self, monkeypatch: MonkeyPatch, aci_context: ControllerContext
+    ) -> None:
         """Auth result includes the controller URL for error messages."""
         monkeypatch.setenv("ACI_URL", "https://apic.lab.local")
 
         mock_auth = MagicMock(side_effect=Exception("HTTP 403: Forbidden"))
         with patch(
-            "nac_test.cli.validators.controller_auth._get_auth_callable",
+            "nac_test.core.controller_auth._get_auth_callable",
             return_value=mock_auth,
         ):
-            result = preflight_auth_check("ACI")
+            result = preflight_auth_check(aci_context)
 
         assert result.controller_url == "https://apic.lab.local"
 
-    def test_propagates_http_status_code(self, monkeypatch: MonkeyPatch) -> None:
+    def test_propagates_http_status_code(
+        self, monkeypatch: MonkeyPatch, aci_context: ControllerContext
+    ) -> None:
         """Auth result includes the HTTP status code from the error."""
         monkeypatch.setenv("ACI_URL", "https://apic.lab.local")
 
         mock_auth = MagicMock(side_effect=Exception("HTTP 403: Forbidden"))
         with patch(
-            "nac_test.cli.validators.controller_auth._get_auth_callable",
+            "nac_test.core.controller_auth._get_auth_callable",
             return_value=mock_auth,
         ):
-            result = preflight_auth_check("ACI")
+            result = preflight_auth_check(aci_context)
 
         assert result.status_code == 403
 
@@ -332,16 +345,23 @@ class TestPreflightAuthCheck:
 
         mock_auth = MagicMock(side_effect=Exception("Connection timed out"))
         with patch(
-            "nac_test.cli.validators.controller_auth._get_auth_callable",
+            "nac_test.core.controller_auth._get_auth_callable",
             return_value=mock_auth,
         ):
-            result = preflight_auth_check("SDWAN")
+            result = preflight_auth_check(
+                ControllerContext(controller_type="SDWAN", auth_method="session")
+            )
 
         assert result.status_code is None
 
     def test_handles_unknown_controller_type(self) -> None:
         """Unknown controller types are handled gracefully (skipped)."""
-        result = preflight_auth_check("UNKNOWN_CONTROLLER")  # type: ignore[arg-type]
+        result = preflight_auth_check(
+            ControllerContext(
+                controller_type="UNKNOWN_CONTROLLER",  # type: ignore[arg-type]
+                auth_method="session",
+            )
+        )
 
         assert result.success is True
         assert "skipped" in result.detail.lower()

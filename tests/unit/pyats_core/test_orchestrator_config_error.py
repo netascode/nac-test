@@ -3,11 +3,13 @@
 
 """Tests for PyATSOrchestrator handling of SubprocessRunner init failures."""
 
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from nac_test.core.types import ControllerContext
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
 from ..conftest import PyATSTestDirs
@@ -59,7 +61,6 @@ class TestOrchestratorSubprocessRunnerInitError:
                 "discover_pyats_tests",
                 return_value=mock_discovery_result,
             ),
-            patch.object(orchestrator, "validate_environment"),
             patch(
                 "nac_test.pyats_core.execution.subprocess_runner.Path.write_text",
                 side_effect=OSError("disk full"),
@@ -82,3 +83,58 @@ class TestOrchestratorSubprocessRunnerInitError:
             assert "disk full" in result.d2d.reason
         else:
             assert result.d2d is None
+
+
+class TestOrchestratorControllerContextEnvVar:
+    """Tests for PyATSOrchestrator populating NAC_TEST_CONTROLLER_CONTEXT env var."""
+
+    def test_orchestrator_populates_controller_context_env_var(
+        self,
+        aci_controller_env: None,
+        pyats_test_dirs: PyATSTestDirs,
+    ) -> None:
+        """PyATSOrchestrator.__init__ serializes controller_context to env var."""
+        # Clear any existing context from prior tests
+        os.environ.pop("NAC_TEST_CONTROLLER_CONTEXT", None)
+
+        orchestrator = PyATSOrchestrator(
+            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
+            test_dir=pyats_test_dirs.test_dir,
+            output_dir=pyats_test_dirs.output_dir,
+        )
+
+        # Verify env var was set
+        assert "NAC_TEST_CONTROLLER_CONTEXT" in os.environ
+
+        # Verify it deserializes correctly
+        raw = os.environ["NAC_TEST_CONTROLLER_CONTEXT"]
+        ctx = ControllerContext.from_json(raw)
+        assert ctx.controller_type == "ACI"
+        assert ctx.auth_method == "session"
+
+        # Verify it matches the orchestrator's context
+        assert orchestrator.controller_context == ctx
+
+    def test_orchestrator_with_explicit_context_uses_it(
+        self,
+        aci_controller_env: None,
+        pyats_test_dirs: PyATSTestDirs,
+    ) -> None:
+        """PyATSOrchestrator uses explicitly passed controller_context."""
+        explicit_ctx = ControllerContext(controller_type="SDWAN", auth_method="token")
+
+        orchestrator = PyATSOrchestrator(
+            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
+            test_dir=pyats_test_dirs.test_dir,
+            output_dir=pyats_test_dirs.output_dir,
+            controller_context=explicit_ctx,
+        )
+
+        # Verify orchestrator uses the explicit context
+        assert orchestrator.controller_context == explicit_ctx
+
+        # Verify env var matches
+        raw = os.environ["NAC_TEST_CONTROLLER_CONTEXT"]
+        ctx = ControllerContext.from_json(raw)
+        assert ctx.controller_type == "SDWAN"
+        assert ctx.auth_method == "token"

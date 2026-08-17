@@ -50,7 +50,7 @@ CLI main()
   ├─ DataMerger.merge_data_files()
   └─ CombinedOrchestrator.run_tests()
        ├─ _discover_test_types() → has_pyats, has_robot
-       ├─ IF (has_pyats OR has_robot) AND NOT render_only AND NOT dry_run:
+       ├─ IF has_pyats AND NOT render_only AND NOT dry_run:
        │    └─ _run_pre_flight_checks()
        │         ├─ ctx = resolve_controller()               ← SINGLE RESOLUTION
        │         │    (core/controller.py — raises typed exceptions on failure)
@@ -77,8 +77,8 @@ CLI main()
        │                             → "token" → reads SDWAN_API_TOKEN
        │                             → "session" → reads SDWAN_USERNAME/PASSWORD
        │                             → checks AuthCache (populated by parent)
-       └─ IF has_robot AND NOT preflight_failed:
-            └─ RobotOrchestrator.run_tests()  (benefits from resolved context + AuthCache)
+       └─ IF has_robot:
+            └─ RobotOrchestrator.run_tests()  (no controller checks)
 ```
 
 ## Design Decisions
@@ -91,20 +91,20 @@ CLI main()
 
 Resolution returns a `ControllerContext` on success or raises typed exceptions on failure. It never calls `sys.exit()`. The orchestrator (caller) decides whether to abort, warn, or continue. This enables:
 - PyATS real run: resolve → enforce → pass to PyATSOrchestrator → serialize → subprocess
-- Robot real run: resolve → enforce → run (benefits from AuthCache populated during pre-flight)
+- Robot real run: skip resolution entirely
 - Dry-run: skip resolution entirely (no pre-flight checks, no subprocess launched)
 - Render-only: skip resolution entirely
 - Future: any caller can handle resolution errors differently
 
-**Dry-run semantics:** Pre-flight checks (resolution + auth reachability) are gated by `NOT dry_run`. In dry-run mode, `controller_context` stays `None`, and no subprocess is launched — so the absence of context is never observed by workers.
+**Dry-run semantics:** Pre-flight checks (resolution + auth reachability) are gated by `has_pyats AND NOT dry_run`. In dry-run mode, `controller_context` stays `None`, and no subprocess is launched — so the absence of context is never observed by workers.
 
 ### 3. Subprocess Receives, Never Re-derives
 
 `PyATSOrchestrator` serializes the resolved `ControllerContext` as inline JSON in `NAC_TEST_CONTROLLER_CONTEXT` before launching subprocesses (following the existing `DEVICE_INFO` pattern). The subprocess accesses it via the `get_controller_context()` accessor function — never by parsing the env var directly.
 
-**Transitional fallback:** To avoid coupling the release of `nac-test` and `nac-test-pyats-common`, the subprocess retains a fallback to current `main()` behavior (`detect_controller_type()` / `get_matched_credential_set()`) when `NAC_TEST_CONTROLLER_CONTEXT` is absent. This allows shipping interim bug-fix releases of either package independently. The fallback is explicitly temporary — once both packages are released with the new API, the fallback path is removed (Phase 3).
+**Transitional fallback:** The subprocess retains a fallback to current behavior (`detect_controller_type()` / `get_matched_credential_set()`) when `NAC_TEST_CONTROLLER_CONTEXT` is absent. This is a short-lived rollout safety net after the bridge `nac-test` release — not the primary release-sequencing mechanism. Once `nac-test-pyats-common` is released against the bridge API and mainline CI is stable, the fallback path is removed (Phase 3).
 
-`get_matched_credential_set()` has one in-repo consumer (`sdwan/auth.py`) that migrates in lockstep. The fallback exists solely to decouple *release timing*, not to support a permanent dual-path.
+`get_matched_credential_set()` has one consumer in `nac-test-pyats-common` (`sdwan/auth.py`) that migrates in lockstep. The fallback exists solely as a temporary rollout safety net, not to support a permanent dual-path.
 
 **Important:** Only controller type *detection/derivation* moves to the parent. Actual secret values (passwords, tokens, URLs) remain env var reads in the subprocess — they are never serialized into `ControllerContext`.
 
@@ -134,15 +134,26 @@ def get_controller_context() -> ControllerContext:
     if raw:
         _cached_context = ControllerContext.from_json(raw)
         return _cached_context
-    # Transitional fallback: supports running with older nac-test that doesn't
-    # serialize context. Remove once both packages ship with the new API.
-    import warnings
-    warnings.warn(
+    # Transitional fallback: supports rollout after the bridge nac-test release
+    # if the parent still doesn't serialize context. Remove in Phase 3.
+    #
+    # Uses logging.warning (not DeprecationWarning) because:
+    # - DeprecationWarning is suppressed by default in production
+    # - This fallback masking a parent bug is a real risk
+    # - logging.warning is always visible in test and CI output
+    import logging
+    logging.getLogger(__name__).warning(
         "NAC_TEST_CONTROLLER_CONTEXT not set — falling back to detect_controller_type(). "
-        "This fallback will be removed in a future release.",
-        DeprecationWarning,
-        stacklevel=2,
+        "This fallback will be removed in a future release. "
+        "If both packages are at the same version, this indicates a bug in the parent process."
     )
+    # Strict mode: set NAC_TEST_STRICT_CONTEXT=1 to make missing context a hard
+    # error during development/CI (catches parent bugs before Phase 3 cleanup).
+    if os.environ.get("NAC_TEST_STRICT_CONTEXT") == "1":
+        raise RuntimeError(
+            "NAC_TEST_CONTROLLER_CONTEXT not set and NAC_TEST_STRICT_CONTEXT=1. "
+            "Parent process must call resolve_controller() and serialize context."
+        )
     controller_type = _detect_controller_type()
     if controller_type:
         _cached_context = ControllerContext(
@@ -189,7 +200,7 @@ The `EnvironmentValidator` class is removed. `get_bool()`, `get_int()`, and `get
 | `environment.py` | `utils/environment.py` | Generic env var helpers as module functions (no class) | — |
 | `CombinedOrchestrator` | `combined_orchestrator.py` | Calls `resolve_controller()` + `preflight_auth_check()`, formats error messages, records `PreFlightFailure`, keeps `self.controller_context`, passes it to `PyATSOrchestrator` | `ControllerContext`, `ResolutionError` subtypes |
 | `PyATSOrchestrator` | `pyats_core/orchestrator.py` | Test execution. Receives `ControllerContext`, serializes to `NAC_TEST_CONTROLLER_CONTEXT` before subprocess launch. No `validate_environment()`. | `ControllerContext` (typed parameter) |
-| Subprocess (`base_test.py`) | `nac-test-pyats-common` | Calls `get_controller_context()` accessor | `ControllerContext` via `nac_test.core.controller` |
+| Subprocess (`base_test.py`) | `nac-test` (`nac_test/pyats_core/common/base_test.py`) | Calls `get_controller_context()` accessor | `ControllerContext` via `nac_test.core.controller` |
 | Auth adapters | `nac-test-pyats-common` | Use `get_controller_context().auth_method` to branch (token vs session). Read actual credential values from hardcoded env var names. Check AuthCache. | `get_controller_context()` from `nac_test.core.controller` |
 
 ## Typed Exceptions
@@ -248,13 +259,13 @@ Example values:
 
 | File | Action | Details |
 |------|--------|---------|
-| `core/types.py` | ADD | `ControllerContext` dataclass with `to_json()`/`from_json()` |
+| `core/types.py` | MODIFY | Add `ControllerContext` dataclass with `to_json()`/`from_json()` (file already exists) |
 | `core/controller.py` | MOVE + REFACTOR | Move from `utils/controller.py`. Rename `detect_controller_type()` to internal `_detect_controller_type()`. Add `resolve_controller() → ControllerContext`. Add typed exception classes. Add `format_resolution_error()` helper. |
 | `core/controller_auth.py` | MOVE | Move `preflight_auth_check()` from `cli/validators/controller_auth.py`. Update signature to accept `ControllerContext`. |
 | `utils/environment.py` | REFACTOR | Delete `EnvironmentValidator` class. Delete `validate_controller_env()`. Delete `get_bool()`, `get_int()`, `get_with_default()` (zero callers, duplicate `_env.py`). Keep `check_required_vars()`, `format_missing_vars_error()` as module functions if needed. |
-| `combined_orchestrator.py` | REFACTOR | Update `_run_pre_flight_checks()`: call `resolve_controller()`, catch `ResolutionError`, call `format_resolution_error()`, call `preflight_auth_check(ctx)`. Save `self.controller_context`. Pass context to `PyATSOrchestrator`. Update pre-flight gate to cover both PyATS and Robot test types. |
+| `combined_orchestrator.py` | REFACTOR | Update `_run_pre_flight_checks()`: call `resolve_controller()`, catch `ResolutionError`, call `format_resolution_error()`, call `preflight_auth_check(ctx)`. Save `self.controller_context`. Pass context to `PyATSOrchestrator`. Keep pre-flight gated to the PyATS path only. |
 | `pyats_core/orchestrator.py` | SIMPLIFY | Remove `controller_type` parameter. Add `controller_context: ControllerContext | None = None` parameter. Remove `self.controller_type`. Remove `validate_environment()` method. Serialize `controller_context.to_json()` into subprocess env before launch. Remove import of `detect_controller_type` and `EnvironmentValidator`. |
-| `cli/validators/controller_auth.py` | DELETE or REDUCE | Move `preflight_auth_check` to `core/controller_auth.py`. If nothing remains, delete the file. |
+| `cli/validators/controller_auth.py` | DELETE | Move all contents (`AuthCheckResult`, `_get_controller_url()`, `_get_auth_callable()`, `preflight_auth_check()`) to `core/controller_auth.py`. Delete this file. |
 | `cli/validators/__init__.py` | UPDATE | Update re-exports to point to new location. |
 
 ### nac-test-pyats-common
@@ -265,13 +276,51 @@ Example values:
 | `iosxe/test_base.py` | REFACTOR | Replace `from nac_test.utils.controller import detect_controller_type` with `from nac_test.core.controller import get_controller_context`. Use `get_controller_context().controller_type` where needed. |
 | Tests referencing old imports | REFACTOR | Update mocks/patches to target `nac_test.core.controller.get_controller_context` instead of `nac_test.utils.controller.detect_controller_type` / `get_matched_credential_set`. |
 
-#### CI Pipeline Strategy for nac-test-pyats-common
+> **Note:** `common/base_test.py` was previously listed here but actually lives in `nac-test` at `nac_test/pyats_core/common/base_test.py`. It has been updated in Phase 1.
 
-The two packages have a circular runtime dependency (`nac-test ↔ nac-test-pyats-common`). The transitional fallback in `get_controller_context()` handles version skew at runtime — if the parent (older `nac-test`) doesn't serialize context, the subprocess falls back to current detection behavior with a deprecation warning.
+#### Release and CI Strategy
 
-**Approach: Runtime fallback + test skips for new-API-only tests**
+The two packages have a circular runtime dependency (`nac-test ↔ nac-test-pyats-common`), so the rollout uses a **bridge release** rather than a simultaneous coordinated release.
 
-Production code uses the fallback path — no `try/except ImportError` shims needed. Tests that specifically validate the *new* integration (context passed from parent) use `pytest.importorskip` for the transition window:
+**Release A — bridge `nac-test` release:**
+- Add `nac_test.core.controller.get_controller_context()` and the new resolution flow
+- Keep old import paths working for one release cycle via thin shims
+- Keep the runtime fallback in `get_controller_context()` as a short-lived safety net
+
+**Release B — `nac-test-pyats-common`:**
+- Switch to direct imports from `nac_test.core.controller`
+- Require the bridge `nac-test` version in packaging / CI
+- Remove no code yet from `nac-test`; bridge compatibility remains in place
+
+**Release C — cleanup `nac-test`:**
+- Remove old import shims
+- Remove the runtime fallback
+- Tighten CI to strict context mode by default
+
+**Bridge import compatibility:** To ensure old consumers continue to work after Release A, old import paths remain as thin shims for one release cycle:
+
+```python
+# nac_test/utils/controller.py (kept as shim during transition)
+# Only exports what nac-test-pyats-common actually uses:
+# - detect_controller_type (iosxe/test_base.py)
+# - get_matched_credential_set (sdwan/auth.py)
+from nac_test.core.controller import (  # noqa: F401
+    detect_controller_type,
+    get_matched_credential_set,
+)
+```
+
+This ensures `from nac_test.utils.controller import detect_controller_type` still works during the bridge window. The shim is removed in Phase 3.
+
+**CI model during the bridge window**
+
+On feature branches, CI can validate integration using branch refs or local editable installs.
+
+On `main`, each repo should test against a **released** dependency version:
+- `nac-test` main can continue testing against the currently released `nac-test-pyats-common`
+- once Release A is published, `nac-test-pyats-common` main should require and test against `nac-test >= <bridge_version>`
+
+Tests that specifically validate the *new* integration (context passed from parent) should run in environments where both packages are installed from source or where the bridge `nac-test` release is available:
 
 ```python
 # tests/sdwan/test_auth.py
@@ -284,10 +333,10 @@ nac_controller = pytest.importorskip(
 ```
 
 **Rationale:**
-- Production code works with both old and new `nac-test` (via fallback) — no conditional imports in hot paths
-- Tests that exercise the new integration skip cleanly in CI when `nac-test` hasn't been updated yet
-- Full integration is validated locally where both packages are installed from source
-- Once both packages are released together, the fallback + skip conditions become dead code (removed in Phase 3)
+- Mainline release CI should validate against published dependencies, not sibling feature branches
+- The bridge `nac-test` release breaks the release-order deadlock
+- Runtime fallback protects rollout behavior only; it is not the import-compatibility mechanism
+- Full integration is still validated on feature branches and local shared environments before merging
 
 #### nac-test-pyats-common Detailed Changes
 
@@ -334,30 +383,33 @@ controller_type = get_controller_context().controller_type
 
 ### Phase 1: nac-test core refactor
 
-1. **`core/types.py`** — Add `ControllerContext` dataclass (no dependencies, safe first step)
+1. **`core/types.py`** — Add `ControllerContext` dataclass to the existing file (no dependencies, safe first step)
 2. **`core/controller.py`** — Move from `utils/`, refactor to `resolve_controller()`, add `get_controller_context()` accessor, add typed exceptions, add `format_resolution_error()`
 3. **`core/controller_auth.py`** — Move `preflight_auth_check()`, update signature
 4. **`utils/environment.py`** — Dissolve `EnvironmentValidator` class. Delete `validate_controller_env()`. Delete `get_bool()`, `get_int()`, `get_with_default()` (zero callers — duplicate `_env.py` functions). Keep only `check_required_vars()` and `format_missing_vars_error()` as module functions if needed.
-5. **`combined_orchestrator.py`** — Update pre-flight to use new API, pass context to `PyATSOrchestrator`. Update pre-flight gate to cover both PyATS and Robot.
+5. **`combined_orchestrator.py`** — Update pre-flight to use new API, pass context to `PyATSOrchestrator`. Keep pre-flight gated to the PyATS path only.
 6. **`pyats_core/orchestrator.py`** — Remove `controller_type`, add `controller_context: ControllerContext | None` parameter, serialize to env before subprocess launch, remove `validate_environment()`
-7. **Update all nac-test internal imports** — ensure nothing references old `utils/controller` paths
-8. **Update nac-test tests** — adjust unit tests in `tests/utils/test_controller.py` (move to `tests/core/`), delete tests for `EnvironmentValidator.validate_controller_env()`, add contract tests for `ControllerContext` serialization round-trip
-9. **Delete `cli/validators/controller_auth.py`** if empty after move
+7. **Add bridge-release shims** — keep `utils/controller.py` as a thin re-export shim (`from nac_test.core.controller import ...`). This preserves old import paths for one release cycle after the bridge `nac-test` release. Shim is removed in Phase 3.
+8. **Update all nac-test internal imports** — ensure nothing references old `utils/controller` paths (use `core/` directly)
+9. **Update nac-test tests** — adjust unit tests in `tests/utils/test_controller.py` (move to `tests/core/`), delete tests for `EnvironmentValidator.validate_controller_env()`, add contract tests for `ControllerContext` serialization round-trip
+10. **Delete `cli/validators/controller_auth.py`** after moving its contents to `core/controller_auth.py`
 
-### Phase 2: nac-test-pyats-common update
+### Phase 2: nac-test-pyats-common update (after bridge `nac-test` release)
 
-10. **`sdwan/auth.py`** — Replace `get_matched_credential_set` import + ImportError fallback with `get_controller_context()` call
-11. **`iosxe/test_base.py`** — Replace `detect_controller_type()` with `get_controller_context().controller_type`
-12. **Update tests** — Patch/mock `nac_test.core.controller.get_controller_context` instead of old functions. Add `pytest.importorskip` guards for tests requiring the new API (CI pipeline may still have old nac-test).
-13. **Remove dead code** — Delete any remaining references to `detect_controller_type`, `get_matched_credential_set`, `CredentialSet` imports
+11. **`sdwan/auth.py`** — Replace `get_matched_credential_set` import + ImportError fallback with `get_controller_context()` call
+11a. **`common/base_test.py`** — Replace `detect_controller_type()` in `setup()` with `get_controller_context()`. This is the primary subprocess consumer — without this change, detection point #3 remains.
+12. **`iosxe/test_base.py`** — Replace `detect_controller_type()` with `get_controller_context().controller_type`
+13. **Update tests and CI dependency** — Patch/mock `nac_test.core.controller.get_controller_context` instead of old functions. Update CI / packaging to require the bridge `nac-test` version.
+14. **Remove dead code** — Delete any remaining references to `detect_controller_type`, `get_matched_credential_set`, `CredentialSet` imports
 
-### Phase 3: Cleanup (after both packages are released)
+### Phase 3: Cleanup (after `nac-test-pyats-common` ships against the bridge API)
 
-14. **Verify CI** — Both repos pass with shared venv (local) and individual pipelines (CI)
-15. **Remove transitional fallback** — Delete the `detect_controller_type()` fallback path in `get_controller_context()` and the associated `DeprecationWarning`. Missing env var becomes a hard `RuntimeError` (clean cut).
-16. **Remove skip guards** — Remove `pytest.importorskip` conditions from nac-test-pyats-common tests
-17. **Remove dead code** — Delete `_detect_controller_type()`, `_infer_auth_method()` if no longer needed internally
-18. **Update `dev-docs/PRD_AND_ARCHITECTURE.md`** — Reflect new controller resolution architecture
+15. **Verify CI** — Both repos pass locally and on mainline CI against released dependency versions
+15a. **Remove import shims** — Delete the re-export shim in `utils/controller.py` (or the entire file if empty). All consumers now import from `core/controller`.
+16. **Remove transitional fallback** — Delete the `detect_controller_type()` fallback path in `get_controller_context()` and the associated warning path. Missing env var becomes a hard `RuntimeError` (clean cut).
+17. **Tighten CI** — Enable strict-context validation by default where appropriate and remove any temporary bridge-window allowances
+18. **Remove dead code** — Delete `_detect_controller_type()`, `_infer_auth_method()` if no longer needed internally
+19. **Update `dev-docs/PRD_AND_ARCHITECTURE.md`** — Reflect new controller resolution architecture
 
 ## Testing Strategy
 
@@ -365,17 +417,21 @@ controller_type = get_controller_context().controller_type
 
 - **Contract tests**: `ControllerContext.to_json()` → `from_json()` round-trip; schema stability; unknown fields ignored gracefully
 - **Unit tests**: `resolve_controller()` returns correct `ControllerContext` for each controller type; raises correct typed exceptions for each failure mode
-- **Unit tests**: `get_controller_context()` reads from env var in subprocess context, from cache in parent context, falls back to `_detect_controller_type()` with `DeprecationWarning` when env var absent (transitional)
+- **Unit tests**: `get_controller_context()` reads from env var in subprocess context, from cache in parent context, falls back to `_detect_controller_type()` with a warning when env var absent (transitional)
 - **Integration**: `resolve_controller()` → `preflight_auth_check()` → serialize → `get_controller_context()` → adapter receives correct `auth_method`
 - **Negative tests**: missing env vars → `NoCredentialsFound`; partial vars → `IncompleteCredentials`; multiple controllers → `MultipleControllersFound`
+- **Strict mode test**: `NAC_TEST_STRICT_CONTEXT=1` causes `RuntimeError` when env var is absent
+- **Malformed JSON test**: corrupt `NAC_TEST_CONTROLLER_CONTEXT` produces clear error (not raw `json.JSONDecodeError`)
 
 ### nac-test-pyats-common
 
 - **Unit tests**: Auth adapters receive correct `auth_method` from mocked `get_controller_context()`
-- **Fallback tests**: Verify that subprocess gracefully falls back to `detect_controller_type()` when `NAC_TEST_CONTROLLER_CONTEXT` is absent (transitional) and emits `DeprecationWarning`
-- **CI compatibility**: Tests requiring new nac-test API use `pytest.importorskip("nac_test.core.controller")` — skip cleanly when published nac-test is stale
+- **Fallback tests**: Verify that subprocess gracefully falls back to `detect_controller_type()` when `NAC_TEST_CONTROLLER_CONTEXT` is absent (transitional) and emits a warning
+- **CI dependency**: Mainline CI requires the bridge `nac-test` release (or later) before merging the `nac-test-pyats-common` migration
 - **Local validation**: Full integration tested in shared venv where both packages are installed from source (`pip install -e ../nac-test -e .`)
-- **Release decoupling**: Either package can ship a bug-fix release independently — the fallback handles version skew at runtime
+- **Bridge-release validation**: Verify feature branches against matching branches or local editable installs, but validate `main` against released dependency versions
+- **`base_test.setup()` migration**: Verify `setup()` uses `get_controller_context()` and no longer calls `detect_controller_type()` directly
+- **Strict mode in CI**: Recommend `NAC_TEST_STRICT_CONTEXT=1` in CI after the bridge-release window closes (Phase 3)
 
 ## References
 

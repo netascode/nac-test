@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
-from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
+from nac_test.core.controller_auth import AuthCheckResult, AuthOutcome
 from nac_test.pyats_core.constants import (
     PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS,
     PYATS_POST_DISCONNECT_WAIT_SECONDS,

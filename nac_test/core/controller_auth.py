@@ -1,18 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
-"""Pre-flight controller authentication validator.
+"""Pre-flight controller authentication check.
 
-This module provides a pre-flight authentication check that validates controller
-credentials before any test execution begins. It uses the same auth implementations
-from nac-test-pyats-common that PyATS tests use, ensuring consistent behavior.
+Validates controller credentials before test execution by attempting the same
+authentication that PyATS tests use.  On success the token/session is cached in
+AuthCache so the first real test gets a cache hit.
 
-Benefits:
-- Fails fast with clear error message instead of N identical auth failures
-- Populates the AuthCache, so first real test gets a cache hit
-- Works for both PyATS and Robot Framework execution modes
-
-The pre-flight check happens at the CLI layer before either test framework is
-invoked, providing immediate feedback for credential and connectivity issues.
+This module lives in ``core/`` because authentication reachability is part of
+the controller resolution domain, not a CLI concern.
 """
 
 import logging
@@ -22,16 +17,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from nac_test.core.controller import CONTROLLER_REGISTRY, get_display_name
 from nac_test.core.error_classification import (
     AuthOutcome,
     classify_auth_error,
     extract_http_status_code,
 )
-from nac_test.core.types import ControllerTypeKey
+from nac_test.core.types import ControllerContext, ControllerTypeKey
 from nac_test.pyats_core.common.auth_cache import AuthCache
-
-# Import CONTROLLER_REGISTRY from centralized location
-from nac_test.utils.controller import CONTROLLER_REGISTRY, get_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +110,7 @@ def _get_auth_callable(controller_type: str) -> Callable[[], Any] | None:
     return None
 
 
-def preflight_auth_check(controller_type: ControllerTypeKey) -> AuthCheckResult:
+def preflight_auth_check(ctx: ControllerContext) -> AuthCheckResult:
     """Attempt authentication to the detected controller before tests run.
 
     Uses the same auth implementations from nac-test-pyats-common that
@@ -130,11 +123,12 @@ def preflight_auth_check(controller_type: ControllerTypeKey) -> AuthCheckResult:
     - If environment variables missing: returns success (let the actual auth fail later)
 
     Args:
-        controller_type: Detected controller type (e.g., "ACI", "SDWAN", "CC").
+        ctx: Resolved controller context from ``resolve_controller()``.
 
     Returns:
         AuthCheckResult with success/failure status and actionable detail.
     """
+    controller_type = ctx.controller_type
     controller_url = _get_controller_url(controller_type)
     display_name = get_display_name(controller_type)
 

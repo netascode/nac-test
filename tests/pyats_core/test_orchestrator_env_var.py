@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from nac_test.core.types import ControllerContext
 from nac_test.pyats_core.constants import ENV_TEST_DIR
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
@@ -32,7 +33,9 @@ class TestOrchestratorEnvVarProcesses:
             data_paths=[pyats_test_dirs.test_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            controller_type="ACI",
+            controller_context=ControllerContext(
+                controller_type="ACI", auth_method="session"
+            ),
         )
 
         assert orchestrator.max_workers == 123456
@@ -51,7 +54,9 @@ class TestOrchestratorEnvPropagation:
             data_paths=[pyats_test_dirs.test_dir.parent / "data"],
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
-            controller_type="ACI",
+            controller_context=ControllerContext(
+                controller_type="ACI", auth_method="session"
+            ),
         )
 
         captured_env: dict[str, str] = {}

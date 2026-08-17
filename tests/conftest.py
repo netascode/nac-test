@@ -7,6 +7,7 @@ This module provides common fixtures used by both integration and E2E tests:
 - Environment cleanup (controller credentials, proxy settings)
 - Mock API server for simulating controller responses
 - Class-scoped monkeypatch for environment variable management
+- ControllerContext fixtures for common test scenarios
 """
 
 import os
@@ -17,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+from nac_test.core.types import ControllerContext
 from tests.e2e.mocks.mock_server import MockAPIServer
 
 # Path to the mock API configuration files
@@ -154,3 +156,20 @@ def socket_dir() -> Generator[Path, None, None]:
     """Short-path temp dir suitable for Unix socket paths (macOS 104-char limit)."""
     with tempfile.TemporaryDirectory() as d:
         yield Path(d)
+
+
+# =============================================================================
+# ControllerContext fixtures
+# =============================================================================
+
+
+@pytest.fixture()
+def aci_context() -> ControllerContext:
+    """Pre-built ControllerContext for ACI with session auth."""
+    return ControllerContext(controller_type="ACI", auth_method="session")
+
+
+@pytest.fixture()
+def sdwan_context() -> ControllerContext:
+    """Pre-built ControllerContext for SDWAN with token auth."""
+    return ControllerContext(controller_type="SDWAN", auth_method="token")

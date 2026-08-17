@@ -3,8 +3,8 @@
 
 """Low-level environment variable parsing utilities.
 
-For higher-level environment validation (required vars, controller credentials),
-see nac_test.utils.environment.EnvironmentValidator.
+For higher-level environment validation, see nac_test.utils.environment.
+For controller resolution and credentials, see nac_test.core.controller.
 """
 
 # Why _env.py lives here instead of utils/env.py:

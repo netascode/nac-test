@@ -9,23 +9,31 @@ from unittest.mock import patch
 
 import pytest
 
-from nac_test.utils.controller import (
+from nac_test.core.controller import (
     CONTROLLER_REGISTRY,
     CredentialSet,
+    IncompleteCredentials,
+    MultipleControllersFound,
+    NoCredentialsFound,
     _find_credential_sets,
     _format_multiple_credentials_error,
     _format_no_credentials_error,
     _matched_credential_sets,
     detect_controller_type,
+    format_resolution_error,
+    get_controller_context,
     get_controller_url,
     get_matched_credential_set,
+    resolve_controller,
 )
-from nac_test.utils.environment import EnvironmentValidator
+from nac_test.core.types import ControllerContext
 
 
 @pytest.fixture(autouse=True)
 def clean_environment() -> Generator[None, None, None]:
     """Clean controller env vars and matched-credential cache for every test."""
+    import nac_test.core.controller as ctrl_module
+
     original_env = os.environ.copy()
 
     for config in CONTROLLER_REGISTRY.values():
@@ -34,11 +42,20 @@ def clean_environment() -> Generator[None, None, None]:
                 os.environ.pop(var, None)
 
     os.environ.pop("CONTROLLER_TYPE", None)
+    os.environ.pop("NAC_TEST_CONTROLLER_CONTEXT", None)
+    os.environ.pop("NAC_TEST_STRICT_CONTEXT", None)
+
+    # Save and clear module-level caches
+    old_matched = dict(ctrl_module._matched_credential_sets)
     _matched_credential_sets.clear()
 
     yield
 
+    # Restore module-level caches
     _matched_credential_sets.clear()
+    ctrl_module._matched_credential_sets.update(old_matched)
+
+    # Restore environment
     os.environ.clear()
     os.environ.update(original_env)
 
@@ -683,43 +700,167 @@ class TestGetControllerUrlSDWAN:
         assert "SDWAN_URL" in str(exc_info.value)
 
 
-class TestValidateControllerEnvMultiCredSet:
-    """Tests for validate_controller_env with multi-credential-set controllers."""
+class TestResolveController:
+    """Tests for resolve_controller() — single source of truth for controller detection."""
 
-    def test_sdwan_passes_with_username_password_only(self) -> None:
-        """validate_controller_env passes when only username/password set (not token)."""
-        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
-        os.environ["SDWAN_USERNAME"] = "admin"
-        os.environ["SDWAN_PASSWORD"] = "password"
+    @pytest.mark.parametrize(
+        "env_vars,expected_type,expected_auth",
+        [
+            (
+                {
+                    "ACI_URL": "https://apic.local",
+                    "ACI_USERNAME": "admin",
+                    "ACI_PASSWORD": "pass",
+                },
+                "ACI",
+                "session",
+            ),
+            (
+                {"SDWAN_URL": "https://sdwan.local", "SDWAN_API_TOKEN": "tok123"},
+                "SDWAN",
+                "token",
+            ),
+            (
+                {
+                    "SDWAN_URL": "https://sdwan.local",
+                    "SDWAN_USERNAME": "admin",
+                    "SDWAN_PASSWORD": "pass",
+                },
+                "SDWAN",
+                "session",
+            ),
+            (
+                {
+                    "CC_URL": "https://cc.local",
+                    "CC_USERNAME": "admin",
+                    "CC_PASSWORD": "pass",
+                },
+                "CC",
+                "session",
+            ),
+        ],
+        ids=["aci-session", "sdwan-token", "sdwan-session", "cc-session"],
+    )
+    def test_resolve_controller_success(
+        self, env_vars: dict[str, str], expected_type: str, expected_auth: str
+    ) -> None:
+        """resolve_controller() returns correct ControllerContext for valid credentials."""
+        os.environ.update(env_vars)
+        ctx = resolve_controller()
+        assert ctx.controller_type == expected_type
+        assert ctx.auth_method == expected_auth
+        assert isinstance(ctx, ControllerContext)
 
-        # Should not raise
-        EnvironmentValidator().validate_controller_env("SDWAN")
+    def test_resolve_no_credentials(self) -> None:
+        """resolve_controller() raises NoCredentialsFound when no env vars set."""
+        with pytest.raises(NoCredentialsFound):
+            resolve_controller()
 
-    def test_sdwan_passes_with_api_token_only(self) -> None:
-        """validate_controller_env passes when only API token set."""
-        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
-        os.environ["SDWAN_API_TOKEN"] = "eyJhbGciOiJSUzI1NiJ9.test.sig"
+    def test_resolve_multiple_controllers(self) -> None:
+        """resolve_controller() raises MultipleControllersFound for multiple complete sets."""
+        os.environ.update(
+            {
+                "ACI_URL": "https://apic.local",
+                "ACI_USERNAME": "admin",
+                "ACI_PASSWORD": "pass",
+                "CC_URL": "https://cc.local",
+                "CC_USERNAME": "admin",
+                "CC_PASSWORD": "pass",
+            }
+        )
+        with pytest.raises(MultipleControllersFound) as exc_info:
+            resolve_controller()
+        assert "ACI" in exc_info.value.controllers
+        assert "CC" in exc_info.value.controllers
 
-        # Should not raise
-        EnvironmentValidator().validate_controller_env("SDWAN")
+    def test_resolve_incomplete_credentials(self) -> None:
+        """resolve_controller() raises IncompleteCredentials for partial env vars."""
+        os.environ["ACI_URL"] = "https://apic.local"
+        # Missing ACI_USERNAME and ACI_PASSWORD
+        with pytest.raises(IncompleteCredentials) as exc_info:
+            resolve_controller()
+        assert "ACI" in exc_info.value.partial_controllers
 
-    def test_sdwan_exits_when_no_credential_set_satisfied(self) -> None:
-        """validate_controller_env exits with all credential sets listed."""
-        os.environ["SDWAN_URL"] = "https://vmanage.example.com"
-        # No token, no username/password
 
-        with pytest.raises(SystemExit) as exc_info:
-            EnvironmentValidator().validate_controller_env("SDWAN")
+class TestControllerContext:
+    """Tests for ControllerContext serialization and round-trip."""
 
-        error_msg = str(exc_info.value)
-        assert "SDWAN: incomplete credentials" in error_msg
-        assert "API Token (20.18+)" in error_msg
-        assert "Username/Password" in error_msg
+    def test_to_json_round_trip(self, aci_context: ControllerContext) -> None:
+        """ControllerContext serializes and deserializes correctly."""
+        raw = aci_context.to_json()
+        restored = ControllerContext.from_json(raw)
+        assert restored == aci_context
 
-    def test_sdwan_exits_when_nothing_set(self) -> None:
-        """validate_controller_env exits when no SDWAN vars are set at all."""
-        with pytest.raises(SystemExit) as exc_info:
-            EnvironmentValidator().validate_controller_env("SDWAN")
+    def test_from_json_ignores_unknown_fields(self) -> None:
+        """Unknown JSON fields are silently ignored (forward compatibility)."""
+        import json
 
-        error_msg = str(exc_info.value)
-        assert "SDWAN" in error_msg
+        raw = json.dumps(
+            {
+                "controller_type": "ACI",
+                "auth_method": "session",
+                "future_field": "some_value",
+            }
+        )
+        ctx = ControllerContext.from_json(raw)
+        assert ctx.controller_type == "ACI"
+        assert ctx.auth_method == "session"
+
+    def test_from_json_missing_field_raises(self) -> None:
+        """Missing required fields raise KeyError."""
+        import json
+
+        raw = json.dumps({"controller_type": "ACI"})
+        with pytest.raises(KeyError):
+            ControllerContext.from_json(raw)
+
+    def test_from_json_malformed_raises(self) -> None:
+        """Malformed JSON raises json.JSONDecodeError."""
+        import json
+
+        with pytest.raises(json.JSONDecodeError):
+            ControllerContext.from_json("not-json")
+
+
+class TestGetControllerContext:
+    """Tests for get_controller_context() accessor."""
+
+    def test_reads_from_env_var(self, sdwan_context: ControllerContext) -> None:
+        """get_controller_context() deserializes from NAC_TEST_CONTROLLER_CONTEXT."""
+        os.environ["NAC_TEST_CONTROLLER_CONTEXT"] = sdwan_context.to_json()
+        try:
+            result = get_controller_context()
+            assert result.controller_type == "SDWAN"
+            assert result.auth_method == "token"
+        finally:
+            os.environ.pop("NAC_TEST_CONTROLLER_CONTEXT", None)
+
+    def test_strict_mode_raises(self) -> None:
+        """NAC_TEST_STRICT_CONTEXT=1 makes missing context a hard error."""
+        os.environ["NAC_TEST_STRICT_CONTEXT"] = "1"
+        try:
+            with pytest.raises(RuntimeError, match="NAC_TEST_STRICT_CONTEXT"):
+                get_controller_context()
+        finally:
+            os.environ.pop("NAC_TEST_STRICT_CONTEXT", None)
+
+
+class TestFormatResolutionError:
+    """Tests for format_resolution_error()."""
+
+    def test_format_no_credentials(self) -> None:
+        error = NoCredentialsFound("No creds")
+        result = format_resolution_error(error)
+        assert "No controller credentials" in result
+
+    def test_format_multiple_controllers(self) -> None:
+        error = MultipleControllersFound(["ACI", "SDWAN"])
+        result = format_resolution_error(error)
+        assert "ACI" in result
+        assert "SDWAN" in result
+
+    def test_format_incomplete_credentials(self) -> None:
+        error = IncompleteCredentials(["ACI"])
+        result = format_resolution_error(error)
+        assert "ACI" in result
+        assert "Incomplete" in result

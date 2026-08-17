@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from nac_test.utils.controller import CONTROLLER_REGISTRY, get_defaults_prefix
+from nac_test.core.controller import CONTROLLER_REGISTRY, get_defaults_prefix
 
 
 class TestControllerDefaultsPrefixMapping:

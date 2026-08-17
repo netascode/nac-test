@@ -23,13 +23,13 @@ from nac_test.core.constants import (
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
+from nac_test.core.controller import get_display_name, get_env_var_prefix
 from nac_test.core.types import (
     CombinedResults,
     ControllerTypeKey,
     PreFlightFailure,
 )
 from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR, get_jinja_environment
-from nac_test.utils.controller import get_display_name, get_env_var_prefix
 from nac_test.utils.url import extract_host
 
 logger = logging.getLogger(__name__)

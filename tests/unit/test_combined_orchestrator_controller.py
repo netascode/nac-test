@@ -9,9 +9,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
-from nac_test.cli.validators.controller_auth import AuthCheckResult, AuthOutcome
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.core.types import PyATSResults
+from nac_test.core.controller_auth import AuthCheckResult, AuthOutcome
+from nac_test.core.types import ControllerContext, PyATSResults
 from nac_test.utils.logging import DEFAULT_LOGLEVEL
 from tests.unit.conftest import AUTH_SUCCESS
 
@@ -54,7 +54,7 @@ class TestCombinedOrchestratorController:
         )
 
         # Controller detection is now deferred to run_tests()
-        assert orchestrator.controller_type is None
+        assert orchestrator.controller_context is None
 
     def test_controller_detected_during_run_tests(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
@@ -78,7 +78,7 @@ class TestCombinedOrchestratorController:
             dev_pyats_only=True,
         )
 
-        assert orchestrator.controller_type is None
+        assert orchestrator.controller_context is None
 
         with (
             patch.object(
@@ -104,7 +104,12 @@ class TestCombinedOrchestratorController:
             orchestrator.run_tests()
 
         # Controller should now be detected
-        assert orchestrator.controller_type == "ACI"
+        assert orchestrator.controller_context is not None
+        # Note: mypy flags this as unreachable because it loses type narrowing after
+        # the method call above. The assertion at line 107 narrows the type, but mypy
+        # conservatively assumes run_tests() could have mutated controller_context back
+        # to None. This is a known mypy limitation with attribute narrowing across calls.
+        assert orchestrator.controller_context.controller_type == "ACI"  # type: ignore[unreachable]
 
     def test_detection_failure_continues_with_preflight_failure(
         self, tmp_path: Path
@@ -226,14 +231,16 @@ class TestCombinedOrchestratorController:
                         # Run tests
                         orchestrator.run_tests()
 
-                # Verify PyATSOrchestrator was called with controller_type
+                # Verify PyATSOrchestrator was called with controller_context
                 mock_pyats.assert_called_once_with(
                     data_paths=[data_dir],
                     test_dir=templates_dir,
                     output_dir=output_dir,
                     minimal_reports=False,
                     custom_testbed_path=None,
-                    controller_type="SDWAN",
+                    controller_context=ControllerContext(
+                        controller_type="SDWAN", auth_method="session"
+                    ),
                     dry_run=False,
                     verbose=False,
                     loglevel=DEFAULT_LOGLEVEL,
@@ -292,7 +299,7 @@ class TestCombinedOrchestratorController:
         )
 
         # Verify controller_type is empty (no detection occurred)
-        assert orchestrator.controller_type is None
+        assert orchestrator.controller_context is None
 
         # Mock PyATSOrchestrator to verify it's never instantiated
         with patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats:
@@ -305,16 +312,16 @@ class TestCombinedOrchestratorController:
 
                 with (
                     patch(
-                        "nac_test.combined_orchestrator.detect_controller_type"
-                    ) as mock_detect,
+                        "nac_test.combined_orchestrator.resolve_controller"
+                    ) as mock_resolve,
                     patch("typer.echo"),
                     patch("typer.secho"),
                 ):
                     # Run tests
                     orchestrator.run_tests()
 
-            # detect_controller_type should NOT be called in render-only mode
-            mock_detect.assert_not_called()
+            # resolve_controller should NOT be called in render-only mode
+            mock_resolve.assert_not_called()
             # CRITICAL ASSERTION: PyATSOrchestrator must NEVER be instantiated
             mock_pyats.assert_not_called()
             # Robot must be called
@@ -361,7 +368,7 @@ class TestCombinedOrchestratorController:
         )
 
         # Controller type should be None after init (deferred to run_tests)
-        assert orchestrator.controller_type is None
+        assert orchestrator.controller_context is None
 
         # Mock PyATSOrchestrator and discovery
         with patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats:
@@ -390,7 +397,7 @@ class TestCombinedOrchestratorController:
                     # Run tests
                     orchestrator.run_tests()
 
-                # Verify PyATSOrchestrator was called with controller_type
+                # Verify PyATSOrchestrator was called with controller_context
 
                 mock_pyats.assert_called_once_with(
                     data_paths=[data_dir],
@@ -398,7 +405,9 @@ class TestCombinedOrchestratorController:
                     output_dir=output_dir,
                     minimal_reports=False,
                     custom_testbed_path=None,
-                    controller_type="CC",
+                    controller_context=ControllerContext(
+                        controller_type="CC", auth_method="session"
+                    ),
                     dry_run=False,
                     verbose=False,
                     loglevel=DEFAULT_LOGLEVEL,

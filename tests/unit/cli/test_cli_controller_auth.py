@@ -17,11 +17,12 @@ import pytest
 from typer.testing import CliRunner
 
 import nac_test.cli.main
-from nac_test.cli.validators.controller_auth import (
+from nac_test.core.controller_auth import (
     AuthCheckResult,
     AuthOutcome,
     preflight_auth_check,
 )
+from nac_test.core.types import ControllerContext, ControllerTypeKey
 
 
 class TestPreflightAuthCli:
@@ -265,7 +266,7 @@ class TestPreflightCacheInvalidation:
     )
     def test_cache_invalidated_before_auth_for_each_controller(
         self,
-        controller_type: str,
+        controller_type: ControllerTypeKey,
         url_env_var: str,
         url_value: str,
         expected_cache_key: str,
@@ -295,15 +296,20 @@ class TestPreflightCacheInvalidation:
 
         with (
             patch(
-                "nac_test.cli.validators.controller_auth._get_auth_callable",
+                "nac_test.core.controller_auth._get_auth_callable",
                 return_value=mock_auth,
             ),
             patch(
-                "nac_test.cli.validators.controller_auth.AuthCache.invalidate",
+                "nac_test.core.controller_auth.AuthCache.invalidate",
                 side_effect=mock_invalidate,
             ) as patched_invalidate,
         ):
-            result = preflight_auth_check(controller_type)  # type: ignore[arg-type]
+            result = preflight_auth_check(
+                ControllerContext(
+                    controller_type=controller_type,
+                    auth_method="session",
+                )
+            )
 
         assert result.success is True
         patched_invalidate.assert_called_once_with(
@@ -321,14 +327,16 @@ class TestPreflightCacheInvalidation:
 
         with (
             patch(
-                "nac_test.cli.validators.controller_auth._get_auth_callable",
+                "nac_test.core.controller_auth._get_auth_callable",
                 return_value=None,
             ),
             patch(
-                "nac_test.cli.validators.controller_auth.AuthCache.invalidate",
+                "nac_test.core.controller_auth.AuthCache.invalidate",
             ) as patched_invalidate,
         ):
-            result = preflight_auth_check("MERAKI")
+            result = preflight_auth_check(
+                ControllerContext(controller_type="MERAKI", auth_method="session")
+            )
 
         # Skipped because no auth adapter — invalidate should not be called
         assert result.success is True
@@ -337,6 +345,7 @@ class TestPreflightCacheInvalidation:
     def test_cache_invalidation_failure_does_not_block_auth(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        aci_context: ControllerContext,
     ) -> None:
         """A failure in AuthCache.invalidate must not prevent authentication."""
         monkeypatch.setenv("ACI_URL", "https://apic.test.local")
@@ -346,15 +355,15 @@ class TestPreflightCacheInvalidation:
 
         with (
             patch(
-                "nac_test.cli.validators.controller_auth._get_auth_callable",
+                "nac_test.core.controller_auth._get_auth_callable",
                 return_value=mock_auth,
             ),
             patch(
-                "nac_test.cli.validators.controller_auth.AuthCache.invalidate",
+                "nac_test.core.controller_auth.AuthCache.invalidate",
                 side_effect=OSError("disk on fire"),
             ),
         ):
-            result = preflight_auth_check("ACI")
+            result = preflight_auth_check(aci_context)
 
         # Auth should still succeed despite invalidation failure
         assert result.success is True

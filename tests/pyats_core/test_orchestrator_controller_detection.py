@@ -3,8 +3,6 @@
 
 """Test PyATS orchestrator controller detection integration."""
 
-from unittest.mock import patch
-
 import pytest
 
 from nac_test.core.constants import EXIT_ERROR
@@ -58,24 +56,6 @@ class TestOrchestratorControllerDetection:
 
         # Verify it exits with EXIT_ERROR (255) for infrastructure errors
         assert exc_info.value.code == EXIT_ERROR
-
-    def test_validate_environment_uses_detected_controller(
-        self, sdwan_controller_env: None, pyats_test_dirs: PyATSTestDirs
-    ) -> None:
-        """Test that validate_environment uses the detected controller type."""
-        orchestrator = PyATSOrchestrator(
-            data_paths=[pyats_test_dirs.output_dir.parent / "data.yaml"],
-            test_dir=pyats_test_dirs.test_dir,
-            output_dir=pyats_test_dirs.output_dir,
-        )
-
-        assert orchestrator.controller_type == "SDWAN"
-
-        with patch(
-            "nac_test.pyats_core.orchestrator.EnvironmentValidator"
-        ) as mock_validator:
-            orchestrator.validate_environment()
-            mock_validator.validate_controller_env.assert_called_once_with("SDWAN")
 
     def test_orchestrator_no_longer_uses_controller_type_env_var(
         self,

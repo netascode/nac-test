@@ -14,7 +14,6 @@ from nac_test.cli.ui import (
     display_auth_failure_banner,
     display_unreachable_banner,
 )
-from nac_test.cli.validators import AuthOutcome, preflight_auth_check
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
     HTML_REPORTS_DIRNAME,
@@ -28,10 +27,18 @@ from nac_test.core.constants import (
     SUMMARY_SEPARATOR_WIDTH,
     XUNIT_XML,
 )
+from nac_test.core.controller import (
+    ResolutionError,
+    format_resolution_error,
+    get_env_var_prefix,
+    resolve_controller,
+)
+from nac_test.core.controller_auth import preflight_auth_check
+from nac_test.core.error_classification import AuthOutcome
 from nac_test.core.reporting.combined_generator import CombinedReportGenerator
 from nac_test.core.types import (
     CombinedResults,
-    ControllerTypeKey,
+    ControllerContext,
     PreFlightFailure,
     PreFlightFailureType,
     TestResults,
@@ -41,7 +48,6 @@ from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.cleanup import cleanup_stale_test_artifacts
-from nac_test.utils.controller import detect_controller_type, get_env_var_prefix
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
 from nac_test.utils.terminal import terminal
@@ -143,8 +149,8 @@ class CombinedOrchestrator:
         self.dev_robot_only = dev_robot_only
         self.verbose = verbose
 
-        # Controller type — detected lazily in run_tests() when PyATS tests are present
-        self.controller_type: ControllerTypeKey | None = None
+        # Controller context — resolved lazily in run_tests() when PyATS tests are present
+        self.controller_context: ControllerContext | None = None
 
     def run_tests(self) -> CombinedResults:
         """Main entry point for combined test execution.
@@ -218,7 +224,7 @@ class CombinedOrchestrator:
                 output_dir=self.output_dir,
                 minimal_reports=self.minimal_reports,
                 custom_testbed_path=self.custom_testbed_path,
-                controller_type=self.controller_type,
+                controller_context=self.controller_context,
                 dry_run=self.dry_run,
                 verbose=self.verbose,
                 loglevel=self.loglevel,
@@ -340,11 +346,14 @@ class CombinedOrchestrator:
         should skip PyATS execution), ``False`` when all checks passed.
         """
         try:
-            self.controller_type = detect_controller_type()
-            logger.info(f"Controller type detected: {self.controller_type}")
-        except ValueError as e:
+            self.controller_context = resolve_controller()
+            logger.info(
+                "Controller type detected: %s", self.controller_context.controller_type
+            )
+        except ResolutionError as e:
+            detail = format_resolution_error(e)
             typer.secho(
-                f"\n❌ Controller detection failed:\n{e}",
+                f"\n❌ Controller detection failed:\n{detail}",
                 fg=typer.colors.RED,
                 err=True,
             )
@@ -352,11 +361,11 @@ class CombinedOrchestrator:
                 failure_type=PreFlightFailureType.DETECTION,
                 controller_type=None,
                 controller_url=None,
-                detail=str(e),
+                detail=detail,
             )
             return True
 
-        auth_result = preflight_auth_check(self.controller_type)
+        auth_result = preflight_auth_check(self.controller_context)
         if not auth_result.success:
             typer.echo("")
             if auth_result.reason == AuthOutcome.UNREACHABLE:
