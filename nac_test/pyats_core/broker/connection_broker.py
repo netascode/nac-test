@@ -61,6 +61,9 @@ class ConnectionBroker:
         # Command caching - shared across all clients
         self.command_cache: dict[str, CommandCache] = {}  # hostname -> CommandCache
 
+        # Per-device execute locks — prevents interleaved I/O on shared Unicon spawns
+        self._execute_locks: dict[str, asyncio.Lock] = {}
+
         # Socket server
         self.server: asyncio.Server | None = None
         self.active_clients: set[asyncio.StreamWriter] = set()
@@ -264,24 +267,32 @@ class ConnectionBroker:
         # Ensure device is connected
         connection = await self._get_connection(hostname)
 
-        # Execute command in thread pool (since Unicon is synchronous)
-        loop = get_or_create_event_loop()
-        try:
-            output = await loop.run_in_executor(None, connection.execute, cmd)
-            output_str = str(output)
+        # Serialize command execution per device. Unicon's spawn is not
+        # thread-safe — concurrent execute() calls on the same device
+        # interleave I/O on the PTY. This lock ensures one command at a
+        # time per device while still allowing cross-device parallelism.
+        if hostname not in self._execute_locks:
+            self._execute_locks[hostname] = asyncio.Lock()
 
-            # Cache the output for future requests
-            cache.set(cmd, output_str)
-            logger.info(
-                f"Cached command output for '{cmd}' on {hostname} ({len(output_str)} chars)"
-            )
+        async with self._execute_locks[hostname]:
+            loop = get_or_create_event_loop()
+            try:
+                output = await loop.run_in_executor(None, connection.execute, cmd)
+                output_str = str(output)
 
-            return output_str
-        except Exception as e:
-            logger.error(f"Command execution failed on {hostname}: {e}")
-            # Try to reconnect on failure
-            await self._disconnect_device(hostname)
-            raise
+                # Cache the output for future requests
+                cache.set(cmd, output_str)
+                logger.info(
+                    f"Cached command output for '{cmd}' on {hostname} "
+                    f"({len(output_str)} chars)"
+                )
+
+                return output_str
+            except Exception as e:
+                logger.error(f"Command execution failed on {hostname}: {e}")
+                # Try to reconnect on failure
+                await self._disconnect_device(hostname)
+                raise
 
     async def _get_connection(self, hostname: str) -> Any:
         """Get or create connection to device."""
