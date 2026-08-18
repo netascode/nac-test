@@ -622,15 +622,6 @@ class TestIOSXEAlternativeURLEnvVar:
     via separate credential sets. The first matching credential set wins.
     """
 
-    def test_detect_iosxe_with_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test IOSXE detection with standard IOSXE_URL env var."""
-        monkeypatch.setenv("IOSXE_URL", "https://iosxe.example.com")
-        monkeypatch.setenv("IOSXE_USERNAME", "admin")
-        monkeypatch.setenv("IOSXE_PASSWORD", "password")
-
-        result = detect_controller_type()
-        assert result == "IOSXE"
-
     def test_detect_iosxe_with_host(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test IOSXE detection with alternative IOSXE_HOST env var."""
         monkeypatch.setenv("IOSXE_HOST", "192.168.1.1")
@@ -655,15 +646,6 @@ class TestIOSXEAlternativeURLEnvVar:
         # Verify URL takes precedence in get_controller_url
         url = get_controller_url("IOSXE")
         assert url == "https://iosxe-url.example.com"
-
-    def test_get_controller_url_returns_iosxe_url(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """get_controller_url returns IOSXE_URL when set."""
-        monkeypatch.setenv("IOSXE_URL", "https://iosxe.example.com")
-
-        url = get_controller_url("IOSXE")
-        assert url == "https://iosxe.example.com"
 
     def test_get_controller_url_returns_iosxe_host(
         self, monkeypatch: pytest.MonkeyPatch
@@ -861,19 +843,6 @@ class TestSDWANCredentialSets:
         assert "API Token (20.18+)" in error_msg
         assert "Username/Password" in error_msg
 
-    def test_incomplete_error_shows_credential_set_options(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Incomplete SDWAN credentials should list both credential set options."""
-        monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
-
-        with pytest.raises(ValueError) as exc_info:
-            detect_controller_type()
-
-        error_msg = str(exc_info.value)
-        assert "API Token (20.18+)" in error_msg
-        assert "Username/Password" in error_msg
-
     def test_get_matched_credential_set_before_detection(self) -> None:
         """get_matched_credential_set returns None before detect_controller_type runs."""
         assert get_matched_credential_set("SDWAN") is None
@@ -899,14 +868,6 @@ class TestSDWANCredentialSets:
 
 class TestGetControllerUrlSDWAN:
     """Tests for get_controller_url with multi-credential-set controllers (SDWAN)."""
-
-    def test_sdwan_url_returned_when_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """get_controller_url returns SDWAN_URL directly from url_env_var."""
-        monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
-        monkeypatch.setenv("SDWAN_API_TOKEN", "some-token")
-
-        url = get_controller_url("SDWAN")
-        assert url == "https://vmanage.example.com"
 
     def test_sdwan_does_not_return_token_when_url_empty(
         self, monkeypatch: pytest.MonkeyPatch

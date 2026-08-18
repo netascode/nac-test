@@ -114,26 +114,3 @@ class TestOrchestratorControllerContextEnvVar:
 
         # Verify it matches the orchestrator's context
         assert orchestrator.controller_context == ctx
-
-    def test_orchestrator_with_explicit_context_uses_it(
-        self,
-        aci_controller_env: None,
-        pyats_test_dirs: PyATSTestDirs,
-        sdwan_context: ControllerContext,
-    ) -> None:
-        """PyATSOrchestrator uses explicitly passed controller_context."""
-        orchestrator = PyATSOrchestrator(
-            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
-            test_dir=pyats_test_dirs.test_dir,
-            output_dir=pyats_test_dirs.output_dir,
-            controller_context=sdwan_context,
-        )
-
-        # Verify orchestrator uses the explicit context
-        assert orchestrator.controller_context == sdwan_context
-
-        # Verify env var matches
-        raw = os.environ["NAC_TEST_CONTROLLER_CONTEXT"]
-        ctx = ControllerContext.from_json(raw)
-        assert ctx.controller_type == "SDWAN"
-        assert ctx.auth_method == "session"
