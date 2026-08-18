@@ -321,9 +321,10 @@ class TestPreflightCacheInvalidation:
     def test_cache_not_invalidated_when_no_auth_adapter(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        aci_context: ControllerContext,
     ) -> None:
         """Controllers without an auth adapter skip cache invalidation entirely."""
-        monkeypatch.setenv("MERAKI_URL", "https://meraki.test.local")
+        monkeypatch.setenv("ACI_URL", "https://apic.test.local")
 
         with (
             patch(
@@ -334,9 +335,7 @@ class TestPreflightCacheInvalidation:
                 "nac_test.core.controller_auth.AuthCache.invalidate",
             ) as patched_invalidate,
         ):
-            result = preflight_auth_check(
-                ControllerContext(controller_type="MERAKI", auth_method="session")
-            )
+            result = preflight_auth_check(aci_context)
 
         # Skipped because no auth adapter — invalidate should not be called
         assert result.success is True

@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
-"""Unit tests for pre-flight controller authentication validator.
+"""Unit tests for pre-flight controller authentication.
 
-These tests verify the business logic of the pre-flight auth check,
-ensuring the CLI correctly identifies authentication failures and
-classifies them appropriately.
+Tests verify the business logic of the pre-flight auth check,
+ensuring authentication failures are identified and classified appropriately.
 """
 
 from unittest.mock import MagicMock, patch
@@ -202,14 +201,12 @@ class TestPreflightAuthCheck:
     """Tests for preflight_auth_check main function."""
 
     def test_returns_skipped_when_no_auth_adapter(
-        self, monkeypatch: MonkeyPatch
+        self, monkeypatch: MonkeyPatch, iosxe_context: ControllerContext
     ) -> None:
         """Returns skipped (not success) when no auth adapter is available."""
         monkeypatch.setenv("IOSXE_URL", "https://device.example.com")
 
-        result = preflight_auth_check(
-            ControllerContext(controller_type="IOSXE", auth_method="session")
-        )
+        result = preflight_auth_check(iosxe_context)
 
         assert result.success is True
         assert result.reason == AuthOutcome.SKIPPED
@@ -266,7 +263,9 @@ class TestPreflightAuthCheck:
         assert result.reason == AuthOutcome.BAD_CREDENTIALS
         assert "401" in result.detail
 
-    def test_returns_failure_for_unreachable(self, monkeypatch: MonkeyPatch) -> None:
+    def test_returns_failure_for_unreachable(
+        self, monkeypatch: MonkeyPatch, sdwan_context: ControllerContext
+    ) -> None:
         """Returns failure when controller is unreachable."""
         monkeypatch.setenv("SDWAN_URL", "https://sdwan.example.com")
 
@@ -275,16 +274,14 @@ class TestPreflightAuthCheck:
             "nac_test.core.controller_auth._get_auth_callable",
             return_value=mock_auth,
         ):
-            result = preflight_auth_check(
-                ControllerContext(controller_type="SDWAN", auth_method="session")
-            )
+            result = preflight_auth_check(sdwan_context)
 
         assert result.success is False
         assert result.reason == AuthOutcome.UNREACHABLE
         assert result.controller_type == "SDWAN"
 
     def test_returns_success_when_missing_env_vars(
-        self, monkeypatch: MonkeyPatch
+        self, monkeypatch: MonkeyPatch, cc_context: ControllerContext
     ) -> None:
         """Returns success when env vars are missing (let real auth fail later)."""
         monkeypatch.setenv("CC_URL", "https://catc.example.com")
@@ -299,9 +296,7 @@ class TestPreflightAuthCheck:
             "nac_test.core.controller_auth._get_auth_callable",
             return_value=mock_auth,
         ):
-            result = preflight_auth_check(
-                ControllerContext(controller_type="CC", auth_method="session")
-            )
+            result = preflight_auth_check(cc_context)
 
         # Should succeed to let the actual auth call fail with proper error
         assert result.success is True
@@ -338,7 +333,7 @@ class TestPreflightAuthCheck:
         assert result.status_code == 403
 
     def test_status_code_none_for_non_http_errors(
-        self, monkeypatch: MonkeyPatch
+        self, monkeypatch: MonkeyPatch, sdwan_context: ControllerContext
     ) -> None:
         """Auth result has None status_code for non-HTTP failures."""
         monkeypatch.setenv("SDWAN_URL", "https://sdwan.example.com")
@@ -348,9 +343,7 @@ class TestPreflightAuthCheck:
             "nac_test.core.controller_auth._get_auth_callable",
             return_value=mock_auth,
         ):
-            result = preflight_auth_check(
-                ControllerContext(controller_type="SDWAN", auth_method="session")
-            )
+            result = preflight_auth_check(sdwan_context)
 
         assert result.status_code is None
 

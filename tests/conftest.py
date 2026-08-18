@@ -178,5 +178,17 @@ def aci_context() -> ControllerContext:
 
 @pytest.fixture()
 def sdwan_context() -> ControllerContext:
-    """Pre-built ControllerContext for SDWAN with token auth."""
-    return ControllerContext(controller_type="SDWAN", auth_method="token")
+    """Pre-built ControllerContext for SDWAN with session auth."""
+    return ControllerContext(controller_type="SDWAN", auth_method="session")
+
+
+@pytest.fixture()
+def cc_context() -> ControllerContext:
+    """Pre-built ControllerContext for Catalyst Center with session auth."""
+    return ControllerContext(controller_type="CC", auth_method="session")
+
+
+@pytest.fixture()
+def iosxe_context() -> ControllerContext:
+    """Pre-built ControllerContext for IOS-XE with session auth."""
+    return ControllerContext(controller_type="IOSXE", auth_method="session")
