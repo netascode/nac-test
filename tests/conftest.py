@@ -11,7 +11,6 @@ This module provides common fixtures used by both integration and E2E tests:
 """
 
 import os
-import re
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
@@ -48,23 +47,6 @@ def assert_is_link_to(link: Path, source: Path) -> None:
 # =============================================================================
 # Session-scoped fixtures (shared across all tests)
 # =============================================================================
-
-
-@pytest.fixture(scope="session", autouse=True)
-def clear_controller_credentials() -> None:
-    """Clear any controller credentials from environment to avoid conflicts.
-
-    nac-test fails if the user has controller credentials set in their
-    environment. This fixture removes any environment variables matching
-    the pattern: ^[A-Z]+_(URL|USERNAME|PASSWORD)$
-
-    Runs at session scope to ensure credentials are cleared before any
-    other fixtures that might set mock credentials.
-    """
-    pattern = re.compile(r"^[A-Z]+_(URL|USERNAME|PASSWORD)$")
-    keys_to_remove = [key for key in os.environ.keys() if pattern.match(key)]
-    for key in keys_to_remove:
-        del os.environ[key]
 
 
 # Derive controller env var prefixes from registry - stays in sync automatically
