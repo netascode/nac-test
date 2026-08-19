@@ -392,10 +392,13 @@ def main(
     merged_data = DataMerger.merge_data_files(data)
     merged_data_path = DataMerger.write_merged_data_model(merged_data, output)
 
-    # Register merged data file for cleanup — always delete, even in debug mode,
-    # because it may contain credentials resolved from !env references.
+    # Register merged data file and JSON sidecar for cleanup — always delete,
+    # even in debug mode, because they may contain credentials resolved from
+    # !env references.
     cleanup_manager = get_cleanup_manager()
     cleanup_manager.register(merged_data_path)
+    json_sidecar = merged_data_path.with_suffix(".cache.json")
+    cleanup_manager.register(json_sidecar)
 
     duration = (datetime.now() - start_time).total_seconds()
     typer.echo(f"✅ Data model merging completed ({format_duration(duration)})")

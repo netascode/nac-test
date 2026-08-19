@@ -3,6 +3,7 @@
 
 """Shared data merging utilities for both Robot and PyATS test execution."""
 
+import json
 import logging
 import os
 from pathlib import Path
@@ -76,4 +77,13 @@ class DataMerger:
         yaml.write_yaml_file(data, full_output_path)
         if not IS_WINDOWS:
             os.chmod(full_output_path, MERGED_DATA_FILE_MODE)
+
+        json_cache_path = full_output_path.with_suffix(".cache.json")
+        try:
+            with open(json_cache_path, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            logger.debug("Wrote JSON sidecar: %s", json_cache_path)
+        except OSError as e:
+            logger.warning("Failed to write JSON sidecar: %s", e)
+
         return full_output_path

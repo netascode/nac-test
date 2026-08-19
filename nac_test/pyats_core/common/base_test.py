@@ -766,6 +766,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
     def load_data_model(self) -> dict[str, Any]:
         """Load the merged data model from the test environment.
 
+        Prefers a JSON sidecar (.cache.json) written by the orchestrator for
+        fast loading (~100x faster than YAML parsing). Falls back to YAML if
+        the sidecar is missing or stale.
+
         Returns:
             Merged data model dictionary
         """
@@ -781,9 +785,29 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 f"Merged data model file not found: {data_file_path}"
             )
 
+        json_cache = data_file.with_suffix(".cache.json")
+        if json_cache.exists():
+            try:
+                if json_cache.stat().st_mtime >= data_file.stat().st_mtime:
+                    with open(json_cache, encoding="utf-8") as f:
+                        data = json.load(f)
+                        return data if isinstance(data, dict) else {}
+            except (json.JSONDecodeError, OSError):
+                pass
+
         with open(data_file, encoding="utf-8") as f:
             data = safe_load(f)
-            return data if isinstance(data, dict) else {}
+            data = data if isinstance(data, dict) else {}
+
+        try:
+            tmp = json_cache.with_suffix(f".{os.getpid()}.tmp")
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            os.replace(tmp, json_cache)
+        except OSError:
+            pass
+
+        return data
 
     def get_default_value(
         self,

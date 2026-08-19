@@ -35,9 +35,12 @@ class TestWriteMergedDataModel:
         assert returned.exists()
 
     def test_writes_no_extra_files(self, tmp_path: Path) -> None:
-        """Exactly one file is created in the output directory."""
+        """Exactly two files are created: YAML data model + JSON sidecar."""
         DataMerger.write_merged_data_model({"key": "value"}, tmp_path)
-        assert len(list(tmp_path.iterdir())) == 1
+        files = sorted(p.name for p in tmp_path.iterdir())
+        assert len(files) == 2
+        assert files[0] == "merged_data_model_test_variables.cache.json"
+        assert files[1] == "merged_data_model_test_variables.yaml"
 
     def test_roundtrip_preserves_content(self, tmp_path: Path) -> None:
         """Data written to YAML can be read back with the same structure."""
