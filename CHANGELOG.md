@@ -1,6 +1,16 @@
-# unreleased
+# Unreleased
+
+## Features
 
 - robot rendering: added support for dicts as parent_key in `iterate_list_chunked` 
+
+## Bug Fixes
+
+- Genie parsers that fire supplementary commands (e.g. VRF resolution) now work in broker mode
+
+## Breaking Changes
+
+- SSHTestBase.parse_output() is now async — test cases must use await self.parse_output(...)
 
 # 2.0.0
 

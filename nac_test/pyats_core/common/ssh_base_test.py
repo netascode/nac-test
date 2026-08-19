@@ -7,12 +7,13 @@ import logging
 import os
 from collections.abc import Callable, Coroutine
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pyats import aetest
 
 from nac_test.pyats_core.broker.broker_client import BrokerClient, BrokerCommandExecutor
 from nac_test.pyats_core.common.base_test import NACTestBase
+from nac_test.pyats_core.constants import DEVICE_EXECUTE_TIMEOUT
 from nac_test.pyats_core.ssh.command_cache import CommandCache
 from nac_test.utils import get_or_create_event_loop
 from nac_test.utils.device_validation import validate_device_inventory
@@ -187,6 +188,18 @@ class SSHTestBase(NACTestBase):
 
     async def _async_setup(self, hostname: str) -> None:
         """Helper for async setup operations with connection error handling."""
+        # 1. Enforce testbed invariant: both broker mode (needs testbed for Genie
+        # parser support) and direct mode (connects via testbed) require it.
+        if not self.testbed_device:
+            raise ConnectionError(
+                f"No testbed device available for {hostname}. "
+                "SSHTestBase requires a PyATS testbed device in both broker "
+                "and direct connection modes."
+            )
+
+        # 2. Create command cache early (needed by broker patch)
+        self.command_cache = CommandCache(hostname)
+
         try:
             # Check if broker is active (priority over testbed to enable connection pooling)
             broker_socket_env = os.environ.get("NAC_TEST_BROKER_SOCKET")
@@ -201,7 +214,6 @@ class SSHTestBase(NACTestBase):
 
             if broker_socket is not None:
                 # Use broker client for connection management
-                # Testbed may still be available for Genie parsers
                 self.logger.info(
                     f"Connecting to device {hostname} via connection broker"
                 )
@@ -213,18 +225,18 @@ class SSHTestBase(NACTestBase):
 
                 # Ensure device connection through broker
                 await self.connection.connect()
-            elif self.testbed_device:
+
+                # Patch testbed device execute so ALL commands (both explicit
+                # test calls and Genie supplementary calls) route through the
+                # broker. This is the unified execution path in broker mode.
+                self._patch_device_execute_for_broker()
+            else:
                 # Connect via testbed to enable Genie features
                 self.logger.info(f"Connecting to device {hostname} via PyATS testbed")
                 loop = get_or_create_event_loop()
                 await loop.run_in_executor(None, self.testbed_device.connect)
                 # Store the testbed device connection for command execution
                 self.connection = self.testbed_device
-            else:
-                raise ConnectionError(
-                    f"No connection method available for device {hostname}: "
-                    "broker not active and testbed not available"
-                )
 
         except ConnectionError:
             # Already logged at source (broker or testbed layer) — just re-raise
@@ -235,19 +247,14 @@ class SSHTestBase(NACTestBase):
             self.logger.error(error_msg)
             raise ConnectionError(error_msg) from e
 
-        # 2. Create and attach the command cache
-        self.command_cache = CommandCache(hostname)
-
         # 3. Create and attach the execute_command helper method
-        self.execute_command = self._create_execute_command_method(
-            self.connection, self.command_cache
-        )
+        self.execute_command = self._create_execute_command_method(self.command_cache)
 
         # 4. Attach device_data for easy access in the test
         self.device_data = self.device_info
         # hostname already set in setup_ssh_context
 
-    def parse_output(
+    async def parse_output(
         self, command: str, output: str | None = None
     ) -> dict[str, Any] | None:
         """Parse command output using Genie parser if available.
@@ -255,45 +262,149 @@ class SSHTestBase(NACTestBase):
         This method attempts to use Genie parsers when a PyATS testbed is available.
         If no testbed is available or parsing fails, it returns None.
 
+        Runs Genie's synchronous parse() in a worker thread so that any
+        supplementary device.execute() calls (patched to route through the
+        broker) can safely use run_coroutine_threadsafe without deadlocking.
+
         Args:
             command: The command whose output should be parsed
             output: Optional pre-fetched command output. If not provided,
-                   the command will be executed.
+                   the command will be executed by Genie directly.
 
         Returns:
             Parsed output dictionary if successful, None otherwise.
         """
-        # If we have a testbed device, use its parse method
-        if self.testbed_device:
-            try:
-                if output is not None:
-                    # Parse provided output
-                    result = self.testbed_device.parse(command, output=output)
-                    return dict(result) if result is not None else None
-                else:
-                    # Execute and parse in one step
-                    result = self.testbed_device.parse(command)
-                    return dict(result) if result is not None else None
-            except Exception as e:
-                self.logger.warning(f"Genie parser failed for '{command}': {e}")
-                return None
-        else:
+        if not self.testbed_device:
+            return None
+        try:
+            loop = get_or_create_event_loop()
+            device = self.testbed_device
+            result = await loop.run_in_executor(
+                None, lambda: device.parse(command, output=output)
+            )
+            return dict(result) if result is not None else None
+        except Exception as e:
+            self.logger.warning(f"Genie parser failed for '{command}': {e}")
             return None
 
+    def _patch_device_execute_for_broker(self) -> None:
+        """Patch testbed_device.execute to route all commands through the broker.
+
+        This makes testbed_device.execute the unified execution engine in broker
+        mode. Both explicit test commands (via execute_command → run_in_executor)
+        and Genie's internal supplementary calls route through the same path.
+
+        The patched method includes command caching so that supplementary commands
+        fired by Genie parsers also benefit from the cache (avoiding duplicate
+        round-trips to the device).
+
+        Must be called after command_cache is created and from an async context
+        (the event loop must be running) so we can capture a reference to it
+        for run_coroutine_threadsafe.
+        """
+        broker_client = self.broker_client
+        # cast: both are guaranteed non-None — hostname is set in setup_ssh_context
+        # and command_cache is created at the top of _async_setup, before this call.
+        hostname: str = cast(str, self.hostname)
+        command_cache: CommandCache = cast(CommandCache, self.command_cache)
+        test_instance = self
+        loop = get_or_create_event_loop()
+
+        def broker_execute(cmd: str, *args: Any, **kwargs: Any) -> str:
+            """Sync execute that routes through the connection broker.
+
+            Called from a worker thread (via run_in_executor in execute_command
+            or parse_output), not from the event loop thread, to avoid deadlock.
+
+            Includes caching so Genie supplementary calls don't re-execute
+            commands already fetched by the test.
+
+            Args:
+                cmd: CLI command string to execute on the device.
+                *args: Ignored — accepted for Unicon API compatibility.
+                **kwargs: Ignored — accepted for Unicon API compatibility.
+
+            Returns:
+                Command output string from the device (or cache).
+
+            Raises:
+                TimeoutError: If the broker does not respond within
+                    DEVICE_EXECUTE_TIMEOUT seconds.
+            """
+            # Check cache (thread-safe)
+            cached = command_cache.get(cmd)
+            if cached is not None:
+                test_instance.logger.debug(
+                    f"broker_execute cache hit for '{cmd}' on {hostname}"
+                )
+                return cached
+
+            future = asyncio.run_coroutine_threadsafe(
+                broker_client.execute_command(hostname, cmd), loop
+            )
+            output = future.result(timeout=DEVICE_EXECUTE_TIMEOUT)
+
+            # Cache the result (thread-safe)
+            command_cache.set(cmd, output)
+            return output
+
+        self.testbed_device.execute = broker_execute  # type: ignore[union-attr]
+        # Mark device as "connected" so Genie's parse() will use device.execute()
+        # instead of requiring pre-fetched output. The actual connection is managed
+        # by the broker, but Genie checks device.connected before executing.
+        self.testbed_device.connected = True  # type: ignore[union-attr]
+        # Also patch connectionmgr.is_connected since Genie may check that
+        self.testbed_device.connectionmgr.is_connected = lambda *args, **kwargs: True  # type: ignore[union-attr]
+
+        # Genie's _get_parser_output accesses device.cli as a connection handle
+        # that has an execute() method. Create a thin shim that delegates to our
+        # broker_execute so parsers calling device.cli.execute() work correctly.
+        class _BrokerCliShim:
+            """Shim that mimics a Unicon connection for Genie parser dispatch.
+
+            Only implements execute() — the single method Genie parsers use
+            for command execution.  If a future pyATS/Genie release accesses
+            additional attributes on device.cli, __getattr__ raises a clear
+            diagnostic instead of a bare AttributeError deep in Genie internals.
+            """
+
+            execute = staticmethod(broker_execute)
+
+            def __getattr__(self, name: str) -> Any:
+                raise AttributeError(
+                    f"_BrokerCliShim does not implement '{name}'. "
+                    f"This may indicate an incompatible pyATS/Genie version — "
+                    f"only 'execute' is supported in broker mode."
+                )
+
+        self.testbed_device.cli = _BrokerCliShim()  # type: ignore[union-attr]
+        self.logger.debug(
+            f"Patched testbed_device.execute for {hostname} to route through broker"
+        )
+
     def _create_execute_command_method(
-        self, connection: Any, command_cache: CommandCache
+        self, command_cache: CommandCache
     ) -> Callable[[str], Coroutine[Any, Any, str]]:
         """Create an async command execution method for the test.
 
+        In both broker and direct modes, commands are executed via
+        testbed_device.execute (which is patched in broker mode to route
+        through the broker). This eliminates mode-specific branching.
+
+        Precondition: testbed_device is guaranteed non-None — enforced by the
+        invariant check at the top of _async_setup().
+
         Args:
-            connection: SSH connection to the device.
             command_cache: Command cache for the device.
 
         Returns:
-            Async method for command execution with caching.
+            Async method for command execution with caching and tracking.
         """
         # Capture self reference for use in the closure
         test_instance = self
+        # cast: testbed_device is guaranteed non-None — broker mode requires a
+        # testbed for Genie support, and direct mode connects via testbed_device.
+        device: Any = cast(Any, test_instance.testbed_device)
 
         async def execute_command(command: str) -> str:
             """Execute command with caching and tracking.
@@ -312,18 +423,12 @@ class SSHTestBase(NACTestBase):
                 test_instance._track_ssh_command(command, cached_output)
                 return cached_output
 
-            # Execute command via connection (broker or testbed device)
+            # Execute command via testbed device
+            # In broker mode: patched to route through broker (sync, via run_in_executor)
+            # In direct mode: real pyATS device execute (sync, via run_in_executor)
             logging.debug(f"Executing command: {command}")
-
-            if hasattr(connection, "execute") and asyncio.iscoroutinefunction(
-                connection.execute
-            ):
-                # Broker command executor - already async
-                output = await connection.execute(command)
-            else:
-                # Testbed device or legacy connection - run in thread pool
-                loop = get_or_create_event_loop()
-                output = await loop.run_in_executor(None, connection.execute, command)
+            loop = get_or_create_event_loop()
+            output = await loop.run_in_executor(None, device.execute, command)
 
             # Convert output to string to ensure consistent type
             output_str = str(output)

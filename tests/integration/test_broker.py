@@ -80,15 +80,19 @@ def _validate_broker_connection_pooling(
 
 def _validate_broker_statistics(
     cli_output: str,
-    expected_devices: int,
-    expected_test_files: int,
+    expected_connection_misses: int,
+    expected_min_connection_hits: int,
+    expected_command_misses: int,
+    expected_min_command_hits: int,
 ) -> None:
     """Validate broker statistics from CLI output.
 
     Args:
         cli_output: Captured stdout/stderr from nac-test execution
-        expected_devices: Number of unique devices
-        expected_test_files: Number of test files per device
+        expected_connection_misses: Exact number of expected connection cache misses
+        expected_min_connection_hits: Minimum number of expected connection cache hits
+        expected_command_misses: Exact number of expected command cache misses
+        expected_min_command_hits: Minimum number of expected command cache hits
 
     Raises:
         AssertionError: If statistics validation fails
@@ -113,31 +117,23 @@ def _validate_broker_statistics(
     print(f"  Command cache misses: {command_misses}")
 
     # Validate connection cache
-    # Expected: one miss per device (first connection), remaining are hits
-    expected_connection_misses = expected_devices
-    expected_connection_hits = expected_devices * (expected_test_files - 1)
-
     assert connection_misses == expected_connection_misses, (
         f"Expected {expected_connection_misses} connection cache misses, "
         f"got {connection_misses}"
     )
 
-    assert connection_hits >= expected_connection_hits, (
-        f"Expected at least {expected_connection_hits} connection cache hits, "
+    assert connection_hits >= expected_min_connection_hits, (
+        f"Expected at least {expected_min_connection_hits} connection cache hits, "
         f"got {connection_hits}"
     )
 
     # Validate command cache
-    # Expected: one miss per device (first command execution), remaining are hits
-    expected_command_misses = expected_devices
-    expected_command_hits = expected_devices * (expected_test_files - 1)
-
     assert command_misses == expected_command_misses, (
         f"Expected {expected_command_misses} command cache misses, got {command_misses}"
     )
 
-    assert command_hits >= expected_command_hits, (
-        f"Expected at least {expected_command_hits} command cache hits, "
+    assert command_hits >= expected_min_command_hits, (
+        f"Expected at least {expected_min_command_hits} command cache hits, "
         f"got {command_hits}"
     )
 
@@ -153,21 +149,25 @@ def test_connection_broker_pooling_and_caching(
     Test that connection broker properly pools connections and caches commands.
 
     This test:
-    1. Runs 3 test files on 2 devices (6 total test executions)
-    2. All test files execute the same command: 'show sdwan control connections'
-    3. Validates that only 2 connections were created (not 6)
-    4. Validates that the command was executed only 2 times (not 6)
-    5. Verifies cache hit rate is 66.7% (4 cache hits out of 6 runs)
+    1. Runs 5 test files on 2 devices (10 total test executions)
+    2. Three test files (pooling_1/2/3) execute 'show sdwan control connections'
+       using the standard execute_command → parse_output(cmd, output=output) pattern
+    3. Two test files (genie_parse_1/2) call parse_output(cmd) WITHOUT output,
+       forcing Genie to call device.execute() internally through the broker
+    4. The Genie parser for 'show ip ospf mpls traffic-eng link' also fires a
+       supplementary 'show running-config | section router ospf 1' command
+    5. Validates connection pooling (2 connections, not 10)
+    6. Validates command caching across all patterns
 
-    Expected behavior with working broker:
-    - Connection pooling: 2 connections (one per device)
-    - Command caching: 2 executions + 4 cache hits
-    - Cache hit rate: 66.7%
+    Expected broker statistics:
+    - Connection misses: 2 (one per device on first test file)
+    - Connection hits: 8 (remaining 4 files × 2 devices)
+    - Command misses: 6 (2 devices × [1 sdwan + 2 ospf commands])
+    - Command hits: 8 (2 devices × [2 sdwan hits + 2 ospf hits])
 
     Without broker or with broken broker:
-    - Would create 6 connections (one per test per device)
-    - Would execute command 6 times (no caching)
-    - Cache hit rate: 0%
+    - Would create 10 connections (one per test per device)
+    - Would execute commands 10+ times (no caching)
     """
     from nac_test_pyats_common.common.base_device_resolver import BaseDeviceResolver
 
@@ -232,21 +232,28 @@ def test_connection_broker_pooling_and_caching(
         )
 
         # Validate connection pooling
-        # Expected: 2 devices, 3 test files
+        # Expected: 2 devices, 5 test files
         _validate_broker_connection_pooling(
             output_dir=output_dir,
             expected_devices=2,
-            expected_test_files=3,
+            expected_test_files=5,
         )
 
         # Validate broker statistics from CLI output
-        # All 3 test files execute: 'show sdwan control connections'
-        # Combine stdout and stderr since logs might be in either
+        # 3 pooling files: 'show sdwan control connections' (1 cmd each)
+        # 2 genie_parse files: 'show ip ospf mpls traffic-eng link' +
+        #   supplementary 'show running-config | section router ospf 1' (2 cmds each)
+        # Command misses: 2 (sdwan, first file) + 4 (ospf primary+supplementary, first genie file) = 6
+        # Command hits: 4 (sdwan files 2&3) + 4 (ospf genie file 2) = 8
+        # Connection misses: 2 (one per device)
+        # Connection hits: 2 devices × (5 files - 1) = 8
         cli_output = result.stdout + (result.stderr or "")
         _validate_broker_statistics(
             cli_output=cli_output,
-            expected_devices=2,
-            expected_test_files=3,
+            expected_connection_misses=2,
+            expected_min_connection_hits=8,
+            expected_command_misses=6,
+            expected_min_command_hits=8,
         )
 
         print("\n✓ All broker validations passed!")
