@@ -177,6 +177,16 @@ Exclude = Annotated[
 ]
 
 
+DeviceTag = Annotated[
+    str | None,
+    typer.Option(
+        "--device-tag",
+        help="Only test devices whose 'tags' list in the data model contains this value.",
+        envvar="NAC_TEST_DEVICE_TAG",
+    ),
+]
+
+
 RenderOnly = Annotated[
     bool,
     typer.Option(
@@ -302,6 +312,7 @@ def main(
     tests: Tests = None,
     include: Include = None,
     exclude: Exclude = None,
+    device_tag: DeviceTag = None,
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
     processes: Processes = None,
@@ -411,6 +422,7 @@ def main(
         tests_path=tests,
         include_tags=include,
         exclude_tags=exclude,
+        device_tag=device_tag,
         render_only=render_only,
         dry_run=dry_run,
         processes=processes,

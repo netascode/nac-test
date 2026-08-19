@@ -32,6 +32,7 @@ class DeviceExecutor:
         base_output_dir: Path,
         merged_data_path: Path,
         custom_testbed_path: Path | None = None,
+        device_tag: str | None = None,
     ):
         """Initialize device executor.
 
@@ -43,6 +44,7 @@ class DeviceExecutor:
             base_output_dir: Base output directory for test results
             merged_data_path: Path to the merged data model YAML file
             custom_testbed_path: Optional path to custom PyATS testbed YAML
+            device_tag: Only test devices whose 'tags' list contains this value
         """
         self.job_generator = job_generator
         self.subprocess_runner = subprocess_runner
@@ -51,6 +53,7 @@ class DeviceExecutor:
         self.base_output_dir = base_output_dir
         self.merged_data_path = merged_data_path
         self.custom_testbed_path = custom_testbed_path
+        self.device_tag = device_tag
 
     async def run_device_job_with_semaphore(
         self,
@@ -108,17 +111,18 @@ class DeviceExecutor:
                 # Set up environment for this device
                 # Always start with a copy of os.environ to preserve PATH and other variables
                 env = os.environ.copy()
-                env.update(
-                    {
-                        "HOSTNAME": hostname,
-                        "DEVICE_INFO": json.dumps(device),
-                        "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
-                            self.merged_data_path
-                        ),
-                        "NAC_TEST_TYPE": "d2d",
-                        ENV_TEST_DIR: str(self.test_dir),
-                    }
-                )
+                env_updates: dict[str, str] = {
+                    "HOSTNAME": hostname,
+                    "DEVICE_INFO": json.dumps(device),
+                    "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
+                        self.merged_data_path
+                    ),
+                    "NAC_TEST_TYPE": "d2d",
+                    ENV_TEST_DIR: str(self.test_dir),
+                }
+                if self.device_tag:
+                    env_updates["NAC_TEST_DEVICE_TAG"] = self.device_tag
+                env.update(env_updates)
 
                 # Track test status for this device.
                 #

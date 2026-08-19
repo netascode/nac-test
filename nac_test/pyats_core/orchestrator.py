@@ -75,6 +75,7 @@ class PyATSOrchestrator:
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
         include_tags: list[str] | None = None,
         exclude_tags: list[str] | None = None,
+        device_tag: str | None = None,
     ):
         """Initialize the PyATS orchestrator.
 
@@ -91,6 +92,7 @@ class PyATSOrchestrator:
             loglevel: Log level for PyATS output filtering
             include_tags: Tag patterns to include (Robot Framework syntax)
             exclude_tags: Tag patterns to exclude (Robot Framework syntax)
+            device_tag: Only test devices whose 'tags' list contains this value
         """
         self.data_paths = data_paths
         # Use absolute() rather than resolve() to preserve symlinks — resolve() would
@@ -112,6 +114,7 @@ class PyATSOrchestrator:
         self.loglevel = loglevel
         self.include_tags = include_tags
         self.exclude_tags = exclude_tags
+        self.device_tag = device_tag
 
         # Track test status by type for combined summary
         self.api_test_status: dict[str, dict[str, Any]] = {}
@@ -278,6 +281,9 @@ class PyATSOrchestrator:
             env["NAC_TEST_TYPE"] = "api"
             # Pass test_dir so plugin can compute relative test names
             env[ENV_TEST_DIR] = str(self.test_dir)
+            # Pass device tag filter to subprocess for per-device scoping
+            if self.device_tag:
+                env["NAC_TEST_DEVICE_TAG"] = self.device_tag
 
             # Execute and return the archive path
             assert self.subprocess_runner is not None  # Should be initialized by now
@@ -393,6 +399,7 @@ class PyATSOrchestrator:
                 self.base_output_dir,
                 self.merged_data_path,
                 self.custom_testbed_path,
+                device_tag=self.device_tag,
             )
 
         # Use a local narrowed variable to satisfy mypy
@@ -659,6 +666,12 @@ class PyATSOrchestrator:
             tasks.append(self._execute_api_tests_standard(api_tests))
 
         if d2d_tests:
+            # Set device tag in environment so the resolver can filter during discovery
+            if self.device_tag:
+                os.environ["NAC_TEST_DEVICE_TAG"] = self.device_tag
+            elif "NAC_TEST_DEVICE_TAG" in os.environ:
+                del os.environ["NAC_TEST_DEVICE_TAG"]
+
             # Get device inventory for D2D tests
             devices = self.device_inventory_discovery.get_device_inventory(d2d_tests)
 
