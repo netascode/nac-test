@@ -170,7 +170,11 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # passes it via NAC_TEST_CONTROLLER_CONTEXT env var. The accessor
         # get_controller_context() reads this, with a fallback to env var scan
         # for direct pyats invocation or legacy compatibility.
-        ctx = get_controller_context()
+        try:
+            ctx = get_controller_context()
+        except (ValueError, KeyError, json.JSONDecodeError) as e:
+            self.logger.error(f"Controller detection failed: {e}")
+            raise
         self.controller_type = ctx.controller_type
 
         self.controller_url = get_controller_url(self.controller_type)

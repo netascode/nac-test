@@ -3,9 +3,10 @@
 
 """Test base_test.py controller detection integration."""
 
+import json
 from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pyats import aetest
@@ -133,3 +134,59 @@ class TestBaseTestControllerDetection:
                 test_instance.setup()
 
             assert "Multiple controller credentials detected" in str(exc_info.value)
+
+
+class TestBaseTestSetupErrorLogging:
+    """Test that setup() logs errors via self.logger before re-raising."""
+
+    def _make_test_instance(self) -> "NACTestBase":
+        class TestClass(NACTestBase):
+            @aetest.test  # type: ignore[misc]
+            def test_method(self) -> None:
+                pass
+
+        return TestClass()
+
+    @pytest.mark.parametrize(
+        "exc,exc_type",
+        [
+            (ValueError("No controller credentials found"), ValueError),
+            (KeyError("controller_type"), KeyError),
+            (
+                json.JSONDecodeError("Expecting value", "not-valid-json", 0),
+                json.JSONDecodeError,
+            ),
+        ],
+        ids=[
+            "value_error",
+            "key_error-missing_field",
+            "json_decode_error-malformed_context",
+        ],
+    )
+    def test_setup_logs_error_before_reraise(
+        self,
+        exc: Exception,
+        exc_type: type[Exception],
+        setup_test_data_file_env: Path,
+    ) -> None:
+        """setup() calls self.logger.error with 'Controller detection failed' before
+        re-raising ValueError, KeyError, or JSONDecodeError from get_controller_context().
+        """
+        test_instance = self._make_test_instance()
+        mock_logger = MagicMock()
+
+        with (
+            patch.object(
+                test_instance, "load_data_model", return_value={"test": "data"}
+            ),
+            patch(
+                "nac_test.pyats_core.common.base_test.get_controller_context",
+                side_effect=exc,
+            ),
+            patch("logging.getLogger", return_value=mock_logger),
+        ):
+            with pytest.raises(exc_type):
+                test_instance.setup()
+
+        mock_logger.error.assert_called_once()
+        assert "Controller detection failed" in mock_logger.error.call_args[0][0]

@@ -61,7 +61,7 @@ def clean_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
     from other tests when running in parallel with pytest-xdist.
     """
     for key in list(os.environ.keys()):
-        if any(prefix in key for prefix in CONTROLLER_ENV_PREFIXES):
+        if any(key.startswith(prefix) for prefix in CONTROLLER_ENV_PREFIXES):
             monkeypatch.delenv(key, raising=False)
 
     # Clear serialized controller context from previous tests
