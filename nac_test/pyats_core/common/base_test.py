@@ -50,6 +50,7 @@ from nac_test.utils.controller import (
     get_defaults_prefix,
 )
 from nac_test.utils.formatting import format_file_timestamp_ms
+from nac_test.utils.learned_state import save_learned_state
 from nac_test.utils.yaml import safe_load
 
 T = TypeVar("T")
@@ -1956,6 +1957,12 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 }
             ]
 
+        # Learning mode: capture state instead of verifying
+        if getattr(self, "SUPPORTS_LEARNING", False) and os.environ.get(
+            "NAC_TEST_LEARN"
+        ):
+            return await self._run_learning_mode(items_to_verify)
+
         # Detect verification pattern based on return type
         if isinstance(items_to_verify, dict):
             # Grouped verification: {group_key: [contexts]}
@@ -2067,6 +2074,92 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 )
 
         return flattened_results
+
+    async def _run_learning_mode(
+        self, items: list[dict[str, Any]] | dict[str, list[dict[str, Any]]]
+    ) -> list["VerificationResult"]:
+        """Execute in learning mode — capture state instead of asserting.
+
+        Calls the test's capture_learned_state() method to query live state,
+        then writes the captured data to the learned_state output directory.
+
+        Args:
+            items: Items from get_items_to_verify() (list or dict depending on pattern).
+
+        Returns:
+            Single-element list with a PASSED result indicating successful capture.
+        """
+        # Flatten grouped items to a list for the capture method
+        if isinstance(items, dict):
+            flat_items = [ctx for group in items.values() for ctx in group]
+        else:
+            flat_items = items
+
+        from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
+
+        semaphore = asyncio.Semaphore(DEFAULT_API_CONCURRENCY)
+        client = getattr(self, "client", None)
+
+        if not hasattr(self, "capture_learned_state"):
+            msg = (
+                f"{self.__class__.__name__} has SUPPORTS_LEARNING=True but no "
+                f"capture_learned_state() method. Inherit LearningModeMixin."
+            )
+            self.logger.warning(msg)
+            return [
+                {
+                    "status": ResultStatus.SKIPPED,
+                    "context": {"action": "learn"},
+                    "reason": msg,
+                    "api_duration": 0,
+                }
+            ]
+
+        try:
+            learned_data = await self.capture_learned_state(
+                semaphore, client, flat_items
+            )
+        except NotImplementedError as e:
+            self.logger.warning(str(e))
+            return [
+                {
+                    "status": ResultStatus.SKIPPED,
+                    "context": {"action": "learn"},
+                    "reason": str(e),
+                    "api_duration": 0,
+                }
+            ]
+
+        # Write captured state to output directory
+        hostname = getattr(self, "hostname", None)
+        test_name = self.__class__.__name__
+        learned_state_dir = Path(
+            os.environ.get("NAC_TEST_LEARNED_STATE_DIR", "learned_state")
+        )
+
+        # If capture returned empty data, write a marker file with the reason
+        # so users know learning ran but found nothing (vs. never ran at all)
+        if not learned_data:
+            config = getattr(self, "TEST_CONFIG", {})
+            command = config.get("api_endpoint", "unknown")
+            learned_data = {
+                "_learned_state_empty": f"No data returned by parser for: {command}"
+            }
+
+        output_path = save_learned_state(
+            learned_data, learned_state_dir, test_name, hostname
+        )
+
+        self.logger.info(f"Learned state saved to {output_path}")
+
+        return [
+            {
+                "status": ResultStatus.PASSED,
+                "context": {"action": "learn", "output_path": str(output_path)},
+                "reason": f"Successfully captured baseline state ({len(flat_items)} items) → {output_path.name}",
+                "api_duration": 0,
+            }
+        ]
 
     async def _run_item_verification(
         self, items: list[dict[str, Any]]

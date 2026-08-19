@@ -279,6 +279,16 @@ Verbose = Annotated[
 ]
 
 
+Learn = Annotated[
+    bool,
+    typer.Option(
+        "--learn",
+        help="Run in learning mode: capture live operational state as baseline instead of verifying. Output is written to {output}/learned_state/ and can be loaded as a -d path for verification.",
+        envvar="NAC_TEST_LEARN",
+    ),
+]
+
+
 Testbed = Annotated[
     Path | None,
     typer.Option(
@@ -304,6 +314,7 @@ def main(
     exclude: Exclude = None,
     render_only: RenderOnly = False,
     dry_run: DryRun = False,
+    learn: Learn = False,
     processes: Processes = None,
     pyats: PyATS = False,
     robot: Robot = False,
@@ -413,6 +424,7 @@ def main(
         exclude_tags=exclude,
         render_only=render_only,
         dry_run=dry_run,
+        learn=learn,
         processes=processes,
         extra_args=validated_robot_args,
         max_parallel_devices=max_parallel_devices,
