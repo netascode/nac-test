@@ -15,6 +15,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -60,6 +61,10 @@ class ConnectionBroker:
 
         # Command caching - shared across all clients
         self.command_cache: dict[str, CommandCache] = {}  # hostname -> CommandCache
+
+        # Health check cache - avoids repeated device.connected probes
+        self._health_cache: dict[int, float] = {}  # id(connection) -> last_check_time
+        self._HEALTH_CHECK_TTL: float = 30.0  # seconds
 
         # Socket server
         self.server: asyncio.Server | None = None
@@ -394,16 +399,38 @@ class ConnectionBroker:
             del self.command_cache[hostname]
 
     def _is_connection_healthy(self, connection: Any) -> bool:
-        """Check if connection is healthy."""
+        """Check if connection is healthy, with TTL caching.
+
+        The ``device.connected`` property on a PyATS Device object performs a
+        live liveness probe over the SSH session (~0.37s round-trip). The
+        previous implementation called it twice per invocation (once via
+        hasattr, once directly) and ran synchronously on the async event loop,
+        blocking all broker traffic for the duration.
+
+        This version caches the result for ``_HEALTH_CHECK_TTL`` seconds so
+        repeated calls (one per test) are effectively free. Since
+        ``_execute_command`` already reconnects on transport failure, a brief
+        stale-positive is harmless.
+        """
+        now = time.monotonic()
+        key = id(connection)
+        cached = self._health_cache.get(key)
+        if cached is not None and (now - cached) < self._HEALTH_CHECK_TTL:
+            return True
+
         try:
-            return (
-                hasattr(connection, "connected")
-                and connection.connected
-                and hasattr(connection, "spawn")
-                and connection.spawn
-            )
+            connected = getattr(connection, "connected", False)
+            has_spawn = getattr(connection, "spawn", None) is not None
+            healthy = bool(connected) and has_spawn
         except Exception:
-            return False
+            healthy = False
+
+        if healthy:
+            self._health_cache[key] = now
+        else:
+            self._health_cache.pop(key, None)
+
+        return healthy
 
     async def _get_broker_status(self) -> dict[str, Any]:
         """Get broker status information."""
