@@ -183,7 +183,10 @@ class TestBaseTestSetupErrorLogging:
                 "nac_test.pyats_core.common.base_test.get_controller_context",
                 side_effect=exc,
             ),
-            patch("logging.getLogger", return_value=mock_logger),
+            patch(
+                "nac_test.pyats_core.common.base_test.logging.getLogger",
+                return_value=mock_logger,
+            ),
         ):
             with pytest.raises(exc_type):
                 test_instance.setup()
