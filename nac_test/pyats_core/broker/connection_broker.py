@@ -20,6 +20,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
+try:
+    from unicon.core.errors import SubCommandFailure
+except ImportError:
+
+    class SubCommandFailure(Exception):  # type: ignore[no-redef]
+        """Placeholder when unicon is not installed (Windows)."""
+
+
 from nac_test.pyats_core.constants import MAX_BROKER_MESSAGE_BYTES
 from nac_test.pyats_core.ssh.command_cache import CommandCache
 from nac_test.utils import get_or_create_event_loop
@@ -277,9 +285,11 @@ class ConnectionBroker:
             )
 
             return output_str
+        except SubCommandFailure as e:
+            logger.warning(f"Command rejected by {hostname} (session intact): {e}")
+            raise
         except Exception as e:
-            logger.error(f"Command execution failed on {hostname}: {e}")
-            # Try to reconnect on failure
+            logger.error(f"Transport failure on {hostname}, disconnecting: {e}")
             await self._disconnect_device(hostname)
             raise
 
