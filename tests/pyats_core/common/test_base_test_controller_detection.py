@@ -4,9 +4,10 @@
 """Test base_test.py controller detection integration."""
 
 import json
+import logging
 from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from pyats import aetest
@@ -168,12 +169,12 @@ class TestBaseTestSetupErrorLogging:
         exc: Exception,
         exc_type: type[Exception],
         setup_test_data_file_env: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """setup() calls self.logger.error with 'Controller detection failed' before
         re-raising ValueError, KeyError, or JSONDecodeError from get_controller_context().
         """
         test_instance = self._make_test_instance()
-        mock_logger = MagicMock()
 
         with (
             patch.object(
@@ -183,13 +184,13 @@ class TestBaseTestSetupErrorLogging:
                 "nac_test.pyats_core.common.base_test.get_controller_context",
                 side_effect=exc,
             ),
-            patch(
-                "nac_test.pyats_core.common.base_test.logging.getLogger",
-                return_value=mock_logger,
-            ),
+            caplog.at_level(logging.ERROR),
         ):
             with pytest.raises(exc_type):
                 test_instance.setup()
 
-        mock_logger.error.assert_called_once()
-        assert "Controller detection failed" in mock_logger.error.call_args[0][0]
+        assert any(
+            "Controller detection failed" in r.message
+            for r in caplog.records
+            if r.levelno == logging.ERROR
+        )
