@@ -3,6 +3,8 @@
 
 """Test base_test.py controller detection integration."""
 
+import json
+import logging
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import patch
@@ -133,3 +135,66 @@ class TestBaseTestControllerDetection:
                 test_instance.setup()
 
             assert "Multiple controller credentials detected" in str(exc_info.value)
+
+
+class TestBaseTestSetupErrorLogging:
+    """Test that setup() logs errors via self.logger before re-raising.
+
+    Uses real env var injection instead of patching get_controller_context so
+    the tests are immune to mock-machinery differences across Python versions.
+    """
+
+    def _make_test_instance(self) -> "NACTestBase":
+        class TestClass(NACTestBase):
+            @aetest.test  # type: ignore[misc]
+            def test_method(self) -> None:
+                pass
+
+        return TestClass()
+
+    @pytest.mark.parametrize(
+        "context_env,exc_type",
+        [
+            # NAC_TEST_CONTROLLER_CONTEXT absent + no controller env vars → ValueError
+            (None, ValueError),
+            # valid JSON but missing controller_type field → KeyError
+            ('{"auth_method": "basic"}', KeyError),
+            # malformed JSON → JSONDecodeError
+            ("not-valid-json", json.JSONDecodeError),
+        ],
+        ids=[
+            "value_error",
+            "key_error-missing_field",
+            "json_decode_error-malformed_context",
+        ],
+    )
+    def test_setup_logs_error_before_reraise(
+        self,
+        context_env: str | None,
+        exc_type: type[Exception],
+        setup_test_data_file_env: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """setup() calls self.logger.error with 'Controller detection failed' before
+        re-raising ValueError, KeyError, or JSONDecodeError from get_controller_context().
+        """
+        if context_env is None:
+            monkeypatch.delenv("NAC_TEST_CONTROLLER_CONTEXT", raising=False)
+        else:
+            monkeypatch.setenv("NAC_TEST_CONTROLLER_CONTEXT", context_env)
+
+        test_instance = self._make_test_instance()
+
+        with patch.object(
+            test_instance, "load_data_model", return_value={"test": "data"}
+        ):
+            with caplog.at_level(logging.ERROR):
+                with pytest.raises(exc_type):
+                    test_instance.setup()
+
+        assert any(
+            "Controller detection failed" in r.message
+            for r in caplog.records
+            if r.levelno == logging.ERROR
+        )

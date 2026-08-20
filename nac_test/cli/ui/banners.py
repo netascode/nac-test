@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import typer
 
-from nac_test.utils.controller import get_display_name
+from nac_test.core.controller import get_display_name
 from nac_test.utils.terminal import TerminalColors
 from nac_test.utils.url import extract_host
 

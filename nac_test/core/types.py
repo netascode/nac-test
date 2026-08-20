@@ -3,6 +3,7 @@
 
 """Core types for nac-test orchestration."""
 
+import json
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Literal
@@ -18,6 +19,44 @@ from nac_test.core.constants import (
 # Type alias for supported controller type keys.
 # Matches the keys of CONTROLLER_REGISTRY in nac_test.utils.controller.
 ControllerTypeKey = Literal["ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"]
+
+
+@dataclass(frozen=True)
+class ControllerContext:
+    """Resolved controller identity passed from orchestrator to subprocess.
+
+    Produced once by ``resolve_controller()`` and threaded through the
+    orchestration chain.  Serialized to ``NAC_TEST_CONTROLLER_CONTEXT``
+    for subprocess transport (follows the existing ``DEVICE_INFO`` pattern).
+
+    Attributes:
+        controller_type: Detected controller key (e.g. ``"ACI"``, ``"SDWAN"``).
+        auth_method: Authentication mechanism selected during resolution
+            (e.g. ``"token"``, ``"session"``).  Consumed by auth adapters in
+            *nac-test-pyats-common* to branch on token vs. session auth.
+    """
+
+    controller_type: ControllerTypeKey
+    auth_method: str
+
+    def to_json(self) -> str:
+        """Serialize for ``NAC_TEST_CONTROLLER_CONTEXT`` env var."""
+        return json.dumps(
+            {"controller_type": self.controller_type, "auth_method": self.auth_method}
+        )
+
+    @classmethod
+    def from_json(cls, raw: str) -> "ControllerContext":
+        """Deserialize from ``NAC_TEST_CONTROLLER_CONTEXT`` env var.
+
+        Unknown keys are silently ignored so new fields can be added
+        without breaking older consumers.
+        """
+        data = json.loads(raw)
+        return cls(
+            controller_type=data["controller_type"],
+            auth_method=data["auth_method"],
+        )
 
 
 @dataclass(frozen=True)

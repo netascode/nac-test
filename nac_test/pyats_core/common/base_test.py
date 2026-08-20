@@ -29,6 +29,11 @@ from nac_test.core.constants import (
     FILE_TIMESTAMP_FORMAT,
     PYATS_RESULTS_DIRNAME,
 )
+from nac_test.core.controller import (
+    get_controller_context,
+    get_controller_url,
+    get_defaults_prefix,
+)
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.defaults_resolver import (
     resolve_default_value,
@@ -44,11 +49,6 @@ from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.utils import sanitize_hostname
-from nac_test.utils.controller import (
-    detect_controller_type,
-    get_controller_url,
-    get_defaults_prefix,
-)
 from nac_test.utils.formatting import format_file_timestamp_ms
 from nac_test.utils.yaml import safe_load
 
@@ -165,15 +165,17 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # Load merged data model created by nac-test
         self.data_model = self.load_data_model()
 
-        # Get controller details from environment
-        # Note: Environment validation happens in orchestrator pre-flight check
-        # Detect controller type based on environment variables
+        # Get controller context from environment
+        # In normal operation, CombinedOrchestrator resolves the controller and
+        # passes it via NAC_TEST_CONTROLLER_CONTEXT env var. The accessor
+        # get_controller_context() reads this, with a fallback to env var scan
+        # for direct pyats invocation or legacy compatibility.
         try:
-            self.controller_type = detect_controller_type()
-        except ValueError as e:
-            # Log error and re-raise to fail the test setup
+            ctx = get_controller_context()
+        except (ValueError, KeyError, json.JSONDecodeError) as e:
             self.logger.error(f"Controller detection failed: {e}")
             raise
+        self.controller_type = ctx.controller_type
 
         self.controller_url = get_controller_url(self.controller_type)
         # USERNAME and PASSWORD are optional for some controller types (e.g., IOSXE)
