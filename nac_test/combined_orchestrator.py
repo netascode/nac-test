@@ -30,7 +30,6 @@ from nac_test.core.constants import (
 from nac_test.core.controller import (
     ResolutionError,
     format_resolution_error,
-    get_env_var_prefix,
     resolve_controller,
 )
 from nac_test.core.controller_auth import preflight_auth_check
@@ -375,12 +374,10 @@ class CombinedOrchestrator:
                     detail=auth_result.detail,
                 )
             else:
-                env_var_prefix = get_env_var_prefix(auth_result.controller_type)
                 display_auth_failure_banner(
                     controller_type=auth_result.controller_type,
                     controller_url=auth_result.controller_url,
                     detail=auth_result.detail,
-                    env_var_prefix=env_var_prefix,
                 )
             typer.echo("")
 
