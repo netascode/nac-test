@@ -19,8 +19,10 @@ from nac_test.core.controller import (
     _format_no_credentials_error,
     detect_controller_type,
     format_resolution_error,
+    get_connection_params,
     get_controller_context,
     get_controller_url,
+    get_insecure_flag,
     get_matched_credential_set,
     resolve_controller,
 )
@@ -849,7 +851,10 @@ class TestSDWANCredentialSets:
 
     def test_credential_set_auth_method_default(self) -> None:
         """CredentialSet.auth_method defaults to 'session'."""
-        cs = CredentialSet(env_vars=("X_URL", "X_USER", "X_PASS"), label="test")
+        cs = CredentialSet(
+            fields={"url": "X_URL", "username": "X_USER", "password": "X_PASS"},
+            label="test",
+        )
         assert cs.auth_method == "session"
 
     def test_aci_matched_credential_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -904,3 +909,206 @@ class TestGetControllerUrlSDWAN:
             get_controller_url("SDWAN")
 
         assert "SDWAN_URL" in str(exc_info.value)
+
+
+class TestGetConnectionParams:
+    """Tests for get_connection_params()."""
+
+    def test_aci_session(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """ACI session auth resolves url/username/password by kind."""
+        monkeypatch.setenv("ACI_URL", "https://apic.example.com")
+        monkeypatch.setenv("ACI_USERNAME", "admin")
+        monkeypatch.setenv("ACI_PASSWORD", "password")
+
+        params = get_connection_params("ACI", "session")
+
+        assert params == {
+            "url": "https://apic.example.com",
+            "username": "admin",
+            "password": "password",
+        }
+
+    def test_sdwan_token(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """SDWAN token auth resolves url/token by kind."""
+        monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
+        monkeypatch.setenv("SDWAN_API_TOKEN", "abc.def.ghi")
+
+        params = get_connection_params("SDWAN", "token")
+
+        assert params == {
+            "url": "https://vmanage.example.com",
+            "token": "abc.def.ghi",
+        }
+
+    def test_sdwan_session(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """SDWAN session auth resolves url/username/password by kind."""
+        monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
+        monkeypatch.setenv("SDWAN_USERNAME", "admin")
+        monkeypatch.setenv("SDWAN_PASSWORD", "password")
+
+        params = get_connection_params("SDWAN", "session")
+
+        assert params == {
+            "url": "https://vmanage.example.com",
+            "username": "admin",
+            "password": "password",
+        }
+
+    def test_cc_session(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """CC session auth resolves url/username/password by kind."""
+        monkeypatch.setenv("CC_URL", "https://dnac.example.com")
+        monkeypatch.setenv("CC_USERNAME", "admin")
+        monkeypatch.setenv("CC_PASSWORD", "password")
+
+        params = get_connection_params("CC", "session")
+
+        assert params == {
+            "url": "https://dnac.example.com",
+            "username": "admin",
+            "password": "password",
+        }
+
+    def test_unknown_controller_type_raises_key_error(self) -> None:
+        """Unknown controller_type raises KeyError."""
+        with pytest.raises(KeyError):
+            get_connection_params("BOGUS", "session")
+
+    def test_unmatched_auth_method_raises_value_error(self) -> None:
+        """auth_method with no matching credential set raises ValueError."""
+        with pytest.raises(ValueError, match="auth_method"):
+            get_connection_params("ACI", "token")
+
+    def test_missing_env_vars_raises_value_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Missing/empty env vars raise ValueError listing the missing var names."""
+        monkeypatch.setenv("ACI_URL", "https://apic.example.com")
+        monkeypatch.delenv("ACI_USERNAME", raising=False)
+        monkeypatch.delenv("ACI_PASSWORD", raising=False)
+
+        with pytest.raises(ValueError) as exc_info:
+            get_connection_params("ACI", "session")
+
+        assert "ACI_USERNAME" in str(exc_info.value)
+        assert "ACI_PASSWORD" in str(exc_info.value)
+
+    def test_meraki_session(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """MERAKI session auth resolves url/username/password by kind."""
+        monkeypatch.setenv("MERAKI_URL", "https://meraki.example.com")
+        monkeypatch.setenv("MERAKI_USERNAME", "admin")
+        monkeypatch.setenv("MERAKI_PASSWORD", "password")
+
+        params = get_connection_params("MERAKI", "session")
+
+        assert params == {
+            "url": "https://meraki.example.com",
+            "username": "admin",
+            "password": "password",
+        }
+
+    def test_env_vars_and_kinds_derived_from_fields(self) -> None:
+        """env_vars/kinds are computed from `fields`, so they can never mismatch."""
+        cs = CredentialSet(
+            fields={"url": "BAD_URL", "username": "BAD_USERNAME"}, label="Broken"
+        )
+        assert cs.env_vars == ("BAD_URL", "BAD_USERNAME")
+        assert cs.kinds == ("url", "username")
+
+    def test_iosxe_host_variant_resolves_when_url_unset(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """IOSXE_HOST alone (no IOSXE_URL) resolves via the Host credential set.
+
+        Both IOSXE_URL and IOSXE_HOST share auth_method="session", so the first
+        fully-satisfied candidate must win - not just the first one in order.
+        """
+        monkeypatch.delenv("IOSXE_URL", raising=False)
+        monkeypatch.setenv("IOSXE_HOST", "192.168.1.1")
+        monkeypatch.setenv("IOSXE_USERNAME", "admin")
+        monkeypatch.setenv("IOSXE_PASSWORD", "password")
+
+        params = get_connection_params("IOSXE", "session")
+
+        assert params == {
+            "url": "192.168.1.1",
+            "username": "admin",
+            "password": "password",
+        }
+
+    def test_iosxe_reports_url_variant_missing_vars_when_nothing_configured(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With neither variant configured, the first (URL) set's vars are reported."""
+        monkeypatch.delenv("IOSXE_URL", raising=False)
+        monkeypatch.delenv("IOSXE_HOST", raising=False)
+        monkeypatch.delenv("IOSXE_USERNAME", raising=False)
+        monkeypatch.delenv("IOSXE_PASSWORD", raising=False)
+
+        with pytest.raises(ValueError) as exc_info:
+            get_connection_params("IOSXE", "session")
+
+        assert "IOSXE_URL" in str(exc_info.value)
+
+    def test_iosxe_reports_host_variant_missing_vars_when_partially_configured(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """IOSXE_HOST set but username/password missing reports IOSXE_HOST vars,
+
+        not IOSXE_URL - the caller never touched the URL variant, so the
+        error must point at the variant they actually started configuring.
+        """
+        monkeypatch.delenv("IOSXE_URL", raising=False)
+        monkeypatch.setenv("IOSXE_HOST", "192.168.1.1")
+        monkeypatch.delenv("IOSXE_USERNAME", raising=False)
+        monkeypatch.delenv("IOSXE_PASSWORD", raising=False)
+
+        with pytest.raises(ValueError) as exc_info:
+            get_connection_params("IOSXE", "session")
+
+        error_msg = str(exc_info.value)
+        assert "IOSXE_USERNAME" in error_msg
+        assert "IOSXE_PASSWORD" in error_msg
+        assert "IOSXE_URL" not in error_msg
+
+
+class TestGetInsecureFlag:
+    """Tests for get_insecure_flag()."""
+
+    def test_defaults_true_when_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Unset env var defaults to True (insecure), matching prior adapter behavior."""
+        monkeypatch.delenv("ACI_INSECURE", raising=False)
+
+        assert get_insecure_flag("ACI") is True
+
+    def test_defaults_true_when_empty(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Empty string is treated the same as unset."""
+        monkeypatch.setenv("CC_INSECURE", "")
+
+        assert get_insecure_flag("CC") is True
+
+    @pytest.mark.parametrize("raw", ["True", "true", "1", "yes", "YES"])
+    def test_truthy_values(self, monkeypatch: pytest.MonkeyPatch, raw: str) -> None:
+        """Recognized truthy spellings (case-insensitive) resolve to True."""
+        monkeypatch.setenv("SDWAN_INSECURE", raw)
+
+        assert get_insecure_flag("SDWAN") is True
+
+    @pytest.mark.parametrize("raw", ["False", "false", "0", "no"])
+    def test_falsy_values(self, monkeypatch: pytest.MonkeyPatch, raw: str) -> None:
+        """Anything else (e.g. "False", "0") resolves to False."""
+        monkeypatch.setenv("SDWAN_INSECURE", raw)
+
+        assert get_insecure_flag("SDWAN") is False
+
+    def test_custom_default_used_when_unset(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The `default` param controls the unset fallback."""
+        monkeypatch.delenv("ISE_INSECURE", raising=False)
+
+        assert get_insecure_flag("ISE", default=False) is False
+
+    def test_unknown_controller_type_raises_key_error(self) -> None:
+        """Unknown controller_type raises KeyError."""
+        with pytest.raises(KeyError):
+            get_insecure_flag("BOGUS")

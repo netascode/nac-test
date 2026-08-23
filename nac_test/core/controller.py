@@ -18,12 +18,13 @@ the merged NAC data model.
 
 import logging
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import cast
 
 from nac_test._env import is_env_var_set
-from nac_test.core.types import ControllerContext, ControllerTypeKey
+from nac_test.core.types import ControllerContext, ControllerTypeKey, CredentialKind
 
 logger = logging.getLogger(__name__)
 
@@ -37,15 +38,36 @@ class CredentialSet:
     multiple CredentialSets, the first satisfied set wins (order matters).
 
     Attributes:
-        env_vars: Environment variable names required for this credential method.
+        fields: Mapping of semantic kind -> environment variable name,
+            e.g. ``{"url": "ACI_URL", "username": "ACI_USERNAME",
+            "password": "ACI_PASSWORD"}``. ``env_vars`` and ``kinds`` are
+            derived from this single mapping, so they can never drift out of
+            sync with each other. Lookups by kind (e.g. :func:`get_controller_url`,
+            :func:`get_connection_params`) key off ``fields`` directly, so entry
+            order within the mapping is not significant.
         label: Human-readable label for error messages (e.g., "API Token (20.18+)").
         auth_method: Identifier consumed by auth adapters in nac-test-pyats-common
             to select the authentication mechanism (e.g., "token", "session").
     """
 
-    env_vars: tuple[str, ...]
+    fields: Mapping[CredentialKind, str]
     label: str
     auth_method: str = "session"
+
+    def __post_init__(self) -> None:
+        # Normalize to an immutable mapping so a frozen CredentialSet can't be
+        # mutated in place via its `fields` dict.
+        object.__setattr__(self, "fields", MappingProxyType(dict(self.fields)))
+
+    @property
+    def env_vars(self) -> tuple[str, ...]:
+        """Environment variable names, in ``fields`` order."""
+        return tuple(self.fields.values())
+
+    @property
+    def kinds(self) -> tuple[CredentialKind, ...]:
+        """Semantic kind for each entry in ``env_vars``, in the same order."""
+        return tuple(self.fields.keys())
 
 
 @dataclass(frozen=True)
@@ -61,6 +83,8 @@ class ControllerConfig:
             must have at least one CredentialSet.
         defaults_prefix: JMESPath prefix for the defaults block in NAC data models
             (e.g., "defaults.apic", "defaults.sdwan").
+        insecure_env_var: Environment variable name for the SSL-verification-disable
+            toggle (e.g., "ACI_INSECURE"). See :func:`get_insecure_flag`.
         cache_key: The controller_type string passed to AuthCache by the auth adapter.
             None for controllers that don't have an auth adapter in nac-test-pyats-common.
     """
@@ -70,6 +94,7 @@ class ControllerConfig:
     env_var_prefix: str
     credential_sets: tuple[CredentialSet, ...]
     defaults_prefix: str
+    insecure_env_var: str
     cache_key: str | None = None
 
 
@@ -82,11 +107,16 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         env_var_prefix="ACI",
         credential_sets=(
             CredentialSet(
-                env_vars=("ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"),
+                fields={
+                    "url": "ACI_URL",
+                    "username": "ACI_USERNAME",
+                    "password": "ACI_PASSWORD",
+                },
                 label="Username/Password",
             ),
         ),
         defaults_prefix="defaults.apic",
+        insecure_env_var="ACI_INSECURE",
         cache_key="ACI",
     ),
     "SDWAN": ControllerConfig(
@@ -95,16 +125,24 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         env_var_prefix="SDWAN",
         credential_sets=(
             CredentialSet(
-                env_vars=("SDWAN_URL", "SDWAN_API_TOKEN"),
+                fields={
+                    "url": "SDWAN_URL",
+                    "token": "SDWAN_API_TOKEN",
+                },
                 label="API Token (20.18+)",
                 auth_method="token",
             ),
             CredentialSet(
-                env_vars=("SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"),
+                fields={
+                    "url": "SDWAN_URL",
+                    "username": "SDWAN_USERNAME",
+                    "password": "SDWAN_PASSWORD",
+                },
                 label="Username/Password",
             ),
         ),
         defaults_prefix="defaults.sdwan",
+        insecure_env_var="SDWAN_INSECURE",
         cache_key="SDWAN_MANAGER",
     ),
     "CC": ControllerConfig(
@@ -113,11 +151,16 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         env_var_prefix="CC",
         credential_sets=(
             CredentialSet(
-                env_vars=("CC_URL", "CC_USERNAME", "CC_PASSWORD"),
+                fields={
+                    "url": "CC_URL",
+                    "username": "CC_USERNAME",
+                    "password": "CC_PASSWORD",
+                },
                 label="Username/Password",
             ),
         ),
         defaults_prefix="defaults.catc",
+        insecure_env_var="CC_INSECURE",
         cache_key="CC",
     ),
     "MERAKI": ControllerConfig(
@@ -126,11 +169,16 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         env_var_prefix="MERAKI",
         credential_sets=(
             CredentialSet(
-                env_vars=("MERAKI_URL", "MERAKI_USERNAME", "MERAKI_PASSWORD"),
+                fields={
+                    "url": "MERAKI_URL",
+                    "username": "MERAKI_USERNAME",
+                    "password": "MERAKI_PASSWORD",
+                },
                 label="Username/Password",
             ),
         ),
         defaults_prefix="defaults.meraki",
+        insecure_env_var="MERAKI_INSECURE",
     ),
     "FMC": ControllerConfig(
         display_name="Firepower Management Center",
@@ -138,11 +186,16 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         env_var_prefix="FMC",
         credential_sets=(
             CredentialSet(
-                env_vars=("FMC_URL", "FMC_USERNAME", "FMC_PASSWORD"),
+                fields={
+                    "url": "FMC_URL",
+                    "username": "FMC_USERNAME",
+                    "password": "FMC_PASSWORD",
+                },
                 label="Username/Password",
             ),
         ),
         defaults_prefix="defaults.fmc",
+        insecure_env_var="FMC_INSECURE",
     ),
     "ISE": ControllerConfig(
         display_name="ISE",
@@ -150,28 +203,44 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         env_var_prefix="ISE",
         credential_sets=(
             CredentialSet(
-                env_vars=("ISE_URL", "ISE_USERNAME", "ISE_PASSWORD"),
+                fields={
+                    "url": "ISE_URL",
+                    "username": "ISE_USERNAME",
+                    "password": "ISE_PASSWORD",
+                },
                 label="Username/Password",
             ),
         ),
         defaults_prefix="defaults.ise",
+        insecure_env_var="ISE_INSECURE",
     ),
     "IOSXE": ControllerConfig(
         display_name="IOS XE",
         url_env_var="IOSXE_URL",
         env_var_prefix="IOSXE",
-        # Direct device access, no controller credentials required
+        # Direct device access, no controller credentials required.
+        # IOSXE_URL and IOSXE_HOST serve the same purpose (IOSXE_URL is
+        # being phased out) - both map to kind="url".
         credential_sets=(
             CredentialSet(
-                env_vars=("IOSXE_URL", "IOSXE_USERNAME", "IOSXE_PASSWORD"),
+                fields={
+                    "url": "IOSXE_URL",
+                    "username": "IOSXE_USERNAME",
+                    "password": "IOSXE_PASSWORD",
+                },
                 label="Device URL",
             ),
             CredentialSet(
-                env_vars=("IOSXE_HOST", "IOSXE_USERNAME", "IOSXE_PASSWORD"),
+                fields={
+                    "url": "IOSXE_HOST",
+                    "username": "IOSXE_USERNAME",
+                    "password": "IOSXE_PASSWORD",
+                },
                 label="Device Host",
             ),
         ),
         defaults_prefix="defaults.iosxe",
+        insecure_env_var="IOSXE_INSECURE",
     ),
 }
 
@@ -412,12 +481,135 @@ def get_controller_url(controller_type: str) -> str:
 
     # Fallback for alternative URL vars (e.g., IOSXE_HOST)
     for cred_set in config.credential_sets:
-        if cred_set.env_vars[0] != config.url_env_var:
-            alt = os.environ.get(cred_set.env_vars[0], "").strip()
+        url_var = cred_set.fields.get("url")
+        if url_var and url_var != config.url_env_var:
+            alt = os.environ.get(url_var, "").strip()
             if alt:
                 return alt
 
     raise KeyError(config.url_env_var)
+
+
+_INSECURE_TRUE_VALUES = ("true", "1", "yes")
+
+
+def get_insecure_flag(controller_type: str, default: bool = True) -> bool:
+    """Resolve the SSL-verification-disable flag for a controller type.
+
+    Single source of truth for reading a controller's ``{PREFIX}_INSECURE``
+    environment variable (see :attr:`ControllerConfig.insecure_env_var`),
+    replacing per-adapter ``os.environ.get(f"{prefix}_INSECURE", ...)`` calls
+    in nac-test-pyats-common.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
+        default: Value to use when the env var is unset or empty. Defaults to
+            True, matching existing adapter behavior (unset means insecure, to
+            keep lab/self-signed deployments working without extra config).
+
+    Returns:
+        True if SSL verification should be disabled.
+
+    Raises:
+        KeyError: If controller_type is not registered.
+
+    Example:
+        >>> os.environ["ACI_INSECURE"] = "False"
+        >>> get_insecure_flag("ACI")
+        False
+    """
+    config = CONTROLLER_REGISTRY[controller_type]
+    raw = os.environ.get(config.insecure_env_var, "").strip()
+    if not raw:
+        return default
+    return raw.lower() in _INSECURE_TRUE_VALUES
+
+
+def get_connection_params(
+    controller_type: str, auth_method: str
+) -> dict[CredentialKind, str]:
+    """Resolve connection values by kind for a controller_type/auth_method.
+
+    Single source of truth for reading connection-related env var values.
+    Looks up the ``CredentialSet``(s) in ``CONTROLLER_REGISTRY[controller_type]``
+    whose ``auth_method`` matches, then reads each of its ``env_vars`` from
+    ``os.environ``, keyed by the corresponding entry in ``kinds`` (e.g.
+    ``"url"``, ``"username"``, ``"password"``, ``"token"``).
+
+    When multiple credential sets share the same ``auth_method`` (e.g. IOS-XE's
+    URL and Host variants, both ``auth_method="session"``), the first one that
+    is fully satisfied (all env vars present) is used, so it doesn't matter
+    which of the equivalent variables the caller actually configured. If none
+    are fully satisfied, the first matching set is used to build the
+    "missing variable(s)" error, matching prior behavior.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
+        auth_method: The auth method to match against the controller's
+            credential sets (e.g., "session", "token").
+
+    Returns:
+        Dict keyed by kind, e.g. ``{"url": ..., "username": ..., "password": ...}``
+        or ``{"url": ..., "token": ...}``.
+
+    Raises:
+        KeyError: If controller_type is not registered.
+        ValueError: If no credential set matches auth_method, or if any of its
+            env vars are missing/empty (message lists the missing var names).
+
+    Example:
+        >>> os.environ.update({"SDWAN_URL": "https://vmanage.example.com",
+        ...                     "SDWAN_API_TOKEN": "abc.def.ghi"})
+        >>> get_connection_params("SDWAN", "token")
+        {'url': 'https://vmanage.example.com', 'token': 'abc.def.ghi'}
+    """
+    config = CONTROLLER_REGISTRY[controller_type]
+
+    candidates = [cs for cs in config.credential_sets if cs.auth_method == auth_method]
+    if not candidates:
+        raise ValueError(
+            f"No credential set for controller_type={controller_type!r} matches "
+            f"auth_method={auth_method!r}."
+        )
+
+    # Prefer a fully-satisfied candidate so equivalent variables (e.g. IOS-XE's
+    # IOSXE_URL vs IOSXE_HOST, both auth_method="session") don't collide -
+    # whichever one the caller actually configured wins. If none is fully
+    # satisfied, report missing vars for whichever candidate the caller has
+    # actually started configuring (most env vars already set), so a user who
+    # set IOSXE_HOST but forgot the password isn't told to set IOSXE_URL
+    # instead. Ties (including "nothing configured at all") keep the first
+    # candidate, matching prior behavior.
+    def _set_var_count(cs: CredentialSet) -> int:
+        return sum(1 for var in cs.env_vars if os.environ.get(var, "").strip())
+
+    cred_set = next(
+        (
+            cs
+            for cs in candidates
+            if all(os.environ.get(var, "").strip() for var in cs.env_vars)
+        ),
+        None,
+    )
+    if cred_set is None:
+        cred_set = max(candidates, key=_set_var_count)
+
+    values: dict[CredentialKind, str] = {}
+    missing: list[str] = []
+    for kind, var in cred_set.fields.items():
+        value = os.environ.get(var, "").strip()
+        if value:
+            values[kind] = value
+        else:
+            missing.append(var)
+
+    if missing:
+        raise ValueError(
+            f"Missing required environment variable(s) for {controller_type}: "
+            f"{', '.join(missing)}"
+        )
+
+    return values
 
 
 def detect_controller_type() -> ControllerTypeKey:

@@ -20,6 +20,10 @@ from nac_test.core.constants import (
 # Matches the keys of CONTROLLER_REGISTRY in nac_test.utils.controller.
 ControllerTypeKey = Literal["ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"]
 
+# Type alias for the semantic kind of a credential value.
+# Matches the keys used in CredentialSet.fields in nac_test.core.controller.
+CredentialKind = Literal["url", "username", "password", "token"]
+
 
 @dataclass(frozen=True)
 class ControllerContext:

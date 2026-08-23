@@ -53,6 +53,41 @@ class TestBaseTestControllerDetection:
         assert test_instance.controller_url == "https://apic.example.com"
         assert test_instance.username == "admin"
         assert test_instance.password == "password"
+        assert test_instance.auth_method == "session"
+        assert test_instance.connection_params == {
+            "url": "https://apic.example.com",
+            "username": "admin",
+            "password": "password",
+        }
+
+    def test_base_test_connection_params_populated_for_iosxe(
+        self, monkeypatch: pytest.MonkeyPatch, setup_test_data_file_env: Path
+    ) -> None:
+        """connection_params resolves for IOSXE too, now that kinds are populated."""
+        for env_var in ["ACI_URL", "SDWAN_URL", "CC_URL"]:
+            monkeypatch.delenv(env_var, raising=False)
+        monkeypatch.setenv("IOSXE_URL", "10.0.0.1")
+        monkeypatch.setenv("IOSXE_USERNAME", "admin")
+        monkeypatch.setenv("IOSXE_PASSWORD", "password")
+
+        class TestClass(NACTestBase):
+            @aetest.test  # type: ignore[misc]
+            def test_method(self) -> None:
+                pass
+
+        test_instance = TestClass()
+
+        with patch.object(
+            test_instance, "load_data_model", return_value={"test": "data"}
+        ):
+            test_instance.setup()
+
+        assert test_instance.controller_type == "IOSXE"
+        assert test_instance.connection_params == {
+            "url": "10.0.0.1",
+            "username": "admin",
+            "password": "password",
+        }
 
     def test_base_test_fails_setup_on_detection_error(
         self, monkeypatch: pytest.MonkeyPatch, setup_test_data_file_env: Path

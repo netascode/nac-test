@@ -30,6 +30,7 @@ from nac_test.core.constants import (
     PYATS_RESULTS_DIRNAME,
 )
 from nac_test.core.controller import (
+    get_connection_params,
     get_controller_context,
     get_controller_url,
     get_defaults_prefix,
@@ -178,10 +179,30 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         self.controller_type = ctx.controller_type
 
         self.controller_url = get_controller_url(self.controller_type)
-        # USERNAME and PASSWORD are optional for some controller types (e.g., IOSXE)
-        # D2D tests use device-specific credentials from inventory, not controller credentials
-        self.username = os.environ.get(f"{self.controller_type}_USERNAME")
-        self.password = os.environ.get(f"{self.controller_type}_PASSWORD")
+
+        # Generic connection params (url/username/password/token, keyed by kind)
+        # for the auth method nac-test resolved. Populated for every registered
+        # controller_type; falls back to {} only on a genuine misconfiguration
+        # (unregistered controller_type or a CredentialSet whose kinds/env_vars
+        # are out of sync).
+        self.auth_method = ctx.auth_method
+        try:
+            self.connection_params = get_connection_params(
+                self.controller_type, ctx.auth_method
+            )
+        except (KeyError, ValueError) as e:
+            self.logger.debug(
+                "get_connection_params() not available for controller_type=%s: %s",
+                self.controller_type,
+                e,
+            )
+            self.connection_params = {}
+
+        # USERNAME and PASSWORD are optional for some controller types/credential
+        # sets (e.g., IOSXE has none, SDWAN's token credential set has neither).
+        # D2D tests use device-specific credentials from inventory, not these.
+        self.username = self.connection_params.get("username")
+        self.password = self.connection_params.get("password")
 
         # Connection pool is shared within process (for API tests)
         self.pool = ConnectionPool()
@@ -867,17 +888,6 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             Result from successful function execution
         """
         return await SmartRetry.execute(func, *args, **kwargs)
-
-    def get_connection_params(self) -> dict[str, Any]:
-        """Get connection parameters for the specific architecture.
-
-        Must be implemented by subclasses to return architecture-specific
-        connection details.
-        """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must implement get_connection_params() to return "
-            f"architecture-specific connection details."
-        )
 
     def wrap_client_for_tracking(
         self, client: Any, device_name: str = "Controller"
