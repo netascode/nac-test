@@ -173,7 +173,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # for direct pyats invocation or legacy compatibility.
         try:
             ctx = get_controller_context()
-        except (ValueError, KeyError, json.JSONDecodeError) as e:
+        except (ValueError, KeyError) as e:
             self.logger.error(f"Controller detection failed: {e}")
             raise
         self.controller_type = ctx.controller_type
@@ -181,22 +181,13 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         self.controller_url = get_controller_url(self.controller_type)
 
         # Generic connection params (url/username/password/token, keyed by kind)
-        # for the auth method nac-test resolved. Populated for every registered
-        # controller_type; falls back to {} only on a genuine misconfiguration
-        # (unregistered controller_type or a CredentialSet whose kinds/env_vars
-        # are out of sync).
+        # for the resolved auth method.  If controller resolution succeeded,
+        # connection params must also resolve — failure here indicates a real
+        # misconfiguration, not a soft-skip scenario.
         self.auth_method = ctx.auth_method
-        try:
-            self.connection_params = get_connection_params(
-                self.controller_type, ctx.auth_method
-            )
-        except (KeyError, ValueError) as e:
-            self.logger.debug(
-                "get_connection_params() not available for controller_type=%s: %s",
-                self.controller_type,
-                e,
-            )
-            self.connection_params = {}
+        self.connection_params = get_connection_params(
+            self.controller_type, ctx.auth_method
+        )
 
         # USERNAME and PASSWORD are optional for some controller types/credential
         # sets (e.g., IOSXE has none, SDWAN's token credential set has neither).

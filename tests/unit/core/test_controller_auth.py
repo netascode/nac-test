@@ -14,7 +14,6 @@ from nac_test.core.controller_auth import (
     CONTROLLER_REGISTRY,
     AuthOutcome,
     _get_auth_callable,
-    _get_controller_url,
     preflight_auth_check,
 )
 from nac_test.core.types import ControllerContext
@@ -33,34 +32,6 @@ class TestControllerRegistry:
             assert config.display_name, f"{controller_type} missing display_name"
             assert config.url_env_var, f"{controller_type} missing url_env_var"
             assert config.env_var_prefix, f"{controller_type} missing env_var_prefix"
-
-
-class TestGetControllerUrl:
-    """Tests for _get_controller_url helper function."""
-
-    def test_strips_trailing_slash(self, monkeypatch: MonkeyPatch) -> None:
-        """Removes trailing slash from URL."""
-        monkeypatch.setenv("SDWAN_URL", "https://sdwan.example.com/")
-
-        result = _get_controller_url("SDWAN")
-
-        assert result == "https://sdwan.example.com"
-
-    def test_returns_empty_string_when_not_set(self, monkeypatch: MonkeyPatch) -> None:
-        """Returns empty string when env var not set."""
-        monkeypatch.delenv("CC_URL", raising=False)
-
-        result = _get_controller_url("CC")
-
-        assert result == ""
-
-    def test_returns_empty_string_for_unknown_controller(
-        self, monkeypatch: MonkeyPatch
-    ) -> None:
-        """Returns empty string for unknown controller type."""
-        result = _get_controller_url("UNKNOWN_CONTROLLER")
-
-        assert result == ""
 
 
 class TestGetAuthCallable:

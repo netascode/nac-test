@@ -22,9 +22,9 @@ from nac_test.core.controller import (
     get_connection_params,
     get_controller_context,
     get_controller_url,
-    get_insecure_flag,
     get_matched_credential_set,
     resolve_controller,
+    should_verify_ssl,
 )
 from nac_test.core.types import ControllerContext
 
@@ -298,9 +298,9 @@ class TestControllerContextSerialization:
             ControllerContext.from_json(raw)
 
     def test_from_json_malformed_raises(self) -> None:
-        """Malformed JSON raises json.JSONDecodeError."""
+        """Malformed JSON raises ValueError."""
 
-        with pytest.raises(json.JSONDecodeError):
+        with pytest.raises(ValueError):
             ControllerContext.from_json("not-json")
 
 
@@ -1071,34 +1071,38 @@ class TestGetConnectionParams:
         assert "IOSXE_URL" not in error_msg
 
 
-class TestGetInsecureFlag:
-    """Tests for get_insecure_flag()."""
+class TestShouldVerifySsl:
+    """Tests for should_verify_ssl()."""
 
-    def test_defaults_true_when_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Unset env var defaults to True (insecure), matching prior adapter behavior."""
+    def test_defaults_false_when_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Unset env var defaults to False (skip verify), matching prior adapter behavior."""
         monkeypatch.delenv("ACI_INSECURE", raising=False)
 
-        assert get_insecure_flag("ACI") is True
+        assert should_verify_ssl("ACI") is False
 
-    def test_defaults_true_when_empty(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_defaults_false_when_empty(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Empty string is treated the same as unset."""
         monkeypatch.setenv("CC_INSECURE", "")
 
-        assert get_insecure_flag("CC") is True
+        assert should_verify_ssl("CC") is False
 
     @pytest.mark.parametrize("raw", ["True", "true", "1", "yes", "YES"])
-    def test_truthy_values(self, monkeypatch: pytest.MonkeyPatch, raw: str) -> None:
-        """Recognized truthy spellings (case-insensitive) resolve to True."""
+    def test_insecure_truthy_means_no_verify(
+        self, monkeypatch: pytest.MonkeyPatch, raw: str
+    ) -> None:
+        """When INSECURE env var is truthy, should_verify_ssl returns False."""
         monkeypatch.setenv("SDWAN_INSECURE", raw)
 
-        assert get_insecure_flag("SDWAN") is True
+        assert should_verify_ssl("SDWAN") is False
 
     @pytest.mark.parametrize("raw", ["False", "false", "0", "no"])
-    def test_falsy_values(self, monkeypatch: pytest.MonkeyPatch, raw: str) -> None:
-        """Anything else (e.g. "False", "0") resolves to False."""
+    def test_insecure_falsy_means_verify(
+        self, monkeypatch: pytest.MonkeyPatch, raw: str
+    ) -> None:
+        """When INSECURE env var is falsy, should_verify_ssl returns True (verify)."""
         monkeypatch.setenv("SDWAN_INSECURE", raw)
 
-        assert get_insecure_flag("SDWAN") is False
+        assert should_verify_ssl("SDWAN") is True
 
     def test_custom_default_used_when_unset(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1106,9 +1110,9 @@ class TestGetInsecureFlag:
         """The `default` param controls the unset fallback."""
         monkeypatch.delenv("ISE_INSECURE", raising=False)
 
-        assert get_insecure_flag("ISE", default=False) is False
+        assert should_verify_ssl("ISE", default=True) is True
 
     def test_unknown_controller_type_raises_key_error(self) -> None:
         """Unknown controller_type raises KeyError."""
         with pytest.raises(KeyError):
-            get_insecure_flag("BOGUS")
+            should_verify_ssl("BOGUS")

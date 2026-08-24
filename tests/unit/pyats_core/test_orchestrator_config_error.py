@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from nac_test.core.types import ControllerContext
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
 from ..conftest import PyATSTestDirs
@@ -86,14 +85,14 @@ class TestOrchestratorSubprocessRunnerInitError:
 
 
 class TestOrchestratorControllerContextEnvVar:
-    """Tests for PyATSOrchestrator populating NAC_TEST_CONTROLLER_CONTEXT env var."""
+    """Tests for PyATSOrchestrator controller context handling."""
 
     def test_orchestrator_populates_controller_context_env_var(
         self,
         aci_controller_env: None,
         pyats_test_dirs: PyATSTestDirs,
     ) -> None:
-        """PyATSOrchestrator.__init__ serializes controller_context to env var."""
+        """PyATSOrchestrator stores controller_context without polluting os.environ."""
         # Clear any existing context from prior tests
         os.environ.pop("NAC_TEST_CONTROLLER_CONTEXT", None)
 
@@ -103,14 +102,11 @@ class TestOrchestratorControllerContextEnvVar:
             output_dir=pyats_test_dirs.output_dir,
         )
 
-        # Verify env var was set
-        assert "NAC_TEST_CONTROLLER_CONTEXT" in os.environ
+        # __init__ should NOT set the env var (moved to subprocess launch)
+        assert "NAC_TEST_CONTROLLER_CONTEXT" not in os.environ
 
-        # Verify it deserializes correctly
-        raw = os.environ["NAC_TEST_CONTROLLER_CONTEXT"]
-        ctx = ControllerContext.from_json(raw)
-        assert ctx.controller_type == "ACI"
-        assert ctx.auth_method == "session"
-
-        # Verify it matches the orchestrator's context
-        assert orchestrator.controller_context == ctx
+        # But the orchestrator should have the context stored
+        assert orchestrator.controller_context is not None
+        assert orchestrator.controller_context.controller_type == "ACI"
+        assert orchestrator.controller_context.auth_method == "session"
+        assert orchestrator.controller_type == "ACI"

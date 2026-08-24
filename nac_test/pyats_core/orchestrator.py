@@ -136,9 +136,6 @@ class PyATSOrchestrator:
                 print(terminal.error(f"Controller resolution failed:\n{e}"))
                 sys.exit(EXIT_ERROR)
 
-        # Serialize controller context for subprocess transport
-        os.environ["NAC_TEST_CONTROLLER_CONTEXT"] = self.controller_context.to_json()
-
         # Calculate max workers based on system resources
         self.max_workers = self._calculate_workers()
 
@@ -280,6 +277,8 @@ class PyATSOrchestrator:
             env["NAC_TEST_TYPE"] = "api"
             # Pass test_dir so plugin can compute relative test names
             env[ENV_TEST_DIR] = str(self.test_dir)
+            # Serialize controller context for subprocess transport
+            env["NAC_TEST_CONTROLLER_CONTEXT"] = self.controller_context.to_json()
 
             # Execute and return the archive path
             assert self.subprocess_runner is not None  # Should be initialized by now
@@ -366,6 +365,10 @@ class PyATSOrchestrator:
 
                 # Set environment variable for test subprocesses to find broker
                 os.environ["NAC_TEST_BROKER_SOCKET"] = str(broker.socket_path)
+                # Serialize controller context for subprocess transport
+                os.environ["NAC_TEST_CONTROLLER_CONTEXT"] = (
+                    self.controller_context.to_json()
+                )
 
                 # Execute device tests with broker running
                 return await self._execute_device_tests_with_broker(test_files, devices)
@@ -376,8 +379,9 @@ class PyATSOrchestrator:
             )
             return None
         finally:
-            # Clean up environment variable
+            # Clean up environment variables
             os.environ.pop("NAC_TEST_BROKER_SOCKET", None)
+            os.environ.pop("NAC_TEST_CONTROLLER_CONTEXT", None)
 
     async def _execute_device_tests_with_broker(
         self, test_files: list[Path], devices: list[dict[str, Any]]

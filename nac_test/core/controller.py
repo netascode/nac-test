@@ -18,6 +18,7 @@ the merged NAC data model.
 
 import logging
 import os
+import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -84,7 +85,7 @@ class ControllerConfig:
         defaults_prefix: JMESPath prefix for the defaults block in NAC data models
             (e.g., "defaults.apic", "defaults.sdwan").
         insecure_env_var: Environment variable name for the SSL-verification-disable
-            toggle (e.g., "ACI_INSECURE"). See :func:`get_insecure_flag`.
+            toggle (e.g., "ACI_INSECURE"). See :func:`should_verify_ssl`.
         cache_key: The controller_type string passed to AuthCache by the auth adapter.
             None for controllers that don't have an auth adapter in nac-test-pyats-common.
     """
@@ -493,8 +494,8 @@ def get_controller_url(controller_type: str) -> str:
 _INSECURE_TRUE_VALUES = ("true", "1", "yes")
 
 
-def get_insecure_flag(controller_type: str, default: bool = True) -> bool:
-    """Resolve the SSL-verification-disable flag for a controller type.
+def should_verify_ssl(controller_type: str, default: bool = False) -> bool:
+    """Determine whether SSL certificate verification should be enabled.
 
     Single source of truth for reading a controller's ``{PREFIX}_INSECURE``
     environment variable (see :attr:`ControllerConfig.insecure_env_var`),
@@ -504,25 +505,29 @@ def get_insecure_flag(controller_type: str, default: bool = True) -> bool:
     Args:
         controller_type: The internal controller type key (e.g., "ACI", "SDWAN", "CC").
         default: Value to use when the env var is unset or empty. Defaults to
-            True, matching existing adapter behavior (unset means insecure, to
-            keep lab/self-signed deployments working without extra config).
+            False (skip verification), matching existing adapter behavior to
+            keep lab/self-signed deployments working without extra config.
 
     Returns:
-        True if SSL verification should be disabled.
+        True if SSL verification should be performed.
 
     Raises:
         KeyError: If controller_type is not registered.
 
     Example:
-        >>> os.environ["ACI_INSECURE"] = "False"
-        >>> get_insecure_flag("ACI")
+        >>> os.environ["ACI_INSECURE"] = "true"
+        >>> should_verify_ssl("ACI")
         False
+        >>> os.environ["ACI_INSECURE"] = "false"
+        >>> should_verify_ssl("ACI")
+        True
     """
     config = CONTROLLER_REGISTRY[controller_type]
     raw = os.environ.get(config.insecure_env_var, "").strip()
     if not raw:
         return default
-    return raw.lower() in _INSECURE_TRUE_VALUES
+    # Env var is "{PREFIX}_INSECURE": true/1/yes means insecure (don't verify)
+    return raw.lower() not in _INSECURE_TRUE_VALUES
 
 
 def get_connection_params(
@@ -649,6 +654,11 @@ def detect_controller_type() -> ControllerTypeKey:
         This function delegates to :func:`resolve_controller` and converts typed
         exceptions to ``ValueError`` for backwards compatibility with existing callers.
     """
+    warnings.warn(
+        "detect_controller_type() is deprecated; use resolve_controller() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
         ctx = resolve_controller()
         return ctx.controller_type
@@ -677,6 +687,12 @@ def get_matched_credential_set(controller_type: str) -> CredentialSet | None:
         The matched CredentialSet, or None if detection has not been called
         or the controller type was not detected.
     """
+    warnings.warn(
+        "get_matched_credential_set() is deprecated; use "
+        "get_controller_context().auth_method instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return _matched_credential_sets.get(controller_type)
 
 

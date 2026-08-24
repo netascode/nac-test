@@ -3,7 +3,6 @@
 
 """Utility modules for nac-test framework."""
 
-from nac_test.core.controller import detect_controller_type
 from nac_test.utils.asyncio_utils import get_or_create_event_loop
 from nac_test.utils.cleanup import (
     cleanup_old_test_outputs,
@@ -35,8 +34,6 @@ __all__ = [
     "validate_device_inventory",
     # File discovery utilities (SSH/D2D architecture)
     "find_data_file",
-    # Controller detection utilities (SSH/D2D architecture)
-    "detect_controller_type",
     # String utilities
     "sanitize_hostname",
 ]

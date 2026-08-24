@@ -11,13 +11,16 @@ the controller resolution domain, not a CLI concern.
 """
 
 import logging
-import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from nac_test.core.controller import CONTROLLER_REGISTRY, get_display_name
+from nac_test.core.controller import (
+    CONTROLLER_REGISTRY,
+    get_controller_url,
+    get_display_name,
+)
 from nac_test.core.error_classification import (
     AuthOutcome,
     classify_auth_error,
@@ -49,22 +52,6 @@ class AuthCheckResult:
     controller_url: str
     detail: str
     status_code: int | None = None
-
-
-def _get_controller_url(controller_type: str) -> str:
-    """Get the controller URL from environment variables.
-
-    Args:
-        controller_type: The detected controller type.
-
-    Returns:
-        The controller URL, or empty string if not found.
-    """
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    if config is None:
-        return ""
-    url = os.environ.get(config.url_env_var, "")
-    return url.rstrip("/") if url else ""
 
 
 def _get_auth_callable(controller_type: str) -> Callable[[], Any] | None:
@@ -129,7 +116,13 @@ def preflight_auth_check(ctx: ControllerContext) -> AuthCheckResult:
         AuthCheckResult with success/failure status and actionable detail.
     """
     controller_type = ctx.controller_type
-    controller_url = _get_controller_url(controller_type)
+    try:
+        controller_url = get_controller_url(controller_type)
+    except KeyError:
+        controller_url = ""
+    # Auth adapters strip trailing "/" before caching (cache key normalization).
+    # Match that here so AuthCache.invalidate() finds the right entry.
+    cache_url = controller_url.rstrip("/")
     display_name = get_display_name(controller_type)
 
     # Get the auth callable for this controller type
@@ -152,13 +145,13 @@ def preflight_auth_check(ctx: ControllerContext) -> AuthCheckResult:
     # Invalidate any stale cached token so we validate the current credentials.
     # Best-effort: a failure here must never block test execution.
     config = CONTROLLER_REGISTRY.get(controller_type)
-    if config is not None and config.cache_key is not None and controller_url:
+    if config is not None and config.cache_key is not None and cache_url:
         try:
             logger.debug(
                 "Invalidating auth cache for %s before pre-flight check",
                 config.cache_key,
             )
-            AuthCache.invalidate(config.cache_key, controller_url)
+            AuthCache.invalidate(config.cache_key, cache_url)
         except Exception as e:
             logger.debug("Cache invalidation failed (non-fatal): %s", e)
 

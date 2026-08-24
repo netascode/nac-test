@@ -3,7 +3,6 @@
 
 """Test base_test.py controller detection integration."""
 
-import json
 import logging
 from collections.abc import Generator
 from pathlib import Path
@@ -12,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from pyats import aetest
 
+from nac_test.core.types import ControllerContext
 from nac_test.pyats_core.common.base_test import NACTestBase
 
 
@@ -171,6 +171,32 @@ class TestBaseTestControllerDetection:
 
             assert "Multiple controller credentials detected" in str(exc_info.value)
 
+    def test_base_test_uses_serialized_controller_context(
+        self, monkeypatch: pytest.MonkeyPatch, setup_test_data_file_env: Path
+    ) -> None:
+        """Test that NACTestBase uses NAC_TEST_CONTROLLER_CONTEXT when present (primary path)."""
+        # Set serialized context (primary path) AND the underlying env vars
+        ctx = ControllerContext(controller_type="SDWAN", auth_method="token")
+        monkeypatch.setenv("NAC_TEST_CONTROLLER_CONTEXT", ctx.to_json())
+        # Need SDWAN env vars for get_controller_url() and get_connection_params()
+        monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
+        monkeypatch.setenv("SDWAN_API_TOKEN", "test-token-value")
+
+        class TestClass(NACTestBase):
+            @aetest.test  # type: ignore[misc]
+            def test_method(self) -> None:
+                pass
+
+        test_instance = TestClass()
+        with patch.object(
+            test_instance, "load_data_model", return_value={"test": "data"}
+        ):
+            test_instance.setup()
+
+        assert test_instance.controller_type == "SDWAN"
+        assert test_instance.auth_method == "token"
+        assert test_instance.connection_params["token"] == "test-token-value"
+
 
 class TestBaseTestSetupErrorLogging:
     """Test that setup() logs errors via self.logger before re-raising.
@@ -194,13 +220,13 @@ class TestBaseTestSetupErrorLogging:
             (None, ValueError),
             # valid JSON but missing controller_type field → KeyError
             ('{"auth_method": "basic"}', KeyError),
-            # malformed JSON → JSONDecodeError
-            ("not-valid-json", json.JSONDecodeError),
+            # malformed JSON → ValueError (wrapped from JSONDecodeError)
+            ("not-valid-json", ValueError),
         ],
         ids=[
             "value_error",
             "key_error-missing_field",
-            "json_decode_error-malformed_context",
+            "value_error-malformed_json",
         ],
     )
     def test_setup_logs_error_before_reraise(

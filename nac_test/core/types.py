@@ -17,7 +17,7 @@ from nac_test.core.constants import (
 )
 
 # Type alias for supported controller type keys.
-# Matches the keys of CONTROLLER_REGISTRY in nac_test.utils.controller.
+# Matches the keys of CONTROLLER_REGISTRY in nac_test.core.controller.
 ControllerTypeKey = Literal["ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"]
 
 # Type alias for the semantic kind of a credential value.
@@ -27,7 +27,11 @@ CredentialKind = Literal["url", "username", "password", "token"]
 
 @dataclass(frozen=True)
 class ControllerContext:
-    """Resolved controller identity passed from orchestrator to subprocess.
+    """Resolved controller selection identity passed from orchestrator to subprocess.
+
+    Represents controller *identity* (type + auth method), **not** connection
+    state.  Credentials are resolved separately from environment variables via
+    ``get_connection_params()`` in ``nac_test.core.controller``.
 
     Produced once by ``resolve_controller()`` and threaded through the
     orchestration chain.  Serialized to ``NAC_TEST_CONTROLLER_CONTEXT``
@@ -55,8 +59,15 @@ class ControllerContext:
 
         Unknown keys are silently ignored so new fields can be added
         without breaking older consumers.
+
+        Raises:
+            ValueError: If the raw string is not valid JSON.
+            KeyError: If required fields are missing.
         """
-        data = json.loads(raw)
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError) as e:
+            raise ValueError(f"Invalid JSON in controller context: {e}") from e
         return cls(
             controller_type=data["controller_type"],
             auth_method=data["auth_method"],
