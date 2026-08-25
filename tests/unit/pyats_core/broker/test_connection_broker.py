@@ -8,7 +8,10 @@ installed in this project (see test_subprocess_runner.py for the same pattern).
 """
 
 import asyncio
+import json
 import logging
+import struct
+import tempfile
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -485,3 +488,82 @@ class TestDisconnectCleanup:
         asyncio.run(_run())
 
         assert "router-1" not in broker.connected_devices
+
+
+# ---------------------------------------------------------------------------
+# BrokerClient._request_lock — concurrent request serialization (#879)
+# ---------------------------------------------------------------------------
+
+
+class TestBrokerClientRequestLock:
+    """Verify that concurrent _send_request calls are serialized.
+
+    Without the _request_lock, concurrent coroutines can interleave their
+    write/read frames on the shared socket, causing response misattribution.
+    These tests use a mock Unix socket server that echoes a unique response
+    per request, and verify that concurrent gather'd calls each receive their
+    own correct response — which would fail without the lock.
+    """
+
+    def test_concurrent_requests_receive_correct_responses(self) -> None:
+        """Multiple concurrent execute_command calls must each get their own response."""
+        # Use a short path — macOS AF_UNIX limit is 104 chars
+        socket_path = Path(tempfile.gettempdir()) / "nac_test_lock_test.sock"
+        if socket_path.exists():
+            socket_path.unlink()
+
+        async def _run() -> None:
+            # --- Fake broker server: echoes hostname+command back as the result ---
+            async def handle_client(
+                reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+            ) -> None:
+                try:
+                    while True:
+                        length_data = await reader.readexactly(4)
+                        msg_len = int.from_bytes(length_data, byteorder="big")
+                        msg_data = await reader.readexactly(msg_len)
+                        request = json.loads(msg_data.decode("utf-8"))
+
+                        # Simulate variable processing delay to provoke interleaving
+                        hostname = request.get("hostname", "?")
+                        cmd = request.get("cmd", "?")
+                        await asyncio.sleep(0.01)
+
+                        response = json.dumps(
+                            {"status": "success", "result": f"{hostname}:{cmd}"}
+                        ).encode("utf-8")
+                        writer.write(struct.pack(">I", len(response)) + response)
+                        await writer.drain()
+                except asyncio.IncompleteReadError:
+                    pass
+                finally:
+                    writer.close()
+
+            server = await asyncio.start_unix_server(
+                handle_client, path=str(socket_path)
+            )
+
+            # --- Client: fire N concurrent requests on a shared BrokerClient ---
+            client = BrokerClient(socket_path=socket_path)
+            await client.connect()
+
+            num_requests = 20
+            tasks = [
+                client.execute_command(f"device-{i}", f"show cmd-{i}")
+                for i in range(num_requests)
+            ]
+            results = await asyncio.gather(*tasks)
+
+            # Each result must match exactly the request that produced it
+            for i, result in enumerate(results):
+                assert result == f"device-{i}:show cmd-{i}", (
+                    f"Request {i} got wrong response: {result!r}. "
+                    f"This indicates request/response interleaving — "
+                    f"the _request_lock may be missing or broken."
+                )
+
+            await client.disconnect()
+            server.close()
+            await server.wait_closed()
+
+        asyncio.run(_run())
