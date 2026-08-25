@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from nac_test.pyats_core.reporting.sanitize import sanitize_output
 from nac_test.pyats_core.reporting.types import ResultStatus
 
 logger = logging.getLogger(__name__)
@@ -143,6 +144,9 @@ class TestResultCollector:
 
         # Pre-truncate to 50KB to prevent memory issues
         truncated_output = output[:50000] if len(output) > 50000 else output
+
+        # Redact secrets before persisting to disk (see #881)
+        truncated_output = sanitize_output(truncated_output)
 
         # Write to disk immediately
         record = {
