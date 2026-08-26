@@ -18,10 +18,6 @@ from tests.unit.conftest import AUTH_SUCCESS
 class TestOrchestratorUnsupportedPythonExit:
     """Tests for the orchestrator-level macOS unsupported Python hard exit."""
 
-    @pytest.fixture(autouse=True)
-    def _clean_env(self, clean_controller_env: None) -> None:
-        """Apply shared clean_controller_env fixture to all tests in this class."""
-
     def _make_orchestrator(
         self, tmp_path: Path, monkeypatch: MonkeyPatch, *, dev_pyats_only: bool = True
     ) -> CombinedOrchestrator:

@@ -6,7 +6,6 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
@@ -28,10 +27,6 @@ class Test(IOSXETestBase):
 
 class TestCombinedOrchestratorController:
     """Tests for CombinedOrchestrator controller detection."""
-
-    @pytest.fixture(autouse=True)
-    def _clean_env(self, clean_controller_env: None) -> None:
-        """Apply shared clean_controller_env fixture to all tests in this class."""
 
     def test_controller_type_is_none_after_init(
         self, tmp_path: Path, monkeypatch: MonkeyPatch
