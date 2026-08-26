@@ -982,7 +982,7 @@ class TestGetConnectionParams:
     def test_missing_env_vars_raises_value_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Missing/empty env vars raise ValueError listing the missing var names."""
+        """Unset env vars raise ValueError listing the missing var names."""
         monkeypatch.setenv("ACI_URL", "https://apic.example.com")
         monkeypatch.delenv("ACI_USERNAME", raising=False)
         monkeypatch.delenv("ACI_PASSWORD", raising=False)
@@ -991,6 +991,29 @@ class TestGetConnectionParams:
             get_connection_params("ACI", AuthMethod.SESSION)
 
         assert "ACI_USERNAME" in str(exc_info.value)
+        assert "ACI_PASSWORD" in str(exc_info.value)
+
+    @pytest.mark.parametrize(
+        "empty_value",
+        ["", "   "],
+        ids=["empty-string", "whitespace-only"],
+    )
+    def test_empty_env_vars_treated_as_missing(
+        self, monkeypatch: pytest.MonkeyPatch, empty_value: str
+    ) -> None:
+        """Empty/whitespace-only env vars are treated as missing in get_connection_params.
+
+        Ensures that os.environ vars set to '' or whitespace trigger the same
+        ValueError as completely unset vars — guards against CI environments or
+        docker-compose files that export VAR= with no value.
+        """
+        monkeypatch.setenv("ACI_URL", "https://apic.example.com")
+        monkeypatch.setenv("ACI_USERNAME", "admin")
+        monkeypatch.setenv("ACI_PASSWORD", empty_value)
+
+        with pytest.raises(ValueError) as exc_info:
+            get_connection_params("ACI", AuthMethod.SESSION)
+
         assert "ACI_PASSWORD" in str(exc_info.value)
 
     def test_meraki_session(self, monkeypatch: pytest.MonkeyPatch) -> None:
