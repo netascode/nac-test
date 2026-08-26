@@ -71,6 +71,11 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
     # Test metadata class variables (enforced in subclasses)
     TEST_TYPE_NAME: str | None = None
 
+    # Subclass-declared guards — validated in setup() when not None.
+    # Subclasses set these as class attributes; the base class enforces them.
+    EXPECTED_CONTROLLER_TYPE: str | None = None
+    SUPPORTED_AUTH_METHODS: set[str] | None = None
+
     # Explicit attribute declarations (avoids hasattr() checks)
     batching_reporter: BatchingReporter | None = None
     step_interceptor: StepInterceptor | None = None
@@ -178,6 +183,18 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             raise
         self.controller_type = ctx.controller_type
 
+        # Validate controller type if subclass declares an expectation
+        if (
+            self.EXPECTED_CONTROLLER_TYPE is not None
+            and self.controller_type != self.EXPECTED_CONTROLLER_TYPE
+        ):
+            self.failed(
+                f"This test requires "
+                f"controller_type={self.EXPECTED_CONTROLLER_TYPE}, "
+                f"but resolved controller_type={self.controller_type!r}"
+            )
+            return
+
         self.controller_url = get_controller_url(self.controller_type)
 
         # Generic connection params (url/username/password/token, keyed by kind)
@@ -185,6 +202,20 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # connection params must also resolve — failure here indicates a real
         # misconfiguration, not a soft-skip scenario.
         self.auth_method = ctx.auth_method
+
+        # Validate auth method if subclass declares supported methods
+        if (
+            self.SUPPORTED_AUTH_METHODS is not None
+            and self.auth_method not in self.SUPPORTED_AUTH_METHODS
+        ):
+            self.failed(
+                f"{self.EXPECTED_CONTROLLER_TYPE or type(self).__name__} "
+                f"adapter supports auth_methods "
+                f"{self.SUPPORTED_AUTH_METHODS}, "
+                f"got {self.auth_method!r}"
+            )
+            return
+
         self.connection_params = get_connection_params(
             self.controller_type, ctx.auth_method
         )
