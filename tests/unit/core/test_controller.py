@@ -27,7 +27,7 @@ from nac_test.core.controller import (
     resolve_controller,
     should_verify_ssl,
 )
-from nac_test.core.types import ControllerContext
+from nac_test.core.types import AuthMethod, ControllerContext
 
 # =============================================================================
 # Test Data Constants
@@ -921,7 +921,7 @@ class TestGetConnectionParams:
         monkeypatch.setenv("ACI_USERNAME", "admin")
         monkeypatch.setenv("ACI_PASSWORD", "password")
 
-        params = get_connection_params("ACI", "session")
+        params = get_connection_params("ACI", AuthMethod.SESSION)
 
         assert params == {
             "url": "https://apic.example.com",
@@ -934,7 +934,7 @@ class TestGetConnectionParams:
         monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
         monkeypatch.setenv("SDWAN_API_TOKEN", "abc.def.ghi")
 
-        params = get_connection_params("SDWAN", "token")
+        params = get_connection_params("SDWAN", AuthMethod.TOKEN)
 
         assert params == {
             "url": "https://vmanage.example.com",
@@ -947,7 +947,7 @@ class TestGetConnectionParams:
         monkeypatch.setenv("SDWAN_USERNAME", "admin")
         monkeypatch.setenv("SDWAN_PASSWORD", "password")
 
-        params = get_connection_params("SDWAN", "session")
+        params = get_connection_params("SDWAN", AuthMethod.SESSION)
 
         assert params == {
             "url": "https://vmanage.example.com",
@@ -961,7 +961,7 @@ class TestGetConnectionParams:
         monkeypatch.setenv("CC_USERNAME", "admin")
         monkeypatch.setenv("CC_PASSWORD", "password")
 
-        params = get_connection_params("CC", "session")
+        params = get_connection_params("CC", AuthMethod.SESSION)
 
         assert params == {
             "url": "https://dnac.example.com",
@@ -972,12 +972,12 @@ class TestGetConnectionParams:
     def test_unknown_controller_type_raises_key_error(self) -> None:
         """Unknown controller_type raises KeyError."""
         with pytest.raises(KeyError):
-            get_connection_params("BOGUS", "session")
+            get_connection_params("BOGUS", AuthMethod.SESSION)
 
     def test_unmatched_auth_method_raises_value_error(self) -> None:
         """auth_method with no matching credential set raises ValueError."""
         with pytest.raises(ValueError, match="auth_method"):
-            get_connection_params("ACI", "token")
+            get_connection_params("ACI", AuthMethod.TOKEN)
 
     def test_missing_env_vars_raises_value_error(
         self, monkeypatch: pytest.MonkeyPatch
@@ -988,7 +988,7 @@ class TestGetConnectionParams:
         monkeypatch.delenv("ACI_PASSWORD", raising=False)
 
         with pytest.raises(ValueError) as exc_info:
-            get_connection_params("ACI", "session")
+            get_connection_params("ACI", AuthMethod.SESSION)
 
         assert "ACI_USERNAME" in str(exc_info.value)
         assert "ACI_PASSWORD" in str(exc_info.value)
@@ -999,7 +999,7 @@ class TestGetConnectionParams:
         monkeypatch.setenv("MERAKI_USERNAME", "admin")
         monkeypatch.setenv("MERAKI_PASSWORD", "password")
 
-        params = get_connection_params("MERAKI", "session")
+        params = get_connection_params("MERAKI", AuthMethod.SESSION)
 
         assert params == {
             "url": "https://meraki.example.com",
@@ -1028,7 +1028,7 @@ class TestGetConnectionParams:
         monkeypatch.setenv("IOSXE_USERNAME", "admin")
         monkeypatch.setenv("IOSXE_PASSWORD", "password")
 
-        params = get_connection_params("IOSXE", "session")
+        params = get_connection_params("IOSXE", AuthMethod.SESSION)
 
         assert params == {
             "url": "192.168.1.1",
@@ -1046,7 +1046,7 @@ class TestGetConnectionParams:
         monkeypatch.delenv("IOSXE_PASSWORD", raising=False)
 
         with pytest.raises(ValueError) as exc_info:
-            get_connection_params("IOSXE", "session")
+            get_connection_params("IOSXE", AuthMethod.SESSION)
 
         assert "IOSXE_URL" in str(exc_info.value)
 
@@ -1064,7 +1064,7 @@ class TestGetConnectionParams:
         monkeypatch.delenv("IOSXE_PASSWORD", raising=False)
 
         with pytest.raises(ValueError) as exc_info:
-            get_connection_params("IOSXE", "session")
+            get_connection_params("IOSXE", AuthMethod.SESSION)
 
         error_msg = str(exc_info.value)
         assert "IOSXE_USERNAME" in error_msg
