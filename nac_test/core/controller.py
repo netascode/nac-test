@@ -26,6 +26,7 @@ from typing import cast
 
 from nac_test._env import is_env_var_set
 from nac_test.core.types import ControllerContext, ControllerTypeKey, CredentialKind
+from nac_test.exceptions import NacTestError
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +251,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
 _matched_credential_sets: dict[str, CredentialSet] = {}
 
 
-class ResolutionError(Exception):
+class ResolutionError(NacTestError):
     """Base for controller resolution failures."""
 
 
