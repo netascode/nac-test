@@ -6,7 +6,7 @@
 import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 from nac_test.core.constants import (
     EXIT_DATA_ERROR,
@@ -79,12 +79,19 @@ class ControllerContext:
             data = json.loads(raw)
         except (json.JSONDecodeError, TypeError) as e:
             raise ValueError(f"Invalid JSON in controller context: {e}") from e
+        # Validate controller_type against known values
+        ct = data["controller_type"]
+        if ct not in get_args(ControllerTypeKey):
+            raise ValueError(
+                f"Unknown controller_type {ct!r}; "
+                f"expected one of {get_args(ControllerTypeKey)}"
+            )
         try:
             auth = AuthMethod(data["auth_method"])
         except ValueError as e:
             raise ValueError(f"Invalid auth_method {data['auth_method']!r}: {e}") from e
         return cls(
-            controller_type=data["controller_type"],
+            controller_type=ct,
             auth_method=auth,
         )
 
