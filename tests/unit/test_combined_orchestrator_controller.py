@@ -10,7 +10,7 @@ from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.controller_auth import AuthCheckResult, AuthOutcome
-from nac_test.core.types import AuthMethod, ControllerContext, PyATSResults
+from nac_test.core.types import ControllerContext, PyATSResults
 from nac_test.utils.logging import DEFAULT_LOGLEVEL
 from tests.unit.conftest import AUTH_SUCCESS
 
@@ -150,7 +150,7 @@ class TestCombinedOrchestratorController:
             assert results.pre_flight_failure.controller_url is None
 
     def test_combined_orchestrator_passes_controller_to_pyats(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch
+        self, tmp_path: Path, monkeypatch: MonkeyPatch, sdwan_context: ControllerContext
     ) -> None:
         """Test that CombinedOrchestrator passes controller type to PyATSOrchestrator."""
         # Set up SDWAN credentials
@@ -233,9 +233,7 @@ class TestCombinedOrchestratorController:
                     output_dir=output_dir,
                     minimal_reports=False,
                     custom_testbed_path=None,
-                    controller_context=ControllerContext(
-                        controller_type="SDWAN", auth_method=AuthMethod.SESSION
-                    ),
+                    controller_context=sdwan_context,
                     dry_run=False,
                     verbose=False,
                     loglevel=DEFAULT_LOGLEVEL,
@@ -323,7 +321,7 @@ class TestCombinedOrchestratorController:
             mock_robot.assert_called_once()
 
     def test_combined_orchestrator_production_mode_passes_controller(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch
+        self, tmp_path: Path, monkeypatch: MonkeyPatch, cc_context: ControllerContext
     ) -> None:
         """Test that CombinedOrchestrator passes controller type in production mode."""
         # Set up CC credentials
@@ -400,9 +398,7 @@ class TestCombinedOrchestratorController:
                     output_dir=output_dir,
                     minimal_reports=False,
                     custom_testbed_path=None,
-                    controller_context=ControllerContext(
-                        controller_type="CC", auth_method=AuthMethod.SESSION
-                    ),
+                    controller_context=cc_context,
                     dry_run=False,
                     verbose=False,
                     loglevel=DEFAULT_LOGLEVEL,

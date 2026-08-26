@@ -18,7 +18,7 @@ from nac_test.core.controller_auth import (
     AuthOutcome,
     preflight_auth_check,
 )
-from nac_test.core.types import AuthMethod, ControllerContext
+from nac_test.core.types import ControllerContext
 
 pytestmark = pytest.mark.integration
 
@@ -28,6 +28,7 @@ def test_aci_preflight_normalizes_url(
     httpserver: HTTPServer,
     monkeypatch: pytest.MonkeyPatch,
     url_suffix: str,
+    aci_context: ControllerContext,
 ) -> None:
     """APIC auth succeeds regardless of trailing slash on ACI_URL."""
     httpserver.expect_request("/api/aaaLogin.json", method="POST").respond_with_json(
@@ -50,8 +51,7 @@ def test_aci_preflight_normalizes_url(
     monkeypatch.setenv("ACI_USERNAME", "admin")
     monkeypatch.setenv("ACI_PASSWORD", "password")
 
-    ctx = ControllerContext(controller_type="ACI", auth_method=AuthMethod.SESSION)
-    result = preflight_auth_check(ctx)
+    result = preflight_auth_check(aci_context)
 
     assert result.success is True, (
         f"Auth failed with url_suffix={url_suffix!r}: {result.detail}"
@@ -64,6 +64,7 @@ def test_sdwan_preflight_normalizes_url(
     httpserver: HTTPServer,
     monkeypatch: pytest.MonkeyPatch,
     url_suffix: str,
+    sdwan_context: ControllerContext,
 ) -> None:
     """SDWAN session auth succeeds regardless of trailing slash on SDWAN_URL."""
     httpserver.expect_request("/j_security_check", method="POST").respond_with_data(
@@ -82,8 +83,7 @@ def test_sdwan_preflight_normalizes_url(
     monkeypatch.setenv("SDWAN_USERNAME", "admin")
     monkeypatch.setenv("SDWAN_PASSWORD", "password")
 
-    ctx = ControllerContext(controller_type="SDWAN", auth_method=AuthMethod.SESSION)
-    result = preflight_auth_check(ctx)
+    result = preflight_auth_check(sdwan_context)
 
     assert result.success is True, (
         f"Auth failed with url_suffix={url_suffix!r}: {result.detail}"
