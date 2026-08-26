@@ -3,8 +3,10 @@
 
 """Core constants shared across the nac-test framework."""
 
+import os
 import platform
 import sys
+import tempfile
 
 from nac_test._env import get_bool_env, get_positive_numeric_env
 
@@ -110,6 +112,9 @@ HTTP_SERVICE_UNAVAILABLE_CODES: tuple[int, ...] = (408, 429, 503, 504)
 
 # Controller context env var (orchestrator writes, subprocess reads)
 ENV_CONTROLLER_CONTEXT: str = "NAC_TEST_CONTROLLER_CONTEXT"
+
+# Auth cache directory (file-based token caching for parallel processes)
+AUTH_CACHE_DIR: str = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
 
 # Platform detection
 IS_MACOS: bool = platform.system() == "Darwin"

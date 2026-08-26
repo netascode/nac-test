@@ -4,7 +4,6 @@
 """PyATS-specific constants and configuration."""
 
 import os
-import tempfile
 
 from nac_test._env import get_bool_env, get_positive_numeric_env
 from nac_test.core.constants import (
@@ -33,9 +32,6 @@ MAX_WORKERS_HARD_LIMIT: int = 50
 MEMORY_PER_WORKER_GB: float = 0.35
 DEFAULT_CPU_MULTIPLIER: int = 2
 LOAD_AVERAGE_THRESHOLD: float = 0.8
-
-# PyATS-specific file paths
-AUTH_CACHE_DIR: str = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
 
 # PyATS config files written to output directory during test execution
 PYATS_PLUGIN_CONFIG_FILENAME: str = ".pyats_plugin.yaml"
@@ -146,7 +142,6 @@ __all__ = [
     "MEMORY_PER_WORKER_GB",
     "DEFAULT_CPU_MULTIPLIER",
     "LOAD_AVERAGE_THRESHOLD",
-    "AUTH_CACHE_DIR",
     "PYATS_PLUGIN_CONFIG_FILENAME",
     "PYATS_CONFIG_FILENAME",
     "PYATS_POST_DISCONNECT_WAIT_SECONDS",

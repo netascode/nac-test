@@ -16,6 +16,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from nac_test.core.auth_cache import AuthCache
 from nac_test.core.controller import (
     CONTROLLER_REGISTRY,
     get_controller_url,
@@ -27,7 +28,6 @@ from nac_test.core.error_classification import (
     extract_http_status_code,
 )
 from nac_test.core.types import ControllerContext, ControllerTypeKey
-from nac_test.pyats_core.common.auth_cache import AuthCache
 
 logger = logging.getLogger(__name__)
 

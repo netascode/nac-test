@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Unit tests for nac_test.pyats_core.common.auth_cache module.
+"""Unit tests for nac_test.core.auth_cache module.
 
 This module tests the AuthCache class which provides generic file-based
 authentication caching for parallel processes. The tests cover:
@@ -21,7 +21,7 @@ from unittest.mock import Mock
 import pytest
 from pytest_mock import MockerFixture
 
-from nac_test.pyats_core.common.auth_cache import AuthCache
+from nac_test.core.auth_cache import AuthCache
 
 
 @pytest.fixture
@@ -34,9 +34,7 @@ def mock_time(mocker: MockerFixture) -> Any:
     Returns:
         Mock object for time.time that can be configured per test.
     """
-    return mocker.patch(
-        "nac_test.pyats_core.common.auth_cache.time.time", return_value=1000.0
-    )
+    return mocker.patch("nac_test.core.auth_cache.time.time", return_value=1000.0)
 
 
 @pytest.fixture
@@ -52,7 +50,7 @@ def mock_auth_cache_dir(mocker: MockerFixture, tmp_path: Path) -> Path:
     """
     cache_dir = tmp_path / "auth-cache"
     cache_dir.mkdir(exist_ok=True)
-    mocker.patch("nac_test.pyats_core.common.auth_cache.AUTH_CACHE_DIR", str(cache_dir))
+    mocker.patch("nac_test.core.auth_cache.AUTH_CACHE_DIR", str(cache_dir))
     return cache_dir
 
 
@@ -73,9 +71,7 @@ def mock_fcntl(mocker: MockerFixture) -> Any:
     mock_lock = mocker.MagicMock()
     mock_lock.__enter__ = mocker.MagicMock(return_value=None)
     mock_lock.__exit__ = mocker.MagicMock(return_value=None)
-    return mocker.patch(
-        "nac_test.pyats_core.common.auth_cache.FileLock", return_value=mock_lock
-    )
+    return mocker.patch("nac_test.core.auth_cache.FileLock", return_value=mock_lock)
 
 
 @pytest.fixture
@@ -891,7 +887,7 @@ class TestAuthCacheIntegration:
             should_refresh: Whether the cache should be refreshed.
         """
         # Arrange
-        time_mock = mocker.patch("nac_test.pyats_core.common.auth_cache.time.time")
+        time_mock = mocker.patch("nac_test.core.auth_cache.time.time")
         time_mock.return_value = initial_time
 
         auth_call_count = 0
@@ -974,7 +970,7 @@ class TestAuthCacheErrorHandling:
         # Arrange
         non_existent_dir = tmp_path / "new-cache-dir"
         mocker.patch(
-            "nac_test.pyats_core.common.auth_cache.AUTH_CACHE_DIR",
+            "nac_test.core.auth_cache.AUTH_CACHE_DIR",
             str(non_existent_dir),
         )
 
@@ -1121,7 +1117,7 @@ class TestAuthCacheInvalidate:
 
         # Make FileLock raise an OSError to simulate a permission issue
         mocker.patch(
-            "nac_test.pyats_core.common.auth_cache.FileLock",
+            "nac_test.core.auth_cache.FileLock",
             side_effect=OSError("Permission denied"),
         )
 
