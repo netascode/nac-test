@@ -423,9 +423,18 @@ class SSHTestBase(NACTestBase):
                 test_instance._track_ssh_command(command, cached_output)
                 return cached_output
 
-            # Execute command via testbed device
-            # In broker mode: patched to route through broker (sync, via run_in_executor)
-            # In direct mode: real pyATS device execute (sync, via run_in_executor)
+            # Execute command via testbed device (unified path for both modes).
+            # In broker mode: the patched broker_execute is sync — it schedules
+            # the async broker call via run_coroutine_threadsafe and blocks. This
+            # means explicit test commands take an extra thread-hop (event loop →
+            # thread pool → back to event loop). We accept this cost because:
+            #   1. The overhead (µs) is negligible vs device I/O latency (ms–s).
+            #   2. parse_output() must use run_in_executor regardless (Genie's
+            #      sync parse() may fire supplementary device.execute() calls),
+            #      so restoring a direct-await here would only help half the
+            #      broker call sites while re-introducing mode-specific branching.
+            #   3. The unified path eliminates a class of mode-dependent bugs.
+            # In direct mode: real pyATS device.execute (sync, via run_in_executor)
             logging.debug(f"Executing command: {command}")
             loop = get_or_create_event_loop()
             output = await loop.run_in_executor(None, device.execute, command)
