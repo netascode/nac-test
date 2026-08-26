@@ -11,7 +11,7 @@ from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.controller_auth import AuthCheckResult, AuthOutcome
-from nac_test.core.types import ControllerContext, PyATSResults
+from nac_test.core.types import AuthMethod, ControllerContext, PyATSResults
 from nac_test.utils.logging import DEFAULT_LOGLEVEL
 from tests.unit.conftest import AUTH_SUCCESS
 
@@ -239,7 +239,7 @@ class TestCombinedOrchestratorController:
                     minimal_reports=False,
                     custom_testbed_path=None,
                     controller_context=ControllerContext(
-                        controller_type="SDWAN", auth_method="session"
+                        controller_type="SDWAN", auth_method=AuthMethod.SESSION
                     ),
                     dry_run=False,
                     verbose=False,
@@ -406,7 +406,7 @@ class TestCombinedOrchestratorController:
                     minimal_reports=False,
                     custom_testbed_path=None,
                     controller_context=ControllerContext(
-                        controller_type="CC", auth_method="session"
+                        controller_type="CC", auth_method=AuthMethod.SESSION
                     ),
                     dry_run=False,
                     verbose=False,

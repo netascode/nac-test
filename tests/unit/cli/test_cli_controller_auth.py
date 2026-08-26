@@ -22,7 +22,7 @@ from nac_test.core.controller_auth import (
     AuthOutcome,
     preflight_auth_check,
 )
-from nac_test.core.types import ControllerContext, ControllerTypeKey
+from nac_test.core.types import AuthMethod, ControllerContext, ControllerTypeKey
 
 
 class TestPreflightAuthCli:
@@ -307,7 +307,7 @@ class TestPreflightCacheInvalidation:
             result = preflight_auth_check(
                 ControllerContext(
                     controller_type=controller_type,
-                    auth_method="session",
+                    auth_method=AuthMethod.SESSION,
                 )
             )
 

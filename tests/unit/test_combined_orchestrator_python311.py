@@ -11,7 +11,7 @@ import typer
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.core.types import ControllerContext
+from nac_test.core.types import AuthMethod, ControllerContext
 from tests.unit.conftest import AUTH_SUCCESS
 
 
@@ -78,7 +78,7 @@ class TestOrchestratorUnsupportedPythonExit:
             patch(
                 "nac_test.combined_orchestrator.resolve_controller",
                 return_value=ControllerContext(
-                    controller_type="ACI", auth_method="session"
+                    controller_type="ACI", auth_method=AuthMethod.SESSION
                 ),
             ),
             patch(

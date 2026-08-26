@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nac_test.core.types import ControllerContext
+from nac_test.core.types import AuthMethod, ControllerContext
 from nac_test.pyats_core.constants import ENV_TEST_DIR
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
@@ -34,7 +34,7 @@ class TestOrchestratorEnvVarProcesses:
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
             controller_context=ControllerContext(
-                controller_type="ACI", auth_method="session"
+                controller_type="ACI", auth_method=AuthMethod.SESSION
             ),
         )
 
@@ -55,7 +55,7 @@ class TestOrchestratorEnvPropagation:
             test_dir=pyats_test_dirs.test_dir,
             output_dir=pyats_test_dirs.output_dir,
             controller_context=ControllerContext(
-                controller_type="ACI", auth_method="session"
+                controller_type="ACI", auth_method=AuthMethod.SESSION
             ),
         )
 

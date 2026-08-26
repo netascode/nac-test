@@ -16,7 +16,7 @@ from nac_test.core.controller_auth import (
     _get_auth_callable,
     preflight_auth_check,
 )
-from nac_test.core.types import ControllerContext
+from nac_test.core.types import AuthMethod, ControllerContext
 
 
 class TestControllerRegistry:
@@ -211,7 +211,7 @@ class TestPreflightAuthCheck:
         result = preflight_auth_check(
             ControllerContext(
                 controller_type="UNKNOWN_CONTROLLER",  # type: ignore[arg-type]
-                auth_method="session",
+                auth_method=AuthMethod.SESSION,
             )
         )
 

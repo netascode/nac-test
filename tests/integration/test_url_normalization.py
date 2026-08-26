@@ -18,7 +18,7 @@ from nac_test.core.controller_auth import (
     AuthOutcome,
     preflight_auth_check,
 )
-from nac_test.core.types import ControllerContext
+from nac_test.core.types import AuthMethod, ControllerContext
 
 pytestmark = pytest.mark.integration
 
@@ -50,7 +50,7 @@ def test_aci_preflight_normalizes_url(
     monkeypatch.setenv("ACI_USERNAME", "admin")
     monkeypatch.setenv("ACI_PASSWORD", "password")
 
-    ctx = ControllerContext(controller_type="ACI", auth_method="session")
+    ctx = ControllerContext(controller_type="ACI", auth_method=AuthMethod.SESSION)
     result = preflight_auth_check(ctx)
 
     assert result.success is True, (
@@ -82,7 +82,7 @@ def test_sdwan_preflight_normalizes_url(
     monkeypatch.setenv("SDWAN_USERNAME", "admin")
     monkeypatch.setenv("SDWAN_PASSWORD", "password")
 
-    ctx = ControllerContext(controller_type="SDWAN", auth_method="session")
+    ctx = ControllerContext(controller_type="SDWAN", auth_method=AuthMethod.SESSION)
     result = preflight_auth_check(ctx)
 
     assert result.success is True, (

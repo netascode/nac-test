@@ -26,7 +26,12 @@ from typing import cast
 
 from nac_test._env import is_env_var_set
 from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
-from nac_test.core.types import ControllerContext, ControllerTypeKey, CredentialKind
+from nac_test.core.types import (
+    AuthMethod,
+    ControllerContext,
+    ControllerTypeKey,
+    CredentialKind,
+)
 from nac_test.exceptions import NacTestError
 
 logger = logging.getLogger(__name__)
@@ -55,7 +60,7 @@ class CredentialSet:
 
     fields: Mapping[CredentialKind, str]
     label: str
-    auth_method: str = "session"
+    auth_method: AuthMethod = AuthMethod.SESSION
 
     def __post_init__(self) -> None:
         # Normalize to an immutable mapping so a frozen CredentialSet can't be
@@ -133,7 +138,7 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
                     "token": "SDWAN_API_TOKEN",
                 },
                 label="API Token (20.18+)",
-                auth_method="token",
+                auth_method=AuthMethod.TOKEN,
             ),
             CredentialSet(
                 fields={
@@ -533,7 +538,7 @@ def should_verify_ssl(controller_type: str, default: bool = False) -> bool:
 
 
 def get_connection_params(
-    controller_type: str, auth_method: str
+    controller_type: str, auth_method: AuthMethod
 ) -> dict[CredentialKind, str]:
     """Resolve connection values by kind for a controller_type/auth_method.
 
@@ -744,7 +749,7 @@ def _find_credential_sets() -> tuple[
     return complete, partial
 
 
-def _infer_auth_method(controller_type: str) -> str:
+def _infer_auth_method(controller_type: str) -> AuthMethod:
     """Infer auth_method by scanning env vars for a controller type.
 
     Used only in the transitional fallback path of
@@ -754,11 +759,11 @@ def _infer_auth_method(controller_type: str) -> str:
     """
     config = CONTROLLER_REGISTRY.get(controller_type)
     if config is None:
-        return "session"
+        return AuthMethod.SESSION
     for cred_set in config.credential_sets:
         if all(is_env_var_set(v) for v in cred_set.env_vars):
             return cred_set.auth_method
-    return "session"
+    return AuthMethod.SESSION
 
 
 def _format_incomplete_credentials_error(partial_controllers: Sequence[str]) -> str:

@@ -19,7 +19,7 @@ import pytest
 
 from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.core.controller import CONTROLLER_REGISTRY
-from nac_test.core.types import ControllerContext
+from nac_test.core.types import AuthMethod, ControllerContext
 from tests.e2e.mocks.mock_server import MockAPIServer
 
 # Path to the mock API configuration files
@@ -174,22 +174,22 @@ def socket_dir() -> Generator[Path, None, None]:
 @pytest.fixture()
 def aci_context() -> ControllerContext:
     """Pre-built ControllerContext for ACI with session auth."""
-    return ControllerContext(controller_type="ACI", auth_method="session")
+    return ControllerContext(controller_type="ACI", auth_method=AuthMethod.SESSION)
 
 
 @pytest.fixture()
 def sdwan_context() -> ControllerContext:
     """Pre-built ControllerContext for SDWAN with session auth."""
-    return ControllerContext(controller_type="SDWAN", auth_method="session")
+    return ControllerContext(controller_type="SDWAN", auth_method=AuthMethod.SESSION)
 
 
 @pytest.fixture()
 def cc_context() -> ControllerContext:
     """Pre-built ControllerContext for Catalyst Center with session auth."""
-    return ControllerContext(controller_type="CC", auth_method="session")
+    return ControllerContext(controller_type="CC", auth_method=AuthMethod.SESSION)
 
 
 @pytest.fixture()
 def iosxe_context() -> ControllerContext:
     """Pre-built ControllerContext for IOS-XE with session auth."""
-    return ControllerContext(controller_type="IOSXE", auth_method="session")
+    return ControllerContext(controller_type="IOSXE", auth_method=AuthMethod.SESSION)

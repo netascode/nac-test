@@ -25,6 +25,17 @@ ControllerTypeKey = Literal["ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE
 CredentialKind = Literal["url", "username", "password", "token"]
 
 
+class AuthMethod(str, Enum):
+    """Authentication mechanism for a controller credential set.
+
+    Consumed by auth adapters in nac-test-pyats-common to branch on
+    token vs. session authentication.
+    """
+
+    SESSION = "session"
+    TOKEN = "token"  # nosec B105 — not a password, enum value for auth method selection
+
+
 @dataclass(frozen=True)
 class ControllerContext:
     """Resolved controller selection identity passed from orchestrator to subprocess.
@@ -45,7 +56,7 @@ class ControllerContext:
     """
 
     controller_type: ControllerTypeKey
-    auth_method: str
+    auth_method: AuthMethod
 
     def to_json(self) -> str:
         """Serialize for ``NAC_TEST_CONTROLLER_CONTEXT`` env var."""
@@ -68,9 +79,13 @@ class ControllerContext:
             data = json.loads(raw)
         except (json.JSONDecodeError, TypeError) as e:
             raise ValueError(f"Invalid JSON in controller context: {e}") from e
+        try:
+            auth = AuthMethod(data["auth_method"])
+        except ValueError as e:
+            raise ValueError(f"Invalid auth_method {data['auth_method']!r}: {e}") from e
         return cls(
             controller_type=data["controller_type"],
-            auth_method=data["auth_method"],
+            auth_method=auth,
         )
 
 

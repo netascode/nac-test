@@ -5,7 +5,7 @@
 
 from unittest.mock import patch
 
-from nac_test.core.types import ControllerContext
+from nac_test.core.types import AuthMethod, ControllerContext
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
 from .conftest import PyATSTestDirs
@@ -19,7 +19,7 @@ class TestOrchestratorControllerParam:
     ) -> None:
         """Test that PyATSOrchestrator uses provided controller_context instead of detecting."""
         controller_context = ControllerContext(
-            controller_type="SDWAN", auth_method="token"
+            controller_type="SDWAN", auth_method=AuthMethod.TOKEN
         )
 
         with patch(
