@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from pyats import aetest
 
+from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.core.types import ControllerContext
 from nac_test.pyats_core.common.base_test import NACTestBase
 
@@ -177,7 +178,7 @@ class TestBaseTestControllerDetection:
         """Test that NACTestBase uses NAC_TEST_CONTROLLER_CONTEXT when present (primary path)."""
         # Set serialized context (primary path) AND the underlying env vars
         ctx = ControllerContext(controller_type="SDWAN", auth_method="token")
-        monkeypatch.setenv("NAC_TEST_CONTROLLER_CONTEXT", ctx.to_json())
+        monkeypatch.setenv(ENV_CONTROLLER_CONTEXT, ctx.to_json())
         # Need SDWAN env vars for get_controller_url() and get_connection_params()
         monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
         monkeypatch.setenv("SDWAN_API_TOKEN", "test-token-value")
@@ -241,9 +242,9 @@ class TestBaseTestSetupErrorLogging:
         re-raising ValueError, KeyError, or JSONDecodeError from get_controller_context().
         """
         if context_env is None:
-            monkeypatch.delenv("NAC_TEST_CONTROLLER_CONTEXT", raising=False)
+            monkeypatch.delenv(ENV_CONTROLLER_CONTEXT, raising=False)
         else:
-            monkeypatch.setenv("NAC_TEST_CONTROLLER_CONTEXT", context_env)
+            monkeypatch.setenv(ENV_CONTROLLER_CONTEXT, context_env)
 
         test_instance = self._make_test_instance()
 

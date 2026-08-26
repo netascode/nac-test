@@ -108,6 +108,9 @@ HTTP_FORBIDDEN_CODE: int = 403
 # Service unavailable status codes (treat as unreachable)
 HTTP_SERVICE_UNAVAILABLE_CODES: tuple[int, ...] = (408, 429, 503, 504)
 
+# Controller context env var (orchestrator writes, subprocess reads)
+ENV_CONTROLLER_CONTEXT: str = "NAC_TEST_CONTROLLER_CONTEXT"
+
 # Platform detection
 IS_MACOS: bool = platform.system() == "Darwin"
 IS_WINDOWS: bool = platform.system() == "Windows"

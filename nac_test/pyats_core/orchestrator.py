@@ -16,6 +16,7 @@ from typing import Any
 from nac_test.core.constants import (
     DEBUG_MODE,
     DRY_RUN_REASON,
+    ENV_CONTROLLER_CONTEXT,
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
@@ -278,7 +279,7 @@ class PyATSOrchestrator:
             # Pass test_dir so plugin can compute relative test names
             env[ENV_TEST_DIR] = str(self.test_dir)
             # Serialize controller context for subprocess transport
-            env["NAC_TEST_CONTROLLER_CONTEXT"] = self.controller_context.to_json()
+            env[ENV_CONTROLLER_CONTEXT] = self.controller_context.to_json()
 
             # Execute and return the archive path
             assert self.subprocess_runner is not None  # Should be initialized by now
@@ -366,9 +367,7 @@ class PyATSOrchestrator:
                 # Set environment variable for test subprocesses to find broker
                 os.environ["NAC_TEST_BROKER_SOCKET"] = str(broker.socket_path)
                 # Serialize controller context for subprocess transport
-                os.environ["NAC_TEST_CONTROLLER_CONTEXT"] = (
-                    self.controller_context.to_json()
-                )
+                os.environ[ENV_CONTROLLER_CONTEXT] = self.controller_context.to_json()
 
                 # Execute device tests with broker running
                 return await self._execute_device_tests_with_broker(test_files, devices)
@@ -381,7 +380,7 @@ class PyATSOrchestrator:
         finally:
             # Clean up environment variables
             os.environ.pop("NAC_TEST_BROKER_SOCKET", None)
-            os.environ.pop("NAC_TEST_CONTROLLER_CONTEXT", None)
+            os.environ.pop(ENV_CONTROLLER_CONTEXT, None)
 
     async def _execute_device_tests_with_broker(
         self, test_files: list[Path], devices: list[dict[str, Any]]

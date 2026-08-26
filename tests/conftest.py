@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.core.controller import CONTROLLER_REGISTRY
 from nac_test.core.types import ControllerContext
 from tests.e2e.mocks.mock_server import MockAPIServer
@@ -65,7 +66,7 @@ def clean_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
             monkeypatch.delenv(key, raising=False)
 
     # Clear serialized controller context from previous tests
-    monkeypatch.delenv("NAC_TEST_CONTROLLER_CONTEXT", raising=False)
+    monkeypatch.delenv(ENV_CONTROLLER_CONTEXT, raising=False)
 
     # Clear module-level credential cache to prevent cross-test pollution
     from nac_test.core import controller

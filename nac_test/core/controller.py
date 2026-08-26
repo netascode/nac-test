@@ -25,6 +25,7 @@ from types import MappingProxyType
 from typing import cast
 
 from nac_test._env import is_env_var_set
+from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.core.types import ControllerContext, ControllerTypeKey, CredentialKind
 from nac_test.exceptions import NacTestError
 
@@ -351,7 +352,7 @@ def get_controller_context() -> ControllerContext:
     Raises:
         ValueError: If no controller credentials are found (via fallback path).
     """
-    raw = os.environ.get("NAC_TEST_CONTROLLER_CONTEXT")
+    raw = os.environ.get(ENV_CONTROLLER_CONTEXT)
     if raw:
         return ControllerContext.from_json(raw)
 

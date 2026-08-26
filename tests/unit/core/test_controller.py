@@ -8,6 +8,7 @@ import logging
 
 import pytest
 
+from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.core.controller import (
     CONTROLLER_REGISTRY,
     CredentialSet,
@@ -243,7 +244,7 @@ class TestGetControllerContext:
         self, monkeypatch: pytest.MonkeyPatch, sdwan_context: ControllerContext
     ) -> None:
         """Primary path: deserializes from NAC_TEST_CONTROLLER_CONTEXT."""
-        monkeypatch.setenv("NAC_TEST_CONTROLLER_CONTEXT", sdwan_context.to_json())
+        monkeypatch.setenv(ENV_CONTROLLER_CONTEXT, sdwan_context.to_json())
         result = get_controller_context()
         assert result.controller_type == "SDWAN"
         assert result.auth_method == "session"

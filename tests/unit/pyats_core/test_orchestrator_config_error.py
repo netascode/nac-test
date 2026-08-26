@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
 from ..conftest import PyATSTestDirs
@@ -94,7 +95,7 @@ class TestOrchestratorControllerContextEnvVar:
     ) -> None:
         """PyATSOrchestrator stores controller_context without polluting os.environ."""
         # Clear any existing context from prior tests
-        os.environ.pop("NAC_TEST_CONTROLLER_CONTEXT", None)
+        os.environ.pop(ENV_CONTROLLER_CONTEXT, None)
 
         orchestrator = PyATSOrchestrator(
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
@@ -103,7 +104,7 @@ class TestOrchestratorControllerContextEnvVar:
         )
 
         # __init__ should NOT set the env var (moved to subprocess launch)
-        assert "NAC_TEST_CONTROLLER_CONTEXT" not in os.environ
+        assert ENV_CONTROLLER_CONTEXT not in os.environ
 
         # But the orchestrator should have the context stored
         assert orchestrator.controller_context is not None
