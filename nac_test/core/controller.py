@@ -498,6 +498,41 @@ def get_controller_url(controller_type: str) -> str:
     raise KeyError(config.url_env_var)
 
 
+def get_credential_vars(
+    controller_type: str,
+) -> list[tuple[CredentialKind, str]]:
+    """Return deduplicated (kind, env_var) pairs for non-URL credential fields.
+
+    Iterates all credential sets for the given controller type and collects
+    unique credential fields, excluding URL (which is accessed separately
+    via :func:`get_controller_url`).
+
+    This is the single-source primitive used by CLI banners and HTML report
+    templates to generate remediation instructions.
+
+    Args:
+        controller_type: The internal controller type key (e.g., "ACI", "SDWAN").
+
+    Returns:
+        List of (kind, env_var_name) tuples, deduplicated by var name.
+        E.g. ``[("username", "ACI_USERNAME"), ("password", "ACI_PASSWORD")]``
+        or ``[("token", "SDWAN_API_TOKEN"), ("username", "SDWAN_USERNAME"), ...]``
+
+    Raises:
+        KeyError: If controller_type is not registered.
+    """
+    config = CONTROLLER_REGISTRY[controller_type]
+    seen: set[str] = set()
+    result: list[tuple[CredentialKind, str]] = []
+    for cred_set in config.credential_sets:
+        for kind, var in cred_set.fields.items():
+            if kind == "url" or var in seen:
+                continue
+            seen.add(var)
+            result.append((kind, var))
+    return result
+
+
 _INSECURE_TRUE_VALUES = ("true", "1", "yes")
 
 

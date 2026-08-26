@@ -12,7 +12,10 @@ from dataclasses import dataclass
 
 import typer
 
-from nac_test.core.controller import CONTROLLER_REGISTRY, get_display_name
+from nac_test.core.controller import (
+    get_credential_vars,
+    get_display_name,
+)
 from nac_test.utils.terminal import TerminalColors
 from nac_test.utils.url import extract_host
 
@@ -242,25 +245,18 @@ def display_aci_defaults_banner() -> None:
 def _credential_remediation_lines(controller_type: str) -> list[str]:
     """Build 'export VAR=<kind>' lines for every credential var a controller accepts.
 
-    Derives var names and kinds from ``CONTROLLER_REGISTRY`` instead of assuming
-    a fixed ``_USERNAME``/``_PASSWORD`` suffix convention, so token-only credential
-    sets (e.g. SDWAN's API token) are represented correctly.
+    Derives var names and kinds from ``CONTROLLER_REGISTRY`` via the
+    :func:`~nac_test.core.controller.get_credential_vars` primitive, so
+    token-only credential sets (e.g. SDWAN's API token) are represented correctly.
     """
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    if config is None:
+    try:
+        cred_vars = get_credential_vars(controller_type)
+    except KeyError:
         return [
             f"  export {controller_type}_USERNAME=<username>",
             f"  export {controller_type}_PASSWORD=<password>",
         ]
-    seen: set[str] = set()
-    lines = []
-    for cred_set in config.credential_sets:
-        for kind, var in cred_set.fields.items():
-            if kind == "url" or var in seen:
-                continue
-            seen.add(var)
-            lines.append(f"  export {var}=<{kind}>")
-    return lines
+    return [f"  export {var}=<{kind}>" for kind, var in cred_vars]
 
 
 def display_auth_failure_banner(

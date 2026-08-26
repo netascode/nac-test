@@ -23,7 +23,12 @@ from nac_test.core.constants import (
     ROBOT_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
 )
-from nac_test.core.controller import get_display_name, get_env_var_prefix
+from nac_test.core.controller import (
+    CONTROLLER_REGISTRY,
+    get_credential_vars,
+    get_display_name,
+    get_env_var_prefix,
+)
 from nac_test.core.types import (
     CombinedResults,
     ControllerTypeKey,
@@ -118,6 +123,26 @@ def _get_curl_example(controller_type: ControllerTypeKey, controller_url: str) -
         )
         return controller_url
     return f"{controller_url}{template.endpoint} \\\n            {template.options}"
+
+
+def _build_controller_credential_vars(
+    controller_type: str | None,
+) -> list[dict[str, str]]:
+    """Build credential variable list for a specific controller type.
+
+    Delegates to :func:`~nac_test.core.controller.get_credential_vars` (SSOT)
+    and reformats as template-friendly dicts.
+
+    Returns:
+        List of dicts with keys ``var`` and ``kind``.
+    """
+    if not controller_type:
+        return []
+    try:
+        cred_vars = get_credential_vars(controller_type)
+    except KeyError:
+        return []
+    return [{"var": var, "kind": kind} for kind, var in cred_vars]
 
 
 class CombinedReportGenerator:
@@ -303,6 +328,12 @@ class CombinedReportGenerator:
             )
             timestamp = datetime.now().strftime(REPORT_TIMESTAMP_FORMAT)
 
+            # Build remediation data from CONTROLLER_REGISTRY
+            controller_prefixes = "|".join(CONTROLLER_REGISTRY.keys())
+            controller_credential_vars = _build_controller_credential_vars(
+                failure.controller_type
+            )
+
             template = self.env.get_template("auth_failure/report.html.j2")
             html_content = template.render(
                 failure_type=failure.failure_type,
@@ -315,6 +346,8 @@ class CombinedReportGenerator:
                 host=host,
                 curl_example=curl_example,
                 timestamp=timestamp,
+                controller_prefixes=controller_prefixes,
+                controller_credential_vars=controller_credential_vars,
             )
 
             failure_report_path.write_text(html_content, encoding="utf-8")
