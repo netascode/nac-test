@@ -7,7 +7,7 @@ PyATS tests let you verify network state in pure Python — no template renderin
 ## Prerequisites
 
 - **nac-test** >= 2.0
-- **nac-test-pyats-common** (install via `pip install nac-test-pyats-common`)
+- **nac-test-pyats-common** (installed as a dependency)
 - **pyATS** (installed as a dependency)
 
 Import the base class for your platform:
