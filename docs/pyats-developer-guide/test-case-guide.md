@@ -1,6 +1,6 @@
 # PyATS Test Case Developer Guide
 
-This guide is for partner engineers writing pyATS test cases for the nac-test framework. It assumes you understand networking concepts but are new to this test framework. We'll cover pyATS basics as needed.
+This guide is for engineers/developers writing pyATS test cases for the nac-test framework. It assumes you understand networking concepts but are new to this test framework. We'll cover pyATS basics as needed.
 
 A pyATS test in this framework is typically 50–100 lines of Python. You write the verification logic — what to query, what to compare. The framework handles everything else:
 
