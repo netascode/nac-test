@@ -212,4 +212,3 @@ The module-level constants (`TITLE`, `DESCRIPTION`, `SETUP`, `PROCEDURE`, `PASS_
 
 - **Full Developer Guide:** See [test-case-guide.md](test-case-guide.md) for detailed patterns, error handling, and advanced features
 - **API Reference:** See [api-reference.md](api-reference.md) for complete method signatures and base class capabilities
-- **Runnable Examples:** See `workspace/doc-examples/` for complete working tests you can run locally with `./run_examples.sh`
