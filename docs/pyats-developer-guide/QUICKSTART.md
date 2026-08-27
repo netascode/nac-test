@@ -2,7 +2,7 @@
 
 ## What is this?
 
-The nac-test framework can run pyATS test cases alongside Robot Framework tests. PyATS tests are pure Python classes that verify network state against expected values from a data model or static expectations. Tests are auto-discovered via AST analysis—just inherit from the appropriate base class and place your file in the test directory. This guide gets you writing tests in 5 minutes.
+PyATS tests let you verify network state in pure Python — no template rendering, no Jinja2. Write a class with three methods; the framework handles controller authentication, parallel execution across all devices, command caching, and HTML report generation automatically. Tests are auto-discovered: inherit from the right base class and place your file in the test directory.
 
 ## Prerequisites
 
@@ -196,13 +196,13 @@ Test results are written to the `results/` directory with HTML reports for easy 
 
 ## The 3-Method Contract
 
-Every pyATS test in this framework implements three things:
+Every pyATS test implements three things — and only these three:
 
 1. An `@aetest.test` method that calls `self.run_async_verification_test(steps)`
-2. `get_items_to_verify()` returning a list of context dictionaries (one per item to verify)
+2. `get_items_to_verify()` returning a list of context dicts (one per item)
 3. `async verify_item()` that verifies one item and returns `self.format_verification_result()`
 
-This pattern enables parallel verification, consistent reporting, and automatic HTML report generation.
+Everything else — running items concurrently, retrying on transient failures, writing the HTML report, setting the CI exit code — is handled by the framework.
 
 ## Module-Level Constants (Strongly Recommended)
 

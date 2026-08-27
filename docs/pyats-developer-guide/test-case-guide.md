@@ -2,6 +2,15 @@
 
 This guide is for partner engineers writing pyATS test cases for the nac-test framework. It assumes you understand networking concepts but are new to this test framework. We'll cover pyATS basics as needed.
 
+A pyATS test in this framework is typically 50–100 lines of Python. You write the verification logic — what to query, what to compare. The framework handles everything else:
+
+- **Automatic test discovery** — inherit from the right base class and your file is found; no registration needed
+- **Authentication and connection management** — login tokens are cached across all parallel tests; you never call an auth API yourself
+- **Parallel execution** — API tests verify multiple items concurrently; D2D tests run across devices in parallel, with a shared SSH connection pool so each device gets one connection regardless of how many tests run against it
+- **Command caching** — `show version` runs once per device per hour even if 10 tests need it
+- **Structured HTML reports** — pass/fail per item, expandable command output, timing data; generated from streaming JSONL so partial results are preserved if a test crashes mid-run
+- **CI/CD exit codes** — exit code reflects the number of failed tests; zero means everything passed
+
 ## Table of Contents
 
 1. [Architecture Overview](#1-architecture-overview)
@@ -130,7 +139,7 @@ For D2D/SSH tests there are three options — the right choice depends on how yo
 
 ## 3. The Three-Method Contract
 
-Every test class implements exactly three things:
+Every test class implements exactly three things. In exchange, the framework provides parallel execution, caching, authentication, retry logic, and a structured HTML report — without any additional code from you.
 
 ### 3.1 The Entry Point (`@aetest.test` method)
 
@@ -846,6 +855,18 @@ if response.status_code != 200:
     context["api_duration"] = api_duration  # optional
     return self.format_api_error(response.status_code, str(response.url), context)
 ```
+
+### display_context, api_context, and test_context
+
+The HTML report needs three pieces of information from each `verify_item()` call. They have similar names but serve distinct purposes:
+
+| What the report needs | How you provide it | Effect if omitted |
+|---|---|---|
+| What item this result is about | `context["display_context"] = "BGP -> edge-01"` | Item label appears blank |
+| Which HTTP call / CLI command produced the evidence | `context["api_context"] = api_context` | Call output appears in a separate "Commands Without Matching Results" section instead of nested under the result |
+| What to name the output block | `test_context=api_context` (to `client.get()`) or `with self.test_context(api_context):` (D2D) | Output block has no label |
+
+In practice, `api_context` is the same string used for both the last two — you build it once with `build_api_context()` and use it in both places.
 
 ### display_context
 
