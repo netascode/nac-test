@@ -174,10 +174,11 @@ if response.status_code != 200:
 
 #### `build_api_context(resource_type: str, identifier: str, **kwargs) -> str`
 
-Build a context string for linking HTTP responses to result entries in the HTML report. Requires two steps — both are necessary:
+Build a context string for linking HTTP responses or SSH command output to result entries in the HTML report. Requires two steps — both are necessary for the link to appear:
 
 1. Store the string in `context["api_context"]` — tells `process_results_smart` which context to attach to the result.
-2. Pass it to `client.get(..., test_context=api_context)` — tags the HTTP call.
+2. **API tests:** pass it to `client.get(..., test_context=api_context)` — tags the HTTP call.  
+   **D2D tests:** pass it to `self.test_context(api_context)` — labels the command output block.
 
 ```python
 api_context = self.build_api_context("BGP Neighbors", f"Device {hostname}")
@@ -234,9 +235,18 @@ self.logger.info(f"Passed: {len(passed)}, Failed: {len(failed)}, Skipped: {len(s
 
 #### `test_context(api_context: str) -> ContextManager`
 
-Labels a command output block in the HTML report. In D2D tests, command output always appears in a dedicated report section separate from pass/fail results — `test_context` only controls the label on that block. Without it, output lands in an unlabelled fallback section.
+Labels a command output block in the HTML report. Use together with `context["api_context"]` to link the command to the result entry.
 
-Multiple sequential calls per `verify_item()` are supported:
+```python
+api_context = self.build_api_context("OSPF Neighbors", self.hostname)
+with self.test_context(api_context):
+    output = await self.execute_command("show ip ospf neighbor")
+
+# Set after the with block — links command output to this result in the report
+context["api_context"] = api_context
+```
+
+Works identically for both API and D2D tests. For multiple commands per `verify_item`, only one can be the primary:
 
 ```python
 with self.test_context(self.build_api_context("Control Connections", self.hostname)):
@@ -244,9 +254,10 @@ with self.test_context(self.build_api_context("Control Connections", self.hostna
 
 with self.test_context(self.build_api_context("SD-WAN Version", self.hostname)):
     output_b = await self.execute_command("show sdwan version")
-```
 
-**Contrast with API tests:** In API tests, linking requires storing `build_api_context()` in `context["api_context"]` AND passing it to `client.get(test_context=...)`. When both are present, the HTTP response is nested under the result. No equivalent linkage exists for D2D command output (framework limitation).
+context["api_context"] = self.build_api_context("Control Connections", self.hostname)
+# output_b appears in "Commands Without Matching Results" — expected
+```
 
 #### `wrap_client_for_tracking(client: Any, device_name: str) -> Any`
 

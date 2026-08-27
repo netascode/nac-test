@@ -447,6 +447,10 @@ class VerifySDWANControlConnectionsD2D(SDWANTestBase):
             with self.test_context(api_context):
                 output = await self.execute_command(command)
 
+            # Store api_context so the command output is linked to this result
+            # in the HTML report — same pattern as API tests
+            context["api_context"] = api_context
+
             if not output:
                 return self.format_verification_result(
                     status=ResultStatus.ERRORED,
@@ -882,7 +886,17 @@ When both are set, the HTTP response appears nested and expandable directly unde
 
 **Multiple API calls per verify_item:** only one call can be the primary (linked to the result). Set `context["api_context"]` to the context of the most important call. Other calls will appear in "Commands Without Matching Results" — they are still visible and labelled.
 
-**D2D tests:** `test_context()` labels SSH command output blocks but the framework does not currently propagate this to the result linkage. D2D command output always appears in a separate section from the result, regardless of `test_context` usage. This is a known framework limitation.
+**D2D tests:** the same `context["api_context"]` pattern works for SSH tests too. Set it after the command executes (after the `with self.test_context()` block exits) to link the command output to the result entry:
+
+```python
+api_context = self.build_api_context(self.TEST_CONFIG["resource_type"], self.hostname)
+with self.test_context(api_context):
+    output = await self.execute_command("show ip ospf neighbor")
+
+context["api_context"] = api_context  # links command to result — works for D2D too
+```
+
+For multiple commands per `verify_item`, set `context["api_context"]` to the primary command's context. Secondary commands will still appear in "Commands Without Matching Results".
 
 ### Logging
 
@@ -1114,7 +1128,7 @@ with self.test_context(api_context):
     output = await self.execute_command("show ip ospf neighbor")
 ```
 
-In D2D tests, command output always appears in a dedicated "Commands" section of the HTML report, separate from pass/fail results. `test_context` controls the *label* on each command output block. Without it, all command output lands in an unlabelled fallback section.
+In D2D tests, `test_context` controls the *label* on the command output block in the HTML report. Without it, output lands in an unlabelled "Commands Without Matching Results" section. To link the command output to a specific result entry, also set `context["api_context"]` — exactly the same as API tests (see below).
 
 Multiple sequential `test_context` blocks per `verify_item()` are supported — each labels its own command output independently:
 
@@ -1126,9 +1140,12 @@ with self.test_context(ctx_a):
 ctx_b = self.build_api_context("SD-WAN Version", self.hostname)
 with self.test_context(ctx_b):
     output_b = await self.execute_command("show sdwan version")
+
+# Link the primary command to the result; ctx_b will appear unlinked
+context["api_context"] = ctx_a
 ```
 
-**Note:** This differs from API tests, where `build_api_context()` is passed to both `client.get(..., test_context=api_context)` and `format_verification_result()`, allowing the framework to link the HTTP response to the result entry. In D2D tests there is no equivalent linkage — command output and result status are always in separate report sections regardless of how many `test_context` blocks you use.
+**Note:** `test_context()` labels the command output block. `context["api_context"]` links it to the result entry. Both are needed. For a single command, use the same string for both. For multiple commands, only one can be linked to the result — set `context["api_context"]` to whichever command is the primary evidence for the pass/fail decision.
 
 ### Command Caching
 
