@@ -199,7 +199,7 @@ Test results are written to the `results/` directory with HTML reports for easy 
 Every pyATS test implements three things — and only these three:
 
 1. An `@aetest.test` method that calls `self.run_async_verification_test(steps)`
-2. `get_items_to_verify()` returning a list of context dicts (one per item)
+2. `get_items_to_verify()` returning a list of context dicts (one per item) — or a dict of lists to use the grouped `verify_group()` pattern (see [the Developer Guide](test-case-guide.md#5-the-verify_group-pattern))
 3. `async verify_item()` that verifies one item and returns `self.format_verification_result()`
 
 Everything else — running items concurrently, retrying on transient failures, writing the HTML report, setting the CI exit code — is handled by the framework.

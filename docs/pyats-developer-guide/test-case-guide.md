@@ -14,21 +14,57 @@ A pyATS test in this framework is typically 50–100 lines of Python. You write 
 ## Table of Contents
 
 1. [Architecture Overview](#1-architecture-overview)
+   - [1.1 How pyATS Tests Differ from Robot Framework](#11-how-pyats-tests-differ-from-robot-framework)
+   - [1.2 Test Discovery](#12-test-discovery)
+   - [1.3 Execution Model](#13-execution-model)
+   - [1.4 Concurrency](#14-concurrency)
 2. [Class Hierarchy](#2-class-hierarchy)
+   - [2.1 Choosing the Right SSH Base Class](#21-choosing-the-right-ssh-base-class)
+   - [2.2 Import Table](#22-import-table)
 3. [The Three-Method Contract](#3-the-three-method-contract)
+   - [3.1 The Entry Point](#31-the-entry-point-aetest-test-method)
+   - [3.2 get_items_to_verify()](#32-get_items_to_verify)
+   - [3.3 async verify_item()](#33-async-verify_itemsemaphore-client-context)
 4. [Two Test Patterns](#4-two-test-patterns)
+   - [4.1 NRFU Pattern](#41-nrfu-pattern-static-expected-values)
+   - [4.2 Data-Model-Driven Pattern](#42-data-model-driven-pattern-expected-values-from-yaml)
+   - [4.3 D2D/SSH Pattern](#43-d2dssh-pattern-device-directed-tests)
 5. [The verify_group() Pattern](#5-the-verify_group-pattern)
 6. [Data Model Access](#6-data-model-access)
+   - [6.1 How --data Works](#61-how---data-works)
+   - [6.2 Accessing the Data Model](#62-accessing-the-data-model)
+   - [6.3 Defaults Resolution](#63-defaults-resolution)
+   - [6.4 SSH/D2D Device Context](#64-sshd2d-device-context)
 7. [Reporting Pass/Fail and Logging](#7-reporting-passfail-and-logging)
+   - [7.1 ResultStatus Enum](#71-resultstatus-enum)
+   - [7.2 Returning Results](#72-returning-results)
+   - [7.3 display_context, api_context, and test_context](#73-display_context-api_context-and-test_context)
+   - [7.4 display_context](#74-display_context)
+   - [7.5 api_context](#75-api_context)
+   - [7.6 Logging](#76-logging)
 8. [TEST_CONFIG and Module Constants](#8-test_config-and-module-constants)
+   - [8.1 TEST_CONFIG](#81-test_config)
+   - [8.2 Optional TEST_CONFIG Keys](#82-optional-test_config-keys)
+   - [8.3 Module-Level Constants](#83-module-level-constants-strongly-recommended)
 9. [API Caching](#9-api-caching)
+   - [9.1 Authentication Token Caching](#91-authentication-token-caching)
+   - [9.2 HTTP Connection Pooling](#92-http-connection-pooling)
 10. [SSH/CLI via the Connection Broker](#10-sshcli-via-the-connection-broker)
+    - [10.1 execute_command()](#101-execute_command)
+    - [10.2 parse_output()](#102-parse_output)
+    - [10.3 test_context()](#103-test_context)
+    - [10.4 Command Caching](#104-command-caching)
+    - [10.5 Broker Architecture](#105-broker-architecture-for-understanding-not-interaction)
 11. [Concurrency](#11-concurrency)
+    - [11.1 API Tests](#111-api-tests)
+    - [11.2 D2D Tests](#112-d2d-tests)
+    - [11.3 What You Must Do](#113-what-you-must-do)
 12. [Tag Filtering](#12-tag-filtering)
+13. [Static Analysis and Type Checking](#13-static-analysis-and-type-checking)
 
 ## 1. Architecture Overview
 
-### How pyATS Tests Differ from Robot Framework
+### 1.1 How pyATS Tests Differ from Robot Framework
 
 The nac-test framework supports two test execution approaches:
 
@@ -47,11 +83,11 @@ The nac-test framework supports two test execution approaches:
 
 In production runs, pyATS tests execute first, followed by Robot Framework tests sequentially. During development, use `--pyats` or `--robot` flags to run only one type for faster iteration cycles.
 
-### Test Discovery
+### 1.2 Test Discovery
 
 The nac-test framework discovers pyATS tests using a two-phase process: **discovery** and **classification**.
 
-**Discovery:** A file is only considered a pyATS test file if it contains at least one class with a base class name that maps to a known test type. The framework uses Python's `ast` module to inspect the source without executing it — files that don't contain classes inheriting from a recognized base (e.g., `APICTestBase`, `IOSXETestBase`) are silently ignored, even if they reside in an `/api/` or `/d2d/` directory.
+**Discovery:** A file is only considered a pyATS test file if it contains at least one class with a base class name that maps to a known test type. The framework uses Python's `ast` module to inspect the source without executing it — files that don't contain classes inheriting from a recognized base (e.g., `APICTestBase`, `IOSXETestBase`) are silently ignored, even if they reside in an `api/` or `d2d/` directory.
 
 **Classification** (for discovered files) uses a three-tier strategy:
 
@@ -62,7 +98,7 @@ The nac-test framework discovers pyATS tests using a two-phase process: **discov
 Practical implication: inherit from the correct base class and your test file is automatically discovered and classified correctly. No manual registration needed.
 
 
-### Execution Model
+### 1.3 Execution Model
 
 **API tests** (ACI, SD-WAN Manager, Catalyst Center):
 - All collected tests run in a single PyATS job file
@@ -76,7 +112,7 @@ Practical implication: inherit from the correct base class and your test file is
 - Each device gets its own subprocess with environment variables (`DEVICE_INFO`, `HOSTNAME`)
 - Parallel device execution with concurrency control
 
-### Concurrency
+### 1.4 Concurrency
 
 **API tests:**
 - `verify_item()` receives an `asyncio.Semaphore` for concurrent verification within a single job process
@@ -114,7 +150,7 @@ Layer 3: Your test files (architecture repos)
 
 **Note:** D2D/SSH tests currently require a controller to discover the device inventory — the controller's data model is the source of truth for which devices to test and how to reach them. Standalone IOS-XE (no SD-WAN, no Catalyst Center) is not yet supported as a D2D target because there is no controller to resolve the device list from. Only SD-WAN (`SDWANTestBase`) and Catalyst Center (`CatalystCenterSSHTestBase`) managed IOS-XE devices are currently supported for D2D testing.
 
-### Choosing the right SSH base class
+### 2.1 Choosing the Right SSH Base Class
 
 For D2D/SSH tests there are three options — the right choice depends on how you want device inventory resolved:
 
@@ -126,7 +162,7 @@ For D2D/SSH tests there are three options — the right choice depends on how yo
 
 `IOSXETestBase` delegates to the same `SDWANDeviceResolver` or `CatalystCenterDeviceResolver` at runtime — it is not a simpler class, just a more portable entry point.
 
-### Import Table
+### 2.2 Import Table
 
 | Platform | Import Statement |
 |----------|------------------|
@@ -153,6 +189,7 @@ def test_bgp_neighbors(self, steps):
 ```
 
 - **Decorated with `@aetest.test`** — required for PyATS discovery
+- **`steps`** — a pyATS `Steps` object injected automatically by the framework. It is used internally by `run_async_verification_test()` to create one named sub-step per verified item, each with its own pass/fail status in the pyATS report. You pass it through and do not call it directly.
 - **Body is always just:** `self.run_async_verification_test(steps)`
 - **Name should be descriptive:** `test_bgp_neighbors`, `test_control_connections`, `test_ospf_neighbors`
 - The docstring appears in PyATS logs and reports
@@ -648,14 +685,14 @@ class VerifyBridgeDomainSubnets(APICTestBase):
 
 ## 6. Data Model Access
 
-### How --data Works
+### 6.1 How --data Works
 
 1. All `--data` YAML files are deep-merged by `DataMerger` (supports Jinja2 templating and `${VAR}` env var substitution), same as for robot test cases.
 2. Merged result is written to `output/merged_data_model_test_variables.yaml` (the file will be removed post execution as it could contain sensitive values)
 3. Passed to test subprocesses via env var `MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH`
 4. `NACTestBase.setup()` loads it into `self.data_model`
 
-### Accessing the Data Model
+### 6.2 Accessing the Data Model
 
 The merged data model is available as `self.data_model` — a Python dict containing the entire merged YAML structure.
 
@@ -695,7 +732,7 @@ if site_id is None:
     return []
 ```
 
-### Defaults Resolution
+### 6.3 Defaults Resolution
 
 The framework provides a helper for reading default values from the `defaults` block in the data model:
 
@@ -724,7 +761,7 @@ unicast_routing = self.get_default_value(
 ) or True
 ```
 
-### SSH/D2D Device Context
+### 6.4 SSH/D2D Device Context
 
 For SSH/D2D tests, the framework automatically sets device-specific attributes:
 
@@ -749,7 +786,7 @@ class VerifyOSPFNeighbors(IOSXETestBase):
 
 ## 7. Reporting Pass/Fail and Logging
 
-### ResultStatus Enum
+### 7.1 ResultStatus Enum
 
 All verification results use the `ResultStatus` enum:
 
@@ -763,7 +800,7 @@ ResultStatus.ERRORED  # Infrastructure error (API unreachable, etc.)
 ResultStatus.INFO     # Informational result (no pass/fail judgment)
 ```
 
-### Returning Results
+### 7.2 Returning Results
 
 Every `verify_item()` must return a result dict. Use these helper methods:
 
@@ -856,7 +893,7 @@ if response.status_code != 200:
     return self.format_api_error(response.status_code, str(response.url), context)
 ```
 
-### display_context, api_context, and test_context
+### 7.3 display_context, api_context, and test_context
 
 The HTML report needs three pieces of information from each `verify_item()` call. They have similar names but serve distinct purposes:
 
@@ -864,11 +901,11 @@ The HTML report needs three pieces of information from each `verify_item()` call
 |---|---|---|
 | What item this result is about | `context["display_context"] = "BGP -> edge-01"` | Item label appears blank |
 | Which HTTP call / CLI command produced the evidence | `context["api_context"] = api_context` | Call output appears in a separate "Commands Without Matching Results" section instead of nested under the result |
-| What to name the output block | `test_context=api_context` (to `client.get()`) or `with self.test_context(api_context):` (D2D) | Output block has no label |
+| What to name the output block | `test_context=api_context` (to `client.get()`) or `with self.test_context(api_context):` (D2D — see [§10.3](#103-test_context)) | Output block has no label |
 
 In practice, `api_context` is the same string used for both the last two — you build it once with `build_api_context()` and use it in both places.
 
-### display_context
+### 7.4 display_context
 
 Set `context["display_context"]` before returning any result. This string appears in the HTML report as the item label.
 
@@ -885,7 +922,7 @@ context["display_context"] = f"{tenant} -> {bd} -> {subnet_ip}"
 context["display_context"] = f"BGP -> {hostname} ({system_ip})"
 ```
 
-### api_context
+### 7.5 api_context
 
 Use `self.build_api_context()` to create context strings that link HTTP responses to result entries in the HTML report. The context string must be stored in `context["api_context"]` **and** passed to `client.get()` — both are required for the link to appear:
 
@@ -919,7 +956,7 @@ context["api_context"] = api_context  # links command to result — works for D2
 
 For multiple commands per `verify_item`, set `context["api_context"]` to the primary command's context. Secondary commands will still appear in "Commands Without Matching Results".
 
-### Logging
+### 7.6 Logging
 
 Use `self.logger` for progress and diagnostic logging:
 
@@ -938,7 +975,7 @@ self.logger.error(f"Failed to parse command output: {e}")
 
 ## 8. TEST_CONFIG and Module Constants
 
-### TEST_CONFIG
+### 8.1 TEST_CONFIG
 
 Class-level dict that configures framework behavior. Minimum required:
 
@@ -949,7 +986,7 @@ TEST_CONFIG = {
 }
 ```
 
-### Optional TEST_CONFIG Keys
+### 8.2 Optional TEST_CONFIG Keys
 
 | Key | Type | Purpose | Example |
 |-----|------|---------|---------|
@@ -982,7 +1019,7 @@ TEST_CONFIG = {
 }
 ```
 
-### Module-Level Constants (Strongly Recommended)
+### 8.3 Module-Level Constants (Strongly Recommended)
 
 These constants feed into HTML report generation. Without them, reports work but lack descriptive metadata.
 
@@ -1027,7 +1064,7 @@ PASS_FAIL_CRITERIA = """
 
 The framework provides two caching layers automatically:
 
-### Authentication Token Caching
+### 9.1 Authentication Token Caching
 
 - File-based, cross-process safe (file locking)
 - Stored in temp directory, keyed by SHA256 of controller URL
@@ -1040,7 +1077,7 @@ The framework provides two caching layers automatically:
 3. If token is expired, the process re-authenticates and updates the cache
 4. All processes share the same cache, reducing authentication overhead
 
-### HTTP Connection Pooling
+### 9.2 HTTP Connection Pooling
 
 - `self.pool` provides shared `httpx.AsyncClient` instances
 - Architecture base classes create the client in `run_async_verification_test()` (deferred from setup for macOS fork safety)
@@ -1065,7 +1102,7 @@ async def verify_item(self, semaphore, client, context):
 
 For SSH/D2D tests (IOSXETestBase and subclasses), the framework provides CLI execution through a Connection Broker — a daemon process that manages shared SSH connections so all tests executed against a given device can share the same SSH session, commands are being multiplexed through it.
 
-### execute_command()
+### 10.1 execute_command()
 
 Execute a CLI command on the current device:
 
@@ -1101,7 +1138,7 @@ async def verify_item(self, semaphore, client, context):
         # ...
 ```
 
-### parse_output()
+### 10.2 parse_output()
 
 Convert CLI output to structured data using Genie parsers:
 
@@ -1139,17 +1176,17 @@ else:
     # ... verification logic
 ```
 
-### test_context()
+### 10.3 test_context()
 
-Wrap command execution in `self.test_context(api_context)` to label the command output in the HTML report:
+Labels a command output block in the HTML report, and — together with `context["api_context"]` (explained in [§7](#7-reporting-passfail-and-logging)) — links it to the result entry. Use the same string for both:
 
 ```python
 api_context = self.build_api_context("OSPF Neighbors", self.hostname)
-with self.test_context(api_context):
+with self.test_context(api_context):           # ← labels the output block
     output = await self.execute_command("show ip ospf neighbor")
-```
 
-In D2D tests, `test_context` controls the *label* on the command output block in the HTML report. Without it, output lands in an unlabelled "Commands Without Matching Results" section. To link the command output to a specific result entry, also set `context["api_context"]` — exactly the same as API tests (see below).
+context["api_context"] = api_context           # ← links block to result entry
+```
 
 Multiple sequential `test_context` blocks per `verify_item()` are supported — each labels its own command output independently:
 
@@ -1168,7 +1205,7 @@ context["api_context"] = ctx_a
 
 **Note:** `test_context()` labels the command output block. `context["api_context"]` links it to the result entry. Both are needed. For a single command, use the same string for both. For multiple commands, only one can be linked to the result — set `context["api_context"]` to whichever command is the primary evidence for the pass/fail decision.
 
-### Command Caching
+### 10.4 Command Caching
 
 The Connection Broker provides automatic command caching:
 
@@ -1187,7 +1224,7 @@ The Connection Broker provides automatic command caching:
 - Subsequent tests (even in different subprocesses) read from cache
 - Cache is transparent — you don't need to manage it
 
-### Broker Architecture (for understanding, not interaction)
+### 10.5 Broker Architecture (for understanding, not interaction)
 
 The Connection Broker is a daemon process that:
 - Listens on a Unix domain socket
@@ -1201,7 +1238,7 @@ The Connection Broker is a daemon process that:
 
 Section 1 introduced concurrency at a high level. This section details what you must do in your test code.
 
-### API Tests
+### 11.1 API Tests
 
 - All run in a single process with a shared event loop
 - `verify_item()` calls run concurrently, controlled by the semaphore
@@ -1220,7 +1257,7 @@ async def verify_item(self, semaphore, client, context):
     # Semaphore released automatically when exiting the block
 ```
 
-### D2D Tests
+### 11.2 D2D Tests
 
 - Each device runs in its own subprocess
 - Multiple devices run in parallel (up to `--max-parallel-devices` or 20)
@@ -1238,7 +1275,7 @@ async def verify_item(self, semaphore, client, context):
         # ... verification logic
 ```
 
-### What You Must Do
+### 11.3 What You Must Do
 
 Always wrap the body of `verify_item()` in `async with semaphore:`:
 
@@ -1344,3 +1381,118 @@ nac-test --pyats \
 - Use `--verbose` flag to see detailed PyATS execution logs
 - For SSH tests, check Connection Broker logs in `output/connection_broker.log`
 - HTML report shows API call timing and response codes for performance analysis
+
+## 13. Static Analysis and Type Checking
+
+Test files live outside the nac-test core repo, so they don't benefit from the project's own pre-commit hooks. Setting up static analysis in your own test repo catches common mistakes — including async/await errors — before you even run nac-test.
+
+### 13.1 What Static Analysis Catches
+
+The most common mistakes for test writers:
+
+| Mistake | Example | Detected by |
+|---------|---------|-------------|
+| Missing `await` on async call | `output = self.execute_command(cmd)` | mypy — `Coroutine[...] assigned to str` |
+| Awaiting a sync function | `result = await self.parse_output(...)` in nac-test 2.0 | mypy — `Incompatible types in await` |
+| Wrong return type from `verify_item` | Returning `None` instead of a result dict | mypy |
+| Unused imports, undefined variables | — | ruff (flake8/pyflakes rules) |
+| Style inconsistencies | Line length, import order | ruff (format) |
+
+mypy detection requires type annotations on local variables. Without them, mypy infers `Any` and silently passes. The key annotation is on the output of async calls:
+
+```python
+# mypy catches this because output is annotated str but execute_command returns Coroutine
+output: str = self.execute_command("show version")   # Error: Maybe you forgot await?
+
+# mypy catches this too — parse_output returns dict|None, not Awaitable
+parsed: dict = await self.parse_output("show version", output=output)  # Error in 2.0
+```
+
+### 13.2 Recommended Pre-commit Setup
+
+Install pre-commit in your test repo:
+
+```bash
+pip install pre-commit ruff mypy
+```
+
+Create `.pre-commit-config.yaml` in your repo root:
+
+```yaml
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - nac-test
+          - nac-test-pyats-common
+          - pyats
+```
+
+```bash
+pre-commit install   # runs on every git commit
+pre-commit run --all-files  # run manually against all files
+```
+
+### 13.3 Recommended mypy Configuration
+
+Create `pyproject.toml` (or `mypy.ini`) in your test repo matching the nac-test project's own settings:
+
+```toml
+[tool.mypy]
+python_version = "3.10"
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+strict_optional = true
+warn_return_any = true
+warn_unreachable = true
+show_error_context = true
+```
+
+### 13.4 Recommended ruff Configuration
+
+```toml
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (undefined names, unused imports)
+    "I",   # isort
+    "B",   # flake8-bugbear (likely bugs)
+    "UP",  # pyupgrade (modern Python syntax)
+]
+```
+
+### 13.5 The parse_output() Migration (nac-test 2.0 → 2.1)
+
+`parse_output()` changes from synchronous to asynchronous in nac-test 2.1. mypy will catch code written for the wrong version:
+
+```python
+# nac-test 2.0 — sync. Accidentally adding await is caught by mypy:
+parsed = self.parse_output(command, output=output)        # correct
+parsed = await self.parse_output(command, output=output)  # mypy error: not Awaitable
+
+# nac-test 2.1+ — async. Forgetting await is caught by mypy:
+parsed = await self.parse_output(command, output=output)  # correct
+parsed = self.parse_output(command, output=output)        # mypy error: Coroutine assigned
+```
+
+Run `mypy` against your test files after upgrading nac-test to catch any `parse_output` calls that need updating:
+
+```bash
+mypy verify_my_test.py
+```
