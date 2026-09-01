@@ -314,7 +314,7 @@ def test_merged_data_model_creates_default_filename(tmp_path: Path) -> None:
     templates_path = "tests/integration/fixtures/templates/"
     output_model_path = tmp_path / MERGED_DATA_FILENAME
     data_dir = Path("tests/integration/fixtures/data_merge")
-    expected_model_path = data_dir / "result.yaml"
+    expected_model_path = data_dir / "result.json"
 
     result = runner.invoke(
         nac_test.cli.main.app,

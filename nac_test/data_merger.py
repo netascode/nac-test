@@ -3,6 +3,7 @@
 
 """Shared data merging utilities for both Robot and PyATS test execution."""
 
+import json
 import logging
 import os
 from pathlib import Path
@@ -50,7 +51,7 @@ class DataMerger:
             output_directory: Base output directory passed to write_merged_data_model()
 
         Returns:
-            Full path to the merged data model YAML file
+            Full path to the merged data model JSON file
         """
         return output_directory / MERGED_DATA_FILENAME
 
@@ -59,21 +60,22 @@ class DataMerger:
         data: dict[str, Any],
         output_directory: Path,
     ) -> Path:
-        """Write merged data model to YAML file.
+        """Write merged data model to JSON file.
 
         The output filename is always MERGED_DATA_FILENAME — the single fixed
         location used by all consumers (Robot, PyATS subprocesses, cleanup).
 
         Args:
             data: The merged data dictionary to write
-            output_directory: Directory where the YAML file will be saved
+            output_directory: Directory where the JSON file will be saved
 
         Returns:
             Path to the written file (use this instead of reconstructing the path)
         """
         full_output_path = DataMerger.merged_data_path(output_directory)
         logger.info("Writing merged data model to %s", full_output_path)
-        yaml.write_yaml_file(data, full_output_path)
+        with open(full_output_path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
         if not IS_WINDOWS:
             os.chmod(full_output_path, MERGED_DATA_FILE_MODE)
         return full_output_path

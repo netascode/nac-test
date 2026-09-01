@@ -5,12 +5,12 @@
 
 Covers:
 - merge_data_files: empty input edge case, ruamel type stripping contract
-- write_merged_data_model: output filename, YAML roundtrip
+- write_merged_data_model: output filename, JSON roundtrip
 """
 
+import json
 from pathlib import Path
 
-from nac_yaml import yaml
 from ruamel.yaml import CommentedMap, CommentedSeq
 
 from nac_test.data_merger import DataMerger
@@ -40,10 +40,11 @@ class TestWriteMergedDataModel:
         assert len(list(tmp_path.iterdir())) == 1
 
     def test_roundtrip_preserves_content(self, tmp_path: Path) -> None:
-        """Data written to YAML can be read back with the same structure."""
+        """Data written to JSON can be read back with the same structure."""
         original = {"host": "router1", "vlan": 100, "tags": ["a", "b"]}
         output_path = DataMerger.write_merged_data_model(original, tmp_path)
-        reloaded = yaml.load_yaml_files([output_path])
+        with open(output_path, encoding="utf-8") as f:
+            reloaded = json.load(f)
         assert reloaded["host"] == "router1"
         assert reloaded["vlan"] == 100
         assert list(reloaded["tags"]) == ["a", "b"]

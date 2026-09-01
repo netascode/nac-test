@@ -2,7 +2,7 @@
 
 ## Features
 
-- robot rendering: added support for dicts as parent_key in `iterate_list_chunked` 
+- robot rendering: added support for dicts as parent_key in `iterate_list_chunked`
 - add support for SDWAN token authentication for pyATS test cases via SDWAN_USERNAME & SDWAN_API_TOKEN
 
 ## Bug Fixes
@@ -12,6 +12,10 @@
 ## Breaking Changes
 
 - SSHTestBase.parse_output() is now async — test cases must use await self.parse_output(...)
+
+## Breaking Changes
+
+- **Internal merged data model file format changed to JSON**: For performance reasons, the internal temporary file used to pass the merged data model to test subprocesses is now written as JSON (`merged_data_model_test_variables.json`, previously `.yaml`). This has no effect on your YAML data files or data model structure. The standard `self.data_model` API is unaffected. This is only breaking if your tests or scripts read the file directly via the `MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH` environment variable — in that case, switch from YAML parsing to `json.load()`.
 
 # 2.0.0
 

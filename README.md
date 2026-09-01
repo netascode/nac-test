@@ -381,7 +381,7 @@ Before test execution, `nac-test` merges all YAML data files into a single data 
 
 1. All files from `--data` paths are recursively loaded
 2. YAML structures are deep-merged (later files override earlier ones)
-3. The merged result is written to the output directory as `merged_data_model_test_variables.yaml`
+3. The merged result is written to the output directory as `merged_data_model_test_variables.json` and will be read by pyATS test cases
 4. Both Robot and PyATS tests reference this merged data
 
 ### Accessing the Merged Data
