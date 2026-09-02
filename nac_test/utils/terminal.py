@@ -8,7 +8,6 @@ import re
 
 from colorama import Fore, Style, init
 
-from nac_test.core.constants import SUMMARY_SEPARATOR_WIDTH
 from nac_test.core.types import CombinedResults
 
 # autoreset=True means colors reset after each print
@@ -112,99 +111,6 @@ class TerminalColors:
 
         separator = char * width
         return f"{cls.ERROR}{separator}{cls.RESET}\n{cls.ERROR}{text}{cls.RESET}\n{cls.ERROR}{separator}{cls.RESET}"
-
-    @classmethod
-    def format_env_var_error(
-        cls, missing_vars: list[str], controller_type: str = "ACI"
-    ) -> str:
-        """Format an informative error message for missing environment variables.
-
-        Generates an architecture-agnostic error message that educates users about
-        the auto-detection mechanism and provides examples for all supported
-        architectures.
-
-        Args:
-            missing_vars: List of missing environment variable names
-            controller_type: Auto-detected controller type from available credentials
-
-        Returns:
-            Formatted error message with ANSI color codes for terminal display
-        """
-        lines = []
-        lines.append(cls.header("ERROR: Missing required environment variable(s)"))
-
-        # Show the missing variables
-        for var in missing_vars:
-            lines.append(f"  {cls.warning('•')} {cls.warning(var)}")
-
-        lines.append("")
-
-        # Explain auto-detection mechanism
-        lines.append(
-            cls.info(
-                "The framework automatically detects which controller type to use based"
-            )
-        )
-        lines.append(cls.info("on the environment variables you provide."))
-        lines.append("")
-        lines.append(
-            cls.info(f"Controller type detected: {cls.highlight(controller_type)}")
-        )
-        lines.append("")
-        lines.append(
-            cls.info("This detection found some credentials but not all required ones.")
-        )
-
-        lines.append("")
-        lines.append(cls.info("To switch to a different controller:"))
-        lines.append(cls.info("1. Unset current controller's environment variables"))
-        lines.append(
-            cls.info(
-                "2. Set the new controller's credentials (URL, USERNAME, PASSWORD)"
-            )
-        )
-        lines.append("")
-
-        # Show how to unset current controller's variables
-        lines.append(cls.info(f"To unset {controller_type} variables:"))
-        lines.append(
-            f"  {cls.success(f'unset {controller_type}_URL {controller_type}_USERNAME {controller_type}_PASSWORD')}"
-        )
-        lines.append("")
-
-        lines.append(cls.info("Then set credentials for your desired controller:"))
-        lines.append("")
-
-        # Architecture-specific examples with helpful URLs
-        architecture_examples = [
-            ("ACI", "apic.example.com", "ACI (APIC)"),
-            ("SDWAN", "sdwan-manager.example.com", "SD-WAN (SDWAN Manager)"),
-            ("CC", "cc.example.com", "Catalyst Center"),
-            ("MERAKI", "api.meraki.com/api/v1", "Meraki"),
-            ("FMC", "fmc.example.com", "Firepower Management Center"),
-            ("ISE", "ise.example.com", "ISE"),
-        ]
-
-        for arch, url, friendly_name in architecture_examples:
-            # Pre-compute strings to avoid nested f-string backslash limitation
-            url_cmd = f"export {arch}_URL='https://{url}'"
-            user_cmd = f"export {arch}_USERNAME='admin'"
-            pass_cmd = f"export {arch}_PASSWORD='your-password'"
-            lines.append(f"  {cls.highlight(friendly_name + ':')}")
-            lines.append(f"    {cls.success(url_cmd)}")
-            lines.append(f"    {cls.success(user_cmd)}")
-            lines.append(f"    {cls.success(pass_cmd)}")
-            lines.append("")
-
-        lines.append(cls.info("The framework will automatically detect and use the"))
-        lines.append(
-            cls.info("controller type based on which credentials are present.")
-        )
-        lines.append("")
-
-        lines.append(cls.error("=" * SUMMARY_SEPARATOR_WIDTH))
-
-        return "\n".join(lines)
 
     @classmethod
     def format_test_summary(cls, results: CombinedResults) -> str:

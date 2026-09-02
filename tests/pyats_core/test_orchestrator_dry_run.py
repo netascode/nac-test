@@ -58,7 +58,6 @@ class TestOrchestratorDryRun:
             patch.object(
                 orchestrator.test_discovery, "discover_pyats_tests"
             ) as mock_discover,
-            patch.object(orchestrator, "validate_environment"),
         ):
             mock_discover.return_value = mock_plan
             result = orchestrator.run_tests()
@@ -100,7 +99,6 @@ class TestOrchestratorDryRun:
             patch.object(
                 orchestrator.test_discovery, "discover_pyats_tests"
             ) as mock_discover,
-            patch.object(orchestrator, "validate_environment"),
         ):
             mock_discover.return_value = mock_plan
             result = orchestrator.run_tests()
@@ -131,7 +129,6 @@ class TestOrchestratorDryRun:
             patch.object(
                 orchestrator.test_discovery, "discover_pyats_tests"
             ) as mock_discover,
-            patch.object(orchestrator, "validate_environment"),
             patch.object(orchestrator, "_execute_api_tests_standard") as mock_execute,
         ):
             mock_discover.return_value = mock_plan
@@ -159,7 +156,6 @@ class TestOrchestratorDryRun:
             patch.object(
                 orchestrator.test_discovery, "discover_pyats_tests"
             ) as mock_discover,
-            patch.object(orchestrator, "validate_environment"),
         ):
             mock_discover.return_value = mock_plan
             result = orchestrator.run_tests()

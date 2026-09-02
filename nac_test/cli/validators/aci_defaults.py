@@ -11,12 +11,10 @@ import logging
 import os
 from pathlib import Path
 
+from nac_test.core.controller import CONTROLLER_REGISTRY
 from nac_test.utils.yaml import YAMLError, safe_load
 
 logger = logging.getLogger(__name__)
-
-# Environment variable that indicates ACI environment
-ACI_URL_ENV_VAR = "ACI_URL"
 
 
 def validate_aci_defaults(data_paths: list[Path]) -> bool:
@@ -43,7 +41,7 @@ def validate_aci_defaults(data_paths: list[Path]) -> bool:
         True if validation passes (not ACI environment, or defaults found).
         False if ACI environment detected AND no defaults structure found.
     """
-    aci_url = os.environ.get(ACI_URL_ENV_VAR)
+    aci_url = os.environ.get(CONTROLLER_REGISTRY["ACI"].url_env_var)
     if not aci_url:
         # Not an ACI environment, no validation needed
         return True

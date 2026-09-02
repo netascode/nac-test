@@ -16,12 +16,14 @@ from typing import Any
 from nac_test.core.constants import (
     DEBUG_MODE,
     DRY_RUN_REASON,
+    ENV_CONTROLLER_CONTEXT,
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
     SUMMARY_SEPARATOR_WIDTH,
 )
-from nac_test.core.types import PyATSResults, TestResults
+from nac_test.core.controller import ResolutionError, resolve_controller
+from nac_test.core.types import ControllerContext, PyATSResults, TestResults
 from nac_test.data_merger import DataMerger
 from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import (
@@ -49,8 +51,6 @@ from nac_test.utils.cleanup import (
     cleanup_old_test_outputs,
     cleanup_pyats_runtime,
 )
-from nac_test.utils.controller import detect_controller_type
-from nac_test.utils.environment import EnvironmentValidator
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
@@ -69,7 +69,7 @@ class PyATSOrchestrator:
         output_dir: Path,
         minimal_reports: bool = False,
         custom_testbed_path: Path | None = None,
-        controller_type: str | None = None,
+        controller_context: ControllerContext | None = None,
         dry_run: bool = False,
         verbose: bool = False,
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
@@ -84,8 +84,8 @@ class PyATSOrchestrator:
             output_dir: Base output directory (orchestrator creates pyats_results subdirectory)
             minimal_reports: Only include command outputs for failed/errored tests in reports
             custom_testbed_path: Path to custom PyATS testbed YAML for device overrides
-            controller_type: The detected controller type (e.g., "ACI", "SDWAN", "CC").
-                If not provided, will be detected automatically.
+            controller_context: Resolved controller context from the parent
+                orchestrator.  If not provided, will be resolved automatically.
             dry_run: If True, validate test structure without executing tests
             verbose: Enable verbose mode - verbose output
             loglevel: Log level for PyATS output filtering
@@ -121,20 +121,20 @@ class PyATSOrchestrator:
         # Track test status (initialized to None, populated during test execution)
         self.test_status: dict[str, Any] | None = None
 
-        # Use provided controller type or detect it
-        if controller_type:
-            # Controller type provided by caller (e.g., CombinedOrchestrator)
-            self.controller_type = controller_type
-            logger.info(f"Using provided controller type: {self.controller_type}")
+        # Use provided controller context or resolve it
+        if controller_context:
+            self.controller_context = controller_context
+            self.controller_type = controller_context.controller_type
+            logger.info("Using provided controller context: %s", self.controller_type)
         else:
-            # Fallback to auto-detection for standalone usage
+            # Fallback to auto-resolution for standalone usage
             try:
-                self.controller_type = detect_controller_type()
-                logger.info(f"Controller type detected: {self.controller_type}")
-            except ValueError as e:
-                # Exit gracefully if controller detection fails
-                logger.error(f"Controller detection failed: {e}")
-                print(terminal.error(f"Controller detection failed:\n{e}"))
+                self.controller_context = resolve_controller()
+                self.controller_type = self.controller_context.controller_type
+                logger.info("Controller type resolved: %s", self.controller_type)
+            except ResolutionError as e:
+                logger.error("Controller resolution failed: %s", e)
+                print(terminal.error(f"Controller resolution failed:\n{e}"))
                 sys.exit(EXIT_ERROR)
 
         # Calculate max workers based on system resources
@@ -278,6 +278,8 @@ class PyATSOrchestrator:
             env["NAC_TEST_TYPE"] = "api"
             # Pass test_dir so plugin can compute relative test names
             env[ENV_TEST_DIR] = str(self.test_dir)
+            # Serialize controller context for subprocess transport
+            env[ENV_CONTROLLER_CONTEXT] = self.controller_context.to_json()
 
             # Execute and return the archive path
             assert self.subprocess_runner is not None  # Should be initialized by now
@@ -364,6 +366,8 @@ class PyATSOrchestrator:
 
                 # Set environment variable for test subprocesses to find broker
                 os.environ["NAC_TEST_BROKER_SOCKET"] = str(broker.socket_path)
+                # Serialize controller context for subprocess transport
+                os.environ[ENV_CONTROLLER_CONTEXT] = self.controller_context.to_json()
 
                 # Execute device tests with broker running
                 return await self._execute_device_tests_with_broker(test_files, devices)
@@ -374,8 +378,9 @@ class PyATSOrchestrator:
             )
             return None
         finally:
-            # Clean up environment variable
+            # Clean up environment variables
             os.environ.pop("NAC_TEST_BROKER_SOCKET", None)
+            os.environ.pop(ENV_CONTROLLER_CONTEXT, None)
 
     async def _execute_device_tests_with_broker(
         self, test_files: list[Path], devices: list[dict[str, Any]]
@@ -469,18 +474,6 @@ class PyATSOrchestrator:
             logger.warning("No device archives were generated")
             return None
 
-    def validate_environment(self) -> None:
-        """Pre-flight check: Validate required environment variables before running tests.
-
-        This ensures we fail fast with clear error messages rather than starting
-        PyATS only to have all tests fail due to missing configuration.
-
-        Raises:
-            SystemExit: If required environment variables are missing
-        """
-        # Use the detected controller type
-        EnvironmentValidator.validate_controller_env(self.controller_type)
-
     def _extract_pyats_stats(
         self, pyats_stats: dict[str, dict[str, Any]]
     ) -> PyATSResults:
@@ -570,9 +563,6 @@ class PyATSOrchestrator:
         # Clean up old test outputs (CI/CD only)
         if os.environ.get("CI"):
             cleanup_old_test_outputs(self.output_dir, days=3)
-
-        # Pre-flight check and setup
-        self.validate_environment()
 
         # Note: Merged data file created by main.py (single source of truth)
 

@@ -3,11 +3,13 @@
 
 """Tests for PyATSOrchestrator handling of SubprocessRunner init failures."""
 
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
 from ..conftest import PyATSTestDirs
@@ -59,7 +61,6 @@ class TestOrchestratorSubprocessRunnerInitError:
                 "discover_pyats_tests",
                 return_value=mock_discovery_result,
             ),
-            patch.object(orchestrator, "validate_environment"),
             patch(
                 "nac_test.pyats_core.execution.subprocess_runner.Path.write_text",
                 side_effect=OSError("disk full"),
@@ -82,3 +83,31 @@ class TestOrchestratorSubprocessRunnerInitError:
             assert "disk full" in result.d2d.reason
         else:
             assert result.d2d is None
+
+
+class TestOrchestratorControllerContextEnvVar:
+    """Tests for PyATSOrchestrator controller context handling."""
+
+    def test_orchestrator_populates_controller_context_env_var(
+        self,
+        aci_controller_env: None,
+        pyats_test_dirs: PyATSTestDirs,
+    ) -> None:
+        """PyATSOrchestrator stores controller_context without polluting os.environ."""
+        # Clear any existing context from prior tests
+        os.environ.pop(ENV_CONTROLLER_CONTEXT, None)
+
+        orchestrator = PyATSOrchestrator(
+            data_paths=[pyats_test_dirs.output_dir.parent / "data"],
+            test_dir=pyats_test_dirs.test_dir,
+            output_dir=pyats_test_dirs.output_dir,
+        )
+
+        # __init__ should NOT set the env var (moved to subprocess launch)
+        assert ENV_CONTROLLER_CONTEXT not in os.environ
+
+        # But the orchestrator should have the context stored
+        assert orchestrator.controller_context is not None
+        assert orchestrator.controller_context.controller_type == "ACI"
+        assert orchestrator.controller_context.auth_method == "session"
+        assert orchestrator.controller_type == "ACI"

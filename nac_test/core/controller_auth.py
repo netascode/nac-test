@@ -1,37 +1,33 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
-"""Pre-flight controller authentication validator.
+"""Pre-flight controller authentication check.
 
-This module provides a pre-flight authentication check that validates controller
-credentials before any test execution begins. It uses the same auth implementations
-from nac-test-pyats-common that PyATS tests use, ensuring consistent behavior.
+Validates controller credentials before test execution by attempting the same
+authentication that PyATS tests use.  On success the token/session is cached in
+AuthCache so the first real test gets a cache hit.
 
-Benefits:
-- Fails fast with clear error message instead of N identical auth failures
-- Populates the AuthCache, so first real test gets a cache hit
-- Works for both PyATS and Robot Framework execution modes
-
-The pre-flight check happens at the CLI layer before either test framework is
-invoked, providing immediate feedback for credential and connectivity issues.
+This module lives in ``core/`` because authentication reachability is part of
+the controller resolution domain, not a CLI concern.
 """
 
 import logging
-import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from nac_test.core.auth_cache import AuthCache
+from nac_test.core.controller import (
+    CONTROLLER_REGISTRY,
+    get_controller_url,
+    get_display_name,
+)
 from nac_test.core.error_classification import (
     AuthOutcome,
     classify_auth_error,
     extract_http_status_code,
 )
-from nac_test.core.types import ControllerTypeKey
-from nac_test.pyats_core.common.auth_cache import AuthCache
-
-# Import CONTROLLER_REGISTRY from centralized location
-from nac_test.utils.controller import CONTROLLER_REGISTRY, get_display_name
+from nac_test.core.types import ControllerContext, ControllerTypeKey
 
 logger = logging.getLogger(__name__)
 
@@ -56,22 +52,6 @@ class AuthCheckResult:
     controller_url: str
     detail: str
     status_code: int | None = None
-
-
-def _get_controller_url(controller_type: str) -> str:
-    """Get the controller URL from environment variables.
-
-    Args:
-        controller_type: The detected controller type.
-
-    Returns:
-        The controller URL, or empty string if not found.
-    """
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    if config is None:
-        return ""
-    url = os.environ.get(config.url_env_var, "")
-    return url.rstrip("/") if url else ""
 
 
 def _get_auth_callable(controller_type: str) -> Callable[[], Any] | None:
@@ -117,7 +97,7 @@ def _get_auth_callable(controller_type: str) -> Callable[[], Any] | None:
     return None
 
 
-def preflight_auth_check(controller_type: ControllerTypeKey) -> AuthCheckResult:
+def preflight_auth_check(ctx: ControllerContext) -> AuthCheckResult:
     """Attempt authentication to the detected controller before tests run.
 
     Uses the same auth implementations from nac-test-pyats-common that
@@ -130,12 +110,19 @@ def preflight_auth_check(controller_type: ControllerTypeKey) -> AuthCheckResult:
     - If environment variables missing: returns success (let the actual auth fail later)
 
     Args:
-        controller_type: Detected controller type (e.g., "ACI", "SDWAN", "CC").
+        ctx: Resolved controller context from ``resolve_controller()``.
 
     Returns:
         AuthCheckResult with success/failure status and actionable detail.
     """
-    controller_url = _get_controller_url(controller_type)
+    controller_type = ctx.controller_type
+    try:
+        controller_url = get_controller_url(controller_type)
+    except KeyError:
+        controller_url = ""
+    # Auth adapters strip trailing "/" before caching (cache key normalization).
+    # Match that here so AuthCache.invalidate() finds the right entry.
+    cache_url = controller_url.rstrip("/")
     display_name = get_display_name(controller_type)
 
     # Get the auth callable for this controller type
@@ -158,13 +145,13 @@ def preflight_auth_check(controller_type: ControllerTypeKey) -> AuthCheckResult:
     # Invalidate any stale cached token so we validate the current credentials.
     # Best-effort: a failure here must never block test execution.
     config = CONTROLLER_REGISTRY.get(controller_type)
-    if config is not None and config.cache_key is not None and controller_url:
+    if config is not None and config.cache_key is not None and cache_url:
         try:
             logger.debug(
                 "Invalidating auth cache for %s before pre-flight check",
                 config.cache_key,
             )
-            AuthCache.invalidate(config.cache_key, controller_url)
+            AuthCache.invalidate(config.cache_key, cache_url)
         except Exception as e:
             logger.debug("Cache invalidation failed (non-fatal): %s", e)
 

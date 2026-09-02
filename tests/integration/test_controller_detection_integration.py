@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from nac_test.core.controller import detect_controller_type
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
-from nac_test.utils.controller import detect_controller_type
 
 
 class TestControllerDetectionIntegration:

@@ -26,19 +26,6 @@ runner = CliRunner()
 class TestCliAciValidationIntegration:
     """Integration tests for ACI defaults validation through the CLI."""
 
-    @pytest.fixture(autouse=True)
-    def clean_controller_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Clear all controller-related environment variables before each test.
-
-        Ensures tests run in isolation regardless of the caller's shell environment.
-        """
-        for key in list(os.environ.keys()):
-            if any(
-                prefix in key
-                for prefix in ["ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_"]
-            ):
-                monkeypatch.delenv(key, raising=False)
-
     @pytest.fixture
     def minimal_test_env(
         self, tmp_path: Path
@@ -205,22 +192,6 @@ class TestCliAciValidationSubprocess:
     These tests run the actual CLI as a subprocess to verify the complete
     end-to-end behavior including entry point wiring.
     """
-
-    @pytest.fixture(autouse=True)
-    def clean_controller_env(self) -> Generator[None, None, None]:
-        """Clear ACI environment variables for subprocess tests."""
-        original_env = os.environ.copy()
-        # Clear controller vars
-        for key in list(os.environ.keys()):
-            if any(
-                prefix in key
-                for prefix in ["ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_"]
-            ):
-                del os.environ[key]
-        yield
-        # Restore original environment
-        os.environ.clear()
-        os.environ.update(original_env)
 
     @pytest.fixture
     def cli_test_env(self, tmp_path: Path) -> Generator[dict[str, Path], None, None]:

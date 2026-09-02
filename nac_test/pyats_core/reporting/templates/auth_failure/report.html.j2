@@ -390,26 +390,10 @@
                 <ol>
                     {% if failure_type.is_detection %}
                     <li>
-                        <strong>Set controller environment variables for your architecture:</strong>
-                        <div class="terminal-block">
-                            <span class="comment"># For ACI (APIC):</span><br>
-                            <span class="prompt">$</span> export ACI_URL=https://apic.example.com<br>
-                            <span class="prompt">$</span> export ACI_USERNAME=admin<br>
-                            <span class="prompt">$</span> export ACI_PASSWORD=your-password<br>
-                            <br>
-                            <span class="comment"># For SD-WAN Manager:</span><br>
-                            <span class="prompt">$</span> export SDWAN_URL=https://sdwan.example.com<br>
-                            <span class="prompt">$</span> export SDWAN_USERNAME=admin<br>
-                            <span class="prompt">$</span> export SDWAN_PASSWORD=your-password<br>
-                            <br>
-                            <span class="comment"># For Catalyst Center:</span><br>
-                            <span class="prompt">$</span> export CC_URL=https://catalyst.example.com<br>
-                            <span class="prompt">$</span> export CC_USERNAME=admin<br>
-                            <span class="prompt">$</span> export CC_PASSWORD=your-password
-                        </div>
+                        <strong>Set controller environment variables for your chosen architecture</strong> — see the required environment variables listed in the error details above.
                     </li>
                     <li>
-                        <strong>Verify environment variables are exported</strong> — use <code>env | grep -E "^(ACI|SDWAN|CC)_"</code> to check.
+                        <strong>Verify environment variables are exported</strong> — use <code>env | grep -E "^({{ controller_prefixes }})_"</code> to check.
                     </li>
                     <li>
                         <strong>Check shell context</strong> — if running via CI/CD, ensure variables are passed to the job environment.
@@ -446,12 +430,14 @@
                         <strong>Verify your credentials are correct:</strong>
                         <div class="terminal-block">
                             <span class="comment"># Check current values</span><br>
-                            <span class="prompt">$</span> echo ${{ env_var_prefix }}_USERNAME<br>
-                            <span class="prompt">$</span> echo ${{ env_var_prefix }}_PASSWORD<br>
+                            {% for cred in controller_credential_vars %}
+                            <span class="prompt">$</span> echo ${{ cred.var }}<br>
+                            {% endfor %}
                             <br>
                             <span class="comment"># Set correct values</span><br>
-                            <span class="prompt">$</span> export {{ env_var_prefix }}_USERNAME=&lt;your-username&gt;<br>
-                            <span class="prompt">$</span> export {{ env_var_prefix }}_PASSWORD=&lt;your-password&gt;
+                            {% for cred in controller_credential_vars %}
+                            <span class="prompt">$</span> export {{ cred.var }}=&lt;{{ cred.kind }}&gt;<br>
+                            {% endfor %}
                         </div>
                     </li>
                         {% if is_403 %}
