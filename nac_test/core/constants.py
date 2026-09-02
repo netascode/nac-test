@@ -40,6 +40,9 @@ DEBUG_MODE: bool = get_bool_env("NAC_TEST_DEBUG")
 # Set NAC_TEST_DISABLE_TESTLEVELSPLIT=true to disable test-level parallelization
 DISABLE_TESTLEVELSPLIT: bool = get_bool_env("NAC_TEST_DISABLE_TESTLEVELSPLIT")
 
+# Merged data model YAML dump for debugging
+# Set NAC_TEST_DUMP_YAML_DATA_MODEL=true to write YAML alongside JSON
+DUMP_YAML_DATA_MODEL: bool = get_bool_env("NAC_TEST_DUMP_YAML_DATA_MODEL")
 
 # Report timestamp format - single source of truth for all report generators
 REPORT_TIMESTAMP_FORMAT: str = "%Y-%m-%d %H:%M:%S"

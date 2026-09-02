@@ -59,18 +59,25 @@ class DataMerger:
     def write_merged_data_model(
         data: dict[str, Any],
         output_directory: Path,
+        dump_yaml: bool = False,
     ) -> Path:
-        """Write merged data model to JSON file.
+        """Write merged data model to JSON file and optionally YAML.
 
         The output filename is always MERGED_DATA_FILENAME — the single fixed
         location used by all consumers (Robot, PyATS subprocesses, cleanup).
 
+        When dump_yaml is True, a companion YAML file is also written with the
+        same data. The YAML file is not auto-cleaned up and may contain sensitive
+        values.
+
         Args:
             data: The merged data dictionary to write
             output_directory: Directory where the JSON file will be saved
+            dump_yaml: If True, also write a YAML file for debugging purposes.
+                      Defaults to False.
 
         Returns:
-            Path to the written file (use this instead of reconstructing the path)
+            Path to the written JSON file (use this instead of reconstructing the path)
         """
         full_output_path = DataMerger.merged_data_path(output_directory)
         logger.info("Writing merged data model to %s", full_output_path)
@@ -78,4 +85,20 @@ class DataMerger:
             json.dump(data, f)
         if not IS_WINDOWS:
             os.chmod(full_output_path, MERGED_DATA_FILE_MODE)
+
+        # Optionally write YAML for debugging
+        if dump_yaml:
+            yaml_output_path = full_output_path.with_suffix(".yaml")
+            try:
+                yaml.write_yaml_file(data, yaml_output_path)
+                if not IS_WINDOWS:
+                    os.chmod(yaml_output_path, MERGED_DATA_FILE_MODE)
+                logger.warning(
+                    "Created %s for post-run debugging. It may contain sensitive values "
+                    "(passwords, tokens, credentials). Please review and remove the file manually.",
+                    yaml_output_path,
+                )
+            except Exception as e:
+                logger.warning("Failed to write YAML data model: %s", e)
+
         return full_output_path

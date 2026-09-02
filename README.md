@@ -818,6 +818,7 @@ In addition to CLI options, `nac-test` supports several environment variables fo
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NAC_TEST_VERBOSE` | unset | Enable verbose mode: verbose output and retain intermediate files (see `NAC_TEST_PYATS_KEEP_REPORT_DATA`) |
+| `NAC_TEST_DUMP_YAML_DATA_MODEL` | unset | Write merged data model as YAML for debugging. File is not auto-cleaned up; you must remove it manually. WARNING: May contain sensitive values. |
 
 ## Troubleshooting
 

@@ -341,6 +341,11 @@ def test_merged_data_model_creates_default_filename(tmp_path: Path) -> None:
         f"Merged data model content should match expected content from "
         f"{expected_model_path}"
     )
+    # By default (NAC_TEST_DUMP_YAML_DATA_MODEL unset) no YAML companion is written.
+    # The env-var-enabled case is covered in test_yaml_data_model_dump.py.
+    assert not output_model_path.with_suffix(".yaml").exists(), (
+        "YAML data model should not be created unless NAC_TEST_DUMP_YAML_DATA_MODEL is set"
+    )
 
 
 def test_render_only_without_controller_credentials(tmp_path: Path) -> None:

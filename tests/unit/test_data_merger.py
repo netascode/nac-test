@@ -5,7 +5,7 @@
 
 Covers:
 - merge_data_files: empty input edge case, ruamel type stripping contract
-- write_merged_data_model: output filename, JSON roundtrip
+- write_merged_data_model: output filename, JSON roundtrip, YAML content parity
 """
 
 import json
@@ -14,6 +14,7 @@ from pathlib import Path
 from ruamel.yaml import CommentedMap, CommentedSeq
 
 from nac_test.data_merger import DataMerger
+from nac_test.utils.yaml import safe_load
 
 
 class TestMergeDataFiles:
@@ -48,6 +49,39 @@ class TestWriteMergedDataModel:
         assert reloaded["host"] == "router1"
         assert reloaded["vlan"] == 100
         assert list(reloaded["tags"]) == ["a", "b"]
+
+    def test_yaml_content_matches_json_when_dumped(self, tmp_path: Path) -> None:
+        """When dump_yaml=True, YAML content matches JSON content.
+
+        This test verifies the content parity contract: the YAML and JSON files
+        contain identical data when deserialized.
+        """
+        # Create test data
+        test_data = {
+            "host": "router1",
+            "vlan": 100,
+            "tags": ["a", "b"],
+            "nested": {"key": "value"},
+        }
+
+        # Write the merged data model with YAML enabled
+        DataMerger.write_merged_data_model(test_data, tmp_path, dump_yaml=True)
+
+        # Verify both files exist
+        json_path = tmp_path / "merged_data_model_test_variables.json"
+        yaml_path = tmp_path / "merged_data_model_test_variables.yaml"
+
+        assert json_path.exists(), "JSON file should be created"
+        assert yaml_path.exists(), "YAML file should be created when dump_yaml=True"
+
+        # Load both and verify content matches
+        with open(json_path, encoding="utf-8") as f:
+            json_data = json.load(f)
+        yaml_data = safe_load(yaml_path.read_text(encoding="utf-8"))
+
+        assert json_data == yaml_data, (
+            f"YAML and JSON content should match.\nJSON: {json_data}\nYAML: {yaml_data}"
+        )
 
 
 def _assert_no_ruamel_types(value: object, path: str = "root") -> None:

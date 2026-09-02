@@ -4,6 +4,7 @@
 
 - robot rendering: added support for dicts as parent_key in `iterate_list_chunked`
 - add support for SDWAN token authentication for pyATS test cases via SDWAN_USERNAME & SDWAN_API_TOKEN
+- add `NAC_TEST_DUMP_YAML_DATA_MODEL` environment variable to also write the merged data model as YAML (alongside the JSON file) for post-run inspection/debugging. The YAML file is not auto-cleaned up and may contain sensitive values (passwords, tokens, credentials), so review and remove it manually.
 
 ## Bug Fixes
 
