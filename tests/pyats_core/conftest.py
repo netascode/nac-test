@@ -6,21 +6,13 @@
 NOTE: This module intentionally duplicates some patterns from tests/unit/conftest.py.
 Issue #541 will merge tests/pyats_core/ into tests/unit/, at which point these
 fixtures should be consolidated into a single conftest.py.
-"""
 
-from pathlib import Path
-from typing import NamedTuple
+The PyATSTestDirs type and the pyats_test_dirs fixture live in the top-level
+tests/conftest.py so they are shared across the whole test suite.
+"""
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
-
-
-class PyATSTestDirs(NamedTuple):
-    """Directory structure for PyATS orchestrator tests."""
-
-    test_dir: Path
-    output_dir: Path
-    merged_file: Path
 
 
 @pytest.fixture()
@@ -45,21 +37,3 @@ def cc_controller_env(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv("CC_URL", "https://cc.test.com")
     monkeypatch.setenv("CC_USERNAME", "admin")
     monkeypatch.setenv("CC_PASSWORD", "password")
-
-
-@pytest.fixture()
-def pyats_test_dirs(tmp_path: Path) -> PyATSTestDirs:
-    """Create standard directory structure for PyATS orchestrator tests.
-
-    Returns:
-        PyATSTestDirs with test_dir, output_dir, and merged_file paths.
-    """
-    test_dir = tmp_path / "tests"
-    test_dir.mkdir()
-    output_dir = tmp_path / "output"
-    output_dir.mkdir()
-    merged_file = output_dir / "merged.yaml"
-    merged_file.write_text("test: data")
-    return PyATSTestDirs(
-        test_dir=test_dir, output_dir=output_dir, merged_file=merged_file
-    )
