@@ -82,7 +82,10 @@ class DataMerger:
         full_output_path = DataMerger.merged_data_path(output_directory)
         logger.info("Writing merged data model to %s", full_output_path)
         with open(full_output_path, "w", encoding="utf-8") as f:
-            json.dump(data, f)
+            # default=str prevents a hard crash on values ruamel's safe loader
+            # produces that json cannot natively serialize (e.g. datetime.date
+            # from an unquoted YAML date); such values are stringified.
+            json.dump(data, f, default=str)
         if not IS_WINDOWS:
             os.chmod(full_output_path, MERGED_DATA_FILE_MODE)
 

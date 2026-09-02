@@ -8,6 +8,7 @@ Covers:
 - write_merged_data_model: output filename, JSON roundtrip, YAML content parity
 """
 
+import datetime
 import json
 from pathlib import Path
 
@@ -82,6 +83,28 @@ class TestWriteMergedDataModel:
         assert json_data == yaml_data, (
             f"YAML and JSON content should match.\nJSON: {json_data}\nYAML: {yaml_data}"
         )
+
+    def test_non_json_native_values_do_not_crash(self, tmp_path: Path) -> None:
+        """Values ruamel's safe loader yields that JSON cannot natively encode
+        (e.g. datetime.date from an unquoted YAML date) are stringified rather
+        than raising TypeError,         so a run is never aborted at merge time.
+        """
+        data = {"cert_valid_until": datetime.date(2025, 1, 15)}
+        output_path = DataMerger.write_merged_data_model(data, tmp_path)
+        with open(output_path, encoding="utf-8") as f:
+            reloaded = json.load(f)
+        assert reloaded["cert_valid_until"] == "2025-01-15"
+
+    def test_int_mapping_keys_are_coerced_to_strings(self, tmp_path: Path) -> None:
+        """JSON has no non-string keys: integer mapping keys (e.g. VLAN IDs used
+        as keys) are coerced to strings on write. This documents the known,
+        breaking-change behavior versus the previous YAML format.
+        """
+        data = {"vlans": {100: "prod", 200: "stg"}}
+        output_path = DataMerger.write_merged_data_model(data, tmp_path)
+        with open(output_path, encoding="utf-8") as f:
+            reloaded = json.load(f)
+        assert reloaded["vlans"] == {"100": "prod", "200": "stg"}
 
 
 def _assert_no_ruamel_types(value: object, path: str = "root") -> None:
