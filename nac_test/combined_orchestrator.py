@@ -80,6 +80,7 @@ class CombinedOrchestrator:
         tests_path: Path | None = None,
         include_tags: list[str] | None = None,
         exclude_tags: list[str] | None = None,
+        device_tag: str | None = None,
         render_only: bool = False,
         dry_run: bool = False,
         max_parallel_devices: int | None = None,
@@ -127,6 +128,7 @@ class CombinedOrchestrator:
         self.tests_path = tests_path
         self.include_tags = include_tags or []
         self.exclude_tags = exclude_tags or []
+        self.device_tag = device_tag
         self.render_only = render_only
         self.dry_run = dry_run
         self.processes = processes
@@ -224,6 +226,7 @@ class CombinedOrchestrator:
                 loglevel=self.loglevel,
                 include_tags=self.include_tags,
                 exclude_tags=self.exclude_tags,
+                device_tag=self.device_tag,
             )
             if self.max_parallel_devices is not None:
                 pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
