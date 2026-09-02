@@ -69,6 +69,33 @@ enable_isr:
       005293: *Jan 20 01:39:01.186: %PIM-6-INVALID_RP_JOIN: Received (*, 224.0.1.40) Join from 192.168.34.69 for invalid RP 192.168.34.64
       005294: *Jan 20 01:40:03.538: %PIM-6-INVALID_RP_JOIN: Received (*, 239.255.255.250) Join from 192.168.34.67 for invalid RP 192.168.34.64
 
+    # OSPF MPLS TE link data — used by verify_iosxe_ospf_te_links.py
+    # The Genie parser for this command fires a supplementary
+    # 'show running-config | section router ospf 1' call to resolve VRF names.
+    "show ip ospf mpls traffic-eng link": |
+      OSPF Router with ID (10.4.1.1) (Process ID 1)
+
+        Area 0 has 1 MPLS TE links. Area instance is 2.
+
+          Links in hash bucket 8.
+            Link is associated with fragment 1. Link instance is 2
+              Link connected to Broadcast network
+                Link ID : 10.1.2.1
+                Interface Address : 10.1.2.1
+                Admin Metric te: 1 igp: 1
+                Maximum bandwidth : 125000000
+                Maximum reservable bandwidth : 93750000
+                Affinity Bit : 0x0
+                Number of Priority : 8
+                Priority 0 : 93750000     Priority 1 : 93750000
+                Priority 2 : 93750000     Priority 3 : 93750000
+                Priority 4 : 93750000     Priority 5 : 93750000
+                Priority 6 : 93750000     Priority 7 : 93750000
+    # Supplementary command called by the OSPF TE parser to resolve VRF.
+    # The parser constructs this from the Process ID found in the primary output.
+    "show running-config | section router ospf 1": |
+      router ospf 1 vrf TESTNET
+
 config:
   commands:
     "archive": ""

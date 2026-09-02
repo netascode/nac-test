@@ -592,6 +592,53 @@ tests
     └── test1_001.robot
 ```
 
+The OBJECT_PATH may be either a single-level path pointing directly at a list, or a two-level dotted path (`<PARENT>.<CHILD>`) where the parent is a list or a dictionary and the child is the list to be chunked. When the parent is a dictionary, only the child list is split by CHUNK_SIZE while sibling keys under the same parent are preserved untouched in every chunk.
+
+When the parent is a list, the child objects are counted across all parent items and chunked globally: each chunk holds up to CHUNK_SIZE child objects, carrying along only the parent items those children belong to (with the child list sliced accordingly). A parent item spanning a chunk boundary appears in both chunks, each time with just its portion of the child list.
+
+For example, given the following input with an OBJECT_PATH of `services.endpoints` and a CHUNK_SIZE of `2`:
+
+```yaml
+services:
+  - name: s1
+    endpoints:
+      - name: e1
+      - name: e2
+      - name: e3
+  - name: s2
+    endpoints:
+      - name: e4
+  - name: s3
+    endpoints:
+      - name: e5
+```
+
+three chunks are produced:
+
+```yaml
+# chunk 1
+services:
+  - name: s1
+    endpoints:
+      - name: e1
+      - name: e2
+
+# chunk 2
+services:
+  - name: s1
+    endpoints:
+      - name: e3
+  - name: s2
+    endpoints:
+      - name: e4
+
+# chunk 3
+services:
+  - name: s3
+    endpoints:
+      - name: e5
+```
+
 
 ## Select Test Cases By Tag
 

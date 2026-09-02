@@ -31,6 +31,7 @@ class BrokerClient:
         self.reader: asyncio.StreamReader | None = None
         self.writer: asyncio.StreamWriter | None = None
         self._connection_lock = asyncio.Lock()
+        self._request_lock = asyncio.Lock()
         self._connected = False
 
     def _get_socket_path(self) -> Path:
@@ -102,44 +103,50 @@ class BrokerClient:
                 await writer.wait_closed()
 
     async def _send_request(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Send request to broker and return response."""
+        """Send request to broker and return response.
+
+        Uses _request_lock to prevent concurrent coroutines from interleaving
+        write/read frames on the shared socket (the broker protocol is strictly
+        sequential per connection).
+        """
         if not self._connected:
             await self.connect()
 
-        try:
-            # Serialize request
-            request_data = json.dumps(request).encode("utf-8")
-            request_length = len(request_data).to_bytes(4, byteorder="big")
+        async with self._request_lock:
+            try:
+                # Serialize request
+                request_data = json.dumps(request).encode("utf-8")
+                request_length = len(request_data).to_bytes(4, byteorder="big")
 
-            # Send request
-            if self.writer is None:
-                raise RuntimeError("Writer must be connected")
-            if self.reader is None:
-                raise RuntimeError("Reader must be connected")
+                # Send request
+                if self.writer is None:
+                    raise RuntimeError("Writer must be connected")
+                if self.reader is None:
+                    raise RuntimeError("Reader must be connected")
 
-            self.writer.write(request_length + request_data)
-            await self.writer.drain()
+                self.writer.write(request_length + request_data)
+                await self.writer.drain()
 
-            # Read response length
-            response_length_data = await self.reader.readexactly(4)
-            response_length = int.from_bytes(response_length_data, byteorder="big")
+                # Read response length
+                response_length_data = await self.reader.readexactly(4)
+                response_length = int.from_bytes(response_length_data, byteorder="big")
 
-            # Read response data
-            response_data = await self.reader.readexactly(response_length)
-            response = json.loads(response_data.decode("utf-8"))
+                # Read response data
+                response_data = await self.reader.readexactly(response_length)
+                response = json.loads(response_data.decode("utf-8"))
 
-            # Check for errors
-            if response.get("status") == "error":
-                error_msg = response.get("error", "Unknown broker error")
-                raise ConnectionError(f"Broker error: {error_msg}")
+                # Check for errors
+                if response.get("status") == "error":
+                    error_msg = response.get("error", "Unknown broker error")
+                    raise ConnectionError(f"Broker error: {error_msg}")
 
-            return response  # type: ignore[no-any-return]
+                return response  # type: ignore[no-any-return]
 
-        except Exception as e:
-            logger.debug(f"Error communicating with broker: {e}")
-            # Reset connection on error
-            await self.disconnect()
-            raise
+            except Exception as e:
+                logger.debug(f"Error communicating with broker: {e}")
+                # Reset connection on error
+                await self.disconnect()
+                raise
 
     async def execute_command(self, hostname: str, command: str) -> str:
         """Execute command on device through broker.
