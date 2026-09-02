@@ -6,9 +6,6 @@
 NOTE: This module intentionally duplicates some patterns from tests/unit/conftest.py.
 Issue #541 will merge tests/pyats_core/ into tests/unit/, at which point these
 fixtures should be consolidated into a single conftest.py.
-
-The PyATSTestDirs type and the pyats_test_dirs fixture live in the top-level
-tests/conftest.py so they are shared across the whole test suite.
 """
 
 import pytest

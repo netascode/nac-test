@@ -1,11 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-"""Shared fixtures for unit tests.
-
-NOTE: The PyATSTestDirs type and the pyats_test_dirs fixture live in the
-top-level tests/conftest.py so they are shared across the whole test suite.
-"""
+"""Shared fixtures for unit tests."""
 
 from typing import Any
 from unittest.mock import AsyncMock, Mock
