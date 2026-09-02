@@ -251,8 +251,9 @@ async def verify_item(
         )
         api_duration = time.time() - start_time
         
-        if response.status_code != 200:
-            return self.format_api_error(response.status_code, response.url, context, api_duration)
+         if response.status_code != 200:
+             context["api_duration"] = api_duration
+             return self.format_api_error(response.status_code, response.url, context)
         
         neighbors = response.json().get("data", [])
         
@@ -403,7 +404,7 @@ class VerifyBridgeDomainSubnets(APICTestBase):
             
             subnets = response.json().get("imdata", [])
             if not subnets:
-                return self.format_not_found("Subnet", context["subnet_ip"], context, 0.0)
+                return self.format_not_found("Subnet", context["subnet_ip"], context)
             
             actual = subnets[0]["fvSubnet"]["attributes"]
             
@@ -414,7 +415,6 @@ class VerifyBridgeDomainSubnets(APICTestBase):
                     context["expected_scope"],
                     actual.get("scope"),
                     context,
-                    0.0,
                 )
             
             if actual.get("preferred") != str(context["expected_preferred"]).lower():
@@ -423,7 +423,6 @@ class VerifyBridgeDomainSubnets(APICTestBase):
                     context["expected_preferred"],
                     actual.get("preferred"),
                     context,
-                    0.0,
                 )
             
             return self.format_verification_result(
@@ -654,7 +653,7 @@ class VerifyBridgeDomainSubnets(APICTestBase):
                 actual = actual_subnets.get(context["subnet_ip"])
                 if not actual:
                     results.append(
-                        self.format_not_found("Subnet", context["subnet_ip"], context, 0.0)
+                        self.format_not_found("Subnet", context["subnet_ip"], context)
                     )
                     continue
                 
@@ -665,7 +664,6 @@ class VerifyBridgeDomainSubnets(APICTestBase):
                             context["expected_scope"],
                             actual.get("scope"),
                             context,
-                            0.0,
                         )
                     )
                 else:

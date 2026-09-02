@@ -13,7 +13,7 @@ Base class for all pyATS test cases. Inherits from `pyats.aetest.Testcase`.
 | `self.data_model` | `dict[str, Any]` | Merged YAML data model loaded from all `--data` files. Available after `setup()`. |
 | `self.logger` | `logging.Logger` | Logger scoped to the test module (`logging.getLogger(cls.__module__)`). |
 | `self.controller_type` | `str` | Auto-detected controller type: `"ACI"`, `"SDWAN"`, `"CC"`, `"IOSXE"`, etc. |
-| `self.controller_url` | `str` | Controller URL from env var (e.g., `APIC_URL`, `SDWAN_URL`). |
+| `self.controller_url` | `str` | Controller URL from env var (e.g., `ACI_URL`, `SDWAN_URL`, `CC_URL`). |
 | `self.result_collector` | `TestResultCollector` | Collects results for HTML reporting. Typically used via helper methods. |
 
 ### Methods to Override
@@ -285,9 +285,9 @@ Extends `NACTestBase` for SSH/D2D (device-to-device) tests.
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `self.hostname` | `str` | Current device hostname (auto-set from env var `HOSTNAME`). |
-| `self.device_data` | `dict` | Device metadata from the data model (from env var `DEVICE_INFO`). |
-| `self.device_info` | `dict` | Alias for `self.device_data`. |
+| `self.hostname` | `str` | Current device hostname (extracted from env var `DEVICE_INFO` JSON blob). |
+| `self.device_info` | `dict` | Device metadata from the data model (from env var `DEVICE_INFO`). |
+| `self.device_data` | `dict` | Alias for `self.device_info`. |
 
 ### Methods
 
@@ -383,6 +383,8 @@ Extends `NACTestBase` for SD-WAN Manager (vManage) API tests.
 ##### `get_devices_from_data_model() -> list[dict]`
 
 Convenience method to extract devices from the SD-WAN data model. Returns list of dicts with `system_ip`, `site_id`, `hostname` keys.
+
+> **Note:** This method is from nac-test-pyats-common PR #37, which is still in review. It will become available once that PR is merged.
 
 **Example:**
 
