@@ -11,7 +11,6 @@ import asyncio
 import json
 import logging
 import struct
-import tempfile
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -505,12 +504,11 @@ class TestBrokerClientRequestLock:
     own correct response — which would fail without the lock.
     """
 
-    def test_concurrent_requests_receive_correct_responses(self) -> None:
+    def test_concurrent_requests_receive_correct_responses(
+        self, socket_dir: Path
+    ) -> None:
         """Multiple concurrent execute_command calls must each get their own response."""
-        # Use a short path — macOS AF_UNIX limit is 104 chars
-        socket_path = Path(tempfile.gettempdir()) / "nac_test_lock_test.sock"
-        if socket_path.exists():
-            socket_path.unlink()
+        socket_path = socket_dir / "test_lock.sock"
 
         async def _run() -> None:
             # --- Fake broker server: echoes hostname+command back as the result ---
@@ -543,27 +541,30 @@ class TestBrokerClientRequestLock:
                 handle_client, path=str(socket_path)
             )
 
-            # --- Client: fire N concurrent requests on a shared BrokerClient ---
-            client = BrokerClient(socket_path=socket_path)
-            await client.connect()
+            try:
+                # --- Client: fire N concurrent requests on a shared BrokerClient ---
+                client = BrokerClient(socket_path=socket_path)
+                await client.connect()
 
-            num_requests = 20
-            tasks = [
-                client.execute_command(f"device-{i}", f"show cmd-{i}")
-                for i in range(num_requests)
-            ]
-            results = await asyncio.gather(*tasks)
+                try:
+                    num_requests = 20
+                    tasks = [
+                        client.execute_command(f"device-{i}", f"show cmd-{i}")
+                        for i in range(num_requests)
+                    ]
+                    results = await asyncio.gather(*tasks)
 
-            # Each result must match exactly the request that produced it
-            for i, result in enumerate(results):
-                assert result == f"device-{i}:show cmd-{i}", (
-                    f"Request {i} got wrong response: {result!r}. "
-                    f"This indicates request/response interleaving — "
-                    f"the _request_lock may be missing or broken."
-                )
-
-            await client.disconnect()
-            server.close()
-            await server.wait_closed()
+                    # Each result must match exactly the request that produced it
+                    for i, result in enumerate(results):
+                        assert result == f"device-{i}:show cmd-{i}", (
+                            f"Request {i} got wrong response: {result!r}. "
+                            f"This indicates request/response interleaving — "
+                            f"the _request_lock may be missing or broken."
+                        )
+                finally:
+                    await client.disconnect()
+            finally:
+                server.close()
+                await server.wait_closed()
 
         asyncio.run(_run())
