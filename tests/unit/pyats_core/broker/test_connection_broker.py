@@ -422,12 +422,14 @@ class TestExecuteCommandRetry:
         assert broker._disconnect_device.await_count == 2
 
     def test_does_not_retry_command_rejection(self, broker: ConnectionBroker) -> None:
-        """SubCommandFailure means the session is healthy - keep it, do not retry."""
+        """A rejected command is not retried - a fresh session rejects it too.
+
+        Whether a rejection should also skip the disconnect is a separate
+        question, handled in #900.
+        """
         from unicon.core.errors import SubCommandFailure
 
-        conn = MagicMock()
-        broker.connected_devices["router-1"] = conn
-        broker._create_connection = AsyncMock()  # type: ignore[method-assign]
+        broker._get_connection = AsyncMock(return_value=MagicMock())  # type: ignore[method-assign]
         broker._disconnect_device = AsyncMock()  # type: ignore[method-assign]
 
         with pytest.raises(SubCommandFailure):
@@ -435,9 +437,7 @@ class TestExecuteCommandRetry:
                 broker, "router-1", "show bogus", SubCommandFailure("invalid input")
             )
 
-        broker._disconnect_device.assert_not_awaited()
-        broker._create_connection.assert_not_called()
-        assert broker.connected_devices["router-1"] is conn
+        assert broker._get_connection.await_count == 1
 
     def test_does_not_retry_unclassified_failure(
         self, broker: ConnectionBroker
@@ -489,12 +489,6 @@ class TestFailureClassification:
             ValueError("bad value"),
         ):
             assert broker._is_transport_failure(exc) is False, type(exc).__name__
-
-    def test_command_rejection(self, broker: ConnectionBroker) -> None:
-        from unicon.core.errors import SubCommandFailure
-
-        assert broker._is_command_rejection(SubCommandFailure("invalid input")) is True
-        assert broker._is_command_rejection(RuntimeError("boom")) is False
 
 
 # ---------------------------------------------------------------------------

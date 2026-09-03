@@ -292,22 +292,16 @@ class ConnectionBroker:
         """Run a command on a connection once and cache its output.
 
         Raises:
-            Exception: Whatever the device layer raised. The connection is torn
-                down first unless the failure was a command rejection, which
-                leaves the session (and its cache) usable.
+            Exception: Whatever the device layer raised, after tearing the
+                connection down so it is not handed to the next caller.
         """
         # Execute command in thread pool (since Unicon is synchronous)
         loop = get_or_create_event_loop()
         try:
             output = await loop.run_in_executor(None, connection.execute, cmd)
         except Exception as e:
-            if self._is_command_rejection(e):
-                # The device rejected the command; the session itself is fine,
-                # so keep the connection and its cached output.
-                logger.error(f"Command '{cmd}' rejected by {hostname}: {e}")
-                raise
             logger.error(f"Command execution failed on {hostname}: {e}")
-            # Drop the connection so it is not handed to the next caller
+            # Try to reconnect on failure
             await self._disconnect_device(hostname)
             raise
 
@@ -323,28 +317,14 @@ class ConnectionBroker:
         return output_str
 
     @staticmethod
-    def _is_command_rejection(error: Exception) -> bool:
-        """Check whether the device rejected the command over a healthy session.
-
-        Unicon raises ``SubCommandFailure`` when the device answered but the
-        command was invalid or errored. The session is still usable, so it must
-        not be torn down or retried.
-        """
-        try:
-            # Imported lazily to delay PyATS initialization
-            from unicon.core.errors import SubCommandFailure
-        except Exception:  # pragma: no cover - unicon always present in practice
-            return False
-
-        return isinstance(error, SubCommandFailure)
-
-    @staticmethod
     def _is_transport_failure(error: Exception) -> bool:
         """Check whether an error indicates a dead or desynchronized session.
 
         Only these failures are worth a reconnect-and-retry. Anything else
-        (a command rejection, exhausted credentials, a bug in the broker) would
-        fail identically on a fresh connection.
+        would fail identically on a fresh connection: a ``SubCommandFailure``
+        means the device answered and rejected the command, and
+        ``CredentialsExhaustedError`` or a bug in the broker will not be fixed
+        by a new session.
         """
         retryable: list[type[BaseException]] = [OSError, EOFError]
         try:

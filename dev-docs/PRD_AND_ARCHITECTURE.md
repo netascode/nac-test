@@ -8854,8 +8854,8 @@ return await self._run_and_cache(hostname, connection, cmd)
 
 Only transport-level failures (Unicon `ConnectionError`, `TimeoutError`,
 `StateMachineError`, `OSError`, `EOFError`) are retried. A `SubCommandFailure`
-means the device answered and rejected the command, so the session stays up and
-the error is raised immediately.
+means the device answered and rejected the command, which a fresh session would
+reject identically, so it is raised rather than retried.
 
 **5. Broker Shutdown:**
 
@@ -9176,9 +9176,6 @@ devices:
 ```python
 # From connection_broker.py — _run_and_cache()
 except Exception as e:
-    if self._is_command_rejection(e):
-        # The device rejected the command; the session itself is fine
-        raise
     logger.error(f"Command execution failed on {hostname}: {e}")
     # Drop the connection so it is not handed to the next caller
     await self._disconnect_device(hostname)
