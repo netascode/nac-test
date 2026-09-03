@@ -6078,7 +6078,7 @@ Each architecture uses different credential environment variables for D2D (SSH) 
 | NDFC | NX-OS switches | `NXOS_SSH_USERNAME` | `NXOS_SSH_PASSWORD` |
 | IOS-XE Direct | IOS-XE devices | `IOSXE_USERNAME` | `IOSXE_PASSWORD` |
 | IOS-XR | IOS-XR devices | `IOSXR_USERNAME` | `IOSXR_PASSWORD` |
-| NX-OS Direct | NX-OS switches | `NXOS_SSH_USERNAME` | `NXOS_SSH_PASSWORD` |
+| NX-OS Direct | NX-OS switches | `NXOS_USERNAME` | `NXOS_PASSWORD` |
 
 **Note:** Device credentials are separate from controller credentials. For example:
 - `SDWAN_USERNAME`/`SDWAN_PASSWORD` → vManage API access
