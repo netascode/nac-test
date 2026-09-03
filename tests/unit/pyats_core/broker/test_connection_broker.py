@@ -466,16 +466,18 @@ class TestExecuteCommandRetry:
 
 class TestFailureClassification:
     def test_transport_failures(self, broker: ConnectionBroker) -> None:
+        from unicon.core.errors import EOF as UniconEOF
         from unicon.core.errors import ConnectionError as UniconConnectionError
-        from unicon.core.errors import StateMachineError
+        from unicon.core.errors import SessionConnectionError, StateMachineError
         from unicon.core.errors import TimeoutError as UniconTimeoutError
 
         for exc in (
             UniconConnectionError("closed"),
+            SessionConnectionError("session lost"),
             UniconTimeoutError("no prompt"),
             StateMachineError("lost prompt"),
             BrokenPipeError("broken pipe"),
-            EOFError("eof"),
+            UniconEOF("eof"),
         ):
             assert broker._is_transport_failure(exc) is True, type(exc).__name__
 
@@ -485,6 +487,7 @@ class TestFailureClassification:
         for exc in (
             SubCommandFailure("invalid input"),
             CredentialsExhaustedError("no creds left"),
+            EOFError("builtin eof"),
             RuntimeError("broker bug"),
             ValueError("bad value"),
         ):

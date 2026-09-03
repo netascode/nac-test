@@ -326,24 +326,22 @@ class ConnectionBroker:
         ``CredentialsExhaustedError`` or a bug in the broker will not be fixed
         by a new session.
         """
-        retryable: list[type[BaseException]] = [OSError, EOFError]
-        try:
-            # Imported lazily to delay PyATS initialization
-            from unicon.core.errors import (
-                ConnectionError as UniconConnectionError,
-            )
-            from unicon.core.errors import (
+        from unicon.core.errors import EOF as UniconEOF
+        from unicon.core.errors import (
+            ConnectionError as UniconConnectionError,
+        )
+        from unicon.core.errors import SessionConnectionError, StateMachineError
+
+        return isinstance(
+            error,
+            (
+                OSError,
+                UniconConnectionError,
+                SessionConnectionError,
+                UniconEOF,
                 StateMachineError,
-            )
-            from unicon.core.errors import (
-                TimeoutError as UniconTimeoutError,
-            )
-
-            retryable += [UniconConnectionError, UniconTimeoutError, StateMachineError]
-        except Exception:  # pragma: no cover - unicon always present in practice
-            pass
-
-        return isinstance(error, tuple(retryable))
+            ),
+        )
 
     async def _get_connection(self, hostname: str) -> Any:
         """Get or create connection to device.
