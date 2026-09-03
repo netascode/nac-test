@@ -11,15 +11,12 @@ import typer
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
+from nac_test.core.types import ControllerContext
 from tests.unit.conftest import AUTH_SUCCESS
 
 
 class TestOrchestratorUnsupportedPythonExit:
     """Tests for the orchestrator-level macOS unsupported Python hard exit."""
-
-    @pytest.fixture(autouse=True)
-    def _clean_env(self, clean_controller_env: None) -> None:
-        """Apply shared clean_controller_env fixture to all tests in this class."""
 
     def _make_orchestrator(
         self, tmp_path: Path, monkeypatch: MonkeyPatch, *, dev_pyats_only: bool = True
@@ -60,7 +57,7 @@ class TestOrchestratorUnsupportedPythonExit:
             CombinedOrchestrator._check_python_version()
 
     def test_pyats_only_mode_triggers_check(
-        self, tmp_path: Path, monkeypatch: MonkeyPatch
+        self, tmp_path: Path, monkeypatch: MonkeyPatch, aci_context: ControllerContext
     ) -> None:
         """Dev pyats-only mode must call _check_python_version and exit on unsupported macOS Python."""
         orchestrator = self._make_orchestrator(
@@ -75,8 +72,8 @@ class TestOrchestratorUnsupportedPythonExit:
                 orchestrator, "_discover_test_types", return_value=(True, False)
             ),
             patch(
-                "nac_test.combined_orchestrator.detect_controller_type",
-                return_value="ACI",
+                "nac_test.combined_orchestrator.resolve_controller",
+                return_value=aci_context,
             ),
             patch(
                 "nac_test.combined_orchestrator.preflight_auth_check",

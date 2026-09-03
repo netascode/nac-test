@@ -70,7 +70,6 @@ class TestDisplayAuthFailureBanner:
                 controller_type="ACI",
                 controller_url="https://apic.example.com",
                 detail="HTTP 401: Unauthorized",
-                env_var_prefix="ACI",
             )
 
         content = output.getvalue()
@@ -84,7 +83,6 @@ class TestDisplayAuthFailureBanner:
                 controller_type="SDWAN",
                 controller_url="https://sdwan-manager.lab.local",
                 detail="HTTP 403: Forbidden",
-                env_var_prefix="SDWAN",
             )
 
         content = output.getvalue()
@@ -98,7 +96,6 @@ class TestDisplayAuthFailureBanner:
                 controller_type="CC",
                 controller_url="https://catc.example.com",
                 detail="HTTP 401: Unauthorized",
-                env_var_prefix="CC",
             )
 
         content = output.getvalue()
@@ -113,7 +110,6 @@ class TestDisplayAuthFailureBanner:
                 controller_type="ACI",
                 controller_url="https://apic.example.com",
                 detail="HTTP 401: Unauthorized - Invalid credentials",
-                env_var_prefix="ACI",
             )
 
         content = output.getvalue()
@@ -132,7 +128,6 @@ class TestDisplayAuthFailureBanner:
                 controller_type="ACI",
                 controller_url="https://apic.example.com",
                 detail="HTTP 401: Unauthorized",
-                env_var_prefix="ACI",
             )
 
         content = output.getvalue()
@@ -312,7 +307,6 @@ class TestLongUrlBannerRendering:
                 controller_type="CC",
                 controller_url=long_url,
                 detail="HTTP 401: Unauthorized",
-                env_var_prefix="CC",
             )
 
         lines = output.getvalue().splitlines()

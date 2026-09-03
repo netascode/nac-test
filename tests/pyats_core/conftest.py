@@ -8,14 +8,11 @@ Issue #541 will merge tests/pyats_core/ into tests/unit/, at which point these
 fixtures should be consolidated into a single conftest.py.
 """
 
-import os
 from pathlib import Path
 from typing import NamedTuple
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
-
-CONTROLLER_ENV_PREFIXES = ("ACI_", "SDWAN_", "CC_", "MERAKI_", "FMC_", "ISE_")
 
 
 class PyATSTestDirs(NamedTuple):
@@ -24,17 +21,6 @@ class PyATSTestDirs(NamedTuple):
     test_dir: Path
     output_dir: Path
     merged_file: Path
-
-
-@pytest.fixture(autouse=True)
-def clean_controller_env(monkeypatch: MonkeyPatch) -> None:
-    """Clear all controller-related environment variables.
-
-    Ensures tests run in isolation regardless of the caller's shell environment.
-    """
-    for key in list(os.environ.keys()):
-        if any(prefix in key for prefix in CONTROLLER_ENV_PREFIXES):
-            monkeypatch.delenv(key, raising=False)
 
 
 @pytest.fixture()

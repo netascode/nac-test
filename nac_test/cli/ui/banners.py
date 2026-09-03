@@ -12,7 +12,10 @@ from dataclasses import dataclass
 
 import typer
 
-from nac_test.utils.controller import get_display_name
+from nac_test.core.controller import (
+    get_credential_vars,
+    get_display_name,
+)
 from nac_test.utils.terminal import TerminalColors
 from nac_test.utils.url import extract_host
 
@@ -239,11 +242,27 @@ def display_aci_defaults_banner() -> None:
     _render_banner(title, content_lines)
 
 
+def _credential_remediation_lines(controller_type: str) -> list[str]:
+    """Build 'export VAR=<kind>' lines for every credential var a controller accepts.
+
+    Derives var names and kinds from ``CONTROLLER_REGISTRY`` via the
+    :func:`~nac_test.core.controller.get_credential_vars` primitive, so
+    token-only credential sets (e.g. SDWAN's API token) are represented correctly.
+    """
+    try:
+        cred_vars = get_credential_vars(controller_type)
+    except KeyError:
+        return [
+            f"  export {controller_type}_USERNAME=<username>",
+            f"  export {controller_type}_PASSWORD=<password>",
+        ]
+    return [f"  export {var}=<{kind}>" for kind, var in cred_vars]
+
+
 def display_auth_failure_banner(
     controller_type: str,
     controller_url: str,
     detail: str,
-    env_var_prefix: str,
 ) -> None:
     """Display a prominent banner when controller authentication fails.
 
@@ -255,7 +274,6 @@ def display_auth_failure_banner(
         controller_type: The controller type string (e.g., "ACI", "SDWAN", "CC").
         controller_url: The URL that was attempted.
         detail: Human-readable error detail (e.g., "HTTP 401: Unauthorized").
-        env_var_prefix: The environment variable prefix (e.g., "ACI", "SDWAN", "CC").
 
     Note:
         Uses the same box style and color handling as display_aci_defaults_banner.
@@ -274,8 +292,7 @@ def display_auth_failure_banner(
         ),
         "",
         "Verify your credentials:",
-        f"  export {env_var_prefix}_USERNAME=<username>",
-        f"  export {env_var_prefix}_PASSWORD=<password>",
+        *_credential_remediation_lines(controller_type),
         "",
     ]
     _render_banner(title, content_lines)

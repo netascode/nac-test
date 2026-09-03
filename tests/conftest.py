@@ -7,16 +7,19 @@ This module provides common fixtures used by both integration and E2E tests:
 - Environment cleanup (controller credentials, proxy settings)
 - Mock API server for simulating controller responses
 - Class-scoped monkeypatch for environment variable management
+- ControllerContext fixtures for common test scenarios
 """
 
 import os
-import re
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 
+from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
+from nac_test.core.controller import CONTROLLER_REGISTRY
+from nac_test.core.types import AuthMethod, ControllerContext
 from tests.e2e.mocks.mock_server import MockAPIServer
 
 # Path to the mock API configuration files
@@ -47,21 +50,28 @@ def assert_is_link_to(link: Path, source: Path) -> None:
 # =============================================================================
 
 
-@pytest.fixture(scope="session", autouse=True)
-def clear_controller_credentials() -> None:
-    """Clear any controller credentials from environment to avoid conflicts.
+# Derive controller env var prefixes from registry - stays in sync automatically
+CONTROLLER_ENV_PREFIXES = tuple(f"{key}_" for key in CONTROLLER_REGISTRY.keys())
 
-    nac-test fails if the user has controller credentials set in their
-    environment. This fixture removes any environment variables matching
-    the pattern: ^[A-Z]+_(URL|USERNAME|PASSWORD)$
 
-    Runs at session scope to ensure credentials are cleared before any
-    other fixtures that might set mock credentials.
+@pytest.fixture(autouse=True)
+def clean_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Clear all controller-related environment variables and caches.
+
+    Ensures tests run in isolation regardless of env var leakage
+    from other tests when running in parallel with pytest-xdist.
     """
-    pattern = re.compile(r"^[A-Z]+_(URL|USERNAME|PASSWORD)$")
-    keys_to_remove = [key for key in os.environ.keys() if pattern.match(key)]
-    for key in keys_to_remove:
-        del os.environ[key]
+    for key in list(os.environ.keys()):
+        if any(key.startswith(prefix) for prefix in CONTROLLER_ENV_PREFIXES):
+            monkeypatch.delenv(key, raising=False)
+
+    # Clear serialized controller context from previous tests
+    monkeypatch.delenv(ENV_CONTROLLER_CONTEXT, raising=False)
+
+    # Clear module-level credential cache to prevent cross-test pollution
+    from nac_test.core import controller
+
+    controller._matched_credential_sets.clear()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -154,3 +164,32 @@ def socket_dir() -> Generator[Path, None, None]:
     """Short-path temp dir suitable for Unix socket paths (macOS 104-char limit)."""
     with tempfile.TemporaryDirectory() as d:
         yield Path(d)
+
+
+# =============================================================================
+# ControllerContext fixtures
+# =============================================================================
+
+
+@pytest.fixture()
+def aci_context() -> ControllerContext:
+    """Pre-built ControllerContext for ACI with session auth."""
+    return ControllerContext(controller_type="ACI", auth_method=AuthMethod.SESSION)
+
+
+@pytest.fixture()
+def sdwan_context() -> ControllerContext:
+    """Pre-built ControllerContext for SDWAN with session auth."""
+    return ControllerContext(controller_type="SDWAN", auth_method=AuthMethod.SESSION)
+
+
+@pytest.fixture()
+def cc_context() -> ControllerContext:
+    """Pre-built ControllerContext for Catalyst Center with session auth."""
+    return ControllerContext(controller_type="CC", auth_method=AuthMethod.SESSION)
+
+
+@pytest.fixture()
+def iosxe_context() -> ControllerContext:
+    """Pre-built ControllerContext for IOS-XE with session auth."""
+    return ControllerContext(controller_type="IOSXE", auth_method=AuthMethod.SESSION)

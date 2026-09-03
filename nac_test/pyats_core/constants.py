@@ -4,7 +4,6 @@
 """PyATS-specific constants and configuration."""
 
 import os
-import tempfile
 
 from nac_test._env import get_bool_env, get_positive_numeric_env
 from nac_test.core.constants import (
@@ -34,8 +33,12 @@ MEMORY_PER_WORKER_GB: float = 0.35
 DEFAULT_CPU_MULTIPLIER: int = 2
 LOAD_AVERAGE_THRESHOLD: float = 0.8
 
-# PyATS-specific file paths
-AUTH_CACHE_DIR: str = os.path.join(tempfile.gettempdir(), "nac-test-auth-cache")
+# PyATS-specific timeouts
+# Timeout for broker-routed device commands (e.g. Genie supplementary execute calls).
+# Override via NAC_TEST_DEVICE_EXECUTE_TIMEOUT env var for slow WAN links or large outputs.
+DEVICE_EXECUTE_TIMEOUT: int = get_positive_numeric_env(
+    "NAC_TEST_DEVICE_EXECUTE_TIMEOUT", 120, int
+)
 
 # PyATS config files written to output directory during test execution
 PYATS_PLUGIN_CONFIG_FILENAME: str = ".pyats_plugin.yaml"
@@ -123,6 +126,10 @@ OVERFLOW_DIR_OVERRIDE: str | None = os.environ.get("NAC_TEST_PYATS_OVERFLOW_DIR"
 # relative (dot-notation) test names.
 ENV_TEST_DIR: str = "NAC_TEST_TEST_DIR"
 
+# Valid test types for PyATS test classification
+# Used by discovery and cleanup modules
+VALID_TEST_TYPES: frozenset[str] = frozenset({"api", "d2d"})
+
 # Re-export all constants for backward compatibility
 __all__ = [
     # From core
@@ -142,13 +149,14 @@ __all__ = [
     "MEMORY_PER_WORKER_GB",
     "DEFAULT_CPU_MULTIPLIER",
     "LOAD_AVERAGE_THRESHOLD",
-    "AUTH_CACHE_DIR",
     "PYATS_PLUGIN_CONFIG_FILENAME",
     "PYATS_CONFIG_FILENAME",
     "PYATS_POST_DISCONNECT_WAIT_SECONDS",
     "PYATS_GRACEFUL_DISCONNECT_WAIT_SECONDS",
     # Connection broker protocol limits
     "MAX_BROKER_MESSAGE_BYTES",
+    # Device execution
+    "DEVICE_EXECUTE_TIMEOUT",
     # Multi-job execution
     "TESTS_PER_JOB",
     "MAX_PARALLEL_JOBS",
@@ -169,4 +177,6 @@ __all__ = [
     "OVERFLOW_DIR_OVERRIDE",
     # Environment variable name
     "ENV_TEST_DIR",
+    # Test type classification
+    "VALID_TEST_TYPES",
 ]

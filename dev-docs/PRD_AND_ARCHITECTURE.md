@@ -5727,21 +5727,32 @@ apic:
 
 ### Controller Type Auto-Detection
 
-**Location:** `nac_test/utils/controller.py`
+**Location:** `nac_test/core/controller.py`
 
 nac-test automatically detects the network architecture based on which credential environment variables are set, eliminating the need for users to explicitly set `CONTROLLER_TYPE`.
+
+Controller resolution follows a **single source of truth (SSOT)** pattern.
+All controller metadata — env var names, credential sets, auth methods,
+display names, defaults prefixes, and insecure-flag env vars — lives in
+`CONTROLLER_REGISTRY` in `nac_test/core/controller.py`.
 
 #### CONTROLLER_REGISTRY and CredentialSets
 
 ```python
 from dataclasses import dataclass
+from collections.abc import Mapping
 
 @dataclass(frozen=True)
 class CredentialSet:
     """A single credential combination that can authenticate to a controller."""
-    env_vars: list[str]       # Env vars required for this method
-    label: str                # Human-readable label (e.g., "API Token (20.18+)")
-    auth_method: str = "session"  # Auth mechanism hint for downstream adapters
+    fields: Mapping[CredentialKind, str]  # kind → env var name (SSOT)
+    label: str                            # Human-readable label
+    auth_method: str = "session"          # Auth mechanism for downstream adapters
+
+    @property
+    def env_vars(self) -> tuple[str, ...]:
+        """Derived from fields — cannot drift."""
+        return tuple(self.fields.values())
 
 @dataclass(frozen=True)
 class ControllerConfig:
@@ -5792,43 +5803,84 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
 }
 ```
 
-#### Detection Algorithm
+#### Resolution Algorithm
 
 ```python
-def detect_controller_type() -> str:
-    """Auto-detect controller type from environment variables.
+@dataclass(frozen=True)
+class ControllerContext:
+    """Resolved controller selection identity (type + auth method).
+    Not connection state — credentials resolved separately via get_connection_params().
+    """
+    controller_type: ControllerTypeKey
+    auth_method: str
+
+def resolve_controller() -> ControllerContext:
+    """Single source of truth for controller detection.
 
     Iterates through CONTROLLER_REGISTRY. For each controller, iterates its
     credential_sets in order. The first CredentialSet whose env_vars are ALL
-    present and non-empty marks the controller as detected. The winning
-    CredentialSet is stored for later retrieval via get_matched_credential_set().
+    present and non-empty marks the controller as detected.
 
     Returns:
-        Controller type key (e.g., "ACI", "SDWAN")
+        ControllerContext with controller_type and auth_method.
 
     Raises:
-        ValueError: If no credentials, multiple controllers, or incomplete credentials
+        NoCredentialsFound: No controller env vars detected.
+        MultipleControllersFound: More than one controller configured.
+        IncompleteCredentials: Some env vars present but no complete set.
 
     Example:
         # If SDWAN_URL and SDWAN_API_TOKEN are set:
-        detect_controller_type() → "SDWAN"
-        get_matched_credential_set("SDWAN").auth_method → "token"
+        ctx = resolve_controller()
+        ctx.controller_type → "SDWAN"
+        ctx.auth_method → "token"
     """
-    complete_sets, partial_controllers, matched_creds = _find_credential_sets()
-    # ... validation logic (multiple, none, incomplete) ...
-    controller_type = complete_sets[0]
-    _matched_credential_sets[controller_type] = matched_creds[controller_type]
-    return controller_type
 
-
-def get_matched_credential_set(controller_type: str) -> CredentialSet | None:
-    """Public API for nac-test-pyats-common to retrieve the winning credential set.
-
-    Returns the CredentialSet that was matched during detect_controller_type().
-    The auth_method attribute tells the auth adapter which mechanism to use.
+def get_controller_context() -> ControllerContext:
+    """Subprocess accessor — reads NAC_TEST_CONTROLLER_CONTEXT env var.
+    Falls back to resolve_controller() if env var is absent (transitional).
     """
-    return _matched_credential_sets.get(controller_type)
+
+def get_connection_params(controller_type, auth_method) -> dict[CredentialKind, str]:
+    """Resolve credential values by kind from environment.
+    Example: {"url": "https://...", "token": "abc.def.ghi"}
+    """
+
+def should_verify_ssl(controller_type, default=False) -> bool:
+    """Determine whether SSL certificate verification should be enabled."""
 ```
+
+#### Resolution Flow
+
+```
+CombinedOrchestrator
+  └─ resolve_controller()          # Single detection call site
+       └─ Returns ControllerContext(controller_type, auth_method)
+            │
+            ├─ preflight_auth_check(ctx)    # Pre-flight validation
+            │
+            └─ PyATSOrchestrator(controller_context=ctx)
+                 └─ Serializes to NAC_TEST_CONTROLLER_CONTEXT at subprocess launch
+                      │
+                      └─ NACTestBase.setup()
+                           └─ get_controller_context()     # Deserializes from env
+                           └─ get_connection_params()      # Reads credentials from env
+                           └─ get_controller_url()         # Reads URL from env
+                           └─ should_verify_ssl()          # Reads SSL flag from env
+```
+
+#### Cross-Package Contract (nac-test-pyats-common)
+
+Auth adapters consume these functions from `nac_test.core.controller`:
+
+| Function | Purpose |
+|----------|---------|
+| `get_controller_context()` | Controller identity in subprocess |
+| `get_connection_params()` | Credential values by kind |
+| `should_verify_ssl()` | SSL verification toggle |
+
+Adapters validate `controller_type` and `auth_method` at setup time
+via guards (`_SUPPORTED_AUTH_METHODS`).
 
 #### Detection Flow Diagram
 

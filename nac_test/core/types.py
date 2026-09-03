@@ -3,9 +3,10 @@
 
 """Core types for nac-test orchestration."""
 
+import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 from nac_test.core.constants import (
     EXIT_DATA_ERROR,
@@ -16,8 +17,83 @@ from nac_test.core.constants import (
 )
 
 # Type alias for supported controller type keys.
-# Matches the keys of CONTROLLER_REGISTRY in nac_test.utils.controller.
+# Matches the keys of CONTROLLER_REGISTRY in nac_test.core.controller.
 ControllerTypeKey = Literal["ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"]
+
+# Type alias for the semantic kind of a credential value.
+# Matches the keys used in CredentialSet.fields in nac_test.core.controller.
+CredentialKind = Literal["url", "username", "password", "token"]
+
+
+class AuthMethod(str, Enum):
+    """Authentication mechanism for a controller credential set.
+
+    Consumed by auth adapters in nac-test-pyats-common to branch on
+    token vs. session authentication.
+    """
+
+    SESSION = "session"
+    TOKEN = "token"  # nosec B105 — not a password, enum value for auth method selection
+
+
+@dataclass(frozen=True)
+class ControllerContext:
+    """Resolved controller selection identity passed from orchestrator to subprocess.
+
+    Represents controller *identity* (type + auth method), **not** connection
+    state.  Credentials are resolved separately from environment variables via
+    ``get_connection_params()`` in ``nac_test.core.controller``.
+
+    Produced once by ``resolve_controller()`` and threaded through the
+    orchestration chain.  Serialized to ``NAC_TEST_CONTROLLER_CONTEXT``
+    for subprocess transport (follows the existing ``DEVICE_INFO`` pattern).
+
+    Attributes:
+        controller_type: Detected controller key (e.g. ``"ACI"``, ``"SDWAN"``).
+        auth_method: Authentication mechanism selected during resolution
+            (e.g. ``"token"``, ``"session"``).  Consumed by auth adapters in
+            *nac-test-pyats-common* to branch on token vs. session auth.
+    """
+
+    controller_type: ControllerTypeKey
+    auth_method: AuthMethod
+
+    def to_json(self) -> str:
+        """Serialize for ``NAC_TEST_CONTROLLER_CONTEXT`` env var."""
+        return json.dumps(
+            {"controller_type": self.controller_type, "auth_method": self.auth_method}
+        )
+
+    @classmethod
+    def from_json(cls, raw: str) -> "ControllerContext":
+        """Deserialize from ``NAC_TEST_CONTROLLER_CONTEXT`` env var.
+
+        Unknown keys are silently ignored so new fields can be added
+        without breaking older consumers.
+
+        Raises:
+            ValueError: If the raw string is not valid JSON.
+            KeyError: If required fields are missing.
+        """
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError) as e:
+            raise ValueError(f"Invalid JSON in controller context: {e}") from e
+        # Validate controller_type against known values
+        ct = data["controller_type"]
+        if ct not in get_args(ControllerTypeKey):
+            raise ValueError(
+                f"Unknown controller_type {ct!r}; "
+                f"expected one of {get_args(ControllerTypeKey)}"
+            )
+        try:
+            auth = AuthMethod(data["auth_method"])
+        except ValueError as e:
+            raise ValueError(f"Invalid auth_method {data['auth_method']!r}: {e}") from e
+        return cls(
+            controller_type=ct,
+            auth_method=auth,
+        )
 
 
 @dataclass(frozen=True)

@@ -317,7 +317,7 @@ PYATS_API_ONLY_SCENARIO = E2EScenario(
 
 PYATS_D2D_ONLY_SCENARIO = E2EScenario(
     name="pyats_d2d_only",
-    description="PyATS D2D only - 1 passing test, no Robot or API tests",
+    description="PyATS D2D only - 2 passing tests, no Robot or API tests",
     data_path=f"{_FIXTURE_BASE}/pyats_d2d_only/data.yaml",
     templates_path=f"{_FIXTURE_BASE}/pyats_d2d_only/templates",
     requires_testbed=True,  # D2D tests require testbed
@@ -329,8 +329,10 @@ PYATS_D2D_ONLY_SCENARIO = E2EScenario(
     # No API tests
     expected_pyats_api_passed=0,
     expected_pyats_api_failed=0,
-    # PyATS D2D: verify_iosxe_control.py (IOSXETestBase) - 1 pass
-    expected_pyats_d2d_passed=1,
+    # PyATS D2D: verify_iosxe_control.py (1 pass) + verify_iosxe_ospf_te_links.py (1 pass)
+    # The OSPF TE test requires Genie's supplementary device.execute() calls
+    # to be routed through the broker (fix for issue #663).
+    expected_pyats_d2d_passed=2,
     expected_pyats_d2d_failed=0,
     expected_d2d_hostnames=["sd-dc-c8kv-01"],
 )

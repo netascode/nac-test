@@ -20,7 +20,12 @@ import typer
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
-from nac_test.core.types import CombinedResults, PyATSResults, TestResults
+from nac_test.core.types import (
+    CombinedResults,
+    ControllerContext,
+    PyATSResults,
+    TestResults,
+)
 from tests.unit.conftest import AUTH_SUCCESS
 
 
@@ -43,16 +48,18 @@ class TestCombinedOrchestratorFlow:
         monkeypatch.setenv("ACI_PASSWORD", "password")
 
     @pytest.fixture(autouse=True)
-    def _mock_preflight_auth(self) -> Generator[None, None, None]:
-        """Mock controller detection and preflight auth for all tests.
+    def _mock_preflight_auth(
+        self, aci_context: ControllerContext
+    ) -> Generator[None, None, None]:
+        """Mock controller resolution and preflight auth for all tests.
 
         These are only reached when has_pyats=True and not render_only,
         but having them present for all tests is harmless.
         """
         with (
             patch(
-                "nac_test.combined_orchestrator.detect_controller_type",
-                return_value="ACI",
+                "nac_test.combined_orchestrator.resolve_controller",
+                return_value=aci_context,
             ),
             patch(
                 "nac_test.combined_orchestrator.preflight_auth_check",

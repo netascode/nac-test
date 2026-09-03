@@ -29,6 +29,12 @@ from nac_test.core.constants import (
     FILE_TIMESTAMP_FORMAT,
     PYATS_RESULTS_DIRNAME,
 )
+from nac_test.core.controller import (
+    get_connection_params,
+    get_controller_context,
+    get_controller_url,
+    get_defaults_prefix,
+)
 from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.defaults_resolver import (
     resolve_default_value,
@@ -44,11 +50,6 @@ from nac_test.pyats_core.reporting.collector import TestResultCollector
 from nac_test.pyats_core.reporting.step_interceptor import StepInterceptor
 from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.utils import sanitize_hostname
-from nac_test.utils.controller import (
-    detect_controller_type,
-    get_controller_url,
-    get_defaults_prefix,
-)
 from nac_test.utils.formatting import format_file_timestamp_ms
 from nac_test.utils.yaml import safe_load
 
@@ -69,6 +70,11 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
     # Test metadata class variables (enforced in subclasses)
     TEST_TYPE_NAME: str | None = None
+
+    # Subclass-declared guards — validated in setup() when not None.
+    # Subclasses set these as class attributes; the base class enforces them.
+    EXPECTED_CONTROLLER_TYPE: str | None = None
+    SUPPORTED_AUTH_METHODS: set[str] | None = None
 
     # Explicit attribute declarations (avoids hasattr() checks)
     batching_reporter: BatchingReporter | None = None
@@ -165,21 +171,60 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # Load merged data model created by nac-test
         self.data_model = self.load_data_model()
 
-        # Get controller details from environment
-        # Note: Environment validation happens in orchestrator pre-flight check
-        # Detect controller type based on environment variables
+        # Get controller context from environment
+        # In normal operation, CombinedOrchestrator resolves the controller and
+        # passes it via NAC_TEST_CONTROLLER_CONTEXT env var. The accessor
+        # get_controller_context() reads this, with a fallback to env var scan
+        # for direct pyats invocation or legacy compatibility.
         try:
-            self.controller_type = detect_controller_type()
-        except ValueError as e:
-            # Log error and re-raise to fail the test setup
+            ctx = get_controller_context()
+        except (ValueError, KeyError) as e:
             self.logger.error(f"Controller detection failed: {e}")
             raise
+        self.controller_type = ctx.controller_type
+
+        # Validate controller type if subclass declares an expectation
+        if (
+            self.EXPECTED_CONTROLLER_TYPE is not None
+            and self.controller_type != self.EXPECTED_CONTROLLER_TYPE
+        ):
+            self.failed(
+                f"This test requires "
+                f"controller_type={self.EXPECTED_CONTROLLER_TYPE}, "
+                f"but resolved controller_type={self.controller_type!r}"
+            )
+            return
 
         self.controller_url = get_controller_url(self.controller_type)
-        # USERNAME and PASSWORD are optional for some controller types (e.g., IOSXE)
-        # D2D tests use device-specific credentials from inventory, not controller credentials
-        self.username = os.environ.get(f"{self.controller_type}_USERNAME")
-        self.password = os.environ.get(f"{self.controller_type}_PASSWORD")
+
+        # Generic connection params (url/username/password/token, keyed by kind)
+        # for the resolved auth method.  If controller resolution succeeded,
+        # connection params must also resolve — failure here indicates a real
+        # misconfiguration, not a soft-skip scenario.
+        self.auth_method = ctx.auth_method
+
+        # Validate auth method if subclass declares supported methods
+        if (
+            self.SUPPORTED_AUTH_METHODS is not None
+            and self.auth_method not in self.SUPPORTED_AUTH_METHODS
+        ):
+            self.failed(
+                f"{self.EXPECTED_CONTROLLER_TYPE or type(self).__name__} "
+                f"adapter supports auth_methods "
+                f"{self.SUPPORTED_AUTH_METHODS}, "
+                f"got {self.auth_method!r}"
+            )
+            return
+
+        self.connection_params = get_connection_params(
+            self.controller_type, ctx.auth_method
+        )
+
+        # USERNAME and PASSWORD are optional for some controller types/credential
+        # sets (e.g., IOSXE has none, SDWAN's token credential set has neither).
+        # D2D tests use device-specific credentials from inventory, not these.
+        self.username = self.connection_params.get("username")
+        self.password = self.connection_params.get("password")
 
         # Connection pool is shared within process (for API tests)
         self.pool = ConnectionPool()
@@ -865,17 +910,6 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             Result from successful function execution
         """
         return await SmartRetry.execute(func, *args, **kwargs)
-
-    def get_connection_params(self) -> dict[str, Any]:
-        """Get connection parameters for the specific architecture.
-
-        Must be implemented by subclasses to return architecture-specific
-        connection details.
-        """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must implement get_connection_params() to return "
-            f"architecture-specific connection details."
-        )
 
     def wrap_client_for_tracking(
         self, client: Any, device_name: str = "Controller"

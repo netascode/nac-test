@@ -19,10 +19,11 @@ import json
 import pytest
 from pytest_httpserver import HTTPServer
 
-from nac_test.cli.validators.controller_auth import (
+from nac_test.core.controller_auth import (
     AuthOutcome,
     preflight_auth_check,
 )
+from nac_test.core.types import ControllerContext
 
 pytestmark = pytest.mark.integration
 
@@ -34,6 +35,7 @@ class TestPreflightAuthIntegrationAPIC:
         self,
         httpserver: HTTPServer,
         monkeypatch: pytest.MonkeyPatch,
+        aci_context: ControllerContext,
     ) -> None:
         """Success path: Real HTTP 200 from mock APIC returns success."""
         httpserver.expect_request(
@@ -59,7 +61,7 @@ class TestPreflightAuthIntegrationAPIC:
         monkeypatch.setenv("ACI_USERNAME", "integration-test-user")
         monkeypatch.setenv("ACI_PASSWORD", "integration-test-password")
 
-        result = preflight_auth_check("ACI")
+        result = preflight_auth_check(aci_context)
 
         assert result.success is True
         assert result.reason == AuthOutcome.SUCCESS
@@ -81,6 +83,7 @@ class TestPreflightAuthIntegrationAPIC:
         self,
         httpserver: HTTPServer,
         monkeypatch: pytest.MonkeyPatch,
+        aci_context: ControllerContext,
     ) -> None:
         """Failure path: HTTP 401 from mock APIC is classified as BAD_CREDENTIALS."""
         httpserver.expect_request(
@@ -106,7 +109,7 @@ class TestPreflightAuthIntegrationAPIC:
         monkeypatch.setenv("ACI_USERNAME", "wrong-user")
         monkeypatch.setenv("ACI_PASSWORD", "wrong-password")
 
-        result = preflight_auth_check("ACI")
+        result = preflight_auth_check(aci_context)
 
         assert result.success is False
         assert result.reason == AuthOutcome.BAD_CREDENTIALS
@@ -116,6 +119,7 @@ class TestPreflightAuthIntegrationAPIC:
         self,
         httpserver: HTTPServer,
         monkeypatch: pytest.MonkeyPatch,
+        aci_context: ControllerContext,
     ) -> None:
         """Failure path: HTTP 403 from mock APIC is classified as BAD_CREDENTIALS."""
         httpserver.expect_request(
@@ -141,7 +145,7 @@ class TestPreflightAuthIntegrationAPIC:
         monkeypatch.setenv("ACI_USERNAME", "readonly-user")
         monkeypatch.setenv("ACI_PASSWORD", "some-password")
 
-        result = preflight_auth_check("ACI")
+        result = preflight_auth_check(aci_context)
 
         assert result.success is False
         assert result.reason == AuthOutcome.BAD_CREDENTIALS
@@ -151,6 +155,7 @@ class TestPreflightAuthIntegrationAPIC:
     def test_apic_auth_unreachable_with_connection_refused(
         self,
         monkeypatch: pytest.MonkeyPatch,
+        aci_context: ControllerContext,
     ) -> None:
         """Failure path: Unreachable server is classified correctly.
 
@@ -164,7 +169,7 @@ class TestPreflightAuthIntegrationAPIC:
         monkeypatch.setenv("ACI_USERNAME", "testuser")
         monkeypatch.setenv("ACI_PASSWORD", "testpass")
 
-        result = preflight_auth_check("ACI")
+        result = preflight_auth_check(aci_context)
 
         assert result.success is False
         assert result.reason == AuthOutcome.UNREACHABLE
@@ -185,6 +190,7 @@ class TestPreflightAuthIntegrationSDWAN:
         self,
         httpserver: HTTPServer,
         monkeypatch: pytest.MonkeyPatch,
+        sdwan_context: ControllerContext,
     ) -> None:
         """Success path: Mock SDWAN Manager returns JSESSIONID and XSRF token."""
         # Step 1: Form login returns JSESSIONID cookie
@@ -210,7 +216,7 @@ class TestPreflightAuthIntegrationSDWAN:
         monkeypatch.setenv("SDWAN_USERNAME", "integration-test-user")
         monkeypatch.setenv("SDWAN_PASSWORD", "integration-test-password")
 
-        result = preflight_auth_check("SDWAN")
+        result = preflight_auth_check(sdwan_context)
 
         assert result.success is True
         assert result.reason == AuthOutcome.SUCCESS
@@ -233,6 +239,7 @@ class TestPreflightAuthIntegrationSDWAN:
         self,
         httpserver: HTTPServer,
         monkeypatch: pytest.MonkeyPatch,
+        sdwan_context: ControllerContext,
     ) -> None:
         """Failure path: HTTP 401 from mock SDWAN Manager is classified as BAD_CREDENTIALS."""
         httpserver.expect_request(
@@ -247,7 +254,7 @@ class TestPreflightAuthIntegrationSDWAN:
         monkeypatch.setenv("SDWAN_USERNAME", "wrong-user")
         monkeypatch.setenv("SDWAN_PASSWORD", "wrong-password")
 
-        result = preflight_auth_check("SDWAN")
+        result = preflight_auth_check(sdwan_context)
 
         assert result.success is False
         assert result.reason == AuthOutcome.BAD_CREDENTIALS
@@ -265,6 +272,7 @@ class TestPreflightAuthIntegrationCC:
         self,
         httpserver: HTTPServer,
         monkeypatch: pytest.MonkeyPatch,
+        cc_context: ControllerContext,
     ) -> None:
         """Success path: Mock Catalyst Center returns auth token."""
         httpserver.expect_request(
@@ -279,7 +287,7 @@ class TestPreflightAuthIntegrationCC:
         monkeypatch.setenv("CC_USERNAME", "integration-test-user")
         monkeypatch.setenv("CC_PASSWORD", "integration-test-password")
 
-        result = preflight_auth_check("CC")
+        result = preflight_auth_check(cc_context)
 
         assert result.success is True
         assert result.reason == AuthOutcome.SUCCESS
@@ -301,6 +309,7 @@ class TestPreflightAuthIntegrationCC:
         self,
         httpserver: HTTPServer,
         monkeypatch: pytest.MonkeyPatch,
+        cc_context: ControllerContext,
     ) -> None:
         """Failure path: HTTP 401 from mock Catalyst Center is classified as BAD_CREDENTIALS.
 
@@ -327,7 +336,7 @@ class TestPreflightAuthIntegrationCC:
         monkeypatch.setenv("CC_USERNAME", "wrong-user")
         monkeypatch.setenv("CC_PASSWORD", "wrong-password")
 
-        result = preflight_auth_check("CC")
+        result = preflight_auth_check(cc_context)
 
         assert result.success is False
         assert result.reason == AuthOutcome.BAD_CREDENTIALS
