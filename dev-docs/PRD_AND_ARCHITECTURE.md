@@ -5780,24 +5780,33 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         display_name="SDWAN Manager",
         url_env_var="SDWAN_URL",
         env_var_prefix="SDWAN",
-        credential_sets=[
-            CredentialSet(env_vars=["SDWAN_URL", "SDWAN_API_TOKEN"],
-                         label="API Token (20.18+)", auth_method="token"),
-            CredentialSet(env_vars=["SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"],
-                         label="Username/Password"),
-        ],
+        credential_sets=(
+            CredentialSet(fields={"url": "SDWAN_URL", "token": "SDWAN_API_TOKEN"},
+                          label="API Token (20.18+)", auth_method=AuthMethod.TOKEN),
+            CredentialSet(fields={"url": "SDWAN_URL", "username": "SDWAN_USERNAME",
+                                  "password": "SDWAN_PASSWORD"},
+                          label="Username/Password"),
+        ),
         defaults_prefix="defaults.sdwan",
+        insecure_env_var="SDWAN_INSECURE",
         cache_key="SDWAN_MANAGER",
     ),
     "IOSXE": ControllerConfig(
         display_name="IOS XE",
         url_env_var="IOSXE_URL",
         env_var_prefix="IOSXE",
-        credential_sets=[
-            CredentialSet(env_vars=["IOSXE_URL"], label="Device URL"),
-            CredentialSet(env_vars=["IOSXE_HOST"], label="Device Host"),
-        ],
+        # IOSXE_URL and IOSXE_HOST serve the same purpose (IOSXE_URL is being
+        # phased out) - both map to kind="url".
+        credential_sets=(
+            CredentialSet(fields={"url": "IOSXE_URL", "username": "IOSXE_USERNAME",
+                                  "password": "IOSXE_PASSWORD"},
+                          label="Device URL"),
+            CredentialSet(fields={"url": "IOSXE_HOST", "username": "IOSXE_USERNAME",
+                                  "password": "IOSXE_PASSWORD"},
+                          label="Device Host"),
+        ),
         defaults_prefix="defaults.iosxe",
+        insecure_env_var="IOSXE_INSECURE",
     ),
     # CC, MERAKI, FMC, ISE follow the same pattern...
 }
