@@ -1,6 +1,7 @@
 # unreleased
 
 - robot rendering: added support for dicts as parent_key in `iterate_list_chunked` 
+- pyats broker: removed the per-command SSH liveness probe from the connection broker; dead sessions are now recovered by reconnecting and retrying the command once. Removes ~0.77s of event-loop blocking per test and the fleet-wide slowdown it caused.
 
 # 2.0.0
 

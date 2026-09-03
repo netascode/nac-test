@@ -8777,22 +8777,33 @@ cache.set("show version", output)
 return output
 ```
 
-**4. Connection Health Monitoring:**
+**4. Connection Health Handling:**
+
+Cached connections are handed out without a liveness probe. Evaluating the pyATS
+`device.connected` property costs a live SSH round-trip (~0.37s) on the broker's
+event loop, which blocks traffic for every device and still cannot rule out the
+session dying between the probe and the command. A dead session is instead
+detected when the command fails, and healed by reconnecting and retrying once:
 
 ```python
-# From connection_broker.py:349-359
-def _is_connection_healthy(self, connection: Any) -> bool:
-    """Check if connection is healthy."""
-    try:
-        return (
-            hasattr(connection, "connected")
-            and connection.connected
-            and hasattr(connection, "spawn")
-            and connection.spawn
-        )
-    except Exception:
-        return False
+# From connection_broker.py — _execute_command()
+connection = await self._get_connection(hostname)
+try:
+    return await self._run_and_cache(hostname, connection, cmd)
+except Exception as e:
+    if not self._is_transport_failure(e):
+        raise
+    logger.warning(...)  # session looks dead - _run_and_cache disconnected it
+
+# Final attempt on a freshly created connection
+connection = await self._get_connection(hostname)
+return await self._run_and_cache(hostname, connection, cmd)
 ```
+
+Only transport-level failures (Unicon `ConnectionError`, `TimeoutError`,
+`StateMachineError`, `OSError`, `EOFError`) are retried. A `SubCommandFailure`
+means the device answered and rejected the command, so the session stays up and
+the error is raised immediately.
 
 **5. Broker Shutdown:**
 
@@ -9035,11 +9046,9 @@ for hostname in self.testbed.devices:
 # Usage during command execution:
 async with self.connection_locks[hostname]:
     # Only one operation per device at a time
-    # Prevents race conditions on connection health checks
+    # Prevents two callers racing to create the same connection
     if hostname in self.connected_devices:
-        connection = self.connected_devices[hostname]
-        if self._is_connection_healthy(connection):
-            return connection
+        return self.connected_devices[hostname]
 ```
 
 ---
@@ -9113,26 +9122,34 @@ devices:
 **Connection Failure Recovery:**
 
 ```python
-# From connection_broker.py:254-258
+# From connection_broker.py — _run_and_cache()
 except Exception as e:
+    if self._is_command_rejection(e):
+        # The device rejected the command; the session itself is fine
+        raise
     logger.error(f"Command execution failed on {hostname}: {e}")
-    # Try to reconnect on failure
+    # Drop the connection so it is not handed to the next caller
     await self._disconnect_device(hostname)
     raise
 ```
 
-**Unhealthy Connection Detection:**
+**Dead Connection Detection:**
+
+A cached connection is reused as-is; nothing probes it (see *Connection Health
+Handling* above). A session that died since its last use surfaces as a transport
+failure on the next command, which tears the connection down and retries once on
+a fresh one — recovering the current request rather than only cleaning up for the
+next caller.
 
 ```python
-# From connection_broker.py:267-273
-# Return existing connection if healthy
-if hostname in self.connected_devices:
-    connection = self.connected_devices[hostname]
-    if self._is_connection_healthy(connection):
-        return connection
-    else:
-        # Remove unhealthy connection
-        await self._disconnect_device_internal(hostname)
+# From connection_broker.py — _get_connection()
+async with self.connection_locks[hostname]:
+    if hostname in self.connected_devices:
+        self.stats_connection_cache_hits += 1
+        return self.connected_devices[hostname]
+
+    self.stats_connection_cache_misses += 1
+    return await self._create_connection(hostname)
 ```
 
 **Broker Status Monitoring:**
