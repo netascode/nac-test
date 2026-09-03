@@ -24,7 +24,16 @@ class TestControllerRegistry:
     def test_registry_covers_all_supported_controllers(self) -> None:
         """Registry includes all supported controller types with valid configs."""
         # After consolidation: CONTROLLER_REGISTRY now includes ALL controllers
-        expected_controllers = {"ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE", "IOSXE"}
+        expected_controllers = {
+            "ACI",
+            "SDWAN",
+            "CC",
+            "MERAKI",
+            "FMC",
+            "ISE",
+            "IOSXE",
+            "NXOS",
+        }
         assert set(CONTROLLER_REGISTRY.keys()) == expected_controllers
 
         for controller_type, config in CONTROLLER_REGISTRY.items():
@@ -51,6 +60,12 @@ class TestGetAuthCallable:
     def test_returns_none_for_iosxe(self) -> None:
         """Returns None for IOSXE (no controller auth needed)."""
         result = _get_auth_callable("IOSXE")
+
+        assert result is None
+
+    def test_returns_none_for_nxos(self) -> None:
+        """Returns None for NXOS (direct device access, no controller auth)."""
+        result = _get_auth_callable("NXOS")
 
         assert result is None
 
