@@ -292,16 +292,29 @@ class ConnectionBroker:
         """Run a command on a connection once and cache its output.
 
         Raises:
-            Exception: Whatever the device layer raised, after tearing the
-                connection down so it is not handed to the next caller.
+            SubCommandFailure: Re-raised as-is. The device answered and rejected
+                the command, so the session and its cache are left intact.
+            Exception: Any other failure, after tearing the connection down so it
+                is not handed to the next caller.
         """
         # Execute command in thread pool (since Unicon is synchronous)
         loop = get_or_create_event_loop()
         try:
+            from unicon.core.errors import SubCommandFailure
+        except ImportError:
+            SubCommandFailure = None  # type: ignore[assignment,misc]
+
+        try:
             output = await loop.run_in_executor(None, connection.execute, cmd)
         except Exception as e:
+            # SubCommandFailure is a fast path, not a health guarantee - unicon wraps
+            # transport errors in it too. Those get neither a disconnect here nor a retry
+            # in _execute_command; recovery relies on unicon re-establishing the session
+            # on the next execute(), which it does transparently.
+            if SubCommandFailure is not None and isinstance(e, SubCommandFailure):
+                logger.warning(f"Command rejected by {hostname} (session intact): {e}")
+                raise
             logger.error(f"Command execution failed on {hostname}: {e}")
-            # Try to reconnect on failure
             await self._disconnect_device(hostname)
             raise
 
