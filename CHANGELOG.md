@@ -12,6 +12,10 @@
 - robot rendering: added support for dicts as parent_key in `iterate_list_chunked` 
 - add support for SDWAN token authentication for pyATS test cases via SDWAN_USERNAME & SDWAN_API_TOKEN
 
+## Performance
+
+- Replace batched device barriers with flat semaphore for D2D execution, eliminating idle time when devices finish at different speeds (#901)
+
 ## Bug Fixes
 
 - Genie parsers that fire supplementary commands (e.g. VRF resolution) now work in broker mode
