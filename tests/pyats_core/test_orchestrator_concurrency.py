@@ -144,6 +144,8 @@ class TestFlatSemaphoreConcurrency:
         max_workers = 2
         devices = _make_devices(4)
 
+        completed: list[str] = []
+
         async def _run() -> None:
             device_2_entered = asyncio.Event()
 
@@ -158,6 +160,7 @@ class TestFlatSemaphoreConcurrency:
                         await asyncio.wait_for(device_2_entered.wait(), timeout=5.0)
                     elif hostname == "device-2":
                         device_2_entered.set()
+                    completed.append(hostname)
                 return None
 
             orchestrator = _make_orchestrator(pyats_test_dirs, max_workers=max_workers)
@@ -172,6 +175,8 @@ class TestFlatSemaphoreConcurrency:
                 )
 
         asyncio.run(_run())
+
+        assert sorted(completed) == sorted(d["hostname"] for d in devices)
 
     def test_max_parallel_devices_caps_concurrency(
         self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
