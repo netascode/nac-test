@@ -122,7 +122,7 @@ class TestFlatSemaphoreConcurrency:
                 )
             )
 
-        assert peak_concurrent <= max_workers
+        assert peak_concurrent == min(max_workers, len(devices))
 
     def test_no_barrier_fast_devices_free_slots_immediately(
         self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
@@ -135,15 +135,17 @@ class TestFlatSemaphoreConcurrency:
 
         A flat semaphore lets device-2 start as soon as device-1 finishes,
         overlapping with device-0.
+
+        Proven structurally: device-0 blocks on an asyncio.Event that device-2
+        sets on entry. Under a batched approach this deadlocks (device-2 can't
+        start until device-0's batch finishes). Under a flat semaphore device-2
+        starts while device-0 is blocked, sets the event, and both complete.
         """
         max_workers = 2
         devices = _make_devices(4)
-        start_times: dict[str, float] = {}
 
         async def _run() -> None:
-            lock = asyncio.Lock()
-            loop = asyncio.get_event_loop()
-            t0 = loop.time()
+            device_2_entered = asyncio.Event()
 
             async def mock_run(
                 device: dict[str, Any],
@@ -152,10 +154,10 @@ class TestFlatSemaphoreConcurrency:
             ) -> Path | None:
                 hostname = device["hostname"]
                 async with semaphore:
-                    async with lock:
-                        start_times[hostname] = loop.time() - t0
-                    delay = 0.15 if hostname == "device-0" else 0.02
-                    await asyncio.sleep(delay)
+                    if hostname == "device-0":
+                        await asyncio.wait_for(device_2_entered.wait(), timeout=5.0)
+                    elif hostname == "device-2":
+                        device_2_entered.set()
                 return None
 
             orchestrator = _make_orchestrator(pyats_test_dirs, max_workers=max_workers)
@@ -170,15 +172,6 @@ class TestFlatSemaphoreConcurrency:
                 )
 
         asyncio.run(_run())
-
-        # device-2 must start before device-0 finishes (overlapping),
-        # proving there is no barrier between "batch 1" and "batch 2".
-        assert "device-2" in start_times
-        assert "device-0" in start_times
-        assert start_times["device-2"] < 0.12, (
-            f"device-2 started at {start_times['device-2']:.3f}s — "
-            "expected to start before device-0 finishes (no barrier)"
-        )
 
     def test_max_parallel_devices_caps_concurrency(
         self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
@@ -219,7 +212,7 @@ class TestFlatSemaphoreConcurrency:
                 )
             )
 
-        assert peak_concurrent <= 2
+        assert peak_concurrent == 2
 
     def test_one_device_failure_does_not_block_others(
         self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
@@ -296,3 +289,34 @@ class TestFlatSemaphoreConcurrency:
             )
 
         assert sorted(executed) == sorted(d["hostname"] for d in devices)
+
+    def test_all_devices_share_single_semaphore_instance(
+        self, aci_controller_env: None, pyats_test_dirs: PyATSTestDirs
+    ) -> None:
+        """All devices receive the same semaphore — the structural claim of this PR."""
+        devices = _make_devices(6)
+        seen_semaphores: list[asyncio.Semaphore] = []
+
+        async def mock_run(
+            device: dict[str, Any],
+            test_files: list[Path],
+            semaphore: asyncio.Semaphore,
+        ) -> Path | None:
+            seen_semaphores.append(semaphore)
+            return None
+
+        orchestrator = _make_orchestrator(pyats_test_dirs, max_workers=3)
+        orchestrator.device_executor = MagicMock()
+        orchestrator.device_executor.run_device_job_with_semaphore = AsyncMock(
+            side_effect=mock_run
+        )
+
+        with _patch_archive(orchestrator):
+            asyncio.run(
+                orchestrator._execute_device_tests_with_broker(
+                    test_files=[Path("test.py")], devices=devices
+                )
+            )
+
+        assert len(seen_semaphores) == len(devices)
+        assert len({id(s) for s in seen_semaphores}) == 1
