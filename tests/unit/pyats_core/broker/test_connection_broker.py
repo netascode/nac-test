@@ -87,30 +87,6 @@ def test_create_connection_omits_redundant_hostname(
 
 
 # ---------------------------------------------------------------------------
-# _is_connection_healthy
-# ---------------------------------------------------------------------------
-
-
-class TestIsConnectionHealthy:
-    def test_returns_false_when_attribute_raises(
-        self, broker: ConnectionBroker
-    ) -> None:
-        """If pyATS connection attributes raise, treat as unhealthy (no crash)."""
-        conn = MagicMock()
-        type(conn).connected = property(
-            lambda self: (_ for _ in ()).throw(Exception("boom"))
-        )
-        assert broker._is_connection_healthy(conn) is False
-
-    def test_returns_false_when_attribute_missing(
-        self, broker: ConnectionBroker
-    ) -> None:
-        """If a connection object lacks expected attributes, treat as unhealthy."""
-        conn = object()
-        assert broker._is_connection_healthy(conn) is False
-
-
-# ---------------------------------------------------------------------------
 # _process_request routing
 # ---------------------------------------------------------------------------
 
@@ -167,12 +143,9 @@ class TestProcessRequest:
 
 
 class TestGetConnection:
-    def test_returns_existing_healthy_connection(
-        self, broker: ConnectionBroker
-    ) -> None:
+    def test_returns_existing_connection(self, broker: ConnectionBroker) -> None:
         conn = MagicMock()
         broker.connected_devices["router-1"] = conn
-        broker._is_connection_healthy = MagicMock(return_value=True)  # type: ignore[method-assign]
 
         result = asyncio.run(broker._get_connection("router-1"))
 
@@ -180,20 +153,28 @@ class TestGetConnection:
         assert broker.stats_connection_cache_hits == 1
         assert broker.stats_connection_cache_misses == 0
 
-    def test_reconnects_when_unhealthy(self, broker: ConnectionBroker) -> None:
-        stale_conn = MagicMock()
-        fresh_conn = MagicMock()
-        broker.connected_devices["router-1"] = stale_conn
-        broker._is_connection_healthy = MagicMock(return_value=False)  # type: ignore[method-assign]
-        broker._create_connection = AsyncMock(return_value=fresh_conn)  # type: ignore[method-assign]
+    def test_does_not_probe_cached_connection(self, broker: ConnectionBroker) -> None:
+        """The cached connection is handed out without touching device.connected.
+
+        Evaluating that property costs a live SSH round-trip on the event loop
+        (#909); a dead session is healed by _execute_command's retry instead.
+        """
+        conn = MagicMock()
+        probed = []
+
+        def _connected(_self: Any) -> bool:
+            probed.append(True)
+            return True
+
+        type(conn).connected = property(_connected)
+        broker.connected_devices["router-1"] = conn
+        broker._create_connection = AsyncMock()  # type: ignore[method-assign]
 
         result = asyncio.run(broker._get_connection("router-1"))
 
-        assert result is fresh_conn
-        assert (
-            "router-1" not in broker.connected_devices
-            or broker.connected_devices["router-1"] is fresh_conn
-        )
+        assert result is conn
+        assert probed == []
+        broker._create_connection.assert_not_called()
 
     def test_creates_new_connection_when_none_exists(
         self, broker: ConnectionBroker
@@ -349,6 +330,171 @@ def test_execute_command_disconnects_on_execution_failure(
 
 
 # ---------------------------------------------------------------------------
+# _execute_command — reconnect-and-retry on transport failure (#909)
+# ---------------------------------------------------------------------------
+
+
+def _run_execute(
+    broker: ConnectionBroker, hostname: str, cmd: str, side_effect: Any
+) -> str:
+    """Drive _execute_command with run_in_executor stubbed by side_effect."""
+
+    async def _run() -> str:
+        loop = asyncio.get_event_loop()
+        with patch(
+            "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
+            return_value=loop,
+        ):
+            with patch.object(
+                loop,
+                "run_in_executor",
+                new_callable=AsyncMock,
+                side_effect=side_effect,
+            ):
+                return await broker._execute_command(hostname, cmd)
+
+    return asyncio.run(_run())
+
+
+class TestExecuteCommandRetry:
+    """A session that died since its last use must heal the current request."""
+
+    def test_retries_once_after_transport_failure(
+        self, broker: ConnectionBroker
+    ) -> None:
+        from unicon.core.errors import ConnectionError as UniconConnectionError
+
+        broker._get_connection = AsyncMock(side_effect=[MagicMock(), MagicMock()])  # type: ignore[method-assign]
+        broker._disconnect_device = AsyncMock()  # type: ignore[method-assign]
+
+        result = _run_execute(
+            broker,
+            "router-1",
+            "show version",
+            [UniconConnectionError("session closed"), "live output"],
+        )
+
+        assert result == "live output"
+        assert broker._get_connection.await_count == 2
+        broker._disconnect_device.assert_awaited_once_with("router-1")
+
+    def test_retry_result_is_cached(self, broker: ConnectionBroker) -> None:
+        """The retry's output lands in a live cache, not the one disconnect dropped."""
+        from unicon.core.errors import ConnectionError as UniconConnectionError
+
+        broker._get_connection = AsyncMock(side_effect=[MagicMock(), MagicMock()])  # type: ignore[method-assign]
+
+        # Real disconnect path: drops the command cache for the device
+        async def _disconnect(hostname: str) -> None:
+            broker.command_cache.pop(hostname, None)
+
+        broker._disconnect_device = AsyncMock(side_effect=_disconnect)  # type: ignore[method-assign]
+
+        result = _run_execute(
+            broker,
+            "router-1",
+            "show version",
+            [UniconConnectionError("session closed"), "live output"],
+        )
+
+        assert result == "live output"
+        assert broker.command_cache["router-1"].get("show version") == "live output"
+
+    def test_raises_when_retry_also_fails(self, broker: ConnectionBroker) -> None:
+        from unicon.core.errors import ConnectionError as UniconConnectionError
+
+        broker._get_connection = AsyncMock(side_effect=[MagicMock(), MagicMock()])  # type: ignore[method-assign]
+        broker._disconnect_device = AsyncMock()  # type: ignore[method-assign]
+
+        with pytest.raises(UniconConnectionError):
+            _run_execute(
+                broker,
+                "router-1",
+                "show version",
+                [
+                    UniconConnectionError("session closed"),
+                    UniconConnectionError("still closed"),
+                ],
+            )
+
+        assert broker._get_connection.await_count == 2
+        # Both attempts tear the connection down; nothing dead is left cached
+        assert broker._disconnect_device.await_count == 2
+
+    def test_does_not_retry_command_rejection(self, broker: ConnectionBroker) -> None:
+        """A rejected command is not retried - a fresh session rejects it too.
+
+        Whether a rejection should also skip the disconnect is a separate
+        question, handled in #900.
+        """
+        from unicon.core.errors import SubCommandFailure
+
+        broker._get_connection = AsyncMock(return_value=MagicMock())  # type: ignore[method-assign]
+        broker._disconnect_device = AsyncMock()  # type: ignore[method-assign]
+
+        with pytest.raises(SubCommandFailure):
+            _run_execute(
+                broker, "router-1", "show bogus", SubCommandFailure("invalid input")
+            )
+
+        assert broker._get_connection.await_count == 1
+
+    def test_does_not_retry_unclassified_failure(
+        self, broker: ConnectionBroker
+    ) -> None:
+        """An error that is neither rejection nor transport disconnects but is not retried."""
+        broker._get_connection = AsyncMock(return_value=MagicMock())  # type: ignore[method-assign]
+        broker._disconnect_device = AsyncMock()  # type: ignore[method-assign]
+
+        with pytest.raises(RuntimeError, match="broker bug"):
+            _run_execute(broker, "router-1", "show version", RuntimeError("broker bug"))
+
+        assert broker._get_connection.await_count == 1
+        broker._disconnect_device.assert_awaited_once_with("router-1")
+
+    def test_connection_errors_are_not_retried(self, broker: ConnectionBroker) -> None:
+        """Failure to establish a connection must not double the connect attempts."""
+        broker._get_connection = AsyncMock(  # type: ignore[method-assign]
+            side_effect=ConnectionError("Device router-1 not found in testbed")
+        )
+
+        with pytest.raises(ConnectionError):
+            asyncio.run(broker._execute_command("router-1", "show version"))
+
+        assert broker._get_connection.await_count == 1
+
+
+class TestFailureClassification:
+    def test_transport_failures(self, broker: ConnectionBroker) -> None:
+        from unicon.core.errors import EOF as UniconEOF
+        from unicon.core.errors import ConnectionError as UniconConnectionError
+        from unicon.core.errors import SessionConnectionError, StateMachineError
+        from unicon.core.errors import TimeoutError as UniconTimeoutError
+
+        for exc in (
+            UniconConnectionError("closed"),
+            SessionConnectionError("session lost"),
+            UniconTimeoutError("no prompt"),
+            StateMachineError("lost prompt"),
+            BrokenPipeError("broken pipe"),
+            UniconEOF("eof"),
+        ):
+            assert broker._is_transport_failure(exc) is True, type(exc).__name__
+
+    def test_non_transport_failures(self, broker: ConnectionBroker) -> None:
+        from unicon.core.errors import CredentialsExhaustedError, SubCommandFailure
+
+        for exc in (
+            SubCommandFailure("invalid input"),
+            CredentialsExhaustedError("no creds left"),
+            EOFError("builtin eof"),
+            RuntimeError("broker bug"),
+            ValueError("bad value"),
+        ):
+            assert broker._is_transport_failure(exc) is False, type(exc).__name__
+
+
+# ---------------------------------------------------------------------------
 # _process_request — remaining paths
 # ---------------------------------------------------------------------------
 
@@ -429,17 +575,26 @@ class TestBrokerClientPassthroughs:
 
 
 class TestConnectionHealthRecovery:
-    def test_reconnects_when_cached_connection_is_unhealthy(
+    def test_recovers_when_cached_connection_is_dead(
         self, broker: ConnectionBroker
     ) -> None:
-        """When a cached connection is unhealthy, _get_connection replaces it."""
-        stale_device = MagicMock()
-        stale_device.connected = False
-        stale_device.spawn = False
+        """A dead cached session is replaced and the command still succeeds.
 
+        Exercises the full path with the real _get_connection, _disconnect_device
+        and _create_connection: the stale session fails, gets torn down, a fresh
+        connection is created from the testbed, and the retry returns output.
+        """
+        from unicon.core.errors import ConnectionError as UniconConnectionError
+
+        stale_device = MagicMock()
+        stale_device.execute.side_effect = UniconConnectionError("session is closed")
         broker.connected_devices["router-1"] = stale_device
 
-        async def _run() -> Any:
+        assert broker.testbed is not None
+        fresh_device = broker.testbed.devices["router-1"]
+        fresh_device.execute.return_value = "recovered output"
+
+        async def _run() -> str:
             loop = asyncio.get_event_loop()
             with patch(
                 "nac_test.pyats_core.broker.connection_broker.get_or_create_event_loop",
@@ -450,11 +605,13 @@ class TestConnectionHealthRecovery:
                     return func(*args)
 
                 with patch.object(loop, "run_in_executor", side_effect=fake_executor):
-                    return await broker._get_connection("router-1")
+                    return await broker._execute_command("router-1", "show version")
 
         result = asyncio.run(_run())
-        assert broker.testbed is not None
-        assert result is broker.testbed.devices["router-1"]
+
+        assert result == "recovered output"
+        assert broker.connected_devices["router-1"] is fresh_device
+        stale_device.disconnect.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

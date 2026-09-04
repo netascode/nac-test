@@ -1,3 +1,9 @@
+# unreleased
+
+## Performance
+
+- pyats broker: removed the per-command SSH liveness probe from the connection broker; dead sessions are now recovered by reconnecting and retrying the command once. Removes ~0.77s of event-loop blocking per test and the fleet-wide slowdown it caused.
+
 # 2.1.0b1
 
 ## Features

@@ -235,20 +235,29 @@ class ConnectionBroker:
             logger.error(f"Error processing request: {e}")
             return {"status": "error", "error": str(e)}
 
+    def _get_command_cache(self, hostname: str) -> CommandCache:
+        """Get or create the broker-level command cache for a device."""
+        cache = self.command_cache.get(hostname)
+        if cache is None:
+            cache = CommandCache(hostname, ttl=3600)  # 1 hour TTL
+            self.command_cache[hostname] = cache
+            logger.info(f"Created command cache for device: {hostname}")
+        return cache
+
     async def _execute_command(self, hostname: str, cmd: str) -> str:
         """Execute command on device via established connection with caching.
 
         This method implements command caching at the broker level, ensuring
         that identical commands are only executed once across all test subprocesses.
-        """
-        # Get or create cache for this device
-        if hostname not in self.command_cache:
-            self.command_cache[hostname] = CommandCache(
-                hostname, ttl=3600
-            )  # 1 hour TTL
-            logger.info(f"Created command cache for device: {hostname}")
 
-        cache = self.command_cache[hostname]
+        Connections are handed out without a liveness probe (see
+        :meth:`_get_connection`), so a session that died since its last use
+        surfaces here as a transport failure. Such a failure is healed by
+        disconnecting, reconnecting and retrying the command exactly once,
+        which recovers the current request instead of only cleaning up for the
+        next one.
+        """
+        cache = self._get_command_cache(hostname)
 
         # Check cache first
         cached_output = cache.get(cmd)
@@ -261,50 +270,101 @@ class ConnectionBroker:
         self.stats_command_cache_misses += 1
         logger.debug(f"Broker cache miss for '{cmd}' on {hostname}, executing...")
 
-        # Ensure device is connected
+        # Connection establishment errors are never retried here - only the
+        # execution itself is, and only when the session looks dead.
         connection = await self._get_connection(hostname)
+        try:
+            return await self._run_and_cache(hostname, connection, cmd)
+        except Exception as e:
+            if not self._is_transport_failure(e):
+                raise
+            logger.warning(
+                f"Transport failure executing '{cmd}' on {hostname} ({e}); "
+                f"reconnecting and retrying once"
+            )
 
+        # Final attempt. The failed attempt above disconnected the device, so
+        # this creates a fresh connection. Failures propagate to the caller.
+        connection = await self._get_connection(hostname)
+        return await self._run_and_cache(hostname, connection, cmd)
+
+    async def _run_and_cache(self, hostname: str, connection: Any, cmd: str) -> str:
+        """Run a command on a connection once and cache its output.
+
+        Raises:
+            Exception: Whatever the device layer raised, after tearing the
+                connection down so it is not handed to the next caller.
+        """
         # Execute command in thread pool (since Unicon is synchronous)
         loop = get_or_create_event_loop()
         try:
             output = await loop.run_in_executor(None, connection.execute, cmd)
-            output_str = str(output)
-
-            # Cache the output for future requests
-            cache.set(cmd, output_str)
-            logger.info(
-                f"Cached command output for '{cmd}' on {hostname} ({len(output_str)} chars)"
-            )
-
-            return output_str
         except Exception as e:
             logger.error(f"Command execution failed on {hostname}: {e}")
             # Try to reconnect on failure
             await self._disconnect_device(hostname)
             raise
 
+        output_str = str(output)
+
+        # Cache the output for future requests. The cache is re-resolved rather
+        # than reused because a preceding failed attempt drops it on disconnect.
+        self._get_command_cache(hostname).set(cmd, output_str)
+        logger.info(
+            f"Cached command output for '{cmd}' on {hostname} ({len(output_str)} chars)"
+        )
+
+        return output_str
+
+    @staticmethod
+    def _is_transport_failure(error: Exception) -> bool:
+        """Check whether an error indicates a dead or desynchronized session.
+
+        Only these failures are worth a reconnect-and-retry. Anything else
+        would fail identically on a fresh connection: a ``SubCommandFailure``
+        means the device answered and rejected the command, and
+        ``CredentialsExhaustedError`` or a bug in the broker will not be fixed
+        by a new session.
+        """
+        from unicon.core.errors import EOF as UniconEOF
+        from unicon.core.errors import (
+            ConnectionError as UniconConnectionError,
+        )
+        from unicon.core.errors import SessionConnectionError, StateMachineError
+
+        return isinstance(
+            error,
+            (
+                OSError,
+                UniconConnectionError,
+                SessionConnectionError,
+                UniconEOF,
+                StateMachineError,
+            ),
+        )
+
     async def _get_connection(self, hostname: str) -> Any:
-        """Get or create connection to device."""
+        """Get or create connection to device.
+
+        A cached connection is returned as-is, without probing it. Evaluating
+        ``device.connected`` performs a live SSH round-trip (~0.37s) on the
+        broker's event loop, blocking traffic for every device, and it cannot
+        rule out the session dying between the probe and the command anyway.
+        Dead sessions are detected and healed by ``_execute_command``'s
+        reconnect-and-retry instead.
+        """
         if hostname not in self.connection_locks:
             self.connection_locks[hostname] = asyncio.Lock()
 
         async with self.connection_locks[hostname]:
-            # Return existing connection if healthy
+            # Return existing connection
             if hostname in self.connected_devices:
-                connection = self.connected_devices[hostname]
-                if self._is_connection_healthy(connection):
-                    self.stats_connection_cache_hits += 1
-                    logger.info(
-                        f"[BROKER] Reusing existing connection for {hostname} "
-                        f"(total connections: {len(self.connected_devices)})"
-                    )
-                    return connection
-                else:
-                    # Remove unhealthy connection
-                    logger.warning(
-                        f"[BROKER] Connection to {hostname} is unhealthy, reconnecting"
-                    )
-                    await self._disconnect_device_internal(hostname)
+                self.stats_connection_cache_hits += 1
+                logger.info(
+                    f"[BROKER] Reusing existing connection for {hostname} "
+                    f"(total connections: {len(self.connected_devices)})"
+                )
+                return self.connected_devices[hostname]
 
             # Create new connection
             self.stats_connection_cache_misses += 1
@@ -392,18 +452,6 @@ class ConnectionBroker:
             cache_stats = self.command_cache[hostname].get_cache_stats()
             logger.info(f"Clearing command cache for {hostname}: {cache_stats}")
             del self.command_cache[hostname]
-
-    def _is_connection_healthy(self, connection: Any) -> bool:
-        """Check if connection is healthy."""
-        try:
-            return (
-                hasattr(connection, "connected")
-                and connection.connected
-                and hasattr(connection, "spawn")
-                and connection.spawn
-            )
-        except Exception:
-            return False
 
     async def _get_broker_status(self) -> dict[str, Any]:
         """Get broker status information."""
