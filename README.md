@@ -49,6 +49,10 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_PYATS]            │
 │    --robot                              [DEV] Run only Robot Framework tests.│
 │                                         [env var: NAC_TEST_ROBOT]            │
+│    --device-filter                      Filter devices by attribute          │
+│                                         expressions (e.g. 'role=spine',      │
+│                                         'tags=~prod.*'). Repeatable (AND).   │
+│                                         [env var: NAC_TEST_DEVICE_FILTER]    │
 │    --max-parallel-devices   INTEGER     Max devices for parallel SSH/D2D.    │
 │                                         [env var: NAC_TEST_MAX_PARALLEL...]  │
 │    --minimal-reports                    Reduce HTML report size (80-95%).    │
@@ -671,6 +675,70 @@ nac-test -d data/ -t templates/ -o output/ --exclude nrfu
 # Boolean patterns
 nac-test -d data/ -t templates/ -o output/ --include "bgpORospf"
 nac-test -d data/ -t templates/ -o output/ --exclude "bgpANDnrfu"
+```
+
+
+## Filter Devices (--device-filter)
+
+The `--device-filter` CLI option filters devices targeted by Device-to-Device (D2D) pyATS tests based on device attributes.
+
+This option is repeatable and can be passed multiple times; multiple filters combine with logical **AND**.
+
+### Supported Operators
+
+| Operator | Meaning | Example |
+|---|---|---|
+| `=` or `==` | Exact value match (or element match in lists) | `--device-filter "role=leaf"` |
+| `!=` | Negated value match | `--device-filter "role!=spine"` |
+| `=~` | Regex pattern match (`re.search`) | `--device-filter "hostname=~^leaf[1-2]$"` |
+| `!~` | Negated regex pattern match | `--device-filter "hostname!~^test-"` |
+
+### Canonical Attributes vs. Raw Data Model Attributes
+
+`nac-test` allows filtering against two types of attributes:
+
+1. **Canonical Attributes**: Normalized across all architecture resolvers (ACI, Catalyst Center, FMC, IOS-XE, NX-OS, SD-WAN):
+   - `hostname`: The resolved device hostname.
+   - `ip`: The management IP or hostname used for connections.
+   - `os`: The operating system type (e.g., `iosxe`, `nxos`).
+2. **Raw Data Model Attributes**: Any architecture-specific fields present in your device data model (e.g., `role`, `site`, `tags`, `bgp.asn`).
+
+### Features
+
+- **Nested Field Traversal**: Dot-notation navigates nested dictionaries (e.g., `bgp.asn=65001`).
+- **List Matching**: Automatically tests membership if a field is a list of scalar values (e.g. `tags=edge`), or traverses lists of dictionaries (e.g. `interfaces.name=GigabitEthernet1/0/1`).
+- **Case Sensitivity**: Field names and string matches (`=`, `!=`, `=~`, `!~`) are **case-sensitive** by default (boolean and null literals like `true`/`True` and `none`/`None` are normalized case-insensitively). For case-insensitive matching, use the `(?i)` inline regex flag (e.g., `--device-filter "site=~(?i)^sjc$"`).
+- **Type Coercion**: Values are coerced to `int`, `float`, `bool`, or `None` when comparing against typed data.
+- **Strict Validation**: If a filter references a field not present in any device, execution fails immediately with an error and fuzzy suggestions for possible typos (e.g., `Unknown filter field 'hostnam'. Did you mean 'hostname'?`).
+- **Repeat-Positive Warning**: If multiple positive filters are set on the same field (e.g., `--device-filter "role=spine" --device-filter "role=leaf"`), a warning is emitted recommending regex alternation (`role=~"spine|leaf"`).
+
+### Examples
+
+```bash
+# Filter by canonical hostname
+nac-test -d data/ -t templates/ -o output/ --device-filter "hostname=leaf1"
+
+# Regex matching on hostname
+nac-test -d data/ -t templates/ -o output/ --device-filter "hostname=~^leaf[1-2]$"
+
+# Case-insensitive regex matching using (?i) flag
+nac-test -d data/ -t templates/ -o output/ --device-filter "site=~(?i)^sjc$"
+
+# Matching multiple values with OR logic (regex alternation)
+nac-test -d data/ -t templates/ -o output/ --device-filter "site=~^(Hamburg|Berlin)$"
+
+# Combining multiple filters (AND logic)
+nac-test -d data/ -t templates/ -o output/ \
+  --device-filter "role=leaf" \
+  --device-filter "site=sjc"
+
+# Nested field and list regex filtering
+nac-test -d data/ -t templates/ -o output/ \
+  --device-filter "bgp.asn=65001" \
+  --device-filter "tags=~prod.*"
+
+# Using environment variable (comma or whitespace separated)
+NAC_TEST_DEVICE_FILTER="role=leaf,site=sjc" nac-test -d data/ -t templates/ -o output/
 ```
 
 
