@@ -7,7 +7,55 @@ This module provides generic URL manipulation utilities used throughout
 the codebase for extracting components from URLs.
 """
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, urlunsplit
+
+
+def sanitize_url_for_display(url: str) -> str:
+    """Sanitize a URL for display and command construction.
+
+    Strips embedded credentials (userinfo), trailing slashes, and whitespace
+    while preserving scheme, host, port, path, query parameters, and fragments.
+    Returns empty string for empty or whitespace-only input.
+
+    Args:
+        url: A URL string (e.g., "https://user:pass@apic.example.com:8443/").
+
+    Returns:
+        Cleaned URL without credentials or trailing slashes
+        (e.g., "https://apic.example.com:8443").
+    """
+    if not url:
+        return ""
+    cleaned = url.strip()
+    if not cleaned:
+        return ""
+
+    if "://" in cleaned:
+        parsed = urlsplit(cleaned)
+        host = parsed.hostname or ""
+        if ":" in host:  # IPv6 literal
+            netloc = f"[{host}]"
+        else:
+            netloc = host
+        if parsed.port is not None:
+            netloc = f"{netloc}:{parsed.port}"
+        cleaned = urlunsplit(
+            (parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment)
+        )
+    elif cleaned.startswith("//"):
+        parsed = urlsplit(cleaned)
+        host = parsed.hostname or ""
+        if ":" in host:
+            netloc = f"[{host}]"
+        else:
+            netloc = host
+        if parsed.port is not None:
+            netloc = f"{netloc}:{parsed.port}"
+        cleaned = urlunsplit(("", netloc, parsed.path, parsed.query, parsed.fragment))
+    elif "@" in cleaned:
+        cleaned = cleaned.split("@", 1)[1]
+
+    return cleaned.rstrip("/")
 
 
 def extract_host(url: str) -> str:

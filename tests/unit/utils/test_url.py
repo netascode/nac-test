@@ -3,7 +3,60 @@
 
 """Unit tests for URL parsing utilities."""
 
-from nac_test.utils.url import extract_host
+import pytest
+
+from nac_test.utils.url import extract_host, sanitize_url_for_display
+
+
+class TestSanitizeUrlForDisplay:
+    """Tests for sanitize_url_for_display utility function."""
+
+    @pytest.mark.parametrize(
+        ("input_url", "expected"),
+        [
+            ("https://apic.example.com", "https://apic.example.com"),
+            ("https://apic.example.com/", "https://apic.example.com"),
+            ("https://apic.example.com///", "https://apic.example.com"),
+            ("  https://apic.example.com/  ", "https://apic.example.com"),
+            ("", ""),
+            ("   ", ""),
+            ("https://admin:secret@apic.example.com/", "https://apic.example.com"),
+            ("https://admin@apic.example.com", "https://apic.example.com"),
+            (
+                "https://admin:secret@apic.example.com:8443/api/v1/",
+                "https://apic.example.com:8443/api/v1",
+            ),
+            (
+                "https://admin:pass@[2001:db8::1]:8443/path/",
+                "https://[2001:db8::1]:8443/path",
+            ),
+            (
+                "admin:pass@apic.example.com:8443/path",
+                "apic.example.com:8443/path",
+            ),
+            (
+                "https://user:pass@apic.example.com/api?debug=true#section",
+                "https://apic.example.com/api?debug=true#section",
+            ),
+        ],
+        ids=[
+            "without_trailing_slash",
+            "single_trailing_slash",
+            "multiple_trailing_slashes",
+            "surrounding_whitespace",
+            "empty_string",
+            "whitespace_only",
+            "embedded_username_and_password",
+            "embedded_username_only",
+            "credentials_with_port_and_path",
+            "credentials_with_ipv6",
+            "schemeless_with_credentials",
+            "preserves_query_and_fragment",
+        ],
+    )
+    def test_sanitize_url_for_display(self, input_url: str, expected: str) -> None:
+        """Verify URL sanitization behavior for various inputs."""
+        assert sanitize_url_for_display(input_url) == expected
 
 
 class TestExtractHost:
