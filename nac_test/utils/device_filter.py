@@ -217,7 +217,7 @@ class FilterResult:
 
 
 def referenced_root_fields(filters: Sequence[DeviceFilter]) -> set[str]:
-    """Return root field names referenced by filters (for lazy virtual field building)."""
+    """Return root field names referenced by filters (for lazy canonical attribute building)."""
     return {f.field.split(".")[0] for f in filters}
 
 

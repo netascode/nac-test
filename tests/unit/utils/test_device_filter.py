@@ -115,6 +115,19 @@ class TestDeviceFilterMatches:
         assert not f.matches({"hostname": "leaf4"})
         assert not f.matches({"hostname": "spine1"})
 
+    def test_regex_alternation_or_match(self) -> None:
+        f_role = DeviceFilter.parse("role=~^(spine|leaf)$")
+        assert f_role.matches({"role": "spine"})
+        assert f_role.matches({"role": "leaf"})
+        assert not f_role.matches({"role": "border-leaf"})
+        assert not f_role.matches({"role": "core"})
+
+        f_tags = DeviceFilter.parse("tags=~^(foo|bar)$")
+        assert f_tags.matches({"tags": ["foo", "baz"]})
+        assert f_tags.matches({"tags": ["bar"]})
+        assert not f_tags.matches({"tags": ["baz", "qux"]})
+        assert not f_tags.matches({"tags": "other"})
+
     def test_regex_match_case_insensitive(self) -> None:
         f = DeviceFilter.parse("site=~(?i)sjc")
         assert f.matches({"site": "SJC"})
@@ -190,13 +203,13 @@ class TestHelpers:
         devices: list[dict[str, Any] | ChainMap[str, Any]] = [
             {"hostname": "leaf1", "bgp": {"asn": 65001}},
             {"hostname": "leaf2", "role": "spine"},
-            ChainMap({"virtual_host": "1.1.1.1"}, {"raw_key": "val"}),
+            ChainMap({"canonical_ip": "1.1.1.1"}, {"raw_key": "val"}),
         ]
         keys = extract_available_keys(devices)
         assert "hostname" in keys
         assert "bgp.asn" in keys
         assert "role" in keys
-        assert "virtual_host" in keys
+        assert "canonical_ip" in keys
         assert "raw_key" in keys
 
     def test_referenced_root_fields(self) -> None:
