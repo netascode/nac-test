@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
-from nac_test.core.controller import CONTROLLER_REGISTRY
+from nac_test.core.controller import CONTROLLER_REGISTRY, resolve_controller
 from nac_test.core.types import AuthMethod, ControllerContext
 from tests.e2e.mocks.mock_server import MockAPIServer
 
@@ -67,11 +67,6 @@ def clean_controller_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Clear serialized controller context from previous tests
     monkeypatch.delenv(ENV_CONTROLLER_CONTEXT, raising=False)
-
-    # Clear module-level credential cache to prevent cross-test pollution
-    from nac_test.core import controller
-
-    controller._matched_credential_sets.clear()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -193,3 +188,21 @@ def cc_context() -> ControllerContext:
 def iosxe_context() -> ControllerContext:
     """Pre-built ControllerContext for IOS-XE with session auth."""
     return ControllerContext(controller_type="IOSXE", auth_method=AuthMethod.SESSION)
+
+
+# =============================================================================
+# Context injection test helpers
+# =============================================================================
+
+
+def resolve_and_inject_context(monkeypatch: pytest.MonkeyPatch) -> ControllerContext:
+    """Resolve controller from current environment and inject into ENV_CONTROLLER_CONTEXT.
+    Designed for happy-path tests to avoid DRY repetition."""
+    ctx = resolve_controller()
+    monkeypatch.setenv(ENV_CONTROLLER_CONTEXT, ctx.to_json())
+    return ctx
+
+
+def inject_context(monkeypatch: pytest.MonkeyPatch, ctx: ControllerContext) -> None:
+    """Inject a pre-built ControllerContext into ENV_CONTROLLER_CONTEXT."""
+    monkeypatch.setenv(ENV_CONTROLLER_CONTEXT, ctx.to_json())

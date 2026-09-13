@@ -172,10 +172,9 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         self.data_model = self.load_data_model()
 
         # Get controller context from environment
-        # In normal operation, CombinedOrchestrator resolves the controller and
-        # passes it via NAC_TEST_CONTROLLER_CONTEXT env var. The accessor
-        # get_controller_context() reads this, with a fallback to env var scan
-        # for direct pyats invocation or legacy compatibility.
+        # CombinedOrchestrator resolves the controller and passes it via
+        # the NAC_TEST_CONTROLLER_CONTEXT env var. The accessor
+        # get_controller_context() deserializes this context.
         try:
             ctx = get_controller_context()
         except (ValueError, KeyError) as e:
