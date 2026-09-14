@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from nac_test.core.controller import detect_controller_type
+from nac_test.core.controller import resolve_controller
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
 
 
@@ -65,7 +65,7 @@ class TestDummy(aetest.Testcase):
         monkeypatch.setenv("ACI_USERNAME", "admin")
         monkeypatch.setenv("ACI_PASSWORD", "password")
 
-        assert detect_controller_type() == "ACI"
+        assert resolve_controller().controller_type == "ACI"
 
         # Clear ACI and switch to FMC
         monkeypatch.delenv("ACI_URL")
@@ -76,7 +76,7 @@ class TestDummy(aetest.Testcase):
         monkeypatch.setenv("FMC_USERNAME", "admin")
         monkeypatch.setenv("FMC_PASSWORD", "password")
 
-        assert detect_controller_type() == "FMC"
+        assert resolve_controller().controller_type == "FMC"
 
         # Clear FMC and switch to ISE
         monkeypatch.delenv("FMC_URL")
@@ -87,4 +87,4 @@ class TestDummy(aetest.Testcase):
         monkeypatch.setenv("ISE_USERNAME", "admin")
         monkeypatch.setenv("ISE_PASSWORD", "password")
 
-        assert detect_controller_type() == "ISE"
+        assert resolve_controller().controller_type == "ISE"

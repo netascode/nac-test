@@ -16,6 +16,7 @@ import pytest
 from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
 from nac_test.pyats_core.constants import DEVICE_EXECUTE_TIMEOUT
 from nac_test.pyats_core.ssh.command_cache import CommandCache
+from tests.conftest import resolve_and_inject_context
 
 
 @pytest.fixture()
@@ -48,6 +49,7 @@ class TestSSHTestBaseValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Validation passes for a fully-populated device info dict."""
+        resolve_and_inject_context(monkeypatch)
         valid_device = {
             "hostname": "test-router",
             "host": "192.168.1.1",
@@ -78,6 +80,7 @@ class TestSSHTestBaseValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Validation fails with a clear message when required fields are absent."""
+        resolve_and_inject_context(monkeypatch)
         invalid_device = {
             "hostname": "test-router",
             "host": "192.168.1.1",
@@ -103,6 +106,7 @@ class TestSSHTestBaseValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Validation is skipped when JSON parsing fails."""
+        resolve_and_inject_context(monkeypatch)
         monkeypatch.setenv("DEVICE_INFO", "not valid json")
         instance = self._make_instance()
 

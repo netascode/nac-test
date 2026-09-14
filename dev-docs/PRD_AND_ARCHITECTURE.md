@@ -5960,14 +5960,14 @@ Example: `IOSXE_USERNAME` and `IOSXE_PASSWORD` could be used for:
 │    IOSXE_PASSWORD=device-pass                                      │
 │                                                                    │
 │  Detection Result:                                                 │
-│    detect_controller_type() → "sdwan"                              │
+│    resolve_controller() → ControllerContext(controller_type="SDWAN")│
 │    → TestTypeResolver uses BASE_CLASS_MAPPING["SDWANTestBase"]    │
 │    → Device SSH uses IOSXE_USERNAME/IOSXE_PASSWORD                │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
 **What happens during D2D test execution:**
-1. Framework detects `CONTROLLER_TYPE=SDWAN` from controller credentials
+1. Framework detects `controller_context.controller_type == "SDWAN"` from controller credentials
 2. Framework loads `SDWANDeviceResolver` for device inventory resolution
 3. Tests connect to devices via SSH using `IOSXE_*` credentials
 4. Controller credentials are NOT used for connection (D2D tests bypass controller)
@@ -5978,11 +5978,8 @@ The detected controller type informs test categorization:
 
 ```python
 # In orchestrator.py
-controller_type = detect_controller_type()
-if controller_type:
-    logger.info(f"Detected controller type: {controller_type}")
-else:
-    logger.warning("Could not auto-detect controller type from environment")
+controller_context = resolve_controller()
+logger.info(f"Detected controller type: {controller_context.controller_type}")
 ```
 
 #### Usage Examples
