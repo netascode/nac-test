@@ -701,11 +701,11 @@ This option is repeatable and can be passed multiple times; multiple filters com
    - `hostname`: The resolved device hostname.
    - `ip`: The management IP or hostname used for connections.
    - `os`: The operating system type (e.g., `iosxe`, `nxos`).
-2. **Raw Data Model Attributes**: Any architecture-specific fields present in your device data model (e.g., `role`, `site`, `tags`, `bgp.asn`).
+2. **Raw Data Model Attributes**: Any architecture-specific fields present in your device data model (e.g., `role`, `site`, `tags`, `site_id`).
 
 ### Features
 
-- **Nested Field Traversal**: Dot-notation navigates nested dictionaries (e.g., `bgp.asn=65001`).
+- **Nested Field Traversal**: Dot-notation navigates nested dictionaries (e.g., `management.vrf=management`).
 - **List Matching**: Automatically tests membership if a field is a list of scalar values (e.g. `tags=edge`), or traverses lists of dictionaries (e.g. `interfaces.name=GigabitEthernet1/0/1`).
 - **Case Sensitivity**: Field names and string matches (`=`, `!=`, `=~`, `!~`) are **case-sensitive** by default (boolean and null literals like `true`/`True` and `none`/`None` are normalized case-insensitively). For case-insensitive matching, use the `(?i)` inline regex flag (e.g., `--device-filter "site=~(?i)^sjc$"`).
 - **Type Coercion**: Values are coerced to `int`, `float`, `bool`, or `None` when comparing against typed data.
@@ -734,7 +734,7 @@ nac-test -d data/ -t templates/ -o output/ \
 
 # Nested field and list regex filtering
 nac-test -d data/ -t templates/ -o output/ \
-  --device-filter "bgp.asn=65001" \
+  --device-filter "management.vrf=management" \
   --device-filter "tags=~prod.*"
 
 # Using environment variable (comma or whitespace separated)
