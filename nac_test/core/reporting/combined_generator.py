@@ -319,12 +319,15 @@ class CombinedReportGenerator:
                 if failure.controller_type
                 else None
             )
-            host = (
-                extract_host(failure.controller_url) if failure.controller_url else None
+            clean_controller_url = (
+                sanitize_url_for_display(failure.controller_url)
+                if failure.controller_url
+                else None
             )
+            host = extract_host(clean_controller_url) if clean_controller_url else None
             curl_example = (
-                _get_curl_example(failure.controller_type, failure.controller_url)
-                if failure.controller_type and failure.controller_url
+                _get_curl_example(failure.controller_type, clean_controller_url)
+                if failure.controller_type and clean_controller_url
                 else None
             )
             timestamp = datetime.now().strftime(REPORT_TIMESTAMP_FORMAT)
@@ -340,7 +343,7 @@ class CombinedReportGenerator:
                 failure_type=failure.failure_type,
                 is_403=is_403,
                 controller_type=failure.controller_type,
-                controller_url=failure.controller_url,
+                controller_url=clean_controller_url,
                 display_name=display_name,
                 detail=failure.detail,
                 env_var_prefix=env_var_prefix,

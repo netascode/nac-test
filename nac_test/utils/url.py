@@ -7,14 +7,60 @@ This module provides generic URL manipulation utilities used throughout
 the codebase for extracting components from URLs.
 """
 
-from urllib.parse import urlparse, urlsplit, urlunsplit
+import re
+from urllib.parse import SplitResult, urlsplit, urlunsplit
+
+_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
+
+
+def _split_url(url: str) -> tuple[SplitResult, bool]:
+    """Parse a URL so the authority always lands in the netloc field.
+
+    If the URL does not start with a recognized scheme or `//`, a `//` sentinel
+    is temporarily prepended before parsing with `urlsplit`.
+
+    Args:
+        url: URL string to parse.
+
+    Returns:
+        A tuple of (parsed SplitResult, sentinel_added: bool).
+    """
+    if _SCHEME_RE.match(url) or url.startswith("//"):
+        return urlsplit(url), False
+    return urlsplit("//" + url), True
+
+
+def _safe_port(parsed: SplitResult) -> str | None:
+    """Safely extract the port as a string without raising ValueError on malformed ports.
+
+    Standard library `urlsplit().port` raises `ValueError` if the port cannot be
+    cast to an integer (e.g., 'notaport' or out-of-range like 99999). For display
+    sanitization, we preserve whatever string was provided after the host/bracketed-IPv6.
+
+    Args:
+        parsed: The SplitResult from urlsplit.
+
+    Returns:
+        Port string if present, or None.
+    """
+    try:
+        port = parsed.port
+        return str(port) if port is not None else None
+    except ValueError:
+        # Port is invalid integer or out of range. Extract raw port substring from netloc.
+        _, _, tail = parsed.netloc.rpartition("@")
+        if tail.startswith("["):
+            _, _, tail = tail.rpartition("]")
+        _, sep, cand = tail.rpartition(":")
+        return cand if sep and cand else None
 
 
 def sanitize_url_for_display(url: str) -> str:
     """Sanitize a URL for display and command construction.
 
-    Strips embedded credentials (userinfo), trailing slashes, and whitespace
-    while preserving scheme, host, port, path, query parameters, and fragments.
+    Strips embedded credentials (userinfo, stripped rather than redacted), trailing
+    slashes, and surrounding whitespace while preserving scheme, host, port, path,
+    query parameters, and fragments. Hostnames are normalized to lowercase.
     Returns empty string for empty or whitespace-only input.
 
     Args:
@@ -30,41 +76,29 @@ def sanitize_url_for_display(url: str) -> str:
     if not cleaned:
         return ""
 
-    if "://" in cleaned:
-        parsed = urlsplit(cleaned)
-        host = parsed.hostname or ""
-        if ":" in host:  # IPv6 literal
-            netloc = f"[{host}]"
-        else:
-            netloc = host
-        if parsed.port is not None:
-            netloc = f"{netloc}:{parsed.port}"
-        cleaned = urlunsplit(
-            (parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment)
-        )
-    elif cleaned.startswith("//"):
-        parsed = urlsplit(cleaned)
-        host = parsed.hostname or ""
-        if ":" in host:
-            netloc = f"[{host}]"
-        else:
-            netloc = host
-        if parsed.port is not None:
-            netloc = f"{netloc}:{parsed.port}"
-        cleaned = urlunsplit(("", netloc, parsed.path, parsed.query, parsed.fragment))
-    elif "@" in cleaned:
-        cleaned = cleaned.split("@", 1)[1]
+    parsed, sentinel_added = _split_url(cleaned)
+    host = parsed.hostname or ""
+    netloc = f"[{host}]" if ":" in host else host
+    port = _safe_port(parsed)
+    if port:
+        netloc = f"{netloc}:{port}"
+
+    cleaned = urlunsplit(
+        (parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment)
+    )
+    if sentinel_added and cleaned.startswith("//"):
+        cleaned = cleaned[2:]
 
     return cleaned.rstrip("/")
 
 
 def extract_host(url: str) -> str:
-    """Extract the hostname from a URL (without port).
+    """Extract the hostname from a URL (without port or embedded userinfo).
 
-    Uses Python's standard library urlparse for robust parsing.
-    Handles URLs with or without scheme prefixes.
+    Uses Python's standard library urlsplit for robust parsing.
+    Handles URLs with or without scheme prefixes, stripping embedded credentials.
     IPv6 literals have their brackets stripped (brackets are URL syntax).
-    Port numbers are excluded from the result.
+    Hostnames are normalized to lowercase. Port numbers and paths are excluded.
 
     Args:
         url: A URL string (e.g., "https://apic.example.com:443/path").
@@ -85,17 +119,12 @@ def extract_host(url: str) -> str:
 
         extract_host("controller.local")
         # Returns: 'controller.local'
+
+        extract_host("host:8080/path")
+        # Returns: 'host'
     """
     if not url:
         return ""
 
-    parsed = urlparse(url)
-    if parsed.netloc:
-        # Use hostname to strip IPv6 brackets and exclude port
-        return parsed.hostname or ""
-
-    # Handle URLs without scheme (urlparse puts them in path)
-    # e.g., "apic.example.com/path" -> path="apic.example.com/path"
-    # Strip port if present (e.g., "host:8080/path" -> "host")
-    host_part = parsed.path.split("/")[0]
-    return host_part.split(":")[0]
+    parsed, _ = _split_url(url.strip())
+    return parsed.hostname or ""

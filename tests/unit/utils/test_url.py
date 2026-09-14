@@ -38,6 +38,38 @@ class TestSanitizeUrlForDisplay:
                 "https://user:pass@apic.example.com/api?debug=true#section",
                 "https://apic.example.com/api?debug=true#section",
             ),
+            (
+                "https://admin:s3cret@h:notaport/api",
+                "https://h:notaport/api",
+            ),
+            (
+                "https://h:99999/",
+                "https://h:99999",
+            ),
+            (
+                "u:p@ss@host/x",
+                "host/x",
+            ),
+            (
+                "host/path?u=a@b",
+                "host/path?u=a@b",
+            ),
+            (
+                "//user:pass@h:8443/p",
+                "//h:8443/p",
+            ),
+            (
+                "https://admin:pass@[2001:db8::1]:notaport/path",
+                "https://[2001:db8::1]:notaport/path",
+            ),
+            (
+                "APIC.Example.COM:8443/x",
+                "apic.example.com:8443/x",
+            ),
+            (
+                "HTTPS://Admin:Secret@Host.Example.COM:8443/Path/",
+                "https://host.example.com:8443/Path",
+            ),
         ],
         ids=[
             "without_trailing_slash",
@@ -52,6 +84,14 @@ class TestSanitizeUrlForDisplay:
             "credentials_with_ipv6",
             "schemeless_with_credentials",
             "preserves_query_and_fragment",
+            "malformed_non_numeric_port",
+            "out_of_range_port",
+            "schemeless_password_with_at_sign",
+            "schemeless_query_with_at_sign",
+            "protocol_relative_with_credentials",
+            "ipv6_with_malformed_port",
+            "schemeless_hostname_lowercased",
+            "scheme_and_hostname_lowercased_path_preserved",
         ],
     )
     def test_sanitize_url_for_display(self, input_url: str, expected: str) -> None:
@@ -62,46 +102,50 @@ class TestSanitizeUrlForDisplay:
 class TestExtractHost:
     """Tests for extract_host utility function."""
 
-    def test_https_url_returns_host(self) -> None:
-        """Standard HTTPS URL extracts hostname."""
-        assert extract_host("https://apic.example.com") == "apic.example.com"
-
-    def test_url_with_port_excludes_port(self) -> None:
-        """URL with explicit port excludes port from result."""
-        assert extract_host("https://apic.example.com:443") == "apic.example.com"
-
-    def test_url_with_path_strips_path(self) -> None:
-        """URL with path returns only the host portion."""
-        assert extract_host("https://apic.example.com:443/api/v1") == "apic.example.com"
-
-    def test_http_url_returns_host(self) -> None:
-        """HTTP URL extracts hostname correctly."""
-        assert extract_host("http://10.1.2.3") == "10.1.2.3"
-
-    def test_ip_with_port_and_path(self) -> None:
-        """IP address with port and path extracts host only."""
-        assert extract_host("https://10.81.239.29:8443/some/path") == "10.81.239.29"
-
-    def test_bare_hostname_without_scheme(self) -> None:
-        """Hostname without scheme falls back to path parsing."""
-        assert extract_host("controller.local") == "controller.local"
-
-    def test_bare_hostname_with_path_strips_path(self) -> None:
-        """Hostname without scheme but with path strips the path."""
-        assert extract_host("controller.local/api") == "controller.local"
-
-    def test_empty_string_returns_empty(self) -> None:
-        """Empty input returns empty string."""
-        assert extract_host("") == ""
-
-    def test_ipv6_url_strips_brackets(self) -> None:
-        """IPv6 literal has brackets stripped."""
-        assert extract_host("https://[2001:db8::1]") == "2001:db8::1"
-
-    def test_ipv6_with_port_strips_brackets(self) -> None:
-        """IPv6 literal with port has brackets stripped, port excluded."""
-        assert extract_host("https://[2001:db8::1]:8443") == "2001:db8::1"
-
-    def test_ipv6_with_port_and_path(self) -> None:
-        """IPv6 literal with port and path extracts host only."""
-        assert extract_host("https://[2001:db8::1]:8443/api") == "2001:db8::1"
+    @pytest.mark.parametrize(
+        ("input_url", "expected"),
+        [
+            ("https://apic.example.com", "apic.example.com"),
+            ("https://apic.example.com:443", "apic.example.com"),
+            ("https://apic.example.com:443/api/v1", "apic.example.com"),
+            ("http://10.1.2.3", "10.1.2.3"),
+            ("https://10.81.239.29:8443/some/path", "10.81.239.29"),
+            ("controller.local", "controller.local"),
+            ("controller.local/api", "controller.local"),
+            ("", ""),
+            ("   ", ""),
+            ("https://[2001:db8::1]", "2001:db8::1"),
+            ("https://[2001:db8::1]:8443", "2001:db8::1"),
+            ("https://[2001:db8::1]:8443/api", "2001:db8::1"),
+            ("https://admin:secret@apic.example.com", "apic.example.com"),
+            (
+                "user:pass@apic.example.com:8443/path",
+                "apic.example.com",
+            ),
+            ("admin@apic.example.com", "apic.example.com"),
+            ("host:8080/path", "host"),
+            ("Controller.LOCAL", "controller.local"),
+        ],
+        ids=[
+            "https_url",
+            "url_with_port",
+            "url_with_port_and_path",
+            "http_ip_address",
+            "ip_with_port_and_path",
+            "bare_hostname_without_scheme",
+            "bare_hostname_with_path",
+            "empty_string",
+            "whitespace_only",
+            "ipv6_url_strips_brackets",
+            "ipv6_with_port_strips_brackets",
+            "ipv6_with_port_and_path",
+            "https_with_embedded_credentials",
+            "schemeless_with_credentials_and_port",
+            "schemeless_user_only",
+            "schemeless_host_with_port_and_path",
+            "hostname_lowercased",
+        ],
+    )
+    def test_extract_host(self, input_url: str, expected: str) -> None:
+        """Verify host extraction behavior for various inputs."""
+        assert extract_host(input_url) == expected
