@@ -709,7 +709,7 @@ This option is repeatable and can be passed multiple times; multiple filters com
 - **List Matching**: Automatically tests membership if a field is a list of scalar values (e.g. `tags=edge`), or traverses lists of dictionaries (e.g. `interfaces.name=GigabitEthernet1/0/1`).
 - **Case Sensitivity**: Field names and string matches (`=`, `!=`, `=~`, `!~`) are **case-sensitive** by default (boolean and null literals like `true`/`True` and `none`/`None` are normalized case-insensitively). For case-insensitive matching, use the `(?i)` inline regex flag (e.g., `--device-filter "site=~(?i)^sjc$"`).
 - **Type Coercion**: Values are coerced to `int`, `float`, `bool`, or `None` when comparing against typed data.
-- **Strict Validation**: If a filter references a field not present in any device, execution fails immediately with an error and fuzzy suggestions for possible typos (e.g., `Unknown filter field 'hostnam'. Did you mean 'hostname'?`).
+- **Strict Validation**: If a filter references a field not present in any device, execution fails immediately with an error listing available data model fields (e.g., `Device filter field(s) not found in data model: 'hostnam'. Available fields: 'hostname', 'ip', 'os', ...`).
 - **Repeat-Positive Warning**: If multiple positive filters are set on the same field (e.g., `--device-filter "role=spine" --device-filter "role=leaf"`), a warning is emitted recommending regex alternation (`role=~"spine|leaf"`).
 
 ### Examples
