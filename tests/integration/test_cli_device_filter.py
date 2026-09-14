@@ -12,7 +12,9 @@ import pytest
 from typer.testing import CliRunner
 
 import nac_test.cli.main
+from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import EXIT_INVALID_ARGS
+from nac_test.utils.device_filter import DeviceFilterError
 
 pytestmark = [
     pytest.mark.integration,
@@ -40,6 +42,46 @@ def test_cli_invalid_device_filter_syntax_fails(tmp_path: Path) -> None:
         "Invalid filter expression" in result.output
         or "Missing operator" in result.output
     )
+
+
+def test_cli_unknown_device_filter_field_exits_invalid_args(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An unknown filter field exits with EXIT_INVALID_ARGS, like a syntax error.
+
+    The field check is semantic (it needs the resolved device inventory), so it is
+    raised from the orchestrator rather than the --device-filter callback. Both
+    failure modes must still surface to the user the same way.
+    """
+
+    def _raise(self: object) -> None:
+        raise DeviceFilterError(
+            "Device filter field(s) not found in data model: 'nonexistent_field'"
+        )
+
+    monkeypatch.setattr(CombinedOrchestrator, "run_tests", _raise)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        nac_test.cli.main.app,
+        [
+            "-d",
+            "tests/integration/fixtures/data/data.yaml",
+            "-d",
+            "tests/integration/fixtures/data/defaults.yaml",
+            "-t",
+            "tests/integration/fixtures/templates/",
+            "-o",
+            str(tmp_path),
+            "--device-filter",
+            "nonexistent_field=val",
+        ],
+    )
+
+    assert result.exit_code == EXIT_INVALID_ARGS
+    assert "not found in data model" in result.output
+    # Must not be reported as a generic infrastructure error.
+    assert "Error during execution" not in result.output
 
 
 def test_cli_device_filter_robot_only_warning(tmp_path: Path) -> None:

@@ -710,7 +710,8 @@ This option is repeatable and can be passed multiple times; multiple filters com
 - **String Comparison**: Comparisons are performed on the string representation of the data model value. Numbers compare as written (`bgp.asn=65001` matches the integer `65001`), and booleans are normalized to the lowercase literals `true` / `false` (so `enabled=true` matches, `enabled=True` does not). Fields whose value is `null` are treated as absent.
 - **Case Sensitivity**: Field names and values are **case-sensitive**. For case-insensitive matching, use the `(?i)` inline regex flag (e.g., `--device-filter "site=~(?i)^sjc$"`).
 - **Missing Fields**: A field absent from a device never matches a positive operator (`=`, `=~`) and always matches a negative operator (`!=`, `!=~`).
-- **Strict Validation**: If a filter references a field not present in *any* device of the data model, execution fails immediately with an error rather than silently running against zero devices.
+- **Strict Validation**: If a filter references a field not present in *any* device of the data model, execution aborts before any test runs and exits with code `2` (invalid arguments) — the same exit code as a malformed filter expression. Nothing is executed, because the intent of the filter cannot be determined.
+- **No Matching Devices**: A valid filter that matches no devices is *not* an error. D2D tests are skipped with a console warning, exactly as if the device inventory were empty, and any API or Robot Framework tests still run and determine the exit code.
 - **Repeat-Positive Warning**: If multiple positive filters are set on the same field (e.g., `--device-filter "role=spine" --device-filter "role=leaf"`), a warning is emitted recommending regex alternation (`role=~"spine|leaf"`).
 
 ### Examples

@@ -81,6 +81,19 @@ def _resolve_path(mapping: Mapping[str, Any], path: str) -> tuple[bool, list[Any
     return True, non_none_values
 
 
+class DeviceFilterError(Exception):
+    """A device filter cannot be applied to the resolved data model.
+
+    Raised when a filter is syntactically valid but references a field that no
+    device exposes, which makes the user's intent unknowable. This is a filter
+    definition error rather than a test outcome, so the CLI reports it as
+    invalid arguments (EXIT_INVALID_ARGS) and aborts before executing anything.
+
+    Note this is distinct from a valid filter that simply matches no devices —
+    that is a legitimate outcome and is handled like an empty device inventory.
+    """
+
+
 @dataclass(frozen=True)
 class DeviceFilter:
     """Parsed single device filter expression."""

@@ -34,6 +34,7 @@ from nac_test.core.constants import (
 )
 from nac_test.data_merger import DataMerger
 from nac_test.utils.cleanup import get_cleanup_manager
+from nac_test.utils.device_filter import DeviceFilterError
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import (
     DEFAULT_LOGLEVEL,
@@ -456,6 +457,12 @@ def main(
         )
         # Exit with code 253 following Robot Framework convention
         raise typer.Exit(EXIT_INTERRUPTED) from None
+    except DeviceFilterError as e:
+        # A --device-filter field that matches nothing in the data model. Reported
+        # as invalid arguments, same as a syntactically malformed filter caught by
+        # the --device-filter callback.
+        _print_cli_error(str(e))
+        raise typer.Exit(EXIT_INVALID_ARGS) from None
     except Exception as e:
         # Infrastructure errors (template rendering, controller detection, etc.)
         logger.exception("Unexpected error during execution")

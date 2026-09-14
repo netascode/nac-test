@@ -7,11 +7,12 @@
 """Unit tests for PyATSOrchestrator device filter handling and diagnostics."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
+from nac_test.utils.device_filter import DeviceFilterError
 
 from ..conftest import PyATSTestDirs
 
@@ -23,9 +24,9 @@ class TestOrchestratorDeviceFilter:
         self,
         aci_controller_env: None,
         pyats_test_dirs: PyATSTestDirs,
-        caplog: pytest.LogCaptureFixture,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """When device filter excludes all devices, orchestrator returns empty PyATSResults."""
+        """A filter matching no devices is treated like an empty inventory, not an error."""
         d2d_test_paths = [Path("/fake/tests/d2d/test_one.py")]
         orchestrator = PyATSOrchestrator(
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
@@ -61,24 +62,31 @@ class TestOrchestratorDeviceFilter:
             ),
             patch.object(orchestrator, "device_inventory_discovery", mock_inv),
             patch("nac_test.pyats_core.orchestrator.SubprocessRunner"),
-            caplog.at_level("WARNING"),
         ):
             results = orchestrator.run_tests()
 
         assert results.api is None
         assert results.d2d is None
-        assert (
-            "No devices matched the device filter(s): hostname=nonexistent"
-            in caplog.text
-        )
+        # Warning goes to the console (same channel as the empty-inventory warning),
+        # naming the filter rather than blaming the inventory.
+        stdout = capsys.readouterr().out
+        assert "No devices matched the device filter(s): hostname=nonexistent" in stdout
+        assert "2 -> 0 devices" in stdout
+        assert "No devices found in inventory" not in stdout
 
-    def test_filter_unknown_field_returns_empty_results(
+    def test_filter_unknown_field_raises(
         self,
         aci_controller_env: None,
         pyats_test_dirs: PyATSTestDirs,
-        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """When device filter specifies an unknown field, orchestrator logs error and returns empty PyATSResults."""
+        """An unknown filter field aborts the run with DeviceFilterError.
+
+        API tests are included in the fixture so the abort also covers the
+        ordering invariant: the filter check must run before any task coroutine
+        is created, otherwise aborting strands the API coroutine un-awaited and
+        silently cancels the API suite.
+        """
+        api_test_paths = [Path("/fake/tests/api/test_api.py")]
         d2d_test_paths = [Path("/fake/tests/d2d/test_one.py")]
         orchestrator = PyATSOrchestrator(
             data_paths=[pyats_test_dirs.output_dir.parent / "data"],
@@ -88,12 +96,14 @@ class TestOrchestratorDeviceFilter:
         )
 
         mock_discovery_result = MagicMock()
-        mock_discovery_result.total_count = 1
-        mock_discovery_result.api_tests = []
+        mock_discovery_result.total_count = 2
+        mock_discovery_result.api_tests = [MagicMock(path=p) for p in api_test_paths]
         mock_discovery_result.d2d_tests = [MagicMock(path=p) for p in d2d_test_paths]
-        mock_discovery_result.api_paths = []
+        mock_discovery_result.api_paths = api_test_paths
         mock_discovery_result.d2d_paths = d2d_test_paths
-        mock_discovery_result.all_tests = mock_discovery_result.d2d_tests
+        mock_discovery_result.all_tests = (
+            mock_discovery_result.api_tests + mock_discovery_result.d2d_tests
+        )
         mock_discovery_result.filtered_by_tags = False
 
         mock_inv = MagicMock()
@@ -106,6 +116,8 @@ class TestOrchestratorDeviceFilter:
         }
         mock_inv.skipped_devices = []
 
+        api_mock = AsyncMock(return_value=None)
+
         with (
             patch.object(
                 orchestrator.test_discovery,
@@ -114,16 +126,17 @@ class TestOrchestratorDeviceFilter:
             ),
             patch.object(orchestrator, "device_inventory_discovery", mock_inv),
             patch("nac_test.pyats_core.orchestrator.SubprocessRunner"),
-            caplog.at_level("ERROR"),
+            patch.object(orchestrator, "_execute_api_tests_standard", api_mock),
+            pytest.raises(DeviceFilterError) as exc_info,
         ):
-            results = orchestrator.run_tests()
+            orchestrator.run_tests()
 
-        assert results.api is None
-        assert results.d2d is None
         assert (
             "Device filter field(s) not found in data model: 'nonexistent_field'"
-            in caplog.text
+            in str(exc_info.value)
         )
+        # The API coroutine must never have been created, or it would be stranded.
+        assert api_mock.call_count == 0
 
     def test_repeated_positive_filters_emits_warning(
         self,
