@@ -934,11 +934,23 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
     ) -> list[T]:
         """Filter a collection of devices using active --device-filter criteria.
 
+        Note:
+            Unknown filter fields are normally caught early by the orchestrator,
+            which aborts the run before any test executes. This method is the
+            in-test safety net and therefore fails *closed*: an unknown field is
+            never silently ignored, so a typo can never widen the device set.
+
+        TODO(#932): This public helper (and ``get_device_filters``) is not yet
+            consumed anywhere in-tree. Revisit the API shape -- including whether
+            both an instance property and a classmethod accessor are warranted --
+            before advertising it to downstream test authors.
+
         Args:
             devices: Sequence of devices (dicts, or custom objects if `key` accessor is provided).
             key: Optional callable extracting a Mapping from each item for filtering.
             strict: If True (default), raise ValueError on unknown filter fields.
-                If False, log a warning and skip that filter.
+                If False, log a warning and still apply every filter, which
+                excludes all devices for a positive filter on an unknown field.
 
         Returns:
             Filtered list of devices matching all active filters.
@@ -966,24 +978,14 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         result = apply_all(device_mappings, filters)
 
         if result.unknown_fields:
-            err_msg = format_unknown_field_error(
-                result.unknown_fields, result.keys_seen
-            )
+            err_msg = format_unknown_field_error(result.unknown_fields)
             if strict:
                 raise ValueError(err_msg)
             logger.warning(err_msg)
-            known_filters = [f for f in filters if f.field not in result.unknown_fields]
-            if not known_filters:
-                return list(devices)
-            return [
-                d
-                for d, m in zip(devices, device_mappings, strict=False)
-                if all(f.matches(m) for f in known_filters)
-            ]
 
         return [
             d
-            for d, m in zip(devices, device_mappings, strict=False)
+            for d, m in zip(devices, device_mappings, strict=True)
             if all(f.matches(m) for f in filters)
         ]
 

@@ -18,7 +18,6 @@ from nac_test.utils.device_filter import (
     _stringify,
     apply_all,
     check_repeated_positive_filters,
-    extract_available_keys,
     filters_from_json,
     filters_to_json,
     format_unknown_field_error,
@@ -43,6 +42,13 @@ class TestDeviceFilterParse:
             ("  hostname = leaf1  ", "hostname", "=", "leaf1"),
             ("tag=value=with=equals", "tag", "=", "value=with=equals"),
             ("custom.field_name=123", "custom.field_name", "=", "123"),
+            # Leftmost-longest operator scan: the value may contain operator
+            # characters without stealing the split point from the field name.
+            ("hostname=a=~b", "hostname", "=", "a=~b"),
+            ("hostname=a!=b", "hostname", "=", "a!=b"),
+            ("hostname=~a!=~b", "hostname", "=~", "a!=~b"),
+            ("role!=a=b", "role", "!=", "a=b"),
+            ("role!=~a=~b", "role", "!=~", "a=~b"),
         ],
     )
     def test_parse_valid_filters(
@@ -199,19 +205,6 @@ class TestHelpers:
         assert _stringify("abc") == "abc"
         assert _stringify(["a", "b"]) == "['a', 'b']"
 
-    def test_extract_available_keys(self) -> None:
-        devices: list[dict[str, Any] | ChainMap[str, Any]] = [
-            {"hostname": "leaf1", "bgp": {"asn": 65001}},
-            {"hostname": "leaf2", "role": "spine"},
-            ChainMap({"canonical_ip": "1.1.1.1"}, {"raw_key": "val"}),
-        ]
-        keys = extract_available_keys(devices)
-        assert "hostname" in keys
-        assert "bgp.asn" in keys
-        assert "role" in keys
-        assert "canonical_ip" in keys
-        assert "raw_key" in keys
-
     def test_referenced_root_fields(self) -> None:
         filters = [
             DeviceFilter.parse("hostname=leaf1"),
@@ -299,13 +292,12 @@ class TestFormatUnknownFieldError:
     """Tests for format_unknown_field_error()."""
 
     def test_format_error(self) -> None:
-        msg = format_unknown_field_error(
-            ["unknown1", "unknown2"], ["hostname", "role", "ip"]
-        )
-        assert "unknown1" in msg
-        assert "unknown2" in msg
-        assert "hostname" in msg
-        assert "252" in msg or "EXIT_DATA_ERROR" in msg or "unknown" in msg.lower()
+        msg = format_unknown_field_error(["unknown2", "unknown1"])
+        assert "'unknown1'" in msg
+        assert "'unknown2'" in msg
+        # Fields are listed in sorted order for deterministic output
+        assert msg.index("'unknown1'") < msg.index("'unknown2'")
+        assert "not found in data model" in msg
 
 
 class TestJsonSerialization:

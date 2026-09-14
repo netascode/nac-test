@@ -688,10 +688,10 @@ This option is repeatable and can be passed multiple times; multiple filters com
 
 | Operator | Meaning | Example |
 |---|---|---|
-| `=` or `==` | Exact value match (or element match in lists) | `--device-filter "role=leaf"` |
+| `=` | Exact value match (or element match in lists) | `--device-filter "role=leaf"` |
 | `!=` | Negated value match | `--device-filter "role!=spine"` |
 | `=~` | Regex pattern match (`re.search`) | `--device-filter "hostname=~^leaf[1-2]$"` |
-| `!~` | Negated regex pattern match | `--device-filter "hostname!~^test-"` |
+| `!=~` | Negated regex pattern match | `--device-filter "hostname!=~^test-"` |
 
 ### Canonical Attributes vs. Raw Data Model Attributes
 
@@ -707,9 +707,10 @@ This option is repeatable and can be passed multiple times; multiple filters com
 
 - **Nested Field Traversal**: Dot-notation navigates nested dictionaries (e.g., `management.vrf=management`).
 - **List Matching**: Automatically tests membership if a field is a list of scalar values (e.g. `tags=edge`), or traverses lists of dictionaries (e.g. `interfaces.name=GigabitEthernet1/0/1`).
-- **Case Sensitivity**: Field names and string matches (`=`, `!=`, `=~`, `!~`) are **case-sensitive** by default (boolean and null literals like `true`/`True` and `none`/`None` are normalized case-insensitively). For case-insensitive matching, use the `(?i)` inline regex flag (e.g., `--device-filter "site=~(?i)^sjc$"`).
-- **Type Coercion**: Values are coerced to `int`, `float`, `bool`, or `None` when comparing against typed data.
-- **Strict Validation**: If a filter references a field not present in any device, execution fails immediately with an error listing available data model fields (e.g., `Device filter field(s) not found in data model: 'hostnam'. Available fields: 'hostname', 'ip', 'os', ...`).
+- **String Comparison**: Comparisons are performed on the string representation of the data model value. Numbers compare as written (`bgp.asn=65001` matches the integer `65001`), and booleans are normalized to the lowercase literals `true` / `false` (so `enabled=true` matches, `enabled=True` does not). Fields whose value is `null` are treated as absent.
+- **Case Sensitivity**: Field names and values are **case-sensitive**. For case-insensitive matching, use the `(?i)` inline regex flag (e.g., `--device-filter "site=~(?i)^sjc$"`).
+- **Missing Fields**: A field absent from a device never matches a positive operator (`=`, `=~`) and always matches a negative operator (`!=`, `!=~`).
+- **Strict Validation**: If a filter references a field not present in *any* device of the data model, execution fails immediately with an error rather than silently running against zero devices.
 - **Repeat-Positive Warning**: If multiple positive filters are set on the same field (e.g., `--device-filter "role=spine" --device-filter "role=leaf"`), a warning is emitted recommending regex alternation (`role=~"spine|leaf"`).
 
 ### Examples
@@ -737,8 +738,8 @@ nac-test -d data/ -t templates/ -o output/ \
   --device-filter "management.vrf=management" \
   --device-filter "tags=~prod.*"
 
-# Using environment variable (comma or whitespace separated)
-NAC_TEST_DEVICE_FILTER="role=leaf,site=sjc" nac-test -d data/ -t templates/ -o output/
+# Using environment variable (whitespace separated)
+NAC_TEST_DEVICE_FILTER="role=leaf site=sjc" nac-test -d data/ -t templates/ -o output/
 ```
 
 

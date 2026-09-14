@@ -234,12 +234,17 @@ def _run_e2e_scenario(
             f"Must be one of {CONTROLLER_ARCHITECTURES | D2D_ARCHITECTURES}"
         )
 
-    # Secondary device credentials for D2D tests targeting devices with an OS distinct from the controller
-    for info in MOCK_DEVICES.values():
-        dev_os = info.get("os", "").upper()
-        if dev_os and dev_os != arch:
-            env[f"{dev_os}_USERNAME"] = "mock_user"
-            env[f"{dev_os}_PASSWORD"] = TEST_CREDENTIAL_SENTINEL
+    # Secondary device credentials for D2D tests targeting devices with an OS distinct
+    # from the controller. Scoped to testbed-based scenarios only, so non-D2D scenarios
+    # keep their credential isolation. Covers every mock device rather than just
+    # scenario.expected_d2d_hostnames, because the testbed is built from the full data
+    # model -- devices excluded by --device-filter still need credentials to be resolved.
+    if scenario.requires_testbed:
+        for info in MOCK_DEVICES.values():
+            dev_os = info.get("os", "").upper()
+            if dev_os and dev_os != arch:
+                env[f"{dev_os}_USERNAME"] = "mock_user"
+                env[f"{dev_os}_PASSWORD"] = TEST_CREDENTIAL_SENTINEL
 
     if extra_env_vars:
         env.update(extra_env_vars)

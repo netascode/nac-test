@@ -1823,19 +1823,16 @@ class TestE2EDeviceFilterTag(E2ECombinedTestBase):
         return e2e_device_filter_tag_results
 
     def test_excluded_device_absent_from_reports(self, results: E2EResults) -> None:
-        """Verify sd-dc-c8kv-02 does not appear in reports or xunit."""
-        summary_html = results.output_dir / "summary.html"
-        if summary_html.exists():
-            content = summary_html.read_text()
-            assert "sd-dc-c8kv-02" not in content
-
-    def test_excluded_device_present_in_testbed(self, results: E2EResults) -> None:
-        """Verify sd-dc-c8kv-02 remains in broker_testbed.yaml (testbed is a connection catalog)."""
-        testbed_yaml = results.output_dir / "broker_testbed.yaml"
-        if testbed_yaml.exists():
-            content = testbed_yaml.read_text()
-            assert "sd-dc-c8kv-02" in content
-            assert "sd-dc-c8kv-01" in content
+        """Verify sd-dc-c8kv-02 does not appear in the combined summary or xunit."""
+        summary_html = results.output_dir / "combined_summary.html"
+        xunit = results.output_dir / "xunit.xml"
+        assert summary_html.exists(), (
+            f"combined_summary.html not found in {results.output_dir}"
+        )
+        assert xunit.exists(), f"xunit.xml not found in {results.output_dir}"
+        assert "sd-dc-c8kv-02" not in summary_html.read_text()
+        assert "sd-dc-c8kv-02" not in xunit.read_text()
+        assert "sd-dc-c8kv-01" in xunit.read_text()
 
     def test_excluded_device_never_connected(self, results: E2EResults) -> None:
         """Verify no test or execution logs exist for sd-dc-c8kv-02."""

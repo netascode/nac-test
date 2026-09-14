@@ -1,9 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# SPDX-License-Identifier: MPL-2.0
-# Copyright (c) 2026 Daniel Schmidt
-
 """Device filtering engine for D2D and API test execution.
 
 Provides expression parsing, path traversal, stringification, pure-Mapping
@@ -24,6 +21,11 @@ logger = logging.getLogger(__name__)
 VALID_OPERATORS: tuple[str, ...] = ("!=~", "=~", "!=", "=")
 POSITIVE_OPERATORS: frozenset[str] = frozenset({"=", "=~"})
 NEGATIVE_OPERATORS: frozenset[str] = frozenset({"!=", "!=~"})
+# Alternation ordered longest-first so that re.search() yields leftmost-longest
+# matching. Derived from VALID_OPERATORS so the two can never drift apart.
+_OPERATOR_RE = re.compile(
+    "|".join(re.escape(op) for op in sorted(VALID_OPERATORS, key=len, reverse=True))
+)
 _IDENTIFIER_SEGMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
@@ -79,26 +81,6 @@ def _resolve_path(mapping: Mapping[str, Any], path: str) -> tuple[bool, list[Any
     return True, non_none_values
 
 
-def extract_available_keys(
-    devices: Sequence[Mapping[str, Any]], max_depth: int = 2
-) -> set[str]:
-    """Discover available field keys across a device population (up to 1 dotted level)."""
-    keys: set[str] = set()
-    for d in devices:
-        for k, v in d.items():
-            keys.add(k)
-            if max_depth > 1:
-                if isinstance(v, Mapping):
-                    for sub_k in v:
-                        keys.add(f"{k}.{sub_k}")
-                elif isinstance(v, list):
-                    for elem in v:
-                        if isinstance(elem, Mapping):
-                            for sub_k in elem:
-                                keys.add(f"{k}.{sub_k}")
-    return keys
-
-
 @dataclass(frozen=True)
 class DeviceFilter:
     """Parsed single device filter expression."""
@@ -133,20 +115,20 @@ class DeviceFilter:
         if not trimmed:
             raise ValueError("Filter expression cannot be empty")
 
-        matched_op: str | None = None
-        for op in VALID_OPERATORS:
-            if op in trimmed:
-                matched_op = op
-                break
-
-        if matched_op is None:
+        # Leftmost-longest operator scan: the regex alternation is ordered
+        # longest-first, and Python anchors on the earliest match position before
+        # trying alternatives there. This keeps the field name unambiguous when
+        # the value itself contains operator characters
+        # (e.g. 'hostname=a=~b' -> field 'hostname', value 'a=~b').
+        match = _OPERATOR_RE.search(trimmed)
+        if match is None:
             raise ValueError(
                 f"Invalid filter expression '{filter_str}'. Missing operator ({', '.join(VALID_OPERATORS)})"
             )
 
-        parts = trimmed.split(matched_op, 1)
-        field_name = parts[0].strip()
-        val = parts[1].strip()
+        matched_op = match.group()
+        field_name = trimmed[: match.start()].strip()
+        val = trimmed[match.end() :].strip()
 
         if not field_name:
             raise ValueError(
@@ -213,7 +195,6 @@ class FilterResult:
     count_before: int
     count_after: int
     unknown_fields: list[str]
-    keys_seen: set[str]
 
 
 def referenced_root_fields(filters: Sequence[DeviceFilter]) -> set[str]:
@@ -240,27 +221,12 @@ def check_repeated_positive_filters(filters: Sequence[DeviceFilter]) -> list[str
     return warnings
 
 
-def format_unknown_field_error(
-    unknown_fields: Collection[str],
-    keys_seen: Collection[str],
-    max_display_keys: int = 40,
-) -> str:
-    """Format a self-documenting error message for unknown filter fields."""
-    unknown_list = sorted(unknown_fields)
-    fields_str = ", ".join(f"'{f}'" for f in unknown_list)
-    sorted_keys = sorted(keys_seen)
-    if len(sorted_keys) > max_display_keys:
-        displayed_keys = sorted_keys[:max_display_keys]
-        keys_str = (
-            ", ".join(f"'{k}'" for k in displayed_keys)
-            + f", ... ({len(sorted_keys) - max_display_keys} more)"
-        )
-    else:
-        keys_str = ", ".join(f"'{k}'" for k in sorted_keys) if sorted_keys else "<none>"
-
+def format_unknown_field_error(unknown_fields: Collection[str]) -> str:
+    """Format an error message for filter fields absent from the device population."""
+    fields_str = ", ".join(f"'{f}'" for f in sorted(unknown_fields))
     return (
         f"Device filter field(s) not found in data model: {fields_str}. "
-        f"Available fields: {keys_str}"
+        f"Check the field name against your data model."
     )
 
 
@@ -269,7 +235,6 @@ def apply_all(
 ) -> FilterResult:
     """Apply all filters to device population using AND logic."""
     count_before = len(devices)
-    keys_seen = extract_available_keys(devices)
 
     if not devices:
         return FilterResult(
@@ -277,7 +242,6 @@ def apply_all(
             count_before=0,
             count_after=0,
             unknown_fields=[],
-            keys_seen=set(),
         )
 
     if not filters:
@@ -286,7 +250,6 @@ def apply_all(
             count_before=count_before,
             count_after=count_before,
             unknown_fields=[],
-            keys_seen=keys_seen,
         )
 
     # Check unknown fields: a field is unknown if it never resolves on ANY device in the population
@@ -308,7 +271,6 @@ def apply_all(
         count_before=count_before,
         count_after=len(matched),
         unknown_fields=unknown_fields,
-        keys_seen=keys_seen,
     )
 
 

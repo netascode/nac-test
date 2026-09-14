@@ -49,7 +49,6 @@ class TestOrchestratorDeviceFilter:
             "count_before": 2,
             "count_after": 0,
             "unknown_fields": [],
-            "keys_seen": {"hostname", "role"},
             "filters": ["hostname=nonexistent"],
         }
         mock_inv.skipped_devices = []
@@ -103,7 +102,6 @@ class TestOrchestratorDeviceFilter:
             "count_before": 2,
             "count_after": 0,
             "unknown_fields": ["nonexistent_field"],
-            "keys_seen": {"hostname", "role"},
             "filters": ["nonexistent_field=val"],
         }
         mock_inv.skipped_devices = []

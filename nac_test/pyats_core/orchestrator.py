@@ -13,6 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import typer
+
 from nac_test.core.constants import (
     DEBUG_MODE,
     DRY_RUN_REASON,
@@ -665,27 +667,32 @@ class PyATSOrchestrator:
             diag = self.device_inventory_discovery.filter_diagnostics
             if diag:
                 unknown_fields = diag.get("unknown_fields", [])
-                keys_seen = diag.get("keys_seen", set())
                 count_before = diag.get("count_before", 0)
                 count_after = diag.get("count_after", len(devices))
                 active_filters = diag.get("filters", [])
 
-                # Filter key absent from all devices in data model
+                # Filter key absent from all devices in data model: fail early,
+                # before any test or device connection is attempted.
                 if unknown_fields:
-                    err_msg = format_unknown_field_error(unknown_fields, keys_seen)
-                    logger.error(err_msg)
+                    logger.error(format_unknown_field_error(unknown_fields))
                     return PyATSResults()
 
-                # Zero matches when a filter caused it -> 252
+                # TODO(#932): Revisit the exit-code semantics of the two early
+                # returns below. Both yield an empty PyATSResults(), so "the
+                # filter matched no devices" is currently indistinguishable from
+                # "nothing to run" for the caller. A dedicated exit code may be
+                # warranted so CI can tell a mis-typed filter from a clean run.
                 if count_before > 0 and count_after == 0:
-                    warn_msg = f"No devices matched the device filter(s): {', '.join(active_filters)}"
-                    logger.warning(warn_msg)
+                    logger.warning(
+                        f"No devices matched the device filter(s): {', '.join(active_filters)}"
+                    )
                     return PyATSResults()
 
                 # Summary line with filters + before/after counts
                 if active_filters:
-                    print(
-                        f"Device filter applied ({', '.join(active_filters)}): {count_before} -> {count_after} devices matched."
+                    typer.echo(
+                        f"Device filter applied ({', '.join(active_filters)}): "
+                        f"{count_before} -> {count_after} devices matched."
                     )
 
             # Display any skipped devices
