@@ -376,8 +376,8 @@ def get_controller_context() -> ControllerContext:
 def format_resolution_error(error: ResolutionError) -> str:
     """Format a :class:`ResolutionError` into a user-facing message.
 
-    Re-uses the existing detailed error formatters so that CLI output
-    stays identical to the legacy ``detect_controller_type()`` path.
+    Uses the detailed error formatters for multiple, incomplete, or missing
+    credentials.
     """
     if isinstance(error, MultipleControllersFound):
         return _format_multiple_credentials_error(error.controllers)

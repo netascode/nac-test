@@ -6,11 +6,13 @@ Tests verify the business logic of the pre-flight auth check,
 ensuring authentication failures are identified and classified appropriately.
 """
 
+import os
 from typing import get_args
 
 from _pytest.monkeypatch import MonkeyPatch
 from pytest_mock import MockerFixture
 
+from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.core.controller_auth import (
     CONTROLLER_REGISTRY,
     AuthOutcome,
@@ -116,6 +118,7 @@ class TestPreflightAuthCheck:
         assert result.reason == AuthOutcome.SUCCESS
         assert result.controller_type == "ACI"
         assert result.controller_url == "https://apic.example.com"
+        assert os.environ.get(ENV_CONTROLLER_CONTEXT) == aci_context.to_json()
         mock_auth.assert_called_once()
 
     def test_returns_failure_for_bad_credentials(
