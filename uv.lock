@@ -8,7 +8,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-09-09T17:15:47.026917Z"
+exclude-newer = "2026-09-12T09:27:33.735752Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
@@ -2091,7 +2091,7 @@ provides-extras = ["dev"]
 [[package]]
 name = "nac-test-pyats-common"
 version = "0.4.0b2"
-source = { git = "https://github.com/netascode/nac-test-pyats-common.git?branch=feat%2F60-device-filter#581de00fecbaa34b1b0833501cb0a3586f27b5a0" }
+source = { git = "https://github.com/netascode/nac-test-pyats-common.git?branch=feat%2F60-device-filter#511e7717da23ee4b01aa49472bd70b762109f785" }
 dependencies = [
     { name = "filelock" },
     { name = "httpx" },
