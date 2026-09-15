@@ -55,6 +55,8 @@ from nac_test.utils.yaml import safe_load
 
 T = TypeVar("T")
 
+logger = logging.getLogger(__name__)
+
 
 class NACTestBase(aetest.Testcase):  # type: ignore[misc]
     """Generic base class with common functionality for all architectures.

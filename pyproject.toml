@@ -93,6 +93,13 @@ override-dependencies = [
 exclude-newer = "3 days"
 exclude-newer-package = { nac-yaml = false,  nac-test-pyats-common = false }
 
+# TEMPORARY - REMOVE BEFORE RELEASE (#932)
+# --device-filter needs the resolver-side filtering added in nac-test-pyats-common
+# #61, which is not in any released version. Drop this block once 0.4.0b3 is on
+# PyPI and bump the nac-test-pyats-common dependency to it.
+[tool.uv.sources]
+nac-test-pyats-common = { git = "https://github.com/netascode/nac-test-pyats-common.git", branch = "feat/60-device-filter" }
+
 [tool.coverage.run]
 source = ["nac_test"]
 

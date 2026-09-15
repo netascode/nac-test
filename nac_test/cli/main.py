@@ -18,10 +18,15 @@ from robot.errors import DataError
 import nac_test
 from nac_test.cli.diagnostic import run_diagnostic
 from nac_test.cli.ui import display_aci_defaults_banner
-from nac_test.cli.validators import validate_aci_defaults, validate_extra_args
+from nac_test.cli.validators import (
+    validate_aci_defaults,
+    validate_device_filter,
+    validate_extra_args,
+)
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import (
     DEBUG_MODE,
+    ENV_DEVICE_FILTER,
     EXIT_DATA_ERROR,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
@@ -29,6 +34,7 @@ from nac_test.core.constants import (
 )
 from nac_test.data_merger import DataMerger
 from nac_test.utils.cleanup import get_cleanup_manager
+from nac_test.utils.device_filter import DeviceFilterError
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import (
     DEFAULT_LOGLEVEL,
@@ -292,6 +298,17 @@ Testbed = Annotated[
 ]
 
 
+DeviceFilterOption = Annotated[
+    list[str] | None,
+    typer.Option(
+        "--device-filter",
+        help="Filter devices by attribute expressions (e.g. 'role=spine', 'tags=~prod.*'). Repeatable; combines with AND.",
+        envvar=ENV_DEVICE_FILTER,
+        callback=validate_device_filter,
+    ),
+]
+
+
 @app.command(context_settings={"allow_extra_args": True})
 def main(
     ctx: typer.Context,
@@ -310,6 +327,7 @@ def main(
     max_parallel_devices: MaxParallelDevices | None = None,
     minimal_reports: MinimalReports = False,
     testbed: Testbed = None,
+    device_filter: DeviceFilterOption = None,
     loglevel: LoglevelOption = None,
     verbosity: DeprecatedVerbosity = None,
     version: Version = False,
@@ -417,6 +435,7 @@ def main(
         extra_args=validated_robot_args,
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
+        device_filters=device_filter,
         loglevel=effective_loglevel,
         dev_pyats_only=pyats,
         dev_robot_only=robot,
@@ -438,6 +457,12 @@ def main(
         )
         # Exit with code 253 following Robot Framework convention
         raise typer.Exit(EXIT_INTERRUPTED) from None
+    except DeviceFilterError as e:
+        # A --device-filter field that matches nothing in the data model. Reported
+        # as invalid arguments, same as a syntactically malformed filter caught by
+        # the --device-filter callback.
+        _print_cli_error(str(e))
+        raise typer.Exit(EXIT_INVALID_ARGS) from None
     except Exception as e:
         # Infrastructure errors (template rendering, controller detection, etc.)
         logger.exception("Unexpected error during execution")

@@ -13,10 +13,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import typer
+
 from nac_test.core.constants import (
     DEBUG_MODE,
     DRY_RUN_REASON,
     ENV_CONTROLLER_CONTEXT,
+    ENV_DEVICE_FILTER_JSON,
     EXIT_ERROR,
     PYATS_RESULTS_DIRNAME,
     SUMMARY_REPORT_FILENAME,
@@ -51,6 +54,13 @@ from nac_test.utils.cleanup import (
     cleanup_old_test_outputs,
     cleanup_pyats_runtime,
 )
+from nac_test.utils.device_filter import (
+    DeviceFilter,
+    DeviceFilterError,
+    check_repeated_positive_filters,
+    filters_to_json,
+    format_unknown_field_error,
+)
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
 from nac_test.utils.system_resources import SystemResourceCalculator
@@ -75,6 +85,7 @@ class PyATSOrchestrator:
         loglevel: LogLevel = DEFAULT_LOGLEVEL,
         include_tags: list[str] | None = None,
         exclude_tags: list[str] | None = None,
+        device_filters: list[str] | None = None,
     ):
         """Initialize the PyATS orchestrator.
 
@@ -91,6 +102,7 @@ class PyATSOrchestrator:
             loglevel: Log level for PyATS output filtering
             include_tags: Tag patterns to include (Robot Framework syntax)
             exclude_tags: Tag patterns to exclude (Robot Framework syntax)
+            device_filters: Device filter expressions for D2D/API tests (e.g. 'role=spine')
         """
         self.data_paths = data_paths
         # Use absolute() rather than resolve() to preserve symlinks — resolve() would
@@ -112,6 +124,7 @@ class PyATSOrchestrator:
         self.loglevel = loglevel
         self.include_tags = include_tags
         self.exclude_tags = exclude_tags
+        self.device_filters = device_filters
 
         # Track test status by type for combined summary
         self.api_test_status: dict[str, dict[str, Any]] = {}
@@ -524,6 +537,11 @@ class PyATSOrchestrator:
         # This is the synchronous entry point that kicks off the async orchestration
         try:
             return asyncio.run(self._run_tests_async())
+        except DeviceFilterError:
+            # Filter definition error: propagate so the CLI can report it as
+            # invalid arguments. Must precede the generic handler below, which
+            # would otherwise bury it in an api-slot error result (exit 255).
+            raise
         except Exception as e:
             logger.error(
                 f"An unexpected error occurred during test orchestration: {e}",
@@ -547,6 +565,16 @@ class PyATSOrchestrator:
         # Clean up old test outputs (CI/CD only)
         if os.environ.get("CI"):
             cleanup_old_test_outputs(self.output_dir, days=3)
+
+        # Set up device filter JSON environment variable for resolver and child processes
+        parsed_device_filters: list[DeviceFilter] = []
+        if self.device_filters:
+            parsed_device_filters = [DeviceFilter.parse(f) for f in self.device_filters]
+            for warn_msg in check_repeated_positive_filters(parsed_device_filters):
+                logger.warning(warn_msg)
+            os.environ[ENV_DEVICE_FILTER_JSON] = filters_to_json(parsed_device_filters)
+        else:
+            os.environ.pop(ENV_DEVICE_FILTER_JSON, None)
 
         # Note: Merged data file created by main.py (single source of truth)
 
@@ -572,6 +600,12 @@ class PyATSOrchestrator:
 
         api_tests = discovery_result.api_paths
         d2d_tests = discovery_result.d2d_paths
+
+        # Warn if device filter was specified but no D2D tests exist
+        if self.device_filters and not d2d_tests:
+            logger.warning(
+                "--device-filter was specified but no D2D tests were executed; filter was not applied automatically."
+            )
 
         # Dry-run mode: print discovered tests and return results without further execution
         if self.dry_run:
@@ -626,15 +660,46 @@ class PyATSOrchestrator:
             d2d_result = TestResults.from_error(error_msg) if d2d_tests else None
             return PyATSResults(api=api_result, d2d=d2d_result)
 
-        # Execute tests based on their type
-        tasks = []
-
-        if api_tests:
-            tasks.append(self._execute_api_tests_standard(api_tests))
+        # Resolve the device inventory BEFORE any task coroutine is created.
+        # An invalid device filter aborts the whole run (DeviceFilterError), and
+        # returning/raising after coroutines exist would leave them un-awaited —
+        # silently cancelling the API suite.
+        devices: list[Any] = []
+        no_device_reason: str | None = None
 
         if d2d_tests:
-            # Get device inventory for D2D tests
             devices = self.device_inventory_discovery.get_device_inventory(d2d_tests)
+
+            diag = self.device_inventory_discovery.filter_diagnostics
+            if diag:
+                unknown_fields = diag.get("unknown_fields", [])
+                count_before = diag.get("count_before", 0)
+                count_after = diag.get("count_after", len(devices))
+                active_filters = diag.get("filters", [])
+
+                # Filter field absent from every device in the data model. This is
+                # a filter definition error, not a test outcome, so abort before
+                # anything executes. The CLI maps this to EXIT_INVALID_ARGS (2),
+                # matching the syntax validation performed by the --device-filter
+                # callback so both filter failures report the same way.
+                if unknown_fields:
+                    raise DeviceFilterError(format_unknown_field_error(unknown_fields))
+
+                # A valid filter that matches nothing is a legitimate outcome, not
+                # an error. Treat it exactly like an empty device inventory: warn,
+                # skip D2D, let API/Robot continue and decide the exit code.
+                if count_before > 0 and count_after == 0:
+                    no_device_reason = (
+                        f"No devices matched the device filter(s): "
+                        f"{', '.join(active_filters)} ({count_before} -> 0 devices)."
+                    )
+
+                # Summary line with filters + before/after counts
+                if active_filters and not no_device_reason:
+                    typer.echo(
+                        f"Device filter applied ({', '.join(active_filters)}): "
+                        f"{count_before} -> {count_after} devices matched."
+                    )
 
             # Display any skipped devices
             skipped = self.device_inventory_discovery.skipped_devices
@@ -650,12 +715,20 @@ class PyATSOrchestrator:
                     )
                 print()  # Blank line after warnings
 
+        # Execute tests based on their type
+        tasks = []
+
+        if api_tests:
+            tasks.append(self._execute_api_tests_standard(api_tests))
+
+        if d2d_tests:
             if devices:
                 tasks.append(self._execute_ssh_tests_device_centric(d2d_tests, devices))
             else:
                 print(
                     terminal.warning(
-                        "No devices found in inventory. D2D tests will be skipped."
+                        no_device_reason
+                        or "No devices found in inventory. D2D tests will be skipped."
                     )
                 )
 

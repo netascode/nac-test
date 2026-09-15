@@ -49,6 +49,10 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_PYATS]            │
 │    --robot                              [DEV] Run only Robot Framework tests.│
 │                                         [env var: NAC_TEST_ROBOT]            │
+│    --device-filter                      Filter devices by attribute          │
+│                                         expressions (e.g. 'role=spine',      │
+│                                         'tags=~prod.*'). Repeatable (AND).   │
+│                                         [env var: NAC_TEST_DEVICE_FILTER]    │
 │    --max-parallel-devices   INTEGER     Max devices for parallel SSH/D2D.    │
 │                                         [env var: NAC_TEST_MAX_PARALLEL...]  │
 │    --minimal-reports                    Reduce HTML report size (80-95%).    │
@@ -671,6 +675,73 @@ nac-test -d data/ -t templates/ -o output/ --exclude nrfu
 # Boolean patterns
 nac-test -d data/ -t templates/ -o output/ --include "bgpORospf"
 nac-test -d data/ -t templates/ -o output/ --exclude "bgpANDnrfu"
+```
+
+
+## Filter Devices (--device-filter)
+
+The `--device-filter` CLI option filters devices targeted by Device-to-Device (D2D) pyATS tests based on device attributes.
+
+This option is repeatable and can be passed multiple times; multiple filters combine with logical **AND**.
+
+### Supported Operators
+
+| Operator | Meaning | Example |
+|---|---|---|
+| `=` | Exact value match (or element match in lists) | `--device-filter "role=leaf"` |
+| `!=` | Negated value match | `--device-filter "role!=spine"` |
+| `=~` | Regex pattern match (`re.search`) | `--device-filter "hostname=~^leaf[1-2]$"` |
+| `!=~` | Negated regex pattern match | `--device-filter "hostname!=~^test-"` |
+
+### Canonical Attributes vs. Raw Data Model Attributes
+
+`nac-test` allows filtering against two types of attributes:
+
+1. **Canonical Attributes**: Normalized across all architecture resolvers (ACI, Catalyst Center, FMC, IOS-XE, NX-OS, SD-WAN):
+   - `hostname`: The resolved device hostname.
+   - `ip`: The management IP or hostname used for connections.
+   - `os`: The operating system type (e.g., `iosxe`, `nxos`).
+2. **Raw Data Model Attributes**: Any architecture-specific fields present in your device data model (e.g., `role`, `site`, `tags`, `site_id`).
+
+### Features
+
+- **Scope**: The filter selects which devices D2D (device-to-device / SSH) tests run against. It is evaluated once, against the data model, during device inventory resolution. API and Robot Framework tests are **not** scoped by it — they continue to run against the controller as a whole.
+- **Nested Field Traversal**: Dot-notation navigates nested dictionaries (e.g., `management.vrf=management`).
+- **List Matching**: Automatically tests membership if a field is a list of scalar values (e.g. `tags=edge`), or traverses lists of dictionaries (e.g. `interfaces.name=GigabitEthernet1/0/1`).
+- **String Comparison**: Comparisons are performed on the string representation of the data model value. Numbers compare as written (`bgp.asn=65001` matches the integer `65001`), and booleans are normalized to the lowercase literals `true` / `false` (so `enabled=true` matches, `enabled=True` does not). Fields whose value is `null` are treated as absent.
+- **Case Sensitivity**: Field names and values are **case-sensitive**. For case-insensitive matching, use the `(?i)` inline regex flag (e.g., `--device-filter "site=~(?i)^sjc$"`).
+- **Missing Fields**: A field absent from a device never matches a positive operator (`=`, `=~`) and always matches a negative operator (`!=`, `!=~`).
+- **Strict Validation**: If a filter references a field not present in *any* device of the data model, execution aborts before any test runs and exits with code `2` (invalid arguments) — the same exit code as a malformed filter expression. Nothing is executed, because the intent of the filter cannot be determined.
+- **No Matching Devices**: A valid filter that matches no devices is *not* an error. D2D tests are skipped with a console warning, exactly as if the device inventory were empty, and any API or Robot Framework tests still run and determine the exit code.
+- **Repeat-Positive Warning**: If multiple positive filters are set on the same field (e.g., `--device-filter "role=spine" --device-filter "role=leaf"`), a warning is emitted recommending regex alternation (`role=~"spine|leaf"`).
+
+### Examples
+
+```bash
+# Filter by canonical hostname
+nac-test -d data/ -t templates/ -o output/ --device-filter "hostname=leaf1"
+
+# Regex matching on hostname
+nac-test -d data/ -t templates/ -o output/ --device-filter "hostname=~^leaf[1-2]$"
+
+# Case-insensitive regex matching using (?i) flag
+nac-test -d data/ -t templates/ -o output/ --device-filter "site=~(?i)^sjc$"
+
+# Matching multiple values with OR logic (regex alternation)
+nac-test -d data/ -t templates/ -o output/ --device-filter "site=~^(Hamburg|Berlin)$"
+
+# Combining multiple filters (AND logic)
+nac-test -d data/ -t templates/ -o output/ \
+  --device-filter "role=leaf" \
+  --device-filter "site=sjc"
+
+# Nested field and list regex filtering
+nac-test -d data/ -t templates/ -o output/ \
+  --device-filter "management.vrf=management" \
+  --device-filter "tags=~prod.*"
+
+# Using environment variable (whitespace separated)
+NAC_TEST_DEVICE_FILTER="role=leaf site=sjc" nac-test -d data/ -t templates/ -o output/
 ```
 
 

@@ -234,10 +234,14 @@ def _run_e2e_scenario(
             f"Must be one of {CONTROLLER_ARCHITECTURES | D2D_ARCHITECTURES}"
         )
 
-    # Secondary device credentials for D2D tests targeting devices with an OS distinct from the controller
-    if scenario.expected_d2d_hostnames:
-        for hostname in scenario.expected_d2d_hostnames:
-            dev_os = MOCK_DEVICES.get(hostname, {}).get("os", "").upper()
+    # Secondary device credentials for D2D tests targeting devices with an OS distinct
+    # from the controller. Scoped to testbed-based scenarios only, so non-D2D scenarios
+    # keep their credential isolation. Covers every mock device rather than just
+    # scenario.expected_d2d_hostnames, because the testbed is built from the full data
+    # model -- devices excluded by --device-filter still need credentials to be resolved.
+    if scenario.requires_testbed:
+        for info in MOCK_DEVICES.values():
+            dev_os = info.get("os", "").upper()
             if dev_os and dev_os != arch:
                 env[f"{dev_os}_USERNAME"] = "mock_user"
                 env[f"{dev_os}_PASSWORD"] = TEST_CREDENTIAL_SENTINEL
@@ -601,4 +605,21 @@ def e2e_pyats_nxos_d2d_results(
         mock_api_server,
         user_testbed,
         tmp_path_factory,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_device_filter_tag_results(
+    mock_api_server: MockAPIServer,
+    user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> E2EResults:
+    from tests.e2e.config import DEVICE_FILTER_TAG_SCENARIO
+
+    return _run_e2e_scenario(
+        DEVICE_FILTER_TAG_SCENARIO,
+        mock_api_server,
+        user_testbed,
+        tmp_path_factory,
+        extra_cli_args=["--device-filter", "tags=production"],
     )
