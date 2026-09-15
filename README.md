@@ -705,6 +705,7 @@ This option is repeatable and can be passed multiple times; multiple filters com
 
 ### Features
 
+- **Scope**: The filter selects which devices D2D (device-to-device / SSH) tests run against. It is evaluated once, against the data model, during device inventory resolution. API and Robot Framework tests are **not** scoped by it — they continue to run against the controller as a whole.
 - **Nested Field Traversal**: Dot-notation navigates nested dictionaries (e.g., `management.vrf=management`).
 - **List Matching**: Automatically tests membership if a field is a list of scalar values (e.g. `tags=edge`), or traverses lists of dictionaries (e.g. `interfaces.name=GigabitEthernet1/0/1`).
 - **String Comparison**: Comparisons are performed on the string representation of the data model value. Numbers compare as written (`bgp.asn=65001` matches the integer `65001`), and booleans are normalized to the lowercase literals `true` / `false` (so `enabled=true` matches, `enabled=True` does not). Fields whose value is `null` are treated as absent.
