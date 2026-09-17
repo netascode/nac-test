@@ -4,13 +4,11 @@
 """Tests for controller type detection utilities."""
 
 import json
-import logging
 
 import pytest
 
 from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.core.controller import (
-    CONTROLLER_REGISTRY,
     CredentialSet,
     IncompleteCredentials,
     MultipleControllersFound,
@@ -18,12 +16,10 @@ from nac_test.core.controller import (
     _find_credential_sets,
     _format_multiple_credentials_error,
     _format_no_credentials_error,
-    detect_controller_type,
     format_resolution_error,
     get_connection_params,
     get_controller_context,
     get_controller_url,
-    get_matched_credential_set,
     resolve_controller,
     should_verify_ssl,
 )
@@ -143,88 +139,60 @@ PARTIAL_CREDENTIALS: list[tuple[str, dict[str, str], str]] = [
 ]
 
 
-class TestControllerResolutionContract:
-    """Contract tests verifying resolve_controller() and detect_controller_type() equivalence.
-
-    These tests ensure the new API (resolve_controller) and deprecated API
-    (detect_controller_type) return equivalent results. The deprecated function
-    delegates to resolve_controller(), so these tests catch any drift.
-
-    When Phase 3 removes detect_controller_type(), remove the deprecated assertions
-    but keep the resolve_controller tests as the primary coverage.
-    """
+class TestResolveControllerContract:
+    """Contract tests verifying resolve_controller() behavior."""
 
     @pytest.mark.parametrize(
         "controller_type,env_vars,expected_auth",
         CONTROLLER_CREDENTIALS,
         ids=[f"{c[0]}-{c[2]}" for c in CONTROLLER_CREDENTIALS],
     )
-    def test_success_both_apis_match(
+    def test_success_resolves_controller_and_auth_method(
         self,
         monkeypatch: pytest.MonkeyPatch,
         controller_type: str,
         env_vars: dict[str, str],
         expected_auth: str,
     ) -> None:
-        """Both APIs return same controller_type; resolve_controller includes auth_method."""
+        """resolve_controller returns ControllerContext with correct type and auth_method."""
         for key, value in env_vars.items():
             monkeypatch.setenv(key, value)
 
-        # New API: returns ControllerContext with type and auth
         ctx = resolve_controller()
         assert ctx.controller_type == controller_type
         assert ctx.auth_method == expected_auth
 
-        # Deprecated API: returns just controller_type (delegates to resolve_controller)
-        deprecated_result = detect_controller_type()
-        assert deprecated_result == ctx.controller_type, (
-            f"Contract violation: detect_controller_type() returned {deprecated_result}, "
-            f"but resolve_controller().controller_type is {ctx.controller_type}"
-        )
-
-    def test_no_credentials_both_apis_raise(
+    def test_no_credentials_raises_no_credentials_found(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """No credentials: resolve raises NoCredentialsFound, detect raises ValueError."""
-        # New API: typed exception
+        """No credentials: resolve raises NoCredentialsFound."""
         with pytest.raises(NoCredentialsFound):
             resolve_controller()
-
-        # Deprecated API: ValueError for backwards compat
-        with pytest.raises(ValueError) as exc_info:
-            detect_controller_type()
-        assert "No controller credentials" in str(exc_info.value)
 
     @pytest.mark.parametrize(
         "expected_partial,env_vars,scenario",
         PARTIAL_CREDENTIALS,
         ids=[f"{c[0]}-{c[2]}" for c in PARTIAL_CREDENTIALS],
     )
-    def test_incomplete_credentials_both_apis_raise(
+    def test_incomplete_credentials_raises_incomplete_credentials(
         self,
         monkeypatch: pytest.MonkeyPatch,
         expected_partial: str,
         env_vars: dict[str, str],
         scenario: str,
     ) -> None:
-        """Partial credentials: resolve raises IncompleteCredentials, detect raises ValueError."""
+        """Partial credentials: resolve raises IncompleteCredentials with controller list."""
         for key, value in env_vars.items():
             monkeypatch.setenv(key, value)
 
-        # New API: typed exception with controller list
         with pytest.raises(IncompleteCredentials) as exc_info:
             resolve_controller()
         assert expected_partial in exc_info.value.partial_controllers
 
-        # Deprecated API: ValueError with same info
-        with pytest.raises(ValueError) as val_exc:
-            detect_controller_type()
-        assert f"{expected_partial}: incomplete credentials" in str(val_exc.value)
-
-    def test_multiple_controllers_both_apis_raise(
+    def test_multiple_controllers_raises_multiple_controllers_found(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Multiple complete controllers: both APIs raise appropriately."""
+        """Multiple complete controllers: resolve raises MultipleControllersFound."""
         # Set ACI credentials
         monkeypatch.setenv("ACI_URL", "https://apic.local")
         monkeypatch.setenv("ACI_USERNAME", "admin")
@@ -234,24 +202,17 @@ class TestControllerResolutionContract:
         monkeypatch.setenv("CC_USERNAME", "admin")
         monkeypatch.setenv("CC_PASSWORD", "pass")
 
-        # New API: typed exception
         with pytest.raises(MultipleControllersFound) as exc_info:
             resolve_controller()
         assert "ACI" in exc_info.value.controllers
         assert "CC" in exc_info.value.controllers
-
-        # Deprecated API: ValueError
-        with pytest.raises(ValueError) as val_exc:
-            detect_controller_type()
-        assert "Multiple controller credentials detected" in str(val_exc.value)
 
 
 class TestGetControllerContext:
     """Tests for get_controller_context() subprocess accessor.
 
     This function is used by PyATS subprocesses to retrieve the resolved
-    controller context. It reads from NAC_TEST_CONTROLLER_CONTEXT env var
-    (primary path) or falls back to detect_controller_type() (transitional).
+    controller context. It deserializes from the NAC_TEST_CONTROLLER_CONTEXT env var.
     """
 
     def test_reads_from_env_var(
@@ -263,22 +224,18 @@ class TestGetControllerContext:
         assert result.controller_type == "SDWAN"
         assert result.auth_method == "session"
 
-    def test_fallback_to_detect_when_env_var_absent(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Transitional fallback: invokes detect_controller_type() with info log."""
-        # Set controller credentials (fallback path will detect)
+    def test_raises_when_env_var_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """When NAC_TEST_CONTROLLER_CONTEXT is absent, raises ValueError."""
+        # Set controller credentials in env (which no longer fall back)
         monkeypatch.setenv("ACI_URL", "https://apic.local")
         monkeypatch.setenv("ACI_USERNAME", "admin")
         monkeypatch.setenv("ACI_PASSWORD", "pass")
-        # NAC_TEST_CONTROLLER_CONTEXT deliberately not set
+        monkeypatch.delenv(ENV_CONTROLLER_CONTEXT, raising=False)
 
-        with caplog.at_level(logging.INFO, logger="nac_test.core.controller"):
-            ctx = get_controller_context()
+        with pytest.raises(ValueError) as exc_info:
+            get_controller_context()
 
-        assert ctx.controller_type == "ACI"
-        assert ctx.auth_method == "session"
-        assert "falling back to detect_controller_type" in caplog.text
+        assert ENV_CONTROLLER_CONTEXT in str(exc_info.value)
 
 
 class TestControllerContextSerialization:
@@ -439,10 +396,8 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("aci_username", "admin")
         monkeypatch.setenv("aci_password", "password")
 
-        with pytest.raises(ValueError) as exc_info:
-            detect_controller_type()
-
-        assert "No controller credentials found" in str(exc_info.value)
+        with pytest.raises(NoCredentialsFound):
+            resolve_controller()
 
     def test_special_characters_in_credentials(
         self, monkeypatch: pytest.MonkeyPatch
@@ -453,8 +408,9 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("CC_USERNAME", "user@domain.com")
         monkeypatch.setenv("CC_PASSWORD", "p@$$w0rd!#$%^&*()")
 
-        result = detect_controller_type()
-        assert result == "CC"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "CC"
+        assert ctx.auth_method == "session"
 
     def test_legacy_controller_type_ignored(
         self, monkeypatch: pytest.MonkeyPatch
@@ -468,9 +424,9 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("SDWAN_USERNAME", "admin")
         monkeypatch.setenv("SDWAN_PASSWORD", "password")
 
-        result = detect_controller_type()
+        ctx = resolve_controller()
         assert (
-            result == "SDWAN"
+            ctx.controller_type == "SDWAN"
         )  # Should use credential-based detection, not CONTROLLER_TYPE
 
     def test_mixed_complete_and_partial_credentials(
@@ -486,8 +442,8 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("ISE_URL", "https://ise.example.com")
         monkeypatch.setenv("ISE_USERNAME", "ise_admin")
 
-        result = detect_controller_type()
-        assert result == "FMC"  # Should detect the complete set
+        ctx = resolve_controller()
+        assert ctx.controller_type == "FMC"  # Should detect the complete set
 
     def test_whitespace_trimming_in_values(
         self, monkeypatch: pytest.MonkeyPatch
@@ -498,22 +454,18 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("MERAKI_USERNAME", "  admin  ")
         monkeypatch.setenv("MERAKI_PASSWORD", "  password  ")
 
-        result = detect_controller_type()
-        assert result == "MERAKI"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "MERAKI"
 
-    def test_truly_empty_environment(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test with a completely empty environment."""
-        # Clear all controller-related environment variables
-        for config in CONTROLLER_REGISTRY.values():
-            for cred_set in config.credential_sets:
-                for var in cred_set.env_vars:
-                    monkeypatch.delenv(var, raising=False)
+    def test_truly_empty_environment(self) -> None:
+        """When no controller env vars are set, raises NoCredentialsFound.
 
-        with pytest.raises(ValueError) as exc_info:
-            detect_controller_type()
-
-        error_msg = str(exc_info.value)
-        assert "No controller credentials found" in error_msg
+        Relies on the global autouse ``clean_controller_env`` fixture in
+        ``tests/conftest.py`` ensuring all controller environment variables
+        are unset.
+        """
+        with pytest.raises(NoCredentialsFound):
+            resolve_controller()
 
     def test_three_way_multiple_controllers(
         self, monkeypatch: pytest.MonkeyPatch
@@ -532,10 +484,11 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("ISE_USERNAME", "ise_user")
         monkeypatch.setenv("ISE_PASSWORD", "ise_pass")
 
-        with pytest.raises(ValueError) as exc_info:
-            detect_controller_type()
+        with pytest.raises(MultipleControllersFound) as exc_info:
+            resolve_controller()
 
-        error_msg = str(exc_info.value)
+        assert set(exc_info.value.controllers) == {"ACI", "CC", "ISE"}
+        error_msg = format_resolution_error(exc_info.value)
         assert "Multiple controller credentials detected: ACI, CC, ISE" in error_msg
         assert "To use ACI only:" in error_msg
         assert "To use CC only:" in error_msg
@@ -548,8 +501,8 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("ACI_USERNAME", "用户名")  # Chinese characters
         monkeypatch.setenv("ACI_PASSWORD", "пароль")  # Cyrillic characters
 
-        result = detect_controller_type()
-        assert result == "ACI"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "ACI"
 
     def test_url_with_path_and_query(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test URL values with paths and query parameters."""
@@ -559,8 +512,8 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("SDWAN_USERNAME", "admin")
         monkeypatch.setenv("SDWAN_PASSWORD", "password")
 
-        result = detect_controller_type()
-        assert result == "SDWAN"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "SDWAN"
 
     def test_iosxe_partial_and_sdwan_partial_are_both_reported(
         self, monkeypatch: pytest.MonkeyPatch
@@ -579,10 +532,12 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
         # No SDWAN credentials beyond URL
 
-        with pytest.raises(ValueError) as exc_info:
-            detect_controller_type()
+        with pytest.raises(IncompleteCredentials) as exc_info:
+            resolve_controller()
 
-        error_msg = str(exc_info.value)
+        assert "IOSXE" in exc_info.value.partial_controllers
+        assert "SDWAN" in exc_info.value.partial_controllers
+        error_msg = format_resolution_error(exc_info.value)
         assert "Incomplete controller credentials detected" in error_msg
         assert "IOSXE: incomplete credentials" in error_msg
         assert "SDWAN: incomplete credentials" in error_msg
@@ -594,10 +549,11 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("ACI_USERNAME", "admin")
         monkeypatch.setenv("ACI_PASSWORD", "")  # Empty string
 
-        with pytest.raises(ValueError) as exc_info:
-            detect_controller_type()
+        with pytest.raises(IncompleteCredentials) as exc_info:
+            resolve_controller()
 
-        error_msg = str(exc_info.value)
+        assert "ACI" in exc_info.value.partial_controllers
+        error_msg = format_resolution_error(exc_info.value)
         assert "Incomplete controller credentials detected" in error_msg
         assert "ACI: incomplete credentials" in error_msg
 
@@ -608,10 +564,11 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("SDWAN_USERNAME", "admin")
         monkeypatch.setenv("SDWAN_PASSWORD", "   ")  # Only whitespace
 
-        with pytest.raises(ValueError) as exc_info:
-            detect_controller_type()
+        with pytest.raises(IncompleteCredentials) as exc_info:
+            resolve_controller()
 
-        error_msg = str(exc_info.value)
+        assert "SDWAN" in exc_info.value.partial_controllers
+        error_msg = format_resolution_error(exc_info.value)
         assert "Incomplete controller credentials detected" in error_msg
         assert "SDWAN: incomplete credentials" in error_msg
 
@@ -628,8 +585,8 @@ class TestControllerEdgeCases:
         monkeypatch.setenv("IOSXE_USERNAME", "device_user")
         monkeypatch.setenv("IOSXE_PASSWORD", "device_pass")
 
-        result = detect_controller_type()
-        assert result == "ACI"  # Controller type still detected
+        ctx = resolve_controller()
+        assert ctx.controller_type == "ACI"  # Controller type still detected
 
 
 class TestIOSXEAlternativeURLEnvVar:
@@ -645,8 +602,8 @@ class TestIOSXEAlternativeURLEnvVar:
         monkeypatch.setenv("IOSXE_USERNAME", "admin")
         monkeypatch.setenv("IOSXE_PASSWORD", "password")
 
-        result = detect_controller_type()
-        assert result == "IOSXE"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "IOSXE"
 
     def test_iosxe_url_takes_precedence_over_host(
         self, monkeypatch: pytest.MonkeyPatch
@@ -657,8 +614,8 @@ class TestIOSXEAlternativeURLEnvVar:
         monkeypatch.setenv("IOSXE_USERNAME", "admin")
         monkeypatch.setenv("IOSXE_PASSWORD", "password")
 
-        result = detect_controller_type()
-        assert result == "IOSXE"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "IOSXE"
 
         # Verify URL takes precedence in get_controller_url
         url = get_controller_url("IOSXE")
@@ -772,14 +729,9 @@ class TestSDWANCredentialSets:
         monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
         monkeypatch.setenv("SDWAN_API_TOKEN", "eyJhbGciOiJSUzI1NiJ9.test.sig")
 
-        result = detect_controller_type()
-        assert result == "SDWAN"
-
-        # Token set should be matched with auth_method="token"
-        cred = get_matched_credential_set("SDWAN")
-        assert cred is not None
-        assert cred.auth_method == "token"
-        assert cred.label == "API Token (20.18+)"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "SDWAN"
+        assert ctx.auth_method == "token"
 
     def test_detect_sdwan_with_username_password(
         self, monkeypatch: pytest.MonkeyPatch
@@ -789,14 +741,9 @@ class TestSDWANCredentialSets:
         monkeypatch.setenv("SDWAN_USERNAME", "admin")
         monkeypatch.setenv("SDWAN_PASSWORD", "password")
 
-        result = detect_controller_type()
-        assert result == "SDWAN"
-
-        # Password set should be matched with auth_method="session"
-        cred = get_matched_credential_set("SDWAN")
-        assert cred is not None
-        assert cred.auth_method == "session"
-        assert cred.label == "Username/Password"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "SDWAN"
+        assert ctx.auth_method == "session"
 
     def test_api_token_takes_priority(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When both credential sets are satisfied, token set wins (listed first)."""
@@ -805,14 +752,9 @@ class TestSDWANCredentialSets:
         monkeypatch.setenv("SDWAN_USERNAME", "admin")
         monkeypatch.setenv("SDWAN_PASSWORD", "password")
 
-        # Should still detect exactly one SDWAN (not duplicate)
-        result = detect_controller_type()
-        assert result == "SDWAN"
-
-        # Token set wins because it's listed first
-        cred = get_matched_credential_set("SDWAN")
-        assert cred is not None
-        assert cred.auth_method == "token"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "SDWAN"
+        assert ctx.auth_method == "token"
 
     def test_partial_token_set_falls_back_to_password(
         self, monkeypatch: pytest.MonkeyPatch
@@ -823,13 +765,9 @@ class TestSDWANCredentialSets:
         monkeypatch.setenv("SDWAN_USERNAME", "admin")
         monkeypatch.setenv("SDWAN_PASSWORD", "password")
 
-        result = detect_controller_type()
-        assert result == "SDWAN"
-
-        # Password set matched because token set was incomplete
-        cred = get_matched_credential_set("SDWAN")
-        assert cred is not None
-        assert cred.auth_method == "session"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "SDWAN"
+        assert ctx.auth_method == "session"
 
     def test_empty_api_token_falls_back_to_password(
         self, monkeypatch: pytest.MonkeyPatch
@@ -840,30 +778,23 @@ class TestSDWANCredentialSets:
         monkeypatch.setenv("SDWAN_USERNAME", "admin")
         monkeypatch.setenv("SDWAN_PASSWORD", "password")
 
-        result = detect_controller_type()
-        assert result == "SDWAN"
-
-        # Should fall back to session auth
-        cred = get_matched_credential_set("SDWAN")
-        assert cred is not None
-        assert cred.auth_method == "session"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "SDWAN"
+        assert ctx.auth_method == "session"
 
     def test_url_only_is_partial(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """SDWAN_URL alone (no token, no username/password) is partial."""
         monkeypatch.setenv("SDWAN_URL", "https://vmanage.example.com")
 
-        with pytest.raises(ValueError) as exc_info:
-            detect_controller_type()
+        with pytest.raises(IncompleteCredentials) as exc_info:
+            resolve_controller()
 
-        error_msg = str(exc_info.value)
+        assert "SDWAN" in exc_info.value.partial_controllers
+        error_msg = format_resolution_error(exc_info.value)
         assert "Incomplete controller credentials detected" in error_msg
         assert "SDWAN: incomplete credentials" in error_msg
         assert "API Token (20.18+)" in error_msg
         assert "Username/Password" in error_msg
-
-    def test_get_matched_credential_set_before_detection(self) -> None:
-        """get_matched_credential_set returns None before detect_controller_type runs."""
-        assert get_matched_credential_set("SDWAN") is None
 
     def test_credential_set_auth_method_default(self) -> None:
         """CredentialSet.auth_method defaults to 'session'."""
@@ -874,17 +805,14 @@ class TestSDWANCredentialSets:
         assert cs.auth_method == "session"
 
     def test_aci_matched_credential_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """ACI detection stores matched credential set with session auth."""
+        """ACI detection resolves controller with session auth."""
         monkeypatch.setenv("ACI_URL", "https://apic.example.com")
         monkeypatch.setenv("ACI_USERNAME", "admin")
         monkeypatch.setenv("ACI_PASSWORD", "password")
 
-        detect_controller_type()
-
-        cred = get_matched_credential_set("ACI")
-        assert cred is not None
-        assert cred.auth_method == "session"
-        assert cred.label == "Username/Password"
+        ctx = resolve_controller()
+        assert ctx.controller_type == "ACI"
+        assert ctx.auth_method == "session"
 
 
 class TestGetControllerUrlSDWAN:
@@ -999,8 +927,6 @@ class TestGetConnectionParams:
     ) -> None:
         """Unset env vars raise ValueError listing the missing var names."""
         monkeypatch.setenv("ACI_URL", "https://apic.example.com")
-        monkeypatch.delenv("ACI_USERNAME", raising=False)
-        monkeypatch.delenv("ACI_PASSWORD", raising=False)
 
         with pytest.raises(ValueError) as exc_info:
             get_connection_params("ACI", AuthMethod.SESSION)
@@ -1061,7 +987,6 @@ class TestGetConnectionParams:
         Both IOSXE_URL and IOSXE_HOST share auth_method="session", so the first
         fully-satisfied candidate must win - not just the first one in order.
         """
-        monkeypatch.delenv("IOSXE_URL", raising=False)
         monkeypatch.setenv("IOSXE_HOST", "192.168.1.1")
         monkeypatch.setenv("IOSXE_USERNAME", "admin")
         monkeypatch.setenv("IOSXE_PASSWORD", "password")
@@ -1075,14 +1000,9 @@ class TestGetConnectionParams:
         }
 
     def test_iosxe_reports_url_variant_missing_vars_when_nothing_configured(
-        self, monkeypatch: pytest.MonkeyPatch
+        self,
     ) -> None:
         """With neither variant configured, the first (URL) set's vars are reported."""
-        monkeypatch.delenv("IOSXE_URL", raising=False)
-        monkeypatch.delenv("IOSXE_HOST", raising=False)
-        monkeypatch.delenv("IOSXE_USERNAME", raising=False)
-        monkeypatch.delenv("IOSXE_PASSWORD", raising=False)
-
         with pytest.raises(ValueError) as exc_info:
             get_connection_params("IOSXE", AuthMethod.SESSION)
 
@@ -1096,10 +1016,7 @@ class TestGetConnectionParams:
         not IOSXE_URL - the caller never touched the URL variant, so the
         error must point at the variant they actually started configuring.
         """
-        monkeypatch.delenv("IOSXE_URL", raising=False)
         monkeypatch.setenv("IOSXE_HOST", "192.168.1.1")
-        monkeypatch.delenv("IOSXE_USERNAME", raising=False)
-        monkeypatch.delenv("IOSXE_PASSWORD", raising=False)
 
         with pytest.raises(ValueError) as exc_info:
             get_connection_params("IOSXE", AuthMethod.SESSION)
@@ -1113,10 +1030,8 @@ class TestGetConnectionParams:
 class TestShouldVerifySsl:
     """Tests for should_verify_ssl()."""
 
-    def test_defaults_false_when_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_defaults_false_when_unset(self) -> None:
         """Unset env var defaults to False (skip verify), matching prior adapter behavior."""
-        monkeypatch.delenv("ACI_INSECURE", raising=False)
-
         assert should_verify_ssl("ACI") is False
 
     def test_defaults_false_when_empty(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1143,12 +1058,8 @@ class TestShouldVerifySsl:
 
         assert should_verify_ssl("SDWAN") is True
 
-    def test_custom_default_used_when_unset(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_custom_default_used_when_unset(self) -> None:
         """The `default` param controls the unset fallback."""
-        monkeypatch.delenv("ISE_INSECURE", raising=False)
-
         assert should_verify_ssl("ISE", default=True) is True
 
     def test_unknown_controller_type_raises_key_error(self) -> None:
