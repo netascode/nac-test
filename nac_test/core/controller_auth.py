@@ -28,6 +28,7 @@ from nac_test.core.error_classification import (
     extract_http_status_code,
 )
 from nac_test.core.types import ControllerContext, ControllerTypeKey
+from nac_test.utils.url import sanitize_url_for_display
 
 logger = logging.getLogger(__name__)
 
@@ -117,12 +118,14 @@ def preflight_auth_check(ctx: ControllerContext) -> AuthCheckResult:
     """
     controller_type = ctx.controller_type
     try:
-        controller_url = get_controller_url(controller_type)
+        raw_url = get_controller_url(controller_type)
+        controller_url = sanitize_url_for_display(raw_url)
     except KeyError:
+        raw_url = ""
         controller_url = ""
     # Auth adapters strip trailing "/" before caching (cache key normalization).
     # Match that here so AuthCache.invalidate() finds the right entry.
-    cache_url = controller_url.rstrip("/")
+    cache_url = raw_url.rstrip("/")
     display_name = get_display_name(controller_type)
 
     # Get the auth callable for this controller type

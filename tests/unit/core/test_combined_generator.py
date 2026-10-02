@@ -294,9 +294,38 @@ class TestGetCurlExample:
         result = _get_curl_example("MERAKI", "https://meraki.local")
         assert result == "https://meraki.local"
 
+    def test_curl_example_sanitizes_embedded_credentials(self) -> None:
+        """Embedded credentials in controller_url are stripped from the curl example."""
+        result = _get_curl_example("ACI", "https://admin:s3cret@apic.local:8443/")
+        assert "s3cret" not in result
+        assert "admin:" not in result
+        assert result.startswith("https://apic.local:8443/api/aaaLogin.json")
+
 
 class TestPreFlightFailureReport:
     """Tests for pre-flight failure report generation."""
+
+    def test_auth_failure_sanitizes_embedded_credentials_in_report(
+        self, tmp_path: Path
+    ) -> None:
+        """Pre-flight failure report must not leak embedded credentials into HTML."""
+        failure = PreFlightFailure(
+            failure_type=PreFlightFailureType.AUTH,
+            controller_type="ACI",
+            controller_url="https://admin:s3cret@apic.test.local:8443/",
+            detail="HTTP 401: Unauthorized",
+            status_code=401,
+        )
+        results = CombinedResults(pre_flight_failure=failure)
+        generator = CombinedReportGenerator(tmp_path)
+
+        report_path = generator.generate_combined_summary(results)
+
+        assert report_path is not None
+        content = report_path.read_text()
+        assert "s3cret" not in content
+        assert "admin:" not in content
+        assert "https://apic.test.local:8443" in content
 
     def test_auth_failure_generates_report(self, tmp_path: Path) -> None:
         """Auth failure produces combined_summary.html with failure details."""

@@ -17,7 +17,7 @@ from nac_test.core.controller import (
     get_display_name,
 )
 from nac_test.utils.terminal import TerminalColors
-from nac_test.utils.url import extract_host
+from nac_test.utils.url import extract_host, sanitize_url_for_display
 
 # Type alias for typer color values
 ColorValue = str | int | tuple[int, int, int]
@@ -279,6 +279,7 @@ def display_auth_failure_banner(
         Uses the same box style and color handling as display_aci_defaults_banner.
     """
     display_name = get_display_name(controller_type)
+    clean_url = sanitize_url_for_display(controller_url)
     no_color = TerminalColors.NO_COLOR
     title = (
         "!!! CONTROLLER AUTHENTICATION FAILED !!!"
@@ -287,9 +288,7 @@ def display_auth_failure_banner(
     )
     content_lines = [
         "",
-        *_wrap_url_lines(
-            f"Could not authenticate to {display_name} at", controller_url
-        ),
+        *_wrap_url_lines(f"Could not authenticate to {display_name} at", clean_url),
         "",
         "Verify your credentials:",
         *_credential_remediation_lines(controller_type),
@@ -318,17 +317,18 @@ def display_unreachable_banner(
         Uses the same box style and color handling as display_aci_defaults_banner.
     """
     display_name = get_display_name(controller_type)
-    host = extract_host(controller_url)
+    clean_url = sanitize_url_for_display(controller_url)
+    host = extract_host(clean_url)
     no_color = TerminalColors.NO_COLOR
     title = (
         "!!! CONTROLLER UNREACHABLE !!!" if no_color else "⛔ CONTROLLER UNREACHABLE"
     )
     content_lines = [
         "",
-        *_wrap_url_lines(f"Could not connect to {display_name} at", controller_url),
+        *_wrap_url_lines(f"Could not connect to {display_name} at", clean_url),
         "",
         "Verify the controller is reachable and the URL is correct:",
-        *_wrap_url_lines("curl -k", controller_url, indent="  "),
+        *_wrap_url_lines("curl -k", clean_url, indent="  "),
         f"  ping {host}",
         "",
     ]
