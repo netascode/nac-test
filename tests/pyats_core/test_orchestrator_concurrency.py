@@ -18,8 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
-
-from .conftest import PyATSTestDirs
+from tests.conftest import PyATSTestDirs
 
 
 def _make_devices(n: int) -> list[dict[str, Any]]:
