@@ -179,7 +179,7 @@ class E2ECombinedTestBase:
         )
 
     def test_merged_data_file_removed_after_run(self, results: E2EResults) -> None:
-        """Merged data model YAML must not persist after a successful run.
+        """Merged data model file must not persist after a successful run.
 
         The file contains potentially sensitive variable data and is registered
         with CleanupManager for deletion on exit. Its absence confirms cleanup ran.
@@ -1285,6 +1285,24 @@ class TestE2EPyatsCc(E2ECombinedTestBase):
     def results(self, e2e_pyats_cc_results: E2EResults) -> E2EResults:
         """Provide PyATS Catalyst Center scenario results."""
         return e2e_pyats_cc_results
+
+
+# =============================================================================
+# PYATS NX-OS D2D SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EPyatsNxosD2d(E2ECombinedTestBase):
+    """E2E tests for the PyATS NX-OS direct-to-device SSH scenario.
+
+    Scenario: PyATS NX-OS D2D, no Robot or API tests
+    Expected: CLI exits with code 0, 100% success rate
+    """
+
+    @pytest.fixture
+    def results(self, e2e_pyats_nxos_d2d_results: E2EResults) -> E2EResults:
+        """Provide PyATS NX-OS D2D scenario results."""
+        return e2e_pyats_nxos_d2d_results
 
 
 # =============================================================================

@@ -2,6 +2,7 @@
 
 ## Performance
 
+- yaml parser: enabled C-accelerated parser/emitter (`ruamel.yaml.clib` / `pure=False`) in YAML utilities. Speeds up YAML loading and data model merge operations by ~3x on CPython.
 - pyats broker: removed the per-command SSH liveness probe from the connection broker; dead sessions are now recovered by reconnecting and retrying the command once. Removes ~0.77s of event-loop blocking per test and the fleet-wide slowdown it caused.
 - pyats broker: command rejections (SubCommandFailure) no longer trigger a full SSH disconnect and cache wipe; only transport-level failures do. Eliminates a 4.7x per-failure penalty on devices with unsupported commands.
 - pyats broker: disconnect all devices concurrently during broker shutdown via `asyncio.gather`, reducing post-test teardown from O(n × disconnect_time) to O(max(disconnect_time)) also for user-provided testbeds where timeout settings might be missing.
@@ -9,13 +10,15 @@
 ## Bug Fixes
 
 - pyats broker: unified per-device locking to prevent a stale caller from tearing down a successor's connection during the reconnect-and-retry window. The execute and disconnect paths previously used separate locks over two halves of one critical section.
+- pyats: register `FTDTestBase` in `BASE_CLASS_MAPPING` so that `--include`/`--exclude` tag filtering works for FTD tests. Previously, FTD tests silently fell through to directory-based detection which drops group tags.
 
 # 2.1.0b1
 
 ## Features
 
-- robot rendering: added support for dicts as parent_key in `iterate_list_chunked` 
+- robot rendering: added support for dicts as parent_key in `iterate_list_chunked`
 - add support for SDWAN token authentication for pyATS test cases via SDWAN_USERNAME & SDWAN_API_TOKEN
+- add `NAC_TEST_DUMP_YAML_DATA_MODEL` environment variable to also write the merged data model as YAML (alongside the JSON file) for post-run inspection/debugging. The YAML file is not auto-cleaned up and may contain sensitive values (passwords, tokens, credentials), so review and remove it manually.
 
 ## Performance
 
@@ -28,6 +31,10 @@
 ## Breaking Changes
 
 - SSHTestBase.parse_output() is now async — test cases must use await self.parse_output(...)
+
+## Breaking Changes
+
+- **Internal merged data model file format changed to JSON**: For performance reasons, the internal temporary file used to pass the merged data model to test subprocesses is now written as JSON (`merged_data_model_test_variables.json`, previously `.yaml`). This has no effect on your YAML data files or data model structure. The standard `self.data_model` API is unaffected. This is only breaking if your tests or scripts read the file directly via the `MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH` environment variable — in that case, switch from YAML parsing to `json.load()`. Note two JSON serialization differences versus the previous YAML format: non-string mapping keys (e.g. integer keys such as VLAN IDs used as keys) are coerced to strings, and values that JSON cannot represent natively (e.g. unquoted YAML dates parsed as `datetime.date`) are written as their string form. Quote such keys/values in your data files if you need them preserved as strings anyway.
 
 # 2.0.0
 
