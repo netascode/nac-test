@@ -42,7 +42,7 @@ dependencies = [
     "ruamel.yaml>=0.18.15",
     "ruamel.yaml.clib>=0.2.12; platform_python_implementation == 'CPython'",
     "typer>=0.17.4",
-    "scrapli-netconf>=2026.1.12",
+    "scrapli-netconf>=2026.1.12; sys_platform != 'win32'",
     "asyncssh>=2.22.0",
     # PyATS & Genie Ecosystem — not supported on Windows
     "pyats>=26.5; sys_platform != 'win32'",
