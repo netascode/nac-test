@@ -8,7 +8,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-10-01T09:03:54.253319Z"
+exclude-newer = "2026-10-04T11:34:46.485002Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
@@ -2019,7 +2019,8 @@ dependencies = [
     { name = "robotframework-requests" },
     { name = "ruamel-yaml" },
     { name = "ruamel-yaml-clib", marker = "platform_python_implementation == 'CPython'" },
-    { name = "scrapli-netconf", marker = "sys_platform != 'win32'" },
+    { name = "scrapli" },
+    { name = "scrapli-netconf" },
     { name = "typer" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
@@ -2080,7 +2081,8 @@ requires-dist = [
     { name = "ruamel-yaml", specifier = ">=0.18.15" },
     { name = "ruamel-yaml-clib", marker = "platform_python_implementation == 'CPython'", specifier = ">=0.2.12" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.10" },
-    { name = "scrapli-netconf", marker = "sys_platform != 'win32'", specifier = ">=2026.1.12" },
+    { name = "scrapli", specifier = "<2026.10.0" },
+    { name = "scrapli-netconf", specifier = ">=2026.1.12" },
     { name = "typer", specifier = ">=0.17.4" },
     { name = "types-aiofiles", marker = "extra == 'dev'", specifier = ">=25.1.0.20260409" },
     { name = "types-markdown", marker = "extra == 'dev'", specifier = ">=3.10.2.20260408" },
