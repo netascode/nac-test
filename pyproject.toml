@@ -43,7 +43,7 @@ dependencies = [
     "ruamel.yaml.clib>=0.2.12; platform_python_implementation == 'CPython'",
     "typer>=0.17.4",
     "scrapli-netconf>=2026.1.12",
-    "scrapli<2026.10.0",  # scrapli 2026.10+ (v2) removed AsyncDriver needed by scrapli-netconf and dropped Windows support
+    "scrapli<2026.11.0",  # scrapli 2026.10+ (v2) removed AsyncDriver needed by scrapli-netconf and dropped Windows support
     "asyncssh>=2.22.0",
     # PyATS & Genie Ecosystem — not supported on Windows
     "pyats>=26.5; sys_platform != 'win32'",
