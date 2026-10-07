@@ -9,7 +9,7 @@
 
 ## Bug Fixes
 
-- dependencies: exclude `scrapli-netconf` on Windows (`sys_platform != 'win32'`) to avoid installation failures caused by `scrapli` 2026.10+ native build incompatibilities (#962).
+- dependencies: pin `scrapli<2026.10.0` to prevent breaking changes and installation failures introduced in scrapli 2026.10+ (#965).
 - pyats broker: unified per-device locking to prevent a stale caller from tearing down a successor's connection during the reconnect-and-retry window. The execute and disconnect paths previously used separate locks over two halves of one critical section.
 - pyats: register `FTDTestBase` in `BASE_CLASS_MAPPING` so that `--include`/`--exclude` tag filtering works for FTD tests. Previously, FTD tests silently fell through to directory-based detection which drops group tags.
 
