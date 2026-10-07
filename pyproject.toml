@@ -1,6 +1,6 @@
 [project]
 name = "nac-test"
-version = "2.0.0"
+version = "2.0.1"
 description = "A CLI tool to render to execute Robot Framework (RF) and PyATS tests for Network as Code (NAC)."
 license = { text = "MPL-2.0" }
 readme = "README.md"
@@ -42,6 +42,7 @@ dependencies = [
     "ruamel.yaml>=0.18.15",
     "typer>=0.17.4",
     "scrapli-netconf>=2026.1.12",
+    "scrapli<2026.10.0",  # scrapli 2026.10+ (v2) removed AsyncDriver needed by scrapli-netconf and dropped Windows support
     "asyncssh>=2.22.0",
     # PyATS & Genie Ecosystem — not supported on Windows
     "pyats>=26.5,!=26.9.*; sys_platform != 'win32'",
@@ -70,7 +71,6 @@ dev = [
     "bandit[toml]>=1.9.4",
     "flask>=3.1.3",
     "mypy>=1.17.1",
-    "nac-test-pyats-common>=0.1.0",  # Required for integration tests
     "pre-commit>=4.6.0",
     "pytest>=9.0.3",
     "pytest-cov~=7.1",

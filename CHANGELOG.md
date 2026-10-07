@@ -1,3 +1,11 @@
+# 2.0.1
+
+## Bug Fixes
+
+- dependencies: pin `scrapli<2026.10.0` to prevent breaking changes and installation failures introduced in scrapli 2026.10+.
+- dependencies: exclude pyATS and Genie 26.9 due to missing aarch64 wheels.
+- dependencies: backport updated python and dependabot dependency versions.
+
 # 2.0.0
 
 ## Major Features
