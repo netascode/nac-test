@@ -6,8 +6,10 @@ Tests verify the business logic of the pre-flight auth check,
 ensuring authentication failures are identified and classified appropriately.
 """
 
+import logging
 from typing import get_args
 
+import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from pytest_mock import MockerFixture
 
@@ -200,6 +202,30 @@ class TestPreflightAuthCheck:
         result = preflight_auth_check(aci_context)
 
         assert result.controller_url == "https://apic.lab.local"
+
+    def test_sanitizes_embedded_credentials_in_url_and_logs(
+        self,
+        monkeypatch: MonkeyPatch,
+        aci_context: ControllerContext,
+        mocker: MockerFixture,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Preflight check sanitizes embedded credentials from result and logs."""
+        monkeypatch.setenv("ACI_URL", "https://admin:s3cret@apic.lab.local:8443/")
+
+        mock_auth = mocker.MagicMock(side_effect=Exception("HTTP 401: Unauthorized"))
+        mocker.patch(
+            "nac_test.core.controller_auth._get_auth_callable",
+            return_value=mock_auth,
+        )
+
+        with caplog.at_level(logging.INFO, logger="nac_test.core.controller_auth"):
+            result = preflight_auth_check(aci_context)
+
+        assert result.controller_url == "https://apic.lab.local:8443"
+        assert "s3cret" not in result.controller_url
+        assert "s3cret" not in caplog.text
+        assert "https://apic.lab.local:8443" in caplog.text
 
     def test_propagates_http_status_code(
         self,
