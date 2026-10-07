@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10, <3.15"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -2084,7 +2084,7 @@ requires-dist = [
     { name = "ruamel-yaml", specifier = ">=0.18.15" },
     { name = "ruamel-yaml-clib", marker = "platform_python_implementation == 'CPython'", specifier = ">=0.2.12" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.10" },
-    { name = "scrapli", specifier = "<2026.10.0" },
+    { name = "scrapli", specifier = "<2026.11.0" },
     { name = "scrapli-netconf", specifier = ">=2026.1.12" },
     { name = "typer", specifier = ">=0.17.4" },
     { name = "types-aiofiles", marker = "extra == 'dev'", specifier = ">=25.1.0.20260409" },
