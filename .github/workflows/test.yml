@@ -161,7 +161,7 @@ jobs:
           uv sync --frozen --extra dev
           # Explicit file list: Windows shell doesn't expand globs, and other integration
           # tests import pyats which isn't available on Windows
-          uv run pytest -m windows -n auto --dist loadscope tests/e2e tests/integration/test_cli_basic.py tests/integration/test_cli_rendering.py tests/integration/test_cli_ordering.py tests/integration/test_cli_extra_args.py
+          uv run pytest -m windows -n auto --dist loadscope tests/e2e tests/integration/test_cli_basic.py tests/integration/test_cli_rendering.py tests/integration/test_cli_ordering.py tests/integration/test_cli_extra_args.py tests/integration/test_downstream_dependencies.py
           uv run nac-test --version
 
   test-uv-tool:
