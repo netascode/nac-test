@@ -206,7 +206,7 @@ class TestBaseTestSetupErrorLogging:
         monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """setup() calls self.logger.error with 'Controller detection failed' before
+        """setup() calls self.logger.error with 'Failed to load controller context' before
         re-raising ValueError, KeyError, or JSONDecodeError from get_controller_context().
         """
         if context_env is None:
@@ -224,7 +224,7 @@ class TestBaseTestSetupErrorLogging:
                     test_instance.setup()
 
         assert any(
-            "Controller detection failed" in r.message
+            "Failed to load controller context" in r.message
             for r in caplog.records
             if r.levelno == logging.ERROR
         )

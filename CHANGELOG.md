@@ -1,5 +1,9 @@
 # Unreleased
 
+## Breaking Changes
+
+- controller: removed `nac_test.utils.controller` (`detect_controller_type`, `get_matched_credential_set`), the `nac_test.pyats_core.common.auth_cache` re-export (use `nac_test.core.auth_cache`) and the transitional fallback in `get_controller_context()`. Use `nac_test.core.controller.resolve_controller()`; the orchestrator now publishes the resolved context via `NAC_TEST_CONTROLLER_CONTEXT`, which `get_controller_context()` requires.
+
 ## Performance
 
 - pyats broker: removed the per-command SSH liveness probe from the connection broker; dead sessions are now recovered by reconnecting and retrying the command once. Removes ~0.77s of event-loop blocking per test and the fleet-wide slowdown it caused.

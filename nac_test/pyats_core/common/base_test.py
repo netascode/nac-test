@@ -178,7 +178,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         try:
             ctx = get_controller_context()
         except (ValueError, KeyError) as e:
-            self.logger.error(f"Controller detection failed: {e}")
+            self.logger.error(f"Failed to load controller context: {e}")
             raise
         self.controller_type = ctx.controller_type
 

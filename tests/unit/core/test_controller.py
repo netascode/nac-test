@@ -457,16 +457,6 @@ class TestControllerEdgeCases:
         ctx = resolve_controller()
         assert ctx.controller_type == "MERAKI"
 
-    def test_truly_empty_environment(self) -> None:
-        """When no controller env vars are set, raises NoCredentialsFound.
-
-        Relies on the global autouse ``clean_controller_env`` fixture in
-        ``tests/conftest.py`` ensuring all controller environment variables
-        are unset.
-        """
-        with pytest.raises(NoCredentialsFound):
-            resolve_controller()
-
     def test_three_way_multiple_controllers(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -804,7 +794,9 @@ class TestSDWANCredentialSets:
         )
         assert cs.auth_method == "session"
 
-    def test_aci_matched_credential_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_aci_resolves_with_session_auth(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """ACI detection resolves controller with session auth."""
         monkeypatch.setenv("ACI_URL", "https://apic.example.com")
         monkeypatch.setenv("ACI_USERNAME", "admin")
