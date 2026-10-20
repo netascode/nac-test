@@ -11,7 +11,6 @@ the controller resolution domain, not a CLI concern.
 """
 
 import logging
-import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -20,7 +19,6 @@ from typing import Any
 from nac_test.core.auth_cache import AuthCache
 from nac_test.core.controller import (
     CONTROLLER_REGISTRY,
-    ENV_CONTROLLER_CONTEXT,
     get_controller_url,
     get_display_name,
 )
@@ -143,10 +141,6 @@ def preflight_auth_check(ctx: ControllerContext) -> AuthCheckResult:
             controller_url=controller_url,
             detail="Pre-flight check skipped (no auth adapter available)",
         )
-
-    # Ensure controller context env var is set for auth adapters (e.g., SDWANManagerAuth)
-    # that inspect get_controller_context() during get_auth().
-    os.environ[ENV_CONTROLLER_CONTEXT] = ctx.to_json()
 
     # Invalidate any stale cached token so we validate the current credentials.
     # Best-effort: a failure here must never block test execution.

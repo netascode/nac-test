@@ -16,6 +16,7 @@ from nac_test.cli.ui import (
 )
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
+    ENV_CONTROLLER_CONTEXT,
     HTML_REPORTS_DIRNAME,
     LOG_HTML,
     OUTPUT_XML,
@@ -209,6 +210,9 @@ class CombinedOrchestrator:
         # Pre-flight: detect controller and validate credentials for PyATS path only.
         # Robot path stays generic — it may not need controller access at all.
         # Dry-run mode skips auth — it validates test structure, not execution.
+        # _run_pre_flight_checks() publishes the controller context env var; it must
+        # stay set for the whole PyATS phase (pre-flight auth, parent-process D2D
+        # inventory discovery, test subprocesses) and is removed afterwards.
         preflight_failed = False
         if has_pyats and not self.render_only and not self.dry_run:
             preflight_failed = self._run_pre_flight_checks(combined_results)
@@ -237,6 +241,7 @@ class CombinedOrchestrator:
             pyats_results = pyats_orchestrator.run_tests()
             combined_results.api = pyats_results.api
             combined_results.d2d = pyats_results.d2d
+        os.environ.pop(ENV_CONTROLLER_CONTEXT, None)
 
         if has_robot:
             typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")
@@ -349,6 +354,7 @@ class CombinedOrchestrator:
             logger.info(
                 "Controller type detected: %s", self.controller_context.controller_type
             )
+            os.environ[ENV_CONTROLLER_CONTEXT] = self.controller_context.to_json()
         except ResolutionError as e:
             detail = format_resolution_error(e)
             typer.secho(
