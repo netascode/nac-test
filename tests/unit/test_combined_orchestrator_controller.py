@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
@@ -161,6 +162,47 @@ class TestCombinedOrchestratorController:
         expected = orchestrator.controller_context.to_json()  # type: ignore[unreachable]
         assert seen["preflight"] == expected
         assert seen["pyats"] == expected
+        assert ENV_CONTROLLER_CONTEXT not in os.environ
+
+    def test_controller_context_cleared_when_pyats_raises(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Context env var is popped even if PyATS execution raises."""
+        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
+        monkeypatch.setenv("ACI_USERNAME", "admin")
+        monkeypatch.setenv("ACI_PASSWORD", "password")
+
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        orchestrator = CombinedOrchestrator(
+            data_paths=[data_dir],
+            templates_dir=templates_dir,
+            output_dir=output_dir,
+            dev_pyats_only=True,
+        )
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.preflight_auth_check",
+                return_value=AUTH_SUCCESS,
+            ),
+            patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats,
+            patch("typer.echo"),
+            patch("typer.secho"),
+            patch.object(CombinedOrchestrator, "_check_python_version"),
+        ):
+            mock_pyats.return_value.run_tests.side_effect = RuntimeError("boom")
+            with pytest.raises(RuntimeError, match="boom"):
+                orchestrator.run_tests()
+
         assert ENV_CONTROLLER_CONTEXT not in os.environ
 
     def test_detection_failure_continues_with_preflight_failure(

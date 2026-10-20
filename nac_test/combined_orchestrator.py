@@ -212,36 +212,38 @@ class CombinedOrchestrator:
         # Dry-run mode skips auth — it validates test structure, not execution.
         # _run_pre_flight_checks() publishes the controller context env var; it must
         # stay set for the whole PyATS phase (pre-flight auth, parent-process D2D
-        # inventory discovery, test subprocesses) and is removed afterwards.
-        preflight_failed = False
-        if has_pyats and not self.render_only and not self.dry_run:
-            preflight_failed = self._run_pre_flight_checks(combined_results)
+        # inventory discovery, test subprocesses) and is always removed afterwards.
+        try:
+            preflight_failed = False
+            if has_pyats and not self.render_only and not self.dry_run:
+                preflight_failed = self._run_pre_flight_checks(combined_results)
 
-        if has_pyats and not self.render_only and not preflight_failed:
-            typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
-            self._check_python_version()
+            if has_pyats and not self.render_only and not preflight_failed:
+                typer.echo(f"\n🧪 Running PyATS tests{mode_suffix}...\n")
+                self._check_python_version()
 
-            pyats_orchestrator = PyATSOrchestrator(
-                data_paths=self.data_paths,
-                test_dir=self.templates_dir,
-                output_dir=self.output_dir,
-                minimal_reports=self.minimal_reports,
-                custom_testbed_path=self.custom_testbed_path,
-                controller_context=self.controller_context,
-                dry_run=self.dry_run,
-                verbose=self.verbose,
-                loglevel=self.loglevel,
-                include_tags=self.include_tags,
-                exclude_tags=self.exclude_tags,
-            )
-            if self.max_parallel_devices is not None:
-                pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
+                pyats_orchestrator = PyATSOrchestrator(
+                    data_paths=self.data_paths,
+                    test_dir=self.templates_dir,
+                    output_dir=self.output_dir,
+                    minimal_reports=self.minimal_reports,
+                    custom_testbed_path=self.custom_testbed_path,
+                    controller_context=self.controller_context,
+                    dry_run=self.dry_run,
+                    verbose=self.verbose,
+                    loglevel=self.loglevel,
+                    include_tags=self.include_tags,
+                    exclude_tags=self.exclude_tags,
+                )
+                if self.max_parallel_devices is not None:
+                    pyats_orchestrator.max_parallel_devices = self.max_parallel_devices
 
-            # PyATS returns PyATSResults with .api and .d2d attributes
-            pyats_results = pyats_orchestrator.run_tests()
-            combined_results.api = pyats_results.api
-            combined_results.d2d = pyats_results.d2d
-        os.environ.pop(ENV_CONTROLLER_CONTEXT, None)
+                # PyATS returns PyATSResults with .api and .d2d attributes
+                pyats_results = pyats_orchestrator.run_tests()
+                combined_results.api = pyats_results.api
+                combined_results.d2d = pyats_results.d2d
+        finally:
+            os.environ.pop(ENV_CONTROLLER_CONTEXT, None)
 
         if has_robot:
             typer.echo(f"\n🤖 Running Robot Framework tests{mode_suffix}...\n")
