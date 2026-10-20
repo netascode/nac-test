@@ -16,7 +16,6 @@ from typing import Any
 
 import pytest
 
-from nac_test.core.controller import IncompleteCredentials, resolve_controller
 from tests.conftest import resolve_and_inject_context
 
 
@@ -47,24 +46,19 @@ class TestIOSXEOptionalCredentials:
         iosxe_controller_env: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """resolve_controller() should fail for IOSXE without USERNAME/PASSWORD.
+        """setup() raises when the context is valid but IOSXE credentials are gone.
 
         IOSXE requires IOSXE_USERNAME and IOSXE_PASSWORD in addition to
-        IOSXE_URL (or IOSXE_HOST). Resolution reports incomplete credentials.
+        IOSXE_URL (or IOSXE_HOST). The orchestrator resolved the controller,
+        so a failure in get_connection_params() is a real misconfiguration.
         """
-        # Remove USERNAME and PASSWORD to simulate incomplete IOSXE environment
-        monkeypatch.delenv("IOSXE_USERNAME", raising=False)
-        monkeypatch.delenv("IOSXE_PASSWORD", raising=False)
+        resolve_and_inject_context(monkeypatch)
+        monkeypatch.delenv("IOSXE_USERNAME")
+        monkeypatch.delenv("IOSXE_PASSWORD")
 
-        # Verify environment is correct
-        assert "IOSXE_URL" in os.environ
-        assert "IOSXE_USERNAME" not in os.environ
-        assert "IOSXE_PASSWORD" not in os.environ
-
-        with pytest.raises(IncompleteCredentials) as exc_info:
-            resolve_controller()
-
-        assert "IOSXE" in exc_info.value.partial_controllers
+        instance = nac_test_base_class.__new__(nac_test_base_class)
+        with pytest.raises(ValueError, match="IOSXE_USERNAME"):
+            instance.setup()
 
     def test_iosxe_setup_works_with_username_password(
         self,
@@ -123,14 +117,10 @@ class TestIOSXEOptionalCredentials:
         aci_controller_env: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Controller resolution should fail for ACI without USERNAME.
+        """setup() raises when the context is valid but ACI_USERNAME is gone."""
+        resolve_and_inject_context(monkeypatch)
+        monkeypatch.delenv("ACI_USERNAME")
 
-        ACI requires all three credentials - resolve_controller() should
-        raise IncompleteCredentials.
-        """
-        monkeypatch.delenv("ACI_USERNAME", raising=False)
-
-        with pytest.raises(IncompleteCredentials) as exc_info:
-            resolve_controller()
-
-        assert "ACI" in exc_info.value.partial_controllers
+        instance = nac_test_base_class.__new__(nac_test_base_class)
+        with pytest.raises(ValueError, match="ACI_USERNAME"):
+            instance.setup()

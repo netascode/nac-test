@@ -16,7 +16,12 @@ import pytest
 from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
 from nac_test.pyats_core.constants import DEVICE_EXECUTE_TIMEOUT
 from nac_test.pyats_core.ssh.command_cache import CommandCache
-from tests.conftest import resolve_and_inject_context
+
+# The class SSHTestBase actually inherits from (NACTestBase). Patch it via the MRO
+# rather than by dotted path: the nac_test_base_class fixture purges and re-imports
+# *base_test* modules, so a dotted target can resolve to a stale NACTestBase
+# (on Python 3.10, depending on test order) and leave the real setup() unpatched.
+_PARENT = SSHTestBase.__mro__[1]
 
 
 @pytest.fixture()
@@ -49,7 +54,6 @@ class TestSSHTestBaseValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Validation passes for a fully-populated device info dict."""
-        resolve_and_inject_context(monkeypatch)
         valid_device = {
             "hostname": "test-router",
             "host": "192.168.1.1",
@@ -64,7 +68,7 @@ class TestSSHTestBaseValidation:
         mock_parent.broker_client = Mock()
 
         with (
-            patch("nac_test.pyats_core.common.base_test.NACTestBase.setup"),
+            patch.object(_PARENT, "setup"),
             patch.object(SSHTestBase, "parent", mock_parent, create=True),
             patch.object(instance, "_async_setup", new_callable=AsyncMock),
         ):
@@ -80,7 +84,6 @@ class TestSSHTestBaseValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Validation fails with a clear message when required fields are absent."""
-        resolve_and_inject_context(monkeypatch)
         invalid_device = {
             "hostname": "test-router",
             "host": "192.168.1.1",
@@ -89,7 +92,7 @@ class TestSSHTestBaseValidation:
         monkeypatch.setenv("DEVICE_INFO", json.dumps(invalid_device))
         instance = self._make_instance()
 
-        with patch("nac_test.pyats_core.common.base_test.NACTestBase.setup"):
+        with patch.object(_PARENT, "setup"):
             instance.setup()
 
         instance.failed.assert_called_once()
@@ -106,7 +109,6 @@ class TestSSHTestBaseValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Validation is skipped when JSON parsing fails."""
-        resolve_and_inject_context(monkeypatch)
         monkeypatch.setenv("DEVICE_INFO", "not valid json")
         instance = self._make_instance()
 
@@ -114,7 +116,7 @@ class TestSSHTestBaseValidation:
             patch(
                 "nac_test.pyats_core.common.ssh_base_test.validate_device_inventory"
             ) as mock_validate,
-            patch("nac_test.pyats_core.common.base_test.NACTestBase.setup"),
+            patch.object(_PARENT, "setup"),
         ):
             instance.setup()
 
