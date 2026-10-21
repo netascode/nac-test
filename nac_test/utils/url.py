@@ -16,18 +16,42 @@ _SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 def _split_url(url: str) -> tuple[SplitResult, bool]:
     """Parse a URL so the authority always lands in the netloc field.
 
+    Embedded userinfo is dropped before parsing: everything between the start of
+    the authority (after `scheme://`, `//`, or the start of a schemeless string)
+    and the last `@` is discarded. This is deliberately done on the raw text, as
+    `urlsplit` ends the authority at the first `/`, `?` or `#`, so a password
+    containing one of those unencoded would otherwise survive. The trade-off is
+    that an `@` in the path or query (e.g., `host/path?u=a@b`) is over-redacted.
+
     If the URL does not start with a recognized scheme or `//`, a `//` sentinel
-    is temporarily prepended before parsing with `urlsplit`.
+    is temporarily prepended before parsing with `urlsplit`. A bare IPv6 literal
+    (two or more colons in the authority, no brackets) is bracketed first.
 
     Args:
         url: URL string to parse.
 
     Returns:
         A tuple of (parsed SplitResult, sentinel_added: bool).
+
+    Raises:
+        ValueError: If `urlsplit` rejects the URL (e.g., a malformed bracketed host).
     """
-    if _SCHEME_RE.match(url) or url.startswith("//"):
-        return urlsplit(url), False
-    return urlsplit("//" + url), True
+    match = _SCHEME_RE.match(url)
+    if match:
+        prefix = match.group(0)
+    elif url.startswith("//"):
+        prefix = "//"
+    else:
+        prefix = ""
+    rest = url[len(prefix) :].rpartition("@")[2]
+
+    if prefix:
+        return urlsplit(prefix + rest), False
+
+    authority = re.split(r"[/?#]", rest, maxsplit=1)[0]
+    if authority.count(":") >= 2 and "[" not in authority:
+        rest = f"[{authority}]{rest[len(authority) :]}"
+    return urlsplit("//" + rest), True
 
 
 def _safe_port(parsed: SplitResult) -> str | None:
@@ -62,7 +86,9 @@ def sanitize_url_for_display(url: str) -> str:
     slashes, and surrounding whitespace while preserving scheme, host, port, path,
     query parameters, and fragments. Hostnames are normalized to lowercase.
     Returns empty string for empty or whitespace-only input, and for input that
-    cannot be parsed (e.g., a malformed bracketed host such as "https://[::1").
+    has no host or cannot be parsed (e.g., "https://user:pass@" or a malformed
+    bracketed host such as "https://[::1"). Everything up to the last `@` of the
+    URL is treated as userinfo, so an `@` in the path or query is over-redacted.
 
     Args:
         url: A URL string (e.g., "https://user:pass@apic.example.com:8443/").
@@ -82,18 +108,26 @@ def sanitize_url_for_display(url: str) -> str:
     except ValueError:
         return ""
     host = parsed.hostname or ""
+    if not host:
+        return ""
     netloc = f"[{host}]" if ":" in host else host
     port = _safe_port(parsed)
     if port:
         netloc = f"{netloc}:{port}"
 
     cleaned = urlunsplit(
-        (parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment)
+        (
+            parsed.scheme,
+            netloc,
+            parsed.path.rstrip("/"),
+            parsed.query,
+            parsed.fragment,
+        )
     )
     if sentinel_added and cleaned.startswith("//"):
         cleaned = cleaned[2:]
 
-    return cleaned.rstrip("/")
+    return cleaned
 
 
 def extract_host(url: str) -> str:

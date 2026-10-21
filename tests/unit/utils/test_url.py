@@ -52,7 +52,7 @@ class TestSanitizeUrlForDisplay:
             ),
             (
                 "host/path?u=a@b",
-                "host/path?u=a@b",
+                "b",
             ),
             (
                 "//user:pass@h:8443/p",
@@ -72,6 +72,12 @@ class TestSanitizeUrlForDisplay:
             ),
             ("https://[apic.local]/", ""),
             ("https://[::1", ""),
+            ("https://admin:p/ss@apic.local/", "https://apic.local"),
+            ("https://admin:p?ss@apic.local/", "https://apic.local"),
+            ("https://admin:p#ss@apic.local/", "https://apic.local"),
+            ("https://host/p?x=/", "https://host/p?x=/"),
+            ("https://user:pass@", ""),
+            ("2001:db8::1", "[2001:db8::1]"),
         ],
         ids=[
             "without_trailing_slash",
@@ -89,13 +95,19 @@ class TestSanitizeUrlForDisplay:
             "malformed_non_numeric_port",
             "out_of_range_port",
             "schemeless_password_with_at_sign",
-            "schemeless_query_with_at_sign",
+            "schemeless_query_with_at_sign_over_redacted",
             "protocol_relative_with_credentials",
             "ipv6_with_malformed_port",
             "schemeless_hostname_lowercased",
             "scheme_and_hostname_lowercased_path_preserved",
             "malformed_bracketed_host",
             "unterminated_bracket",
+            "password_with_slash",
+            "password_with_question_mark",
+            "password_with_hash",
+            "trailing_slash_in_query_preserved",
+            "userinfo_without_host",
+            "bare_ipv6",
         ],
     )
     def test_sanitize_url_for_display(self, input_url: str, expected: str) -> None:
@@ -131,6 +143,8 @@ class TestExtractHost:
             ("Controller.LOCAL", "controller.local"),
             ("https://[apic.local]/", ""),
             ("https://[::1", ""),
+            ("https://admin:p/ss@apic.local", "apic.local"),
+            ("2001:db8::1", "2001:db8::1"),
         ],
         ids=[
             "https_url",
@@ -152,6 +166,8 @@ class TestExtractHost:
             "hostname_lowercased",
             "malformed_bracketed_host",
             "unterminated_bracket",
+            "password_with_slash",
+            "bare_ipv6",
         ],
     )
     def test_extract_host(self, input_url: str, expected: str) -> None:
