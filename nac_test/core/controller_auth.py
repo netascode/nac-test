@@ -124,7 +124,9 @@ def preflight_auth_check(ctx: ControllerContext) -> AuthCheckResult:
         raw_url = ""
         controller_url = ""
     # Auth adapters strip trailing "/" before caching (cache key normalization).
-    # Match that here so AuthCache.invalidate() finds the right entry.
+    # Match that here so AuthCache.invalidate() finds the right entry. This
+    # deliberately uses the raw URL (not the sanitized display URL): the adapters
+    # key on the URL exactly as configured, including any userinfo and case.
     cache_url = raw_url.rstrip("/")
     display_name = get_display_name(controller_type)
 
