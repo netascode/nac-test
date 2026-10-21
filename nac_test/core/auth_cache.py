@@ -14,6 +14,7 @@ from typing import Any
 from filelock import FileLock
 
 from nac_test.core.constants import AUTH_CACHE_DIR
+from nac_test.utils.url import sanitize_url_for_display
 
 logger = logging.getLogger(__name__)
 
@@ -126,25 +127,29 @@ class AuthCache:
         url_hash = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
         cache_file = cache_dir / f"{controller_type}_{url_hash}.json"
         lock_file = cache_dir / f"{controller_type}_{url_hash}.lock"
+        # The raw URL is only the cache key; never log it (may carry credentials).
+        display_url = sanitize_url_for_display(url)
 
         try:
             with FileLock(str(lock_file)):
                 if cache_file.exists():
                     cache_file.unlink()
                     logger.debug(
-                        "Invalidated auth cache for %s at %s", controller_type, url
+                        "Invalidated auth cache for %s at %s",
+                        controller_type,
+                        display_url,
                     )
                 else:
                     logger.debug(
                         "No auth cache to invalidate for %s at %s",
                         controller_type,
-                        url,
+                        display_url,
                     )
         except Exception as e:
             logger.debug(
                 "Best-effort cache invalidation failed for %s at %s: %s",
                 controller_type,
-                url,
+                display_url,
                 e,
             )
             return
