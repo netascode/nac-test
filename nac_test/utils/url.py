@@ -61,7 +61,8 @@ def sanitize_url_for_display(url: str) -> str:
     Strips embedded credentials (userinfo, stripped rather than redacted), trailing
     slashes, and surrounding whitespace while preserving scheme, host, port, path,
     query parameters, and fragments. Hostnames are normalized to lowercase.
-    Returns empty string for empty or whitespace-only input.
+    Returns empty string for empty or whitespace-only input, and for input that
+    cannot be parsed (e.g., a malformed bracketed host such as "https://[::1").
 
     Args:
         url: A URL string (e.g., "https://user:pass@apic.example.com:8443/").
@@ -76,7 +77,10 @@ def sanitize_url_for_display(url: str) -> str:
     if not cleaned:
         return ""
 
-    parsed, sentinel_added = _split_url(cleaned)
+    try:
+        parsed, sentinel_added = _split_url(cleaned)
+    except ValueError:
+        return ""
     host = parsed.hostname or ""
     netloc = f"[{host}]" if ":" in host else host
     port = _safe_port(parsed)
@@ -105,7 +109,7 @@ def extract_host(url: str) -> str:
 
     Returns:
         The hostname portion of the URL (e.g., "apic.example.com").
-        Returns empty string for empty input.
+        Returns empty string for empty or unparseable input.
 
     Examples:
         extract_host("https://apic.example.com:443/api/v1")
@@ -126,5 +130,8 @@ def extract_host(url: str) -> str:
     if not url:
         return ""
 
-    parsed, _ = _split_url(url.strip())
+    try:
+        parsed, _ = _split_url(url.strip())
+    except ValueError:
+        return ""
     return parsed.hostname or ""

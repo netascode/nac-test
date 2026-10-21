@@ -70,6 +70,8 @@ class TestSanitizeUrlForDisplay:
                 "HTTPS://Admin:Secret@Host.Example.COM:8443/Path/",
                 "https://host.example.com:8443/Path",
             ),
+            ("https://[apic.local]/", ""),
+            ("https://[::1", ""),
         ],
         ids=[
             "without_trailing_slash",
@@ -92,6 +94,8 @@ class TestSanitizeUrlForDisplay:
             "ipv6_with_malformed_port",
             "schemeless_hostname_lowercased",
             "scheme_and_hostname_lowercased_path_preserved",
+            "malformed_bracketed_host",
+            "unterminated_bracket",
         ],
     )
     def test_sanitize_url_for_display(self, input_url: str, expected: str) -> None:
@@ -125,6 +129,8 @@ class TestExtractHost:
             ("admin@apic.example.com", "apic.example.com"),
             ("host:8080/path", "host"),
             ("Controller.LOCAL", "controller.local"),
+            ("https://[apic.local]/", ""),
+            ("https://[::1", ""),
         ],
         ids=[
             "https_url",
@@ -144,6 +150,8 @@ class TestExtractHost:
             "schemeless_user_only",
             "schemeless_host_with_port_and_path",
             "hostname_lowercased",
+            "malformed_bracketed_host",
+            "unterminated_bracket",
         ],
     )
     def test_extract_host(self, input_url: str, expected: str) -> None:
