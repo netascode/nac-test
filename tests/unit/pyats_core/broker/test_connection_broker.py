@@ -752,3 +752,52 @@ class TestBrokerClientRequestLock:
                 await server.wait_closed()
 
         asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# broker.shutdown() — concurrency
+# ---------------------------------------------------------------------------
+
+
+class TestBrokerShutdownConcurrency:
+    def test_shutdown_disconnects_devices_concurrently(
+        self, broker: ConnectionBroker
+    ) -> None:
+        """Verify all connected devices are disconnected concurrently during shutdown.
+
+        Each mock disconnect waits until all devices have entered the disconnect
+        routine before completing. Under serial execution this would deadlock/timeout;
+        under asyncio.gather all devices overlap and complete together.
+        """
+        device_names = ["router-1", "router-2", "router-3"]
+        for name in device_names:
+            broker.connected_devices[name] = MagicMock()
+
+        all_entered = asyncio.Event()
+        in_flight = 0
+        max_concurrent = 0
+
+        async def _mock_disconnect(hostname: str) -> None:
+            nonlocal in_flight, max_concurrent
+            in_flight += 1
+            max_concurrent = max(max_concurrent, in_flight)
+
+            if in_flight == len(device_names):
+                all_entered.set()
+
+            # Wait for all devices to be in-flight simultaneously
+            await asyncio.wait_for(all_entered.wait(), timeout=2.0)
+            in_flight -= 1
+            broker.connected_devices.pop(hostname, None)
+
+        async def _run() -> None:
+            with patch.object(
+                broker, "_disconnect_device", side_effect=_mock_disconnect
+            ):
+                await broker.shutdown()
+
+        asyncio.run(_run())
+
+        # Assert all devices were in-flight at the same time
+        assert max_concurrent == len(device_names)
+        assert broker.connected_devices == {}

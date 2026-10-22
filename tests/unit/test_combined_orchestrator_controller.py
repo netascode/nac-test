@@ -270,8 +270,8 @@ class TestCombinedOrchestratorController:
 
         output_dir = tmp_path / "output"
         output_dir.mkdir()
-        merged_file = output_dir / "merged.yaml"
-        merged_file.write_text("merged: data")
+        merged_file = output_dir / "merged.json"
+        merged_file.write_text('{"merged": "data"}')
 
         sdwan_auth = AuthCheckResult(
             success=True,
@@ -378,8 +378,8 @@ class TestCombinedOrchestratorController:
 
         output_dir = tmp_path / "output"
         output_dir.mkdir()
-        merged_file = output_dir / "merged.yaml"
-        merged_file.write_text("test: data")
+        merged_file = output_dir / "merged.json"
+        merged_file.write_text('{"test": "data"}')
 
         # Initialize CombinedOrchestrator with render_only=True
         # This should NOT raise typer.Exit despite missing credentials
@@ -441,8 +441,8 @@ class TestCombinedOrchestratorController:
 
         output_dir = tmp_path / "output"
         output_dir.mkdir()
-        merged_file = output_dir / "merged.yaml"
-        merged_file.write_text("merged: data")
+        merged_file = output_dir / "merged.json"
+        merged_file.write_text('{"merged": "data"}')
 
         cc_auth = AuthCheckResult(
             success=True,
