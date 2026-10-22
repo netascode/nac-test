@@ -24,6 +24,7 @@ from nac_test.core.controller_auth import (
     preflight_auth_check,
 )
 from nac_test.core.types import ControllerContext
+from tests.conftest import inject_context
 
 pytestmark = pytest.mark.integration
 
@@ -215,6 +216,9 @@ class TestPreflightAuthIntegrationSDWAN:
         monkeypatch.setenv("SDWAN_URL", httpserver.url_for(""))
         monkeypatch.setenv("SDWAN_USERNAME", "integration-test-user")
         monkeypatch.setenv("SDWAN_PASSWORD", "integration-test-password")
+        # The orchestrator publishes the context in production; SDWANManagerAuth
+        # reads it via get_controller_context() in the auth subprocess.
+        inject_context(monkeypatch, sdwan_context)
 
         result = preflight_auth_check(sdwan_context)
 
@@ -253,6 +257,7 @@ class TestPreflightAuthIntegrationSDWAN:
         monkeypatch.setenv("SDWAN_URL", httpserver.url_for(""))
         monkeypatch.setenv("SDWAN_USERNAME", "wrong-user")
         monkeypatch.setenv("SDWAN_PASSWORD", "wrong-password")
+        inject_context(monkeypatch, sdwan_context)
 
         result = preflight_auth_check(sdwan_context)
 

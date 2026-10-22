@@ -19,6 +19,7 @@ from nac_test.core.controller_auth import (
     preflight_auth_check,
 )
 from nac_test.core.types import ControllerContext
+from tests.conftest import inject_context
 
 pytestmark = pytest.mark.integration
 
@@ -82,6 +83,7 @@ def test_sdwan_preflight_normalizes_url(
     monkeypatch.setenv("SDWAN_URL", httpserver.url_for("") + url_suffix)
     monkeypatch.setenv("SDWAN_USERNAME", "admin")
     monkeypatch.setenv("SDWAN_PASSWORD", "password")
+    inject_context(monkeypatch, sdwan_context)
 
     result = preflight_auth_check(sdwan_context)
 

@@ -77,12 +77,12 @@ class TestCliAciValidationIntegration:
     def test_cli_validation_passes_when_aci_url_not_set(
         self,
         minimal_test_env: dict[str, Path],
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """CLI should skip ACI validation when ACI_URL is not set."""
-        # Ensure ACI_URL is not set
-        monkeypatch.delenv("ACI_URL", raising=False)
+        """CLI should skip ACI validation when ACI_URL is not set.
 
+        Relies on the global autouse ``clean_controller_env`` fixture in
+        ``tests/conftest.py`` ensuring ACI_URL is unset.
+        """
         # We need to mock the DataMerger and orchestrator since we don't have full environment
         with (
             patch("nac_test.cli.main.DataMerger") as mock_merger,

@@ -366,8 +366,6 @@ class PyATSOrchestrator:
 
                 # Set environment variable for test subprocesses to find broker
                 os.environ["NAC_TEST_BROKER_SOCKET"] = str(broker.socket_path)
-                # Serialize controller context for subprocess transport
-                os.environ[ENV_CONTROLLER_CONTEXT] = self.controller_context.to_json()
 
                 # Execute device tests with broker running
                 return await self._execute_device_tests_with_broker(test_files, devices)
@@ -380,7 +378,6 @@ class PyATSOrchestrator:
         finally:
             # Clean up environment variables
             os.environ.pop("NAC_TEST_BROKER_SOCKET", None)
-            os.environ.pop(ENV_CONTROLLER_CONTEXT, None)
 
     async def _execute_device_tests_with_broker(
         self, test_files: list[Path], devices: list[dict[str, Any]]
