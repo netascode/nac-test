@@ -26,15 +26,24 @@ $ nac-test --help
 ╭─ Options ────────────────────────────────────────────────────────────────────╮
 │ *  --data              -d   PATH        Path to data YAML files.             │
 │                                         [env var: NAC_TEST_DATA] [required]  │
-│ *  --templates         -t   DIRECTORY   Path to test templates.              │
+│    --templates         -t   DIRECTORY   Path to test templates (optional if │
+│                                         a module or bundle provides them).   │
 │                                         [env var: NAC_TEST_TEMPLATES]        │
-│                                         [required]                           │
 │ *  --output            -o   DIRECTORY   Path to output directory.            │
 │                                         [env var: NAC_TEST_OUTPUT] [required]│
 │    --filters           -f   DIRECTORY   Path to Jinja filters.               │
 │                                         [env var: NAC_TEST_FILTERS]          │
 │    --tests                  DIRECTORY   Path to Jinja tests.                 │
 │                                         [env var: NAC_TEST_TESTS]            │
+│    --bundle                 PATH        Artifact bundle (zip, tar.gz or      │
+│                                         directory), repeatable, default:     │
+│                                         the bundles in .nac/                 │
+│                                         [env var: NAC_TEST_BUNDLE]           │
+│    --module-dir             DIRECTORY   Module directory with nac/ artifacts,│
+│                                         default: via terraform init          │
+│                                         [env var: NAC_TEST_MODULE_DIR]       │
+│    --list-artifacts                     List artifact layers, templates,     │
+│                                         filters and tests, then exit.        │
 │    --include           -i   TEXT        Selects test cases by tag (include). │
 │                                         [env var: NAC_TEST_INCLUDE]          │
 │    --exclude           -e   TEXT        Selects test cases by tag (exclude). │
@@ -71,7 +80,7 @@ $ nac-test --help
 ## How It Works
 
 1. **Data Merging**: All YAML files from `--data` paths are merged into a single data model
-2. **Test Discovery**: The framework discovers both Robot templates (`.robot`, `.j2`) and PyATS tests (`.py`) in the `--templates` directory
+2. **Test Discovery**: The framework discovers both Robot templates (`.robot`, `.j2`) and PyATS tests (`.py`) in the `--templates` directory and in the templates provided by modules and bundles (see [Templates from Modules and Bundles](#templates-from-modules-and-bundles))
 3. **Robot Rendering**: Jinja templates are rendered using the merged data model
 4. **Test Execution**: Both Robot Framework and PyATS tests execute in parallel
 5. **Report Generation**: HTML reports and artifacts are generated in the `--output` directory
@@ -446,9 +455,47 @@ nac-test -d ./data -t ./tests -o ./output --pyats --max-parallel-devices 10
 
 The `--max-parallel-devices` option sets an upper limit on concurrent SSH connections to prevent overwhelming network devices or exhausting system resources.
 
+## Templates from Modules and Bundles
+
+Templates, Jinja filters and Jinja tests can come from three layers, highest priority first:
+
+1. **Local**: the `--templates`, `--filters` and `--tests` options
+2. **Bundles**: archives (`.zip`, `.tar.gz` or `.tgz`) or a `bundle/` directory in `.nac/` of your project, or `--bundle` (repeatable). Several bundles are peers of one tier and may split content between them
+3. **Module**: the `nac/` directory shipped inside an installed Terraform or OpenTofu module, found through `terraform init` (or `--module-dir`)
+
+Modules and bundles use the same layout below their `nac/` directory:
+
+```text
+nac/tests/
+├── templates/       # test templates (and PyATS tests)
+├── jinja_filters/   # Jinja filters
+└── jinja_tests/     # Jinja tests
+```
+
+How layers are combined:
+
+- **Templates** are identified by their path relative to the templates directory. If several layers provide the same path, the highest layer wins. A single templates directory is used in place; several are merged into a copy in `<output>/merged_templates/`, which is what Robot and PyATS then use.
+- **Filters and Jinja tests** are identified by the `name` they declare, not by their file name. A higher layer replaces a lower one with the same name. Two files in one directory declaring the same name are an error.
+- **Several bundles** are peers: a template path, filter or Jinja test provided by two bundles is an error naming both, so content can be split cleanly but not overlap. Each bundle needs a unique `name` in its manifest, and two bundles with the same name (typically an old and a new version left in `.nac/`) are an error. A bundle in `.nac/` that provides nothing for nac-test (for example only a schema and rules) is skipped.
+- `-t` is optional if a module or bundle provides templates. If no layer provides any, nac-test exits with an error.
+- Existing projects are unaffected until an installed module or bundle ships `nac/tests`.
+
+To remove templates of a lower layer, list them in `.nac/overrides.yaml` of your project (this affects the bundle and the module), or in an `overrides.yaml` at the root of a bundle (this affects the module):
+
+```yaml
+disable:
+  templates: ["config/bridge_domain.robot", "lib/*"]
+```
+
+Entries are paths relative to the templates directory; globs are allowed and `*` also matches `/`. Local templates are never affected (delete them or leave them out of `-t`). Entries are declarative, so one that matches nothing is not an error. A rule list under `disable.rules` is used by `nac-validate`; see [nac-artifacts](https://github.com/netascode/nac-artifacts) for the full format.
+
+Use `nac-test --list-artifacts` (no `-d` or `-o` needed) to see the layers, the templates each contributes, which templates were replaced or disabled (and entries that matched nothing), and the filters and tests that will be loaded.
+
+Bundles usually contain Python code that nac-test executes (filters, PyATS tests), so a bundle needs the same trust as code in your own repository. Bundle and module discovery is provided by [nac-artifacts](https://github.com/netascode/nac-artifacts), which documents the bundle format.
+
 ## Custom Jinja Filters
 
-Custom Jinja filters can be used by providing a set of Python classes where each filter is implemented as a separate `Filter` class in a `.py` file located in the `--filters` path. The class must have a single attribute named `name`, the filter name, and a `classmethod()` named `filter` which has one or more arguments. A sample filter can be found below.
+Custom Jinja filters can be used by providing a set of Python classes where each filter is implemented as a separate `Filter` class in a `.py` file located in the `--filters` path. The class must have a single attribute named `name`, the filter name, and a `classmethod()` named `filter` which has one or more arguments. The name must be unique within the directory; a filter with the same name in a higher priority layer (see [Templates from Modules and Bundles](#templates-from-modules-and-bundles)) replaces it. A sample filter can be found below.
 
 ```python
 class Filter:
@@ -461,7 +508,7 @@ class Filter:
 
 ## Custom Jinja Tests
 
-Custom Jinja tests can be used by providing a set of Python classes where each test is implemented as a separate `Test` class in a `.py` file located in the `--tests` path. The class must have a single attribute named `name`, the test name, and a `classmethod()` named `test` which has one or more arguments. A sample test can be found below.
+Custom Jinja tests can be used by providing a set of Python classes where each test is implemented as a separate `Test` class in a `.py` file located in the `--tests` path. The class must have a single attribute named `name`, the test name, and a `classmethod()` named `test` which has one or more arguments. The name must be unique within the directory; a test with the same name in a higher priority layer replaces it. A sample test can be found below.
 
 ```python
 class Test:

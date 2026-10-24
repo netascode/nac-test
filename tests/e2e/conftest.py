@@ -22,6 +22,7 @@ from pathlib import Path
 import pytest
 import ruamel.yaml
 
+from nac_test.utils.terminal import TerminalColors
 from tests.e2e.config import (
     ALL_FAIL_SCENARIO,
     DRY_RUN_PYATS_ONLY_SCENARIO,
@@ -65,10 +66,10 @@ class E2EResults:
         scenario: The E2E scenario that was executed.
         output_dir: Path to the output directory containing all reports.
         exit_code: CLI exit code.
-        stdout: CLI standard output.
-        stderr: CLI standard error.
+        stdout: CLI standard output, without ANSI color codes.
+        stderr: CLI standard error, without ANSI color codes.
         filtered_stdout: Stdout with logger lines (INFO -, DEBUG -, etc.) removed.
-        cli_result: The full CliRunner result object.
+        cli_result: The full subprocess result, with the raw (colored) output.
     """
 
     scenario: E2EScenario
@@ -270,10 +271,15 @@ def _run_e2e_scenario(
         env=env,
     )
 
+    # nac-test colors its output even when piped (only NO_COLOR disables it);
+    # assertions match plain text
+    stdout = TerminalColors.strip_ansi(result.stdout)
+    stderr = TerminalColors.strip_ansi(result.stderr)
+
     # Compute filtered stdout (strips logger output lines)
     filtered_stdout = "\n".join(
         line
-        for line in result.stdout.split("\n")
+        for line in stdout.split("\n")
         if not line.startswith(("INFO -", "DEBUG -", "WARNING -", "ERROR -"))
     )
 
@@ -281,8 +287,8 @@ def _run_e2e_scenario(
         scenario=scenario,
         output_dir=output_dir,
         exit_code=result.returncode,
-        stdout=result.stdout,
-        stderr=result.stderr,
+        stdout=stdout,
+        stderr=stderr,
         filtered_stdout=filtered_stdout,
         cli_result=result,
     )

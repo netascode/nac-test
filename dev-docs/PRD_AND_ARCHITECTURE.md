@@ -245,8 +245,10 @@ from nac_test.pyats_core.reporting.types import ResultStatus
 from nac_test.pyats_core.common.base_test import NACTestBase
 from nac_test.pyats_core.common.auth_cache import AuthCache
 
+
 class CatalystCenterTestBase(NACTestBase):
     """Catalyst Center API test base class."""
+
     # Inherits from generic NACTestBase, adds CC-specific auth
 ```
 
@@ -296,6 +298,7 @@ _REQUIRED_NAC_TEST_METHODS = [
     ("nac_test.pyats_core.common.auth_cache", "AuthCache", "get_or_create"),
 ]
 
+
 def _check_nac_test_compatibility():
     """Runtime check for compatible nac-test version and method signatures."""
     import importlib
@@ -328,6 +331,7 @@ def _check_nac_test_compatibility():
                 f"Please install nac-test>=1.1.0"
             )
 
+
 _check_nac_test_compatibility()
 ```
 
@@ -339,6 +343,7 @@ Custom exceptions provide clear error messages:
 # In nac_test_pyats_common/exceptions.py
 class AuthenticationError(NACPyATSCommonError):
     """Raised when controller authentication fails."""
+
     def __init__(self, controller_type: str, url: str, cause: Exception | None = None):
         self.controller_type = controller_type
         self.url = url
@@ -348,8 +353,10 @@ class AuthenticationError(NACPyATSCommonError):
             message += f": {cause}"
         super().__init__(message)
 
+
 class EnvironmentConfigError(NACPyATSCommonError):
     """Raised when required environment variables are missing."""
+
     def __init__(self, missing_vars: list[str], controller_type: str):
         self.missing_vars = missing_vars
         self.controller_type = controller_type
@@ -1164,8 +1171,8 @@ def main(
         max_parallel_devices=max_parallel_devices,
         minimal_reports=minimal_reports,
         verbosity=verbosity,
-        dev_pyats_only=pyats,    # Development mode flags
-        dev_robot_only=robot,     # Development mode flags
+        dev_pyats_only=pyats,  # Development mode flags
+        dev_robot_only=robot,  # Development mode flags
     )
 
     # PHASE 6: Test Execution with Runtime Tracking
@@ -1248,6 +1255,7 @@ import errorhandler
 
 error_handler = errorhandler.ErrorHandler()
 
+
 def exit() -> None:
     """Exit with appropriate code based on error state."""
     if error_handler.fired:
@@ -1272,7 +1280,7 @@ configure_logging(verbosity, error_handler)
 
 # Throughout codebase:
 logger.error("Connection failed")  # Tracked by error_handler
-logger.critical("Fatal error")     # Tracked by error_handler
+logger.critical("Fatal error")  # Tracked by error_handler
 
 # At exit:
 exit()  # Checks error_handler.fired for exit code
@@ -1601,9 +1609,7 @@ if pyats and robot:
             fg=typer.colors.RED,  # Visible red error
         )
     )
-    typer.echo(
-        "Use one development flag at a time, or neither for combined execution."
-    )
+    typer.echo("Use one development flag at a time, or neither for combined execution.")
     raise typer.Exit(1)
 ```
 
@@ -1767,7 +1773,7 @@ class CombinedOrchestrator:
         if self.dev_pyats_only:
             typer.secho(
                 "\n\n⚠️  WARNING: --pyats flag is for development use only...",
-                fg=typer.colors.YELLOW
+                fg=typer.colors.YELLOW,
             )
             orchestrator = PyATSOrchestrator(...)
             pyats_results = orchestrator.run_tests()  # Returns PyATSResults
@@ -1779,7 +1785,7 @@ class CombinedOrchestrator:
         if self.dev_robot_only:
             typer.secho(
                 "\n\n⚠️  WARNING: --robot flag is for development use only...",
-                fg=typer.colors.YELLOW
+                fg=typer.colors.YELLOW,
             )
             robot_orchestrator = RobotOrchestrator(...)
             results.robot = robot_orchestrator.run_tests()  # Returns TestResults
@@ -1861,7 +1867,9 @@ class PyATSOrchestrator:
         minimal_reports: bool = False,
     ):
         # Output directory structure
-        self.base_output_dir = Path(output_dir).absolute()  # Base dir (where merged data lives)
+        self.base_output_dir = Path(
+            output_dir
+        ).absolute()  # Base dir (where merged data lives)
         self.output_dir = self.base_output_dir / "pyats_results"  # PyATS subdirectory
 
         # Calculate workers dynamically
@@ -1877,7 +1885,7 @@ class PyATSOrchestrator:
         self.job_generator = JobGenerator(self.max_workers, self.output_dir)
         self.output_processor = None  # Created when progress reporter ready
         self.subprocess_runner = None  # Created when output processor ready
-        self.device_executor = None     # Created when needed for D2D tests
+        self.device_executor = None  # Created when needed for D2D tests
 ```
 
 **Dynamic Worker Calculation:**
@@ -1887,9 +1895,9 @@ def _calculate_workers(self) -> int:
     """Calculate optimal worker count based on CPU, memory, and test type."""
     cpu_workers = SystemResourceCalculator.calculate_worker_capacity(
         memory_per_worker_gb=MEMORY_PER_WORKER_GB,  # 0.35GB per worker
-        cpu_multiplier=DEFAULT_CPU_MULTIPLIER,       # 2x CPU cores
-        max_workers=MAX_WORKERS_HARD_LIMIT,         # 100 workers max
-        env_var="NAC_TEST_PYATS_PROCESSES",                # Override via env var
+        cpu_multiplier=DEFAULT_CPU_MULTIPLIER,  # 2x CPU cores
+        max_workers=MAX_WORKERS_HARD_LIMIT,  # 100 workers max
+        env_var="NAC_TEST_PYATS_PROCESSES",  # Override via env var
     )
     return cpu_workers
 ```
@@ -1940,8 +1948,7 @@ def run_tests(self) -> PyATSResults:
     progress_reporter = ProgressReporter(total_test_count)
     self.output_processor = OutputProcessor(progress_reporter)
     self.subprocess_runner = SubprocessRunner(
-        output_dir=self.output_dir,
-        output_handler=self.output_processor.process_line
+        output_dir=self.output_dir, output_handler=self.output_processor.process_line
     )
 
     # PHASE 5: Execute tests
@@ -1950,11 +1957,17 @@ def run_tests(self) -> PyATSResults:
 
     if api_test_files:
         api_archive = await self._execute_api_tests_standard(api_test_files)
-        results.api = self._extract_stats_from_archive(api_archive)  # Returns TestResults
+        results.api = self._extract_stats_from_archive(
+            api_archive
+        )  # Returns TestResults
 
     if d2d_test_files and devices:
-        d2d_archive = await self._execute_ssh_tests_device_centric(d2d_test_files, devices)
-        results.d2d = self._extract_stats_from_archive(d2d_archive)  # Returns TestResults
+        d2d_archive = await self._execute_ssh_tests_device_centric(
+            d2d_test_files, devices
+        )
+        results.d2d = self._extract_stats_from_archive(
+            d2d_archive
+        )  # Returns TestResults
 
     # PHASE 6: Generate HTML reports
     archives = [a for a in [api_archive, d2d_archive] if a is not None]
@@ -2010,7 +2023,9 @@ async def execute_job(self, job_file_path: Path, env: Dict[str, str]) -> Optiona
             module: nac_test.pyats_core.progress.plugin
             order: 1.0
     """)
-    plugin_config_file = tempfile.NamedTemporaryFile(mode="w", suffix="_plugin_config.yaml", delete=False)
+    plugin_config_file = tempfile.NamedTemporaryFile(
+        mode="w", suffix="_plugin_config.yaml", delete=False
+    )
     plugin_config_file.write(plugin_config)
     plugin_config_file.close()
 
@@ -2020,17 +2035,25 @@ async def execute_job(self, job_file_path: Path, env: Dict[str, str]) -> Optiona
 
     # Build PyATS command
     cmd = [
-        "pyats", "run", "job", str(job_file_path),
-        "--configuration", plugin_config_file.name,
-        "--archive-dir", str(self.output_dir),
-        "--archive-name", archive_name,
+        "pyats",
+        "run",
+        "job",
+        str(job_file_path),
+        "--configuration",
+        plugin_config_file.name,
+        "--archive-dir",
+        str(self.output_dir),
+        "--archive-name",
+        archive_name,
         "--no-archive-subdir",
         "--no-mail",
         "--no-xml-report",
     ]
 
     # Execute with increased buffer limit (10MB)
-    buffer_limit = int(os.environ.get("NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT))
+    buffer_limit = int(
+        os.environ.get("NAC_TEST_PYATS_OUTPUT_BUFFER_LIMIT", DEFAULT_BUFFER_LIMIT)
+    )
     process = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
@@ -2078,7 +2101,9 @@ async def _process_output_realtime(self, process: asyncio.subprocess.Process) ->
         except asyncio.LimitOverrunError as e:
             # Handle lines exceeding buffer limit
             consecutive_errors += 1
-            logger.warning(f"Output line exceeded buffer limit: {e}. Clearing buffer...")
+            logger.warning(
+                f"Output line exceeded buffer limit: {e}. Clearing buffer..."
+            )
 
             # Consume oversized data in chunks until newline
             while True:
@@ -2087,7 +2112,9 @@ async def _process_output_realtime(self, process: asyncio.subprocess.Process) ->
                     break
 
             if consecutive_errors >= max_consecutive_errors:
-                logger.error(f"Too many consecutive buffer errors. Stopping output processing.")
+                logger.error(
+                    f"Too many consecutive buffer errors. Stopping output processing."
+                )
                 break
 
     return await process.wait()
@@ -2131,27 +2158,36 @@ async def run_device_job_with_semaphore(
         logger.info(f"Starting tests for device {hostname}")
 
         # Generate device-specific job file
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as job_file:
-            job_content = self.job_generator.generate_device_centric_job(device, test_files)
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False
+        ) as job_file:
+            job_content = self.job_generator.generate_device_centric_job(
+                device, test_files
+            )
             job_file.write(job_content)
             job_file_path = Path(job_file.name)
 
         # Generate per-device testbed file
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as testbed_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as testbed_file:
             testbed_content = TestbedGenerator.generate_testbed_yaml(device)
             testbed_file.write(testbed_content)
             testbed_file_path = Path(testbed_file.name)
 
         # Set up device-specific environment
         env = os.environ.copy()
-        env.update({
-            "HOSTNAME": hostname,
-            "DEVICE_INFO": json.dumps(device),  # Serialized device dict
-            "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
-                self.subprocess_runner.output_dir / "merged_data_model_test_variables.json"
-            ),
-            "PYTHONPATH": get_pythonpath_for_tests(self.test_dir, [nac_test_dir]),
-        })
+        env.update(
+            {
+                "HOSTNAME": hostname,
+                "DEVICE_INFO": json.dumps(device),  # Serialized device dict
+                "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
+                    self.subprocess_runner.output_dir
+                    / "merged_data_model_test_variables.json"
+                ),
+                "PYTHONPATH": get_pythonpath_for_tests(self.test_dir, [nac_test_dir]),
+            }
+        )
 
         # Execute job with testbed
         archive_path = await self.subprocess_runner.execute_job_with_testbed(
@@ -2849,12 +2885,13 @@ MAX_WORKERS = 50  # Hardcoded
 ```python
 def _calculate_workers(self) -> int:
     cpu_workers = SystemResourceCalculator.calculate_worker_capacity(
-        memory_per_worker_gb=0.35,        # 0.35GB per worker
-        cpu_multiplier=2.0,               # 2× CPU cores
-        max_workers=100,                  # Safety limit
-        env_var="NAC_TEST_PYATS_PROCESSES",      # Override mechanism
+        memory_per_worker_gb=0.35,  # 0.35GB per worker
+        cpu_multiplier=2.0,  # 2× CPU cores
+        max_workers=100,  # Safety limit
+        env_var="NAC_TEST_PYATS_PROCESSES",  # Override mechanism
     )
     return cpu_workers
+
 
 # Example results:
 # 8GB laptop, 4 cores:    min(8, 22) → 8 workers    ✅ Fits in 8GB
@@ -2917,6 +2954,7 @@ class PyATSOrchestrator:
 ```python
 class SubprocessRunner:
     """Executes PyATS jobs as subprocesses."""
+
     async def execute_job(self, job_file, env) -> Path:
         # 150 lines focused on subprocess execution
         # - Command building
@@ -2924,6 +2962,7 @@ class SubprocessRunner:
         # - Output streaming
         # - Error recovery
         return archive_path
+
 
 class PyATSOrchestrator:
     async def execute_api_tests(self, test_files):
@@ -2953,9 +2992,11 @@ asyncio.Semaphore provides precise concurrency control for I/O-bound operations 
 ```python
 from multiprocessing import Pool
 
+
 def execute_device_tests(device):
     # Each process launches a PyATS subprocess (subprocess in subprocess)
     subprocess.run(["pyats", "run", "job", ...])
+
 
 pool = Pool(processes=15)
 results = pool.map(execute_device_tests, devices)
@@ -2973,9 +3014,11 @@ results = pool.map(execute_device_tests, devices)
 ```python
 semaphore = asyncio.Semaphore(15)  # Allow 15 concurrent devices
 
+
 async def run_device_with_semaphore(device):
     async with semaphore:  # Acquire slot (blocks if at limit)
         return await execute_device_tests(device)  # Launch PyATS subprocess
+
 
 tasks = [run_device_with_semaphore(d) for d in devices]
 results = await asyncio.gather(*tasks)
@@ -3050,8 +3093,11 @@ env["ACI_URL"] = "https://apic.example.com"
 
 # Launch subprocess with env vars
 process = await asyncio.create_subprocess_exec(
-    "pyats", "run", "job", str(job_file),
-    env=env  # Pass entire environment
+    "pyats",
+    "run",
+    "job",
+    str(job_file),
+    env=env,  # Pass entire environment
 )
 
 # Subprocess reads env vars
@@ -3186,9 +3232,9 @@ class TestDiscovery:
 ```python
 @dataclass
 class TestDiscoveryResult:
-    api_tests: List[Path]      # Standard API tests
-    d2d_tests: List[Path]      # Direct-to-device SSH tests
-    total_count: int           # Total test count
+    api_tests: List[Path]  # Standard API tests
+    d2d_tests: List[Path]  # Direct-to-device SSH tests
+    total_count: int  # Total test count
 ```
 
 ##### Device Inventory Discovery (`device_inventory.py`)
@@ -3251,20 +3297,14 @@ class JobGenerator:
 
 from pyats.easypy import run
 
-TEST_FILES = [
-    "/path/to/test1.py",
-    "/path/to/test2.py"
-]
+TEST_FILES = ["/path/to/test1.py", "/path/to/test2.py"]
+
 
 def main(runtime):
     runtime.max_workers = {max_workers}
     for test_file in TEST_FILES:
         test_name = Path(test_file).stem
-        run(
-            testscript=test_file,
-            taskid=test_name,
-            max_runtime={timeout}
-        )
+        run(testscript=test_file, taskid=test_name, max_runtime={timeout})
 ```
 
 **Device-Centric Job Structure:**
@@ -3281,8 +3321,9 @@ HOSTNAME = "{hostname}"
 DEVICE_INFO = {device_json}
 TEST_FILES = [...]
 
+
 def main(runtime):
-    os.environ['DEVICE_INFO'] = json.dumps(DEVICE_INFO)
+    os.environ["DEVICE_INFO"] = json.dumps(DEVICE_INFO)
     runtime.connection_manager = DeviceConnectionManager(max_concurrent=1)
 
     for test_file in TEST_FILES:
@@ -3290,7 +3331,7 @@ def main(runtime):
         run(
             testscript=test_file,
             taskid=f"{HOSTNAME}_{test_name}",
-            max_runtime={timeout}
+            max_runtime={timeout},
         )
 ```
 
@@ -3457,8 +3498,13 @@ class ProgressReporter:
         """Format: YYYY-MM-DD HH:MM:SS.mmm [PID:X] [W] [ID:N] EXECUTING test_name"""
 
     def report_test_end(
-        self, test_name: str, pid: int, worker_id: int,
-        test_id: int, status: str, duration: float
+        self,
+        test_name: str,
+        pid: int,
+        worker_id: int,
+        test_id: int,
+        status: str,
+        duration: float,
     ) -> None:
         """Format: YYYY-MM-DD HH:MM:SS.mmm [PID:X] [W] [ID:N] STATUS test_name in X.X seconds"""
 ```
@@ -3642,22 +3688,21 @@ Orchestrates the unified dashboard generation:
 ```python
 class CombinedReportGenerator:
     """Generates combined dashboard across all test frameworks.
-    
+
     This is a pure renderer - it takes CombinedResults from the orchestrator
     and generates HTML. It does not discover or parse test results itself.
     """
-    
+
     def generate_combined_summary(
-        self,
-        results: CombinedResults | None = None
+        self, results: CombinedResults | None = None
     ) -> Path | None:
         """Generate combined summary dashboard.
-        
+
         Args:
             results: CombinedResults with .api, .d2d, .robot attributes.
                 Each attribute is a TestResults dataclass or None if that
                 framework wasn't executed.
-                    
+
         Returns:
             Path to combined_summary.html at root level, or None if generation fails
         """
@@ -3788,14 +3833,17 @@ class ExecutionState(str, Enum):
         SKIPPED: Tests intentionally skipped (e.g., render-only mode)
         ERROR: Execution failed with an error (e.g., framework crash)
     """
+
     SUCCESS = "success"
     EMPTY = "empty"
     SKIPPED = "skipped"
     ERROR = "error"
 
+
 @dataclass
 class TestResults:
     """Results from a single test framework/type."""
+
     passed: int = 0
     failed: int = 0
     skipped: int = 0
@@ -3831,19 +3879,23 @@ class TestResults:
         base = f"{self.total}/{self.passed}/{self.failed}/{self.skipped}"
         return f"{base}/{self.other}" if self.other > 0 else base
 
+
 @dataclass
 class PyATSResults:
     """Groups API and D2D results from PyATS."""
+
     api: TestResults | None = None
     d2d: TestResults | None = None
+
 
 @dataclass
 class CombinedResults:
     """Aggregates results across all frameworks."""
-    api: TestResults | None = None   # From PyATSResults.api
-    d2d: TestResults | None = None   # From PyATSResults.d2d
-    robot: TestResults | None = None # From RobotOrchestrator
-    
+
+    api: TestResults | None = None  # From PyATSResults.api
+    d2d: TestResults | None = None  # From PyATSResults.d2d
+    robot: TestResults | None = None  # From RobotOrchestrator
+
     # Computed properties aggregate across all non-None results:
     # .total, .passed, .failed, .skipped, .errors (list[str]), .success_rate,
     # .has_failures, .has_errors, .is_empty, .exit_code
@@ -3967,7 +4019,9 @@ from nac_test.utils.xunit_merger import merge_xunit_results
 from nac_test.core.types import CombinedResults
 
 # After PyATS and Robot execution
-combined_results = CombinedResults(robot=robot_results, api=api_results, d2d=d2d_results)
+combined_results = CombinedResults(
+    robot=robot_results, api=api_results, d2d=d2d_results
+)
 merged_xunit_path = merge_xunit_results(output_dir, combined_results)
 # Returns Path to {output_dir}/xunit.xml if files were merged, None otherwise
 ```
@@ -4088,7 +4142,7 @@ class MyAPITest(BaseTest):
         "identifier_format": "{name}",
         "step_name_format": "Verify {attribute}",
         "api_queries": [...],
-        "log_fields": ["field1", "field2"]
+        "log_fields": ["field1", "field2"],
     }
 
     @aetest.test
@@ -4341,7 +4395,7 @@ class APICTestBase(NACTestBase):
         return APICAuth.get_apic_token(
             url=self.apic.get("url"),
             username=self.apic.get("username"),
-            password=self.apic.get("password")
+            password=self.apic.get("password"),
         )
 ```
 
@@ -4375,11 +4429,13 @@ class APICAuth:
             url=url,
             username=username,
             password=password,
-            auth_func=cls._authenticate_to_apic
+            auth_func=cls._authenticate_to_apic,
         )
 
     @staticmethod
-    def _authenticate_to_apic(url: str, username: str, password: str) -> tuple[str, int]:
+    def _authenticate_to_apic(
+        url: str, username: str, password: str
+    ) -> tuple[str, int]:
         """Perform APIC REST API authentication.
 
         Calls APIC's /api/aaaLogin.json endpoint to obtain
@@ -4397,21 +4453,16 @@ class APICAuth:
             requests.HTTPError: If authentication request fails
         """
         login_url = f"{url}/api/aaaLogin.json"
-        payload = {
-            "aaaUser": {
-                "attributes": {
-                    "name": username,
-                    "pwd": password
-                }
-            }
-        }
+        payload = {"aaaUser": {"attributes": {"name": username, "pwd": password}}}
 
         response = requests.post(login_url, json=payload, verify=False)
         response.raise_for_status()
 
         data = response.json()
         token = data["imdata"][0]["aaaLogin"]["attributes"]["token"]
-        refresh_timeout = int(data["imdata"][0]["aaaLogin"]["attributes"]["refreshTimeoutSeconds"])
+        refresh_timeout = int(
+            data["imdata"][0]["aaaLogin"]["attributes"]["refreshTimeoutSeconds"]
+        )
 
         return token, refresh_timeout
 ```
@@ -4537,8 +4588,11 @@ class AuthCache:
 
                 # Cache with expiration (minus buffer)
                 cls._write_token_to_cache(
-                    cache_file, token, url, username,
-                    expires_in - cls.EXPIRY_BUFFER_SECONDS
+                    cache_file,
+                    token,
+                    url,
+                    username,
+                    expires_in - cls.EXPIRY_BUFFER_SECONDS,
                 )
 
                 return token
@@ -4599,6 +4653,7 @@ sequenceDiagram
 # Example: tenant_test.py in ACI-as-Code repository
 from nac_test_pyats_common.aci import APICTestBase
 
+
 class TenantValidation(APICTestBase):
     """Validate ACI tenant configuration against data model."""
 
@@ -4606,10 +4661,8 @@ class TenantValidation(APICTestBase):
         "schema_paths": ["apic.tenants"],
         "identifier_format": "{name}",
         "step_name_format": "Verify tenant {name}",
-        "api_queries": [
-            {"class": "fvTenant", "filter": "eq(fvTenant.name, \"{name}\")"}
-        ],
-        "log_fields": ["name", "descr", "nameAlias"]
+        "api_queries": [{"class": "fvTenant", "filter": 'eq(fvTenant.name, "{name}")'}],
+        "log_fields": ["name", "descr", "nameAlias"],
     }
 
     @aetest.test
@@ -4795,9 +4848,11 @@ class SDWANDeviceResolver:
             # Find device in site
             device_details = cls._find_device_in_site(site, device_name)
             if device_details:
-                devices.append(cls._build_device_entry(
-                    inventory_item, site, device_details, data_model
-                ))
+                devices.append(
+                    cls._build_device_entry(
+                        inventory_item, site, device_details, data_model
+                    )
+                )
 
         return devices
 
@@ -4840,11 +4895,7 @@ class SDWANDeviceResolver:
 
     @classmethod
     def _build_device_entry(
-        cls,
-        inventory_item: dict,
-        site: dict,
-        device_details: dict,
-        data_model: dict
+        cls, inventory_item: dict, site: dict, device_details: dict, data_model: dict
     ) -> dict:
         """Build complete device entry with all required fields.
 
@@ -4864,7 +4915,6 @@ class SDWANDeviceResolver:
             "os": "iosxe" if device_type == "cedge" else "viptela",
             "username": credentials.get("username", "admin"),
             "password": credentials.get("password"),
-
             # Additional SD-WAN specific fields
             "site_id": site.get("site_id"),
             "device_type": device_type,
@@ -4998,6 +5048,7 @@ sequenceDiagram
 # Example: system_test.py in nac-sdwan repository
 from nac_test_pyats_common.sdwan import SDWANTestBase
 
+
 class SystemStatusValidation(SDWANTestBase):
     """Validate SD-WAN device system status."""
 
@@ -5005,7 +5056,7 @@ class SystemStatusValidation(SDWANTestBase):
         "schema_paths": ["sdwan.sites.cedge_routers"],
         "identifier_format": "{name}",
         "step_name_format": "Verify system status for {name}",
-        "log_fields": ["name", "system_ip", "site_id"]
+        "log_fields": ["name", "system_ip", "site_id"],
     }
 
     @aetest.test
@@ -5087,11 +5138,14 @@ import httpx
 
 from nac_test.pyats_core.common.auth_cache import AuthCache
 
+
 class ISEAuth:
     """ISE authentication adapter."""
 
     @classmethod
-    def _authenticate(cls, url: str, username: str, password: str) -> tuple[dict[str, Any], int]:
+    def _authenticate(
+        cls, url: str, username: str, password: str
+    ) -> tuple[dict[str, Any], int]:
         """Perform ISE authentication."""
         with httpx.Client(verify=False, timeout=30.0) as client:
             # ISE uses ERS API with Basic Auth
@@ -5126,6 +5180,7 @@ from pyats import aetest
 
 from .auth import ISEAuth
 
+
 class ISETestBase(NACTestBase):
     """ISE API test base class."""
 
@@ -5138,6 +5193,7 @@ class ISETestBase(NACTestBase):
     def _create_client(self):
         """Create httpx client with ISE auth."""
         import os
+
         url = os.environ.get("ISE_URL", "").rstrip("/")
         base_client = self.pool.get_client(
             base_url=url,
@@ -5152,6 +5208,7 @@ class ISETestBase(NACTestBase):
 ```python
 # In nac-ise-terraform test files
 from nac_test_pyats_common.ise import ISETestBase
+
 
 class VerifyNetworkDevices(ISETestBase):
     @aetest.test
@@ -5195,6 +5252,7 @@ from typing import Any
 
 from nac_test_pyats_common.common.base_device_resolver import BaseDeviceResolver
 
+
 class NXOSDeviceResolver(BaseDeviceResolver):
     """NX-OS device resolver - parses NAC schema for device inventory."""
 
@@ -5221,6 +5279,7 @@ from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
 
 from .device_resolver import NXOSDeviceResolver
 
+
 class NXOSTestBase(SSHTestBase):
     """NX-OS SSH test base class."""
 
@@ -5234,6 +5293,7 @@ class NXOSTestBase(SSHTestBase):
 ```python
 # In nac-nxos-terraform test files
 from nac_test_pyats_common.nxos import NXOSTestBase
+
 
 class VerifyVLANs(NXOSTestBase):
     @aetest.test
@@ -5350,6 +5410,7 @@ New architecture resolvers only need to implement 8 abstract methods:
 # In nac-test-pyats-common: sdwan/device_resolver.py
 from nac_test_pyats_common.common.base_device_resolver import BaseDeviceResolver
 
+
 class SDWANDeviceResolver(BaseDeviceResolver):
     """SD-WAN specific device resolver."""
 
@@ -5410,6 +5471,7 @@ from nac_test.utils import validate_device_inventory, DeviceValidationError
 
 # Required fields for all devices
 REQUIRED_DEVICE_FIELDS = frozenset({"hostname", "host", "os", "username", "password"})
+
 
 def validate_device_inventory(devices: list[dict]) -> None:
     """Validate device inventory has all required fields.
@@ -5513,9 +5575,7 @@ Generic file discovery utility for finding data files in configurable search dir
 
 ```python
 def find_data_file(
-    filename: str,
-    search_dirs: list[Path] | None = None,
-    base_dir: Path | None = None
+    filename: str, search_dirs: list[Path] | None = None, base_dir: Path | None = None
 ) -> Path | None:
     """Find a data file by searching multiple directories.
 
@@ -5544,15 +5604,19 @@ def find_data_file(
 ```python
 from pydantic import BaseModel
 
+
 class TestResult(BaseModel):
     """Individual test result."""
+
     name: str
     status: str
     duration: float
     message: Optional[str] = None
 
+
 class ExecutionSummary(BaseModel):
     """Execution summary statistics."""
+
     total: int
     passed: int
     failed: int
@@ -5741,21 +5805,25 @@ display names, defaults prefixes, and insecure-flag env vars — lives in
 from dataclasses import dataclass
 from collections.abc import Mapping
 
+
 @dataclass(frozen=True)
 class CredentialSet:
     """A single credential combination that can authenticate to a controller."""
+
     fields: Mapping[CredentialKind, str]  # kind → env var name (SSOT)
-    label: str                            # Human-readable label
-    auth_method: str = "session"          # Auth mechanism for downstream adapters
+    label: str  # Human-readable label
+    auth_method: str = "session"  # Auth mechanism for downstream adapters
 
     @property
     def env_vars(self) -> tuple[str, ...]:
         """Derived from fields — cannot drift."""
         return tuple(self.fields.values())
 
+
 @dataclass(frozen=True)
 class ControllerConfig:
     """Configuration metadata for a supported controller type."""
+
     display_name: str
     url_env_var: str
     env_var_prefix: str
@@ -5763,14 +5831,17 @@ class ControllerConfig:
     defaults_prefix: str
     cache_key: str | None = None
 
+
 CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
     "ACI": ControllerConfig(
         display_name="APIC",
         url_env_var="ACI_URL",
         env_var_prefix="ACI",
         credential_sets=[
-            CredentialSet(env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
-                         label="Username/Password"),
+            CredentialSet(
+                env_vars=["ACI_URL", "ACI_USERNAME", "ACI_PASSWORD"],
+                label="Username/Password",
+            ),
         ],
         defaults_prefix="defaults.apic",
         cache_key="ACI",
@@ -5780,11 +5851,19 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         url_env_var="SDWAN_URL",
         env_var_prefix="SDWAN",
         credential_sets=(
-            CredentialSet(fields={"url": "SDWAN_URL", "token": "SDWAN_API_TOKEN"},
-                          label="API Token (20.18+)", auth_method=AuthMethod.TOKEN),
-            CredentialSet(fields={"url": "SDWAN_URL", "username": "SDWAN_USERNAME",
-                                  "password": "SDWAN_PASSWORD"},
-                          label="Username/Password"),
+            CredentialSet(
+                fields={"url": "SDWAN_URL", "token": "SDWAN_API_TOKEN"},
+                label="API Token (20.18+)",
+                auth_method=AuthMethod.TOKEN,
+            ),
+            CredentialSet(
+                fields={
+                    "url": "SDWAN_URL",
+                    "username": "SDWAN_USERNAME",
+                    "password": "SDWAN_PASSWORD",
+                },
+                label="Username/Password",
+            ),
         ),
         defaults_prefix="defaults.sdwan",
         insecure_env_var="SDWAN_INSECURE",
@@ -5797,12 +5876,22 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
         # IOSXE_URL and IOSXE_HOST serve the same purpose (IOSXE_URL is being
         # phased out) - both map to kind="url".
         credential_sets=(
-            CredentialSet(fields={"url": "IOSXE_URL", "username": "IOSXE_USERNAME",
-                                  "password": "IOSXE_PASSWORD"},
-                          label="Device URL"),
-            CredentialSet(fields={"url": "IOSXE_HOST", "username": "IOSXE_USERNAME",
-                                  "password": "IOSXE_PASSWORD"},
-                          label="Device Host"),
+            CredentialSet(
+                fields={
+                    "url": "IOSXE_URL",
+                    "username": "IOSXE_USERNAME",
+                    "password": "IOSXE_PASSWORD",
+                },
+                label="Device URL",
+            ),
+            CredentialSet(
+                fields={
+                    "url": "IOSXE_HOST",
+                    "username": "IOSXE_USERNAME",
+                    "password": "IOSXE_PASSWORD",
+                },
+                label="Device Host",
+            ),
         ),
         defaults_prefix="defaults.iosxe",
         insecure_env_var="IOSXE_INSECURE",
@@ -5819,8 +5908,10 @@ class ControllerContext:
     """Resolved controller selection identity (type + auth method).
     Not connection state — credentials resolved separately via get_connection_params().
     """
+
     controller_type: ControllerTypeKey
     auth_method: str
+
 
 def resolve_controller() -> ControllerContext:
     """Single source of truth for controller detection.
@@ -5844,15 +5935,18 @@ def resolve_controller() -> ControllerContext:
         ctx.auth_method → "token"
     """
 
+
 def get_controller_context() -> ControllerContext:
     """Subprocess accessor — reads NAC_TEST_CONTROLLER_CONTEXT env var.
     Falls back to resolve_controller() if env var is absent (transitional).
     """
 
+
 def get_connection_params(controller_type, auth_method) -> dict[CredentialKind, str]:
     """Resolve credential values by kind from environment.
     Example: {"url": "https://...", "token": "abc.def.ghi"}
     """
+
 
 def should_verify_ssl(controller_type, default=False) -> bool:
     """Determine whether SSL certificate verification should be enabled."""
@@ -6102,12 +6196,13 @@ Configures Python paths for test imports:
 def find_tests_directory(path: Path) -> Path:
     """Find /tests directory in path hierarchy."""
 
+
 def determine_import_path(test_path: Path) -> Path:
     """Determine correct path for sys.path."""
 
+
 def get_pythonpath_for_tests(
-    test_dir: Path,
-    extra_dirs: Optional[List[Path]] = None
+    test_dir: Path, extra_dirs: Optional[List[Path]] = None
 ) -> str:
     """Build PYTHONPATH for subprocess execution."""
 ```
@@ -6128,11 +6223,12 @@ Structured logging configuration:
 ```python
 import logging
 
+
 def configure_logging(level: str = "INFO") -> None:
     """Configure logging with consistent format."""
     logging.basicConfig(
         level=getattr(logging, level),
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 ```
 
@@ -6153,6 +6249,7 @@ class Terminal:
 
     def info(self, text: str) -> str:
         """Format text in blue."""
+
 
 terminal = Terminal()
 ```
@@ -6197,12 +6294,12 @@ with `-9`.
 **Key methods:**
 
 ```python
-cleanup = get_cleanup_manager()           # always returns the singleton
+cleanup = get_cleanup_manager()  # always returns the singleton
 
-cleanup.register(path)                    # delete path on exit
+cleanup.register(path)  # delete path on exit
 cleanup.register(path, keep_if_debug=True)  # skip deletion when NAC_TEST_DEBUG=true
-cleanup.unregister(path)                  # cancel a previously registered path
-cleanup.run_cleanup()                     # trigger cleanup immediately (idempotent)
+cleanup.unregister(path)  # cancel a previously registered path
+cleanup.run_cleanup()  # trigger cleanup immediately (idempotent)
 ```
 
 **`keep_if_debug` flag**
@@ -6245,6 +6342,7 @@ Environment variable handling:
 ```python
 def load_env_from_yaml(yaml_path: Path) -> Dict[str, str]:
     """Extract and load environment variables from YAML."""
+
 
 def set_env_vars(env_vars: Dict[str, str]) -> None:
     """Set environment variables."""
@@ -6545,14 +6643,14 @@ When adding results, use the `ResultStatus` enum:
 from nac_test.pyats_core.reporting.types import ResultStatus
 
 # Available status values:
-ResultStatus.PASSED   # Test verification succeeded
-ResultStatus.FAILED   # Test verification failed
+ResultStatus.PASSED  # Test verification succeeded
+ResultStatus.FAILED  # Test verification failed
 ResultStatus.SKIPPED  # Test was skipped (no data to test)
 ResultStatus.ERRORED  # Unexpected error during test
-ResultStatus.INFO     # Informational message (not a test result)
+ResultStatus.INFO  # Informational message (not a test result)
 ResultStatus.ABORTED  # Test was aborted (e.g., user interrupt)
 ResultStatus.BLOCKED  # Test blocked by prerequisite failure
-ResultStatus.PASSX    # Passed with expected failure
+ResultStatus.PASSX  # Passed with expected failure
 ```
 
 #### 3. Required Test Class Inheritance
@@ -6565,6 +6663,7 @@ from nac_test.pyats_core.common.base_test import NACTestBase
 from nac_test_pyats_common.aci import APICTestBase
 from nac_test_pyats_common.sdwan import SDWANTestBase, SDWANManagerTestBase
 from nac_test_pyats_common.catc import CatalystCenterTestBase
+
 
 class MyTest(APICTestBase):  # or SDWANTestBase, CatalystCenterTestBase
     """Your test class."""
@@ -7161,7 +7260,7 @@ class TenantVerification(NACTestBase):
             self.result_collector.add_result(
                 ResultStatus.SKIPPED,
                 "No tenants defined in data model - nothing to verify",
-                test_context=None
+                test_context=None,
             )
             self.skipped("No tenants defined in data model")
             return
@@ -7172,10 +7271,7 @@ class TenantVerification(NACTestBase):
             tenant_name = tenant.get("name")
 
             # Build API context for result tracking (links API calls to results)
-            api_context = self.build_api_context(
-                "Tenant",
-                tenant_name
-            )
+            api_context = self.build_api_context("Tenant", tenant_name)
 
             # Create PyATS step for this verification
             with steps.start(f"Verify tenant '{tenant_name}'", continue_=True) as step:
@@ -7184,8 +7280,10 @@ class TenantVerification(NACTestBase):
                     # The test_context parameter links this call to the step
                     response = self.client.get(
                         f"{self.controller_url}/api/class/fvTenant.json",
-                        params={"query-target-filter": f'eq(fvTenant.name,"{tenant_name}")'},
-                        test_context=api_context  # Links API call to this verification
+                        params={
+                            "query-target-filter": f'eq(fvTenant.name,"{tenant_name}")'
+                        },
+                        test_context=api_context,  # Links API call to this verification
                     )
 
                     if response.status_code == 200:
@@ -7196,7 +7294,7 @@ class TenantVerification(NACTestBase):
                                 status=ResultStatus.PASSED,
                                 test_type="Tenant",
                                 item_identifier=tenant_name,
-                                test_context=api_context
+                                test_context=api_context,
                             )
                             step.passed()
                         else:
@@ -7206,7 +7304,7 @@ class TenantVerification(NACTestBase):
                                 test_type="Tenant",
                                 item_identifier=tenant_name,
                                 details="Tenant not found in APIC fabric",
-                                test_context=api_context
+                                test_context=api_context,
                             )
                             step.failed("Tenant not found")
                     else:
@@ -7216,7 +7314,7 @@ class TenantVerification(NACTestBase):
                             test_type="Tenant",
                             item_identifier=tenant_name,
                             details=f"API returned HTTP {response.status_code}",
-                            test_context=api_context
+                            test_context=api_context,
                         )
                         step.failed(f"API error: {response.status_code}")
 
@@ -7227,7 +7325,7 @@ class TenantVerification(NACTestBase):
                         test_type="Tenant",
                         item_identifier=tenant_name,
                         details=str(e),
-                        test_context=api_context
+                        test_context=api_context,
                     )
                     step.errored(str(e))
 
@@ -7378,9 +7476,13 @@ The system uses **streaming JSONL (JSON Lines)** instead of accumulating all res
 
 ```python
 # Clean up JSONL files (unless in debug mode or NAC_TEST_PYATS_KEEP_REPORT_DATA is set)
-if os.environ.get("NAC_TEST_VERBOSE") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+if os.environ.get("NAC_TEST_VERBOSE") or os.environ.get(
+    "NAC_TEST_PYATS_KEEP_REPORT_DATA"
+):
     if os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
-        logger.info("Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)")
+        logger.info(
+            "Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)"
+        )
     else:
         logger.info("Debug mode enabled - keeping JSONL result files")
 else:
@@ -7473,14 +7575,15 @@ export NAC_TEST_PYATS_KEEP_REPORT_DATA=1
 ```python
 class ResultStatus(str, Enum):
     """Status values for test results."""
-    PASSED = "passed"    # Verification succeeded
-    FAILED = "failed"    # Verification failed (expected condition not met)
-    PASSX = "passx"      # Passed with expected failure
+
+    PASSED = "passed"  # Verification succeeded
+    FAILED = "failed"  # Verification failed (expected condition not met)
+    PASSX = "passx"  # Passed with expected failure
     ABORTED = "aborted"  # Test was aborted (user interrupt)
     BLOCKED = "blocked"  # Test blocked by prerequisite failure
     SKIPPED = "skipped"  # Test skipped (no data to test)
     ERRORED = "errored"  # Unexpected error during test
-    INFO = "info"        # Informational message (not a test result)
+    INFO = "info"  # Informational message (not a test result)
 ```
 
 **Overall Status Determination Logic** (Source: `collector.py:193-227`):
@@ -7575,8 +7678,10 @@ class DummyReporter:
 
     def __getattr__(self, name: str) -> Callable[..., Any]:
         """Return a no-op function for any method call."""
+
         def noop(*args: Any, **kwargs: Any) -> None:
             pass
+
         return noop
 
     def __bool__(self) -> bool:
@@ -7719,8 +7824,8 @@ class VerifyAPICClusterHealth(APICTestBase):
 
    **Source:** `base_test.py:2273-2279`
    ```python
-   config = getattr(self, 'TEST_CONFIG', {})
-   log_fields = config.get('log_fields', [])
+   config = getattr(self, "TEST_CONFIG", {})
+   log_fields = config.get("log_fields", [])
    for field in log_fields:
        value = context.get(field)
        if value:
@@ -7733,8 +7838,8 @@ class VerifyAPICClusterHealth(APICTestBase):
 
    **Source:** `base_test.py:2024-2029`
    ```python
-   config = getattr(self, 'TEST_CONFIG', {})
-   schema_paths = config.get('schema_paths', {})
+   config = getattr(self, "TEST_CONFIG", {})
+   schema_paths = config.get("schema_paths", {})
    schema_path = schema_paths.get(attribute, f"data model configuration for '{attribute}'")
    ```
 
@@ -7744,7 +7849,7 @@ class VerifyAPICClusterHealth(APICTestBase):
 
    **Source:** `base_test.py:2143-2146`
    ```python
-   format_str = config.get('identifier_format', 'Resource Verification')
+   format_str = config.get("identifier_format", "Resource Verification")
    identifier = format_str.format(**context)  # e.g., "BGP-65000 - 10.1.1.1"
    ```
 
@@ -7754,7 +7859,7 @@ class VerifyAPICClusterHealth(APICTestBase):
 
    **Source:** `base_test.py:2208-2225`
    ```python
-   step_name_format = config.get('step_name_format', '{resource_type} Verification')
+   step_name_format = config.get("step_name_format", "{resource_type} Verification")
    step_name = step_name_format.format(**context, resource_type=resource_type)
    ```
 
@@ -7788,16 +7893,16 @@ The `test_case/report.html.j2` template expects these variables:
 
 ```python
 template.render(
-    title=metadata.get("title", test_data["test_id"]),      # From TITLE constant
+    title=metadata.get("title", test_data["test_id"]),  # From TITLE constant
     description_html=metadata.get("description_html", ""),  # Pre-rendered HTML
-    setup_html=metadata.get("setup_html", ""),              # Pre-rendered HTML
-    procedure_html=metadata.get("procedure_html", ""),      # Pre-rendered HTML
-    criteria_html=metadata.get("criteria_html", ""),        # Pre-rendered HTML
-    results=test_data.get("results", []),                   # List of result dicts
+    setup_html=metadata.get("setup_html", ""),  # Pre-rendered HTML
+    procedure_html=metadata.get("procedure_html", ""),  # Pre-rendered HTML
+    criteria_html=metadata.get("criteria_html", ""),  # Pre-rendered HTML
+    results=test_data.get("results", []),  # List of result dicts
     command_executions=test_data.get("command_executions", []),  # List of cmd dicts
-    status=test_data.get("overall_status", "unknown"),      # Overall test status
-    generation_time=datetime.now().strftime("..."),         # When report generated
-    jobfile_path=metadata.get("jobfile_path", ""),          # Path to test file
+    status=test_data.get("overall_status", "unknown"),  # Overall test status
+    generation_time=datetime.now().strftime("..."),  # When report generated
+    jobfile_path=metadata.get("jobfile_path", ""),  # Path to test file
 )
 ```
 
@@ -7990,7 +8095,6 @@ BASE_CLASS_MAPPING: dict[str, str] = {
     "MerakiTestBase": "api",
     "FMCTestBase": "api",
     "ISETestBase": "api",
-
     # D2D-based test bases (device/SSH)
     "SSHTestBase": "d2d",
     "SDWANTestBase": "d2d",
@@ -8077,8 +8181,10 @@ If a single file contains classes inheriting from both API and D2D base classes,
 class TestAPI(APICTestBase):
     pass
 
+
 class TestDevice(SSHTestBase):
     pass
+
 
 # Error raised:
 # ValueError: test_mixed_invalid.py: Contains both API and D2D test classes.
@@ -8145,7 +8251,9 @@ def resolve(self, file_path: Path) -> str:
     3. Default to 'api' with warning
     """
     # Check cache first
-    abs_path = file_path.absolute()  # absolute() preserves symlinks for relative_to() comparisons
+    abs_path = (
+        file_path.absolute()
+    )  # absolute() preserves symlinks for relative_to() comparisons
     if abs_path in self._cache:
         return self._cache[abs_path]
 
@@ -8223,7 +8331,6 @@ When adding new architectures:
 # When adding ISE support:
 BASE_CLASS_MAPPING = {
     # ... existing entries ...
-
     # NEW: ISE architecture
     "ISETestBase": "api",
 }
@@ -8288,12 +8395,14 @@ Throughout the PyATS stack, `Path.absolute()` is used instead of `Path.resolve()
 
 ```python
 # WRONG — breaks when test files are symlinks pointing outside test_dir
-path = Path(testscript).resolve()          # follows symlink -> /real/target/outside/test_dir/...
-path.relative_to(test_dir)                 # raises ValueError
+path = Path(
+    testscript
+).resolve()  # follows symlink -> /real/target/outside/test_dir/...
+path.relative_to(test_dir)  # raises ValueError
 
 # CORRECT — symlink stays within test_dir logically
-path = Path(testscript).absolute()         # /test_dir/subdir/symlink.py (symlink intact)
-path.relative_to(test_dir)                 # -> subdir/symlink.py  (works)
+path = Path(testscript).absolute()  # /test_dir/subdir/symlink.py (symlink intact)
+path.relative_to(test_dir)  # -> subdir/symlink.py  (works)
 ```
 
 This convention applies consistently to: `orchestrator.py`, `job_generator.py`, `test_discovery.py`, `test_type_resolver.py`, `plugin.py`, and `archive_inspector.py`.
@@ -8412,7 +8521,9 @@ async def run(self) -> None:
         devices = DeviceInventoryDiscovery.get_device_inventory(
             d2d_tests, self.merged_data_path
         )
-        logger.info(f"Executing {len(d2d_tests)} D2D tests on {len(devices)} devices...")
+        logger.info(
+            f"Executing {len(d2d_tests)} D2D tests on {len(devices)} devices..."
+        )
         d2d_archive = await self._execute_ssh_tests_device_centric(d2d_tests, devices)
 ```
 
@@ -8426,9 +8537,12 @@ async def run(self) -> None:
 # File: tests/api/verify_device_ssh.py
 from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
 
+
 class TestDeviceSSH(SSHTestBase):  # Inherits D2D base class
     """Even though in /api/ directory, detected as D2D due to base class."""
+
     pass
+
 
 # Detection result: D2D (AST wins over directory)
 ```
@@ -8530,15 +8644,20 @@ tests/vrf/
 # verify_vrf_api.py
 from nac_test_pyats_common.aci import APICTestBase
 
+
 class VerifyVRFAPI(APICTestBase):
     """VRF verification via APIC API."""
+
     pass
+
 
 # verify_vrf_ssh.py
 from nac_test_pyats_common.sdwan import SDWANTestBase
 
+
 class VerifyVRFSSH(SDWANTestBase):
     """VRF verification via device SSH."""
+
     pass
 ```
 
@@ -8788,9 +8907,9 @@ All messages are **length-prefixed JSON** to handle variable-length payloads:
 ```python
 # From orchestrator.py:280-295
 broker = ConnectionBroker(
-    testbed_path=testbed_file,           # Consolidated testbed YAML
+    testbed_path=testbed_file,  # Consolidated testbed YAML
     max_connections=min(50, len(devices) * 2),  # Connection limit
-    output_dir=self.output_dir,           # Unicon CLI log directory
+    output_dir=self.output_dir,  # Unicon CLI log directory
 )
 
 async with broker.run_context():
@@ -8960,9 +9079,7 @@ async def _execute_command(self, hostname: str, cmd: str) -> str:
     """
     # Get or create cache for this device
     if hostname not in self.command_cache:
-        self.command_cache[hostname] = CommandCache(
-            hostname, ttl=3600
-        )  # 1 hour TTL
+        self.command_cache[hostname] = CommandCache(hostname, ttl=3600)  # 1 hour TTL
         logger.info(f"Created command cache for device: {hostname}")
 
     cache = self.command_cache[hostname]
@@ -9087,7 +9204,7 @@ async with self.connection_semaphore:
 
 ```python
 # From orchestrator.py:283
-max_connections=min(50, len(devices) * 2)
+max_connections = min(50, len(devices) * 2)
 
 # Examples:
 # 10 devices → max 20 connections
@@ -9109,7 +9226,7 @@ for hostname in self.testbed.devices:
 
 # From connection_broker.py — _execute_command
 async with self._device_locks[hostname]:
-    connection = await self._get_connection(hostname)    # lock-free
+    connection = await self._get_connection(hostname)  # lock-free
     return await self._run_and_cache(hostname, conn, cmd)  # lock-free
 ```
 
@@ -9985,7 +10102,7 @@ loop = asyncio.get_event_loop()
 conn = await loop.run_in_executor(
     None,  # Use default thread pool
     self._unicon_connect,  # Blocking function
-    device_info  # Arguments
+    device_info,  # Arguments
 )
 ```
 
@@ -10024,6 +10141,7 @@ semaphore = asyncio.Semaphore(DEFAULT_API_CONCURRENCY)  # Default: 55
 for context in items:
     task = self.verify_item(semaphore, client, context)
     tasks.append(task)
+
 
 # Each verify_item must acquire semaphore:
 async def verify_item(self, semaphore, client, context):
@@ -10110,9 +10228,7 @@ results = await asyncio.gather(*tasks, return_exceptions=True)
 # From orchestrator.py:368
 # Execute batch of device tests concurrently
 batch_tasks = [
-    self.device_executor.execute_device_tests(
-        test_files, [device], semaphore
-    )
+    self.device_executor.execute_device_tests(test_files, [device], semaphore)
     for device in batch
 ]
 
@@ -10266,7 +10382,7 @@ loop = asyncio.get_event_loop()
 connection = await loop.run_in_executor(
     None,  # Default ThreadPoolExecutor
     self._unicon_connect,  # Blocking function
-    device_info  # Arguments to function
+    device_info,  # Arguments to function
 )
 ```
 
@@ -10276,10 +10392,7 @@ connection = await loop.run_in_executor(
 # From connection_broker.py:304-307
 # Connect to device (blocking Unicon operation)
 loop = asyncio.get_event_loop()
-await loop.run_in_executor(
-    None,
-    lambda: device.connect(logfile=str(logfile_path))
-)
+await loop.run_in_executor(None, lambda: device.connect(logfile=str(logfile_path)))
 # Event loop free to run other tasks while this thread connects
 ```
 
@@ -10374,8 +10487,7 @@ for i in range(0, len(devices), batch_size):
 semaphore = asyncio.Semaphore(10)  # Max 10 concurrent reports
 
 tasks = [
-    self._generate_single_report(result_file, semaphore)
-    for result_file in result_files
+    self._generate_single_report(result_file, semaphore) for result_file in result_files
 ]
 
 report_paths = await asyncio.gather(*tasks)
@@ -10402,6 +10514,7 @@ result = await verify_tenant(tenant)
 async def verify(context):
     time.sleep(5)  # Blocks entire event loop!
 
+
 # ✅ CORRECT
 async def verify(context):
     await asyncio.sleep(5)  # Cooperative, event loop runs other tasks
@@ -10414,6 +10527,7 @@ async def verify(semaphore, context):
     # No semaphore acquisition → no concurrency control
     result = await api_call()
 
+
 # ✅ CORRECT
 async def verify(semaphore, context):
     async with semaphore:  # Respects concurrency limit
@@ -10425,10 +10539,12 @@ async def verify(semaphore, context):
 ```python
 # Enable async debugging
 import asyncio
+
 asyncio.get_event_loop().set_debug(True)
 
 # Log async task lifecycle
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
 ```
 
@@ -10485,12 +10601,12 @@ Running too few workers wastes resources:
 **From `constants.py:22-27`:**
 
 ```python
-MIN_WORKERS = 2                    # Always use at least 2 workers
-MAX_WORKERS = 32                   # Default maximum
-MAX_WORKERS_HARD_LIMIT = 50        # Absolute ceiling (safety limit)
-MEMORY_PER_WORKER_GB = 0.35        # Each worker needs 0.35GB RAM
-DEFAULT_CPU_MULTIPLIER = 2         # 2x CPU count (I/O-bound workload)
-LOAD_AVERAGE_THRESHOLD = 0.8       # Reduce workers if load > 80% CPU count
+MIN_WORKERS = 2  # Always use at least 2 workers
+MAX_WORKERS = 32  # Default maximum
+MAX_WORKERS_HARD_LIMIT = 50  # Absolute ceiling (safety limit)
+MEMORY_PER_WORKER_GB = 0.35  # Each worker needs 0.35GB RAM
+DEFAULT_CPU_MULTIPLIER = 2  # 2x CPU count (I/O-bound workload)
+LOAD_AVERAGE_THRESHOLD = 0.8  # Reduce workers if load > 80% CPU count
 ```
 
 **Why These Values:**
@@ -10612,8 +10728,8 @@ memory_workers = int(memory_info["available"] / memory_per_worker_bytes)
 memory = psutil.virtual_memory()
 return {
     "available": memory.available,  # Used for calculation
-    "total": memory.total,          # Total RAM installed
-    "used": memory.used,            # Currently used RAM
+    "total": memory.total,  # Total RAM installed
+    "used": memory.used,  # Currently used RAM
 }
 ```
 
@@ -10780,9 +10896,9 @@ Similar algorithm for **SSH connection pooling**:
 
 ```python
 def calculate_connection_capacity(
-    memory_per_connection_mb: float = 10.0,    # SSH connection: 10MB
-    fds_per_connection: int = 5,                # File descriptors per SSH
-    max_connections: int = 1000,                # Safety ceiling
+    memory_per_connection_mb: float = 10.0,  # SSH connection: 10MB
+    fds_per_connection: int = 5,  # File descriptors per SSH
+    max_connections: int = 1000,  # Safety ceiling
     env_var: str = "NAC_TEST_PYATS_MAX_SSH_CONNECTIONS",
 ) -> int:
     """Calculate optimal SSH connection count."""
@@ -10836,9 +10952,9 @@ RESULT: File descriptors are the bottleneck
 def _calculate_workers(self) -> int:
     """Calculate optimal worker count based on CPU, memory, and test type"""
     cpu_workers = SystemResourceCalculator.calculate_worker_capacity(
-        memory_per_worker_gb=MEMORY_PER_WORKER_GB,      # 0.35 GB
-        cpu_multiplier=DEFAULT_CPU_MULTIPLIER,          # 2.0
-        max_workers=MAX_WORKERS_HARD_LIMIT,             # 50
+        memory_per_worker_gb=MEMORY_PER_WORKER_GB,  # 0.35 GB
+        cpu_multiplier=DEFAULT_CPU_MULTIPLIER,  # 2.0
+        max_workers=MAX_WORKERS_HARD_LIMIT,  # 50
         env_var="NAC_TEST_PYATS_PROCESSES",
     )
 
@@ -10880,10 +10996,10 @@ def _calculate_workers(self) -> int:
 from nac_test.utils.system_resources import SystemResourceCalculator
 
 workers = SystemResourceCalculator.calculate_worker_capacity(
-memory_per_worker_gb=0.35,
+    memory_per_worker_gb=0.35,
     cpu_multiplier=2.0,
     max_workers=50,
-    env_var="NAC_TEST_PYATS_PROCESSES"
+    env_var="NAC_TEST_PYATS_PROCESSES",
 )
 
 print(f"Calculated workers: {workers}")
@@ -10919,8 +11035,8 @@ NAC_TEST_PYATS_PROCESSES=4 nac-test --pyats --test-dir ./tests
 # Conservative fallback if psutil fails
 return {
     "available": 8 * 1024 * 1024 * 1024,  # 8GB available
-    "total": 16 * 1024 * 1024 * 1024,     # 16GB total
-    "used": 8 * 1024 * 1024 * 1024,       # 8GB used
+    "total": 16 * 1024 * 1024 * 1024,  # 16GB total
+    "used": 8 * 1024 * 1024 * 1024,  # 8GB used
 }
 ```
 
@@ -11021,7 +11137,9 @@ Understanding the lifecycle of files helps explain why certain directories exist
 
 ```python
 # orchestrator.py:67-72
-self.base_output_dir = Path(output_dir).absolute()  # User-specified directory (absolute() preserves symlinks)
+self.base_output_dir = Path(
+    output_dir
+).absolute()  # User-specified directory (absolute() preserves symlinks)
 self.output_dir = self.base_output_dir / "pyats_results"  # PyATS workspace
 
 # orchestrator.py:444
@@ -11246,9 +11364,13 @@ pyats_results/api/html_reports/
 
 ```python
 # generator.py:137-144
-if os.environ.get("NAC_TEST_VERBOSE") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+if os.environ.get("NAC_TEST_VERBOSE") or os.environ.get(
+    "NAC_TEST_PYATS_KEEP_REPORT_DATA"
+):
     if os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
-        logger.info("Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)")
+        logger.info(
+            "Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)"
+        )
     else:
         logger.info("Debug mode enabled - keeping JSONL result files")
 else:
@@ -11681,7 +11803,9 @@ A PyATS job file is a Python script with a `main(runtime)` function that:
 def generate_job_file_content(self, test_files: List[Path]) -> str:
     """Generate the content for a PyATS job file."""
     test_files_str = ",\n        ".join(
-        [f'"{str(Path(tf).absolute())}"' for tf in test_files]  # absolute() preserves symlinks
+        [
+            f'"{str(Path(tf).absolute())}"' for tf in test_files
+        ]  # absolute() preserves symlinks
     )
 
     job_content = textwrap.dedent(f'''
@@ -11745,6 +11869,7 @@ TEST_FILES = [
     "/path/to/tests/api/verify_aci_application_profiles.py",
 ]
 
+
 def main(runtime):
     """Main job file entry point"""
     # Set max workers (calculated from CPU/memory)
@@ -11761,7 +11886,7 @@ def main(runtime):
         run(
             testscript=test_file,
             taskid=test_name,
-            max_runtime=21600  # 6 hours per test
+            max_runtime=21600,  # 6 hours per test
         )
 ```
 
@@ -11889,17 +12014,19 @@ def main(runtime):
 ```python
 # device_executor.py:92-110
 env = os.environ.copy()
-env.update({
-    "HOSTNAME": hostname,  # e.g., "apic1"
-    "DEVICE_INFO": json.dumps(device),  # Full device dict with credentials
-    "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
-        self.subprocess_runner.output_dir / "merged_data_model_test_variables.json"
-    ),
-    "PYTHONPATH": get_pythonpath_for_tests(self.test_dir, [nac_test_dir]),
-    # Pass test_dir so the plugin subprocess can compute relative test names
-    "NAC_TEST_TEST_DIR": str(self.test_dir),
-    # NOTE: NAC_TEST_BROKER_SOCKET set by orchestrator at broker level
-})
+env.update(
+    {
+        "HOSTNAME": hostname,  # e.g., "apic1"
+        "DEVICE_INFO": json.dumps(device),  # Full device dict with credentials
+        "MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH": str(
+            self.subprocess_runner.output_dir / "merged_data_model_test_variables.json"
+        ),
+        "PYTHONPATH": get_pythonpath_for_tests(self.test_dir, [nac_test_dir]),
+        # Pass test_dir so the plugin subprocess can compute relative test names
+        "NAC_TEST_TEST_DIR": str(self.test_dir),
+        # NOTE: NAC_TEST_BROKER_SOCKET set by orchestrator at broker level
+    }
+)
 ```
 
 **PyATS command for D2D tests:**
@@ -12054,12 +12181,22 @@ plugin_config_file = None
 try:
     plugin_config = textwrap.dedent("""...""")
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix="_plugin_config.yaml", delete=False) as f:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix="_plugin_config.yaml", delete=False
+    ) as f:
         f.write(plugin_config)
         plugin_config_file = f.name  # Store path for PyATS command
 
     # Execute PyATS with plugin config
-    cmd = ["pyats", "run", "job", str(job_file_path), "--configuration", plugin_config_file, ...]
+    cmd = [
+        "pyats",
+        "run",
+        "job",
+        str(job_file_path),
+        "--configuration",
+        plugin_config_file,
+        ...,
+    ]
     process = await asyncio.create_subprocess_exec(*cmd, ...)
 
 except Exception as e:
@@ -12092,12 +12229,13 @@ with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
 self.max_workers = self._calculate_workers()
 self.job_generator = JobGenerator(self.max_workers, self.output_dir)
 
+
 # orchestrator.py:111-120
 def _calculate_workers(self) -> int:
     cpu_workers = SystemResourceCalculator.calculate_worker_capacity(
-memory_per_worker_gb=MEMORY_PER_WORKER_GB,  # 0.35 GB
-        cpu_multiplier=DEFAULT_CPU_MULTIPLIER,       # 2.0
-        max_workers=MAX_WORKERS_HARD_LIMIT,          # 50
+        memory_per_worker_gb=MEMORY_PER_WORKER_GB,  # 0.35 GB
+        cpu_multiplier=DEFAULT_CPU_MULTIPLIER,  # 2.0
+        max_workers=MAX_WORKERS_HARD_LIMIT,  # 50
         env_var="NAC_TEST_PYATS_PROCESSES",
     )
     return cpu_workers
@@ -12146,7 +12284,7 @@ DEFAULT_TEST_TIMEOUT = 21600  # 6 hours per test
 run(
     testscript=test_file,
     taskid=test_name,
-    max_runtime={DEFAULT_TEST_TIMEOUT}  # 21600 seconds = 6 hours
+    max_runtime={DEFAULT_TEST_TIMEOUT},  # 21600 seconds = 6 hours
 )
 ```
 
@@ -12797,11 +12935,11 @@ output_dir = Path("output/pyats_results")
 archives = ArchiveInspector.find_archives(output_dir)
 
 print(f"API archives: {len(archives['api'])}")
-for archive in archives['api']:
+for archive in archives["api"]:
     print(f"  - {archive.name}")
 
 print(f"D2D archives: {len(archives['d2d'])}")
-for archive in archives['d2d']:
+for archive in archives["d2d"]:
     print(f"  - {archive.name}")
 ```
 
@@ -13252,7 +13390,9 @@ The per-device approach provides isolation:
 
 ```python
 # device_executor.py:82-87
-with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as testbed_file:
+with tempfile.NamedTemporaryFile(
+    mode="w", suffix=".yaml", delete=False
+) as testbed_file:
     testbed_content = TestbedGenerator.generate_testbed_yaml(device)
     testbed_file.write(testbed_content)
     testbed_file_path = Path(testbed_file.name)
@@ -14026,9 +14166,7 @@ class ConnectionPool:
 def __init__(self) -> None:
     if not hasattr(self, "limits"):
         self.limits = httpx.Limits(
-            max_connections=200,
-            max_keepalive_connections=50,
-            keepalive_expiry=300
+            max_connections=200, max_keepalive_connections=50, keepalive_expiry=300
         )
 ```
 
@@ -14179,8 +14317,7 @@ async def execute_with_retry(
             # If we succeed after retries, log recovery prominently
             if attempt > 0:
                 recovery_downtime = sum(
-                    min(INITIAL_DELAY * (2**i), MAX_DELAY)
-                    for i in range(attempt)
+                    min(INITIAL_DELAY * (2**i), MAX_DELAY) for i in range(attempt)
                 )
 
                 # Track recovery statistics
@@ -14212,8 +14349,15 @@ async def execute_with_retry(
             # Determine error type for logging
             if isinstance(e, httpx.RemoteProtocolError):
                 error_type = "Server disconnected"
-            elif isinstance(e, (httpx.ConnectTimeout, httpx.ReadTimeout,
-                               httpx.WriteTimeout, httpx.PoolTimeout)):
+            elif isinstance(
+                e,
+                (
+                    httpx.ConnectTimeout,
+                    httpx.ReadTimeout,
+                    httpx.WriteTimeout,
+                    httpx.PoolTimeout,
+                ),
+            ):
                 error_type = "Timeout"
             elif isinstance(e, httpx.HTTPStatusError):
                 error_type = f"HTTP {e.response.status_code}"
@@ -14437,9 +14581,7 @@ The `wrap_client_for_tracking()` method intercepts all HTTP methods and automati
 
 ```python
 # base_test.py:806-820
-def wrap_client_for_tracking(
-    self, client: Any, device_name: str = "Controller"
-) -> Any:
+def wrap_client_for_tracking(self, client: Any, device_name: str = "Controller") -> Any:
     """Wrap httpx client to automatically track API calls.
 
     This wrapper intercepts all HTTP methods (GET, POST, PUT, DELETE, PATCH)
@@ -14466,9 +14608,7 @@ async def tracked_get(
     url: str, *args: Any, test_context: Optional[str] = None, **kwargs: Any
 ) -> Any:
     """Tracked GET method with retry and connection cleanup."""
-    response = await execute_with_retry(
-        "GET", original_get, url, *args, **kwargs
-    )
+    response = await execute_with_retry("GET", original_get, url, *args, **kwargs)
     test_instance._track_api_response(
         "GET", url, response, device_name, test_context=test_context
     )
@@ -14521,8 +14661,7 @@ When API calls recover after retries, the system tracks detailed recovery statis
 if attempt > 0:
     # Calculate total downtime for this recovery
     recovery_downtime = sum(
-        min(INITIAL_DELAY * (2**i), MAX_DELAY)
-        for i in range(attempt)
+        min(INITIAL_DELAY * (2**i), MAX_DELAY) for i in range(attempt)
     )
 
     # Track recovery statistics
@@ -14606,10 +14745,10 @@ slow_controller_timeout = httpx.Timeout(300.0)  # 5 minutes
 
 # Per-operation timeouts
 fine_grained_timeout = httpx.Timeout(
-    connect=10.0,    # Quick connection
-    read=120.0,      # Allow slow responses (large datasets)
-    write=30.0,      # Standard write timeout
-    pool=5.0,        # Quick pool acquisition
+    connect=10.0,  # Quick connection
+    read=120.0,  # Allow slow responses (large datasets)
+    write=30.0,  # Standard write timeout
+    pool=5.0,  # Quick pool acquisition
 )
 
 client = ConnectionPool().get_client(
@@ -14653,6 +14792,7 @@ from nac_test.pyats_core.common.connection_pool import ConnectionPool
 from nac_test.pyats_core.common.base_test import BaseTest
 import httpx
 
+
 class APICTenantTest(BaseTest):
     async def test_tenant_creation(self):
         """Test tenant creation on APIC."""
@@ -14677,15 +14817,12 @@ class APICTenantTest(BaseTest):
             "fvTenant": {
                 "attributes": {
                     "name": "test-tenant-123",
-                    "descr": "Created by automated test"
+                    "descr": "Created by automated test",
                 }
             }
         }
 
-        response = await client.post(
-            "/api/mo/uni.json",
-            json=new_tenant_data
-        )
+        response = await client.post("/api/mo/uni.json", json=new_tenant_data)
 
         # If controller is slow/stressed, retry logic handles it automatically
         # All API calls are tracked in HTML report
@@ -15228,6 +15365,7 @@ except Exception as e:
     typer.echo(f"Error during execution: {e}")
     raise  # Re-raises to errorhandler for exit code management
 
+
 # main.py:322-326
 def exit() -> None:
     if error_handler.fired:
@@ -15430,6 +15568,7 @@ def _is_connection_healthy(self, conn: Any) -> bool:
     except Exception:
         return False
 
+
 # connection_manager.py:93-102
 async with self.device_locks[hostname]:
     if hostname in self.connections:
@@ -15508,7 +15647,7 @@ except httpx.HTTPStatusError as e:
 1. **Test Code (Layer 1)**:
 ```python
 # SSH test attempts connection
-device = testbed.devices['spine-01']
+device = testbed.devices["spine-01"]
 device.connect()  # Times out
 ```
 
@@ -15550,10 +15689,10 @@ Test 'test_device_reachability' failed with ConnectionError
 ```python
 # Subprocess exits with code 1
 # Orchestrator updates test_status
-test_status['spine-01::test_device_reachability'] = {
-    'status': 'failed',
-    'device': 'spine-01',
-    'error': 'Connection timeout'
+test_status["spine-01::test_device_reachability"] = {
+    "status": "failed",
+    "device": "spine-01",
+    "error": "Connection timeout",
 }
 # Does NOT crash - continues with other tests
 ```
@@ -15635,9 +15774,7 @@ tenants = response.json()
 5. **Orchestrator (Layer 3)**:
 ```python
 # Updates test_status
-test_status['test_tenant_query'] = {
-    'status': 'passed'
-}
+test_status["test_tenant_query"] = {"status": "passed"}
 ```
 
 6. **Report Generator (Layer 3c)**:
@@ -15672,13 +15809,13 @@ Test Results Summary:
 1. **Device Inventory Loading (Layer 3)**:
 ```python
 # device_inventory.py
-for device in inventory['devices']:
-    hostname = device['hostname']  # KeyError if missing
+for device in inventory["devices"]:
+    hostname = device["hostname"]  # KeyError if missing
 ```
 
 2. **Exception Raised**:
 ```python
-KeyError: 'hostname'
+KeyError: "hostname"
 ```
 
 3. **Orchestrator (Layer 3)**:
@@ -16109,7 +16246,7 @@ def merge_list_item(source_item: Any, destination: list[Any]) -> None:
             match = True
             comparison = False  # Did we compare any fields?
             unique_source = False  # Source has unique fields?
-            unique_dest = False    # Dest has unique fields?
+            unique_dest = False  # Dest has unique fields?
 
             # Compare primitive fields in source
             for k, v in source_item.items():
@@ -16331,8 +16468,8 @@ apic:
 # Source: nac_yaml/yaml.py lines 71-74
 y = yaml.YAML()
 y.preserve_quotes = True
-y.register_class(VaultTag)   # Enable !vault tag
-y.register_class(EnvTag)     # Enable !env tag
+y.register_class(VaultTag)  # Enable !vault tag
+y.register_class(EnvTag)  # Enable !env tag
 ```
 
 Both tags are registered globally for all YAML parsing in nac-test.
@@ -16350,8 +16487,8 @@ def write_yaml_file(data: dict[str, Any], path: Path) -> None:
     try:
         with open(path, "w") as fh:
             y = yaml.YAML()
-            y.explicit_start = True        # Add "---" document marker
-            y.default_flow_style = False   # Block style (not inline)
+            y.explicit_start = True  # Add "---" document marker
+            y.default_flow_style = False  # Block style (not inline)
             y.indent(mapping=2, sequence=4, offset=2)
             y.dump(data, fh)
     except:  # noqa: E722
@@ -17454,18 +17591,19 @@ import os
 from pathlib import Path
 
 TEST_FILES = [
-    '/path/to/tests/api/test_apic_tenants.py',
-    '/path/to/tests/api/test_apic_vrfs.py',
+    "/path/to/tests/api/test_apic_tenants.py",
+    "/path/to/tests/api/test_apic_vrfs.py",
 ]
+
 
 def main(runtime):
     # Configure plugin
-    runtime.configuration.extend('''
+    runtime.configuration.extend("""
     plugins:
         ProgressReporterPlugin:
             class: nac_test.pyats_core.progress.plugin.ProgressReporterPlugin
             enabled: true
-    ''')
+    """)
 
     runtime.max_workers = 10
 
@@ -17474,7 +17612,7 @@ def main(runtime):
         run(
             testscript=test_file,
             taskid=test_name,
-            max_runtime=21600  # 6 hours
+            max_runtime=21600,  # 6 hours
         )
 ```
 
@@ -17587,6 +17725,7 @@ Test ID 50 (Worker 10)
 ```python
 # REJECTED
 import importlib.util
+
 spec = importlib.util.spec_from_file_location("test_module", task.testscript)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
@@ -17838,7 +17977,9 @@ def _send_batch_to_pyats(self, messages: List[Any]) -> bool:
                 self._attempt_reporter_recovery()
                 time.sleep(0.5 * (attempt + 1))  # Exponential backoff
             else:
-                self.logger.error("PyATS reporter connection failed after %d attempts", max_retries)
+                self.logger.error(
+                    "PyATS reporter connection failed after %d attempts", max_retries
+                )
 
         except AttributeError as e:
             # Reporter became None
@@ -17911,6 +18052,7 @@ def _get_pyats_reporter(self) -> Optional[Any]:
     # Location 2: PyATS runtime
     try:
         from pyats import aetest
+
         if hasattr(aetest, "runtime") and hasattr(aetest.runtime, "reporter"):
             return aetest.runtime.reporter
     except ImportError:
@@ -18381,7 +18523,9 @@ def _initialize_batching_reporter(self) -> None:
             )
         else:
             # Installation failed - disable batching
-            self.logger.warning("Failed to install step interceptors, batching disabled")
+            self.logger.warning(
+                "Failed to install step interceptors, batching disabled"
+            )
             self.batching_reporter = None
             self.step_interceptor = None
             interceptor_module.interception_enabled = False
@@ -18391,7 +18535,9 @@ def _initialize_batching_reporter(self) -> None:
         self.batching_reporter = None
         self.step_interceptor = None
     except Exception as e:
-        self.logger.error("Failed to initialize batching reporter: %s", e, exc_info=True)
+        self.logger.error(
+            "Failed to initialize batching reporter: %s", e, exc_info=True
+        )
         self.batching_reporter = None
         self.step_interceptor = None
 ```
@@ -19083,7 +19229,7 @@ nac_test.data_merger
 
 1. **Targeted Debugging**: Can enable DEBUG for specific module:
    ```python
-   logging.getLogger('nac_test.pyats_core.ssh').setLevel(logging.DEBUG)
+   logging.getLogger("nac_test.pyats_core.ssh").setLevel(logging.DEBUG)
    ```
 
 2. **Log Filtering**: Can filter logs by module name in production
@@ -19139,9 +19285,7 @@ DEBUG - Acquired semaphore, 49 slots remaining
 
 ```python
 # orchestrator.py line 179
-logger.info(
-    f"Executing {len(test_files)} API tests using standard PyATS job execution"
-)
+logger.info(f"Executing {len(test_files)} API tests using standard PyATS job execution")
 
 # connection_manager.py line 48
 logger.info(
@@ -19149,9 +19293,7 @@ logger.info(
 )
 
 # data_merger.py line 26
-logger.info(
-    "Loading yaml files from %s", ", ".join([str(path) for path in data_paths])
-)
+logger.info("Loading yaml files from %s", ", ".join([str(path) for path in data_paths]))
 
 # broker.py line 145
 logger.info(f"Connection broker started at: {self.socket_path}")
@@ -19186,9 +19328,7 @@ logger.warning("No device archives were generated")
 logger.warning("Could not load file: {}".format(filename))
 
 # output_processor.py line 50
-logger.warning(
-    f"Unknown event schema version: {event.get('version')}"
-)
+logger.warning(f"Unknown event schema version: {event.get('version')}")
 ```
 
 **Output (always shown, even at CRITICAL level):**
@@ -19216,9 +19356,7 @@ WARNING - Unknown event schema version: 2.0
 logger.error(f"Failed to create consolidated testbed: {e}", exc_info=True)
 
 # orchestrator.py line 298
-logger.error(
-    f"Error running tests with connection broker: {e}", exc_info=True
-)
+logger.error(f"Error running tests with connection broker: {e}", exc_info=True)
 
 # connection_manager.py line 148 (part of error enrichment)
 logger.error(error_msg, exc_info=True)
@@ -19259,9 +19397,7 @@ if error_handler.fired:
     raise typer.Exit(1)
 
 # environment_validator.py (not shown, but conceptual)
-logger.critical(
-    f"Missing required environment variables: {missing_vars}"
-)
+logger.critical(f"Missing required environment variables: {missing_vars}")
 ```
 
 **Output (always shown, even at default CRITICAL level):**
@@ -19282,11 +19418,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def my_function():
     logger.info("Function executed")
 
+
 # ❌ WRONG - Don't use root logger
 import logging
+
 
 def my_function():
     logging.info("Function executed")  # Uses root logger
@@ -19319,8 +19458,7 @@ try:
     testbed_yaml = generate_testbed(devices)
 except Exception as e:
     logger.error(
-        f"Failed to create testbed for {len(devices)} devices: {e}",
-        exc_info=True
+        f"Failed to create testbed for {len(devices)} devices: {e}", exc_info=True
     )
     raise
 
@@ -19393,6 +19531,7 @@ The logging system integrates with the `errorhandler` library to track errors:
 ```python
 error_handler = errorhandler.ErrorHandler()
 
+
 def configure_logging(level, error_handler):
     # ... configure logging ...
     error_handler.reset()  # Clear previous error state
@@ -19405,6 +19544,7 @@ def configure_logging(level, error_handler):
 def operation_that_may_fail():
     """Errors in this function are tracked by error_handler."""
     raise ValueError("Something went wrong")
+
 
 # Later, check if any errors occurred
 if error_handler.fired:
@@ -19569,7 +19709,7 @@ import logging
 configure_logging(verbosity, error_handler)
 
 # Enable DEBUG only for SSH module
-logging.getLogger('nac_test.pyats_core.ssh').setLevel(logging.DEBUG)
+logging.getLogger("nac_test.pyats_core.ssh").setLevel(logging.DEBUG)
 ```
 
 **Result**: Only SSH module logs at DEBUG, rest at configured level.
@@ -19686,7 +19826,7 @@ For nac-test's use case (CLI tool with terminal output), standard logging is suf
 ```python
 # NOT used in nac-test
 handler = logging.handlers.RotatingFileHandler(
-    'nac-test.log', maxBytes=10*1024*1024, backupCount=5
+    "nac-test.log", maxBytes=10 * 1024 * 1024, backupCount=5
 )
 ```
 
@@ -19714,7 +19854,7 @@ For a CLI tool, stdout is the right choice.
 ```python
 # NOT used in nac-test
 formatter = logging.Formatter(
-    '%(asctime)s - %(name)s:%(lineno)d - %(levelname)s - %(message)s'
+    "%(asctime)s - %(name)s:%(lineno)d - %(levelname)s - %(message)s"
 )
 ```
 
@@ -19842,7 +19982,13 @@ class TestResultCollector:
         self.jsonl_file.write(json.dumps(metadata_record) + "\n")
 
         # Keep only counters in memory (not full result lists)
-        self.result_counts = {"passed": 0, "failed": 0, "skipped": 0, "errored": 0, "info": 0}
+        self.result_counts = {
+            "passed": 0,
+            "failed": 0,
+            "skipped": 0,
+            "errored": 0,
+            "info": 0,
+        }
         self.command_count = 0
         self._current_overall_status = "passed"  # Updated in real-time
 ```
@@ -19988,10 +20134,12 @@ def __del__(self) -> None:
         try:
             # Write emergency closure record
             self.jsonl_file.write(
-                json.dumps({
-                    "type": "emergency_close",
-                    "timestamp": datetime.now().isoformat(),
-                })
+                json.dumps(
+                    {
+                        "type": "emergency_close",
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
                 + "\n"
             )
             self.jsonl_file.close()
@@ -20394,6 +20542,7 @@ class ReportGenerator:
 
         # Initialize Jinja2 environment
         from nac_test.pyats_core.reporting.templates import TEMPLATES_DIR
+
         self.env = get_jinja_environment(TEMPLATES_DIR)
 ```
 
@@ -20452,14 +20601,16 @@ async def generate_all_reports(self) -> Dict[str, Any]:
     logger.info(f"Successfully generated {len(successful_reports)} reports")
 
     # Generate summary report
-    summary_path = await self._generate_summary_report(
-        successful_reports, result_files
-    )
+    summary_path = await self._generate_summary_report(successful_reports, result_files)
 
     # Clean up JSONL files (unless in debug mode or NAC_TEST_PYATS_KEEP_REPORT_DATA is set)
-    if os.environ.get("NAC_TEST_VERBOSE") or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
+    if os.environ.get("NAC_TEST_VERBOSE") or os.environ.get(
+        "NAC_TEST_PYATS_KEEP_REPORT_DATA"
+    ):
         if os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA"):
-            logger.info("Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)")
+            logger.info(
+                "Keeping JSONL result files (NAC_TEST_PYATS_KEEP_REPORT_DATA is set)"
+            )
         else:
             logger.info("Debug mode enabled - keeping JSONL result files")
     else:
@@ -20521,9 +20672,7 @@ async def _read_jsonl_results(self, jsonl_path: Path) -> Dict[str, Any]:
                         summary = record
                     elif record_type == "emergency_close":
                         # Log but continue processing - emergency close indicates crash recovery
-                        logger.debug(
-                            f"Found emergency close record in {jsonl_path}"
-                        )
+                        logger.debug(f"Found emergency close record in {jsonl_path}")
 
                 except json.JSONDecodeError as e:
                     logger.warning(
@@ -20606,6 +20755,7 @@ async def _generate_single_report(self, result_file: Path) -> Path:
 
     logger.debug(f"Generated report: {report_path}")
     return report_path
+
 
 def _truncate_output(self, output: str, max_lines: int = 1000) -> str:
     """Truncate output with a note.
@@ -20710,8 +20860,7 @@ async def _generate_summary_report(
         failed_tests = sum(
             1
             for r in all_results
-            if r["status"]
-            in [ResultStatus.FAILED.value, ResultStatus.ERRORED.value]
+            if r["status"] in [ResultStatus.FAILED.value, ResultStatus.ERRORED.value]
         )
         skipped_tests = sum(
             1 for r in all_results if r["status"] == ResultStatus.SKIPPED.value
@@ -21393,6 +21542,7 @@ def format_file_size(size_bytes: int) -> str:
     else:
         return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
 
+
 # Register in get_jinja_environment()
 def get_jinja_environment(directory: Optional[Union[str, Path]] = None) -> Environment:
     # ... existing code ...
@@ -21477,7 +21627,7 @@ def format_duration(duration_seconds: Union[float, int, None]) -> str:
 ```python
 async def _generate_single_report(self, result_file: Path) -> Path:
     # Synchronous file read blocks all parallel reports
-    with open(result_file, 'r') as f:
+    with open(result_file, "r") as f:
         data = json.load(f)
 ```
 
@@ -21485,7 +21635,7 @@ async def _generate_single_report(self, result_file: Path) -> Path:
 ```python
 async def _generate_single_report(self, result_file: Path) -> Path:
     # Async file read allows other reports to process in parallel
-    async with aiofiles.open(result_file, 'r') as f:
+    async with aiofiles.open(result_file, "r") as f:
         content = await f.read()
         data = json.loads(content)
 ```
@@ -21645,12 +21795,12 @@ class CommandCache:
 {
     "show version": {
         "output": "Cisco IOS XE Software, Version 17.3.1...",
-        "timestamp": 1705334400.123  # Unix epoch time
+        "timestamp": 1705334400.123,  # Unix epoch time
     },
     "show ip bgp summary": {
         "output": "BGP router identifier 10.0.0.1, local AS number 65000...",
-        "timestamp": 1705334401.456
-    }
+        "timestamp": 1705334401.456,
+    },
 }
 ```
 
@@ -21711,9 +21861,7 @@ def set(self, command: str, output: str) -> None:
         output: The command output to cache
     """
     self.cache[command] = {"output": output, "timestamp": time.time()}
-    logger.debug(
-        f"Cached '{command}' output for {self.hostname} ({len(output)} chars)"
-    )
+    logger.debug(f"Cached '{command}' output for {self.hostname} ({len(output)} chars)")
 ```
 
 **3. `clear() -> None`**: Clear all cached entries (used when disconnecting)
@@ -21807,7 +21955,7 @@ cache = CommandCache("router1", ttl=300)  # 5 minutes
 cache = CommandCache("switch1", ttl=7200)  # 2 hours
 
 # No expiration (dangerous - only for static config)
-cache = CommandCache("device1", ttl=float('inf'))  # Never expires
+cache = CommandCache("device1", ttl=float("inf"))  # Never expires
 ```
 
 ---
@@ -21992,9 +22140,9 @@ stats = cache.get_cache_stats()
 
 # Returns:
 {
-    "total_entries": 15,      # Total commands cached
-    "expired_entries": 3,     # Expired but not yet purged
-    "valid_entries": 12       # Still within TTL
+    "total_entries": 15,  # Total commands cached
+    "expired_entries": 3,  # Expired but not yet purged
+    "valid_entries": 12,  # Still within TTL
 }
 ```
 
@@ -22076,7 +22224,7 @@ class InterfaceTest(SSHTestBase):
         start = time.time()
         output1 = await self.execute_command("show interfaces status")
         duration1 = time.time() - start  # ~500ms
-        logger.info(f"First call: {duration1*1000:.0f}ms")
+        logger.info(f"First call: {duration1 * 1000:.0f}ms")
 
         # Parse output to find all UP interfaces
         up_interfaces = parse_up_interfaces(output1)
@@ -22087,7 +22235,7 @@ class InterfaceTest(SSHTestBase):
             start = time.time()
             output = await self.execute_command("show interfaces status")
             duration = time.time() - start  # <1ms
-            logger.info(f"Cached call: {duration*1000:.2f}ms")
+            logger.info(f"Cached call: {duration * 1000:.2f}ms")
 
             # Validate this interface in cached output
             validate_interface(intf, output)
@@ -22142,10 +22290,16 @@ async def print_cache_stats():
         print(f"Total cached commands: {cache_stats['total_cached_commands']}")
 
         for device, stats in cache_stats["per_device_stats"].items():
-            hit_rate = (stats["valid_entries"] / stats["total_entries"] * 100
-                       if stats["total_entries"] > 0 else 0)
-            print(f"{device}: {stats['valid_entries']}/{stats['total_entries']} "
-                  f"valid ({hit_rate:.1f}% hit rate)")
+            hit_rate = (
+                stats["valid_entries"] / stats["total_entries"] * 100
+                if stats["total_entries"] > 0
+                else 0
+            )
+            print(
+                f"{device}: {stats['valid_entries']}/{stats['total_entries']} "
+                f"valid ({hit_rate:.1f}% hit rate)"
+            )
+
 
 # Output:
 # Total cached commands: 47
@@ -22168,10 +22322,9 @@ class ConfigChangeTest(SSHTestBase):
         before = await self.execute_command("show interfaces status")
 
         # Apply configuration change
-        await self.apply_config([
-            "interface GigabitEthernet0/1",
-            "description NEW_DESCRIPTION"
-        ])
+        await self.apply_config(
+            ["interface GigabitEthernet0/1", "description NEW_DESCRIPTION"]
+        )
 
         # Clear cache to force fresh command execution
         self.command_cache.clear()
@@ -22436,6 +22589,7 @@ def setup(self) -> None:
     super().setup()  # REQUIRED
     # ... test-specific setup ...
 
+
 @aetest.test
 def test_something(self) -> None:
     """Test methods must be decorated with @aetest.test."""
@@ -22547,10 +22701,11 @@ PASS_FAIL_CRITERIA = """
 ```python
 class ApiDetails(TypedDict, total=False):
     """API transaction details for debugging and monitoring."""
-    url: str                  # Full API endpoint URL
-    response_code: int        # HTTP status code
-    response_time: float      # Request duration in seconds
-    response_body: Any        # Raw response body (for debugging)
+
+    url: str  # Full API endpoint URL
+    response_code: int  # HTTP status code
+    response_time: float  # Request duration in seconds
+    response_body: Any  # Raw response body (for debugging)
 ```
 
 **Usage**:
@@ -22559,7 +22714,7 @@ api_details: ApiDetails = {
     "url": "https://apic1/api/node/class/fvTenant.json",
     "response_code": 200,
     "response_time": 0.123,
-    "response_body": {"imdata": [...]}
+    "response_body": {"imdata": [...]},
 }
 ```
 
@@ -22568,15 +22723,18 @@ api_details: ApiDetails = {
 ```python
 class BaseVerificationResult(TypedDict):
     """Base result structure used by format_verification_result() method."""
-    status: ResultStatus           # PASSED, FAILED, SKIPPED, etc.
-    context: Dict[str, Any]        # Test-specific context (tenant name, device, etc.)
-    reason: str                    # Human-readable result explanation
-    api_duration: float            # API call duration (seconds)
-    timestamp: float               # Unix timestamp of verification
+
+    status: ResultStatus  # PASSED, FAILED, SKIPPED, etc.
+    context: Dict[str, Any]  # Test-specific context (tenant name, device, etc.)
+    reason: str  # Human-readable result explanation
+    api_duration: float  # API call duration (seconds)
+    timestamp: float  # Unix timestamp of verification
+
 
 class BaseVerificationResultOptional(BaseVerificationResult, total=False):
     """Extends BaseVerificationResult with optional fields."""
-    api_details: ApiDetails        # Optional API transaction details
+
+    api_details: ApiDetails  # Optional API transaction details
 ```
 
 **Usage**:
@@ -22590,8 +22748,8 @@ result: BaseVerificationResultOptional = {
     "api_details": {
         "url": "https://apic1/api/node/mo/uni/tn-prod/ctx-common.json",
         "response_code": 200,
-        "response_time": 0.234
-    }
+        "response_time": 0.234,
+    },
 }
 ```
 
@@ -22599,11 +22757,13 @@ result: BaseVerificationResultOptional = {
 
 ```python
 VerificationResult = Union[
-    BaseVerificationResultOptional,            # Structured result with optional fields
-    GenericVerificationResult[Any, Any],       # Generic result with custom context/domain data
-    ExtensibleVerificationResult,              # Arbitrary additional fields allowed
-    VerificationResultProtocol,                # Protocol-compatible results
-    Dict[str, Any],                            # Fallback for maximum flexibility
+    BaseVerificationResultOptional,  # Structured result with optional fields
+    GenericVerificationResult[
+        Any, Any
+    ],  # Generic result with custom context/domain data
+    ExtensibleVerificationResult,  # Arbitrary additional fields allowed
+    VerificationResultProtocol,  # Protocol-compatible results
+    Dict[str, Any],  # Fallback for maximum flexibility
 ]
 ```
 
@@ -22620,6 +22780,7 @@ class VerificationResultProtocol(Protocol):
 
     Allows custom result types while maintaining framework compatibility.
     """
+
     status: Union[ResultStatus, str]
     reason: str
 
@@ -22633,6 +22794,7 @@ class VerificationResultProtocol(Protocol):
 @dataclass
 class CustomVerificationResult:
     """Custom result type implementing Protocol."""
+
     status: ResultStatus
     reason: str
     device_name: str
@@ -22641,12 +22803,13 @@ class CustomVerificationResult:
     def get(self, key: str, default: Any = None) -> Any:
         return getattr(self, key, default)
 
+
 # Framework accepts this custom type
 result: VerificationResultProtocol = CustomVerificationResult(
     status=ResultStatus.PASSED,
     reason="All interfaces operational",
     device_name="spine-1",
-    interface_count=48
+    interface_count=48,
 )
 ```
 
@@ -22747,6 +22910,7 @@ def setup(self) -> None:
     if not self.test_params:
         self.skipped("No tenant/VRF combinations to test")
 
+
 @aetest.test
 def test_vrf_existence(self) -> None:
     for params in self.test_params:
@@ -22782,7 +22946,7 @@ Tests must use `self.result_collector` for HTML report integration:
 self.result_collector.add_result(
     status=ResultStatus.PASSED,
     message="Tenant 'prod' exists with expected configuration",
-    test_context="tenant_validation"  # Links result to API calls
+    test_context="tenant_validation",  # Links result to API calls
 )
 
 # Add API/command execution record (for HTML report "Commands" section)
@@ -22791,7 +22955,7 @@ self.result_collector.add_command_api_execution(
     command="GET /api/node/mo/uni/tn-prod.json",
     output=response_body_json,
     data=parsed_data,  # Optional: parsed/structured data
-    test_context="tenant_validation"  # Links to result above
+    test_context="tenant_validation",  # Links to result above
 )
 ```
 
@@ -22808,7 +22972,7 @@ response = await self.execute_api_call("/api/bgp/peers")
 self.result_collector.add_result(
     status=ResultStatus.PASSED,
     message="All BGP peers established",
-    test_context="bgp_peer_validation"  # SAME context = proper linking
+    test_context="bgp_peer_validation",  # SAME context = proper linking
 )
 
 # Result: HTML report shows API call grouped under this result
@@ -22855,7 +23019,7 @@ Tests rely on environment variables set by orchestrator:
 # url = os.environ["ACI_URL"]
 
 # DO this (framework provides these):
-url = self.controller_url        # From NACTestBase.setup()
+url = self.controller_url  # From NACTestBase.setup()
 username = self.username
 password = self.password
 controller_type = self.controller_type
@@ -22902,6 +23066,7 @@ from nac_test.pyats_core.common.base_test import NACTestBase
 from pyats import aetest
 import httpx
 
+
 class SDWANManagerTestBase(NACTestBase):
     """Base class for SDWAN Manager API tests.
 
@@ -22920,7 +23085,7 @@ class SDWANManagerTestBase(NACTestBase):
         self.sdwan_manager_client = httpx.AsyncClient(
             base_url=self.controller_url,
             verify=False,  # SSL verification per SDWAN Manager requirements
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
         )
 
         # Authenticate (SDWAN Manager-specific auth flow)
@@ -22930,7 +23095,7 @@ class SDWANManagerTestBase(NACTestBase):
         """Authenticate with SDWAN Manager and store session token."""
         response = await self.sdwan_manager_client.post(
             "/j_security_check",
-            data={"j_username": self.username, "j_password": self.password}
+            data={"j_username": self.username, "j_password": self.password},
         )
         # ... store token ...
 
@@ -22956,6 +23121,7 @@ DESCRIPTION = "Validates device templates are attached correctly"
 SETUP = "Connect to SDWAN Manager and retrieve template configuration"
 PROCEDURE = "Query each device and verify template attachment"
 PASS_FAIL_CRITERIA = "All devices have expected templates attached"
+
 
 class TemplateAttachedTest(SDWANManagerTestBase):
     """Validates template attachment for all devices."""
@@ -22990,13 +23156,13 @@ class TemplateAttachedTest(SDWANManagerTestBase):
                 self.result_collector.add_result(
                     status=ResultStatus.PASSED,
                     message=f"Device '{device_name}' has correct template '{actual_template}'",
-                    test_context=f"template_check_{device_name}"
+                    test_context=f"template_check_{device_name}",
                 )
             else:
                 self.result_collector.add_result(
                     status=ResultStatus.FAILED,
                     message=f"Device '{device_name}' has template '{actual_template}', expected '{expected_template}'",
-                    test_context=f"template_check_{device_name}"
+                    test_context=f"template_check_{device_name}",
                 )
 ```
 
@@ -23041,12 +23207,12 @@ def __init_subclass__(cls, **kwargs):
     super().__init_subclass__(**kwargs)
 
     # Skip validation for abstract intermediate classes
-    abstract_classes = {'APICTestBase', 'SSHTestBase', 'NACTestBase'}
+    abstract_classes = {"APICTestBase", "SSHTestBase", "NACTestBase"}
     if cls.__name__ in abstract_classes:
         return
 
     # Enforce TEST_TYPE_NAME for concrete test classes
-    if not hasattr(cls, 'TEST_TYPE_NAME') or cls.TEST_TYPE_NAME is None:
+    if not hasattr(cls, "TEST_TYPE_NAME") or cls.TEST_TYPE_NAME is None:
         raise TypeError(
             f"{cls.__name__} must define TEST_TYPE_NAME class variable. "
             f"Example: TEST_TYPE_NAME = 'BGP Peer' or 'Bridge Domain'"
@@ -23086,13 +23252,17 @@ class MyTest(SSHTestBase):
 self._current_test_context = "bgp_validation"
 response = await self.execute_api_call("/api/bgp")
 self.result_collector.add_command_api_execution(...)  # Automatically linked by context
-self.result_collector.add_result(..., test_context="bgp_validation")  # Explicitly linked
+self.result_collector.add_result(
+    ..., test_context="bgp_validation"
+)  # Explicitly linked
 ```
 
 ❌ **INCORRECT**:
 ```python
 response = await self.execute_api_call("/api/bgp")
-self.result_collector.add_result(..., test_context=None)  # Orphaned API call in HTML report
+self.result_collector.add_result(
+    ..., test_context=None
+)  # Orphaned API call in HTML report
 ```
 
 **Pattern 3: Module-Level Constants**
@@ -23228,8 +23398,8 @@ Without the result pipeline, each test would implement its own result formatting
 
 ```python
 {
-    "status": ResultStatus.PASSED,      # Enum: PASSED/FAILED/SKIPPED/ERRORED/INFO
-    "context": {                         # Dict[str, Any]: Complete verification context
+    "status": ResultStatus.PASSED,  # Enum: PASSED/FAILED/SKIPPED/ERRORED/INFO
+    "context": {  # Dict[str, Any]: Complete verification context
         "tenant_name": "production",
         "bd_name": "web_bd",
         "resolved_bd_name": "web_bd_prod",
@@ -23237,14 +23407,14 @@ Without the result pipeline, each test would implement its own result formatting
         # ... any fields needed for reporting/troubleshooting ...
     },
     "reason": "Subnet gateway IP verified successfully",  # Human-readable explanation
-    "api_duration": 0.245,              # float: API call timing in seconds
-    "timestamp": 1699876543.123,        # float: When result was created (time.time())
-    "api_details": {                    # Optional[ApiDetails]: API transaction details
+    "api_duration": 0.245,  # float: API call timing in seconds
+    "timestamp": 1699876543.123,  # float: When result was created (time.time())
+    "api_details": {  # Optional[ApiDetails]: API transaction details
         "url": "https://apic/api/node/mo/...",
         "response_code": 200,
         "response_time": 0.245,
-        "response_body": "{...}"
-    }
+        "response_body": "{...}",
+    },
 }
 ```
 
@@ -23260,11 +23430,12 @@ Without the result pipeline, each test would implement its own result formatting
 ```python
 class ResultStatus(str, Enum):
     """Result status enumeration."""
-    PASSED = "PASSED"      # Verification succeeded
-    FAILED = "FAILED"      # Verification failed (mismatch, error)
-    SKIPPED = "SKIPPED"    # Verification skipped (no data, not applicable)
-    ERRORED = "ERRORED"    # Unexpected error during verification
-    INFO = "INFO"          # Informational message (not a verification)
+
+    PASSED = "PASSED"  # Verification succeeded
+    FAILED = "FAILED"  # Verification failed (mismatch, error)
+    SKIPPED = "SKIPPED"  # Verification skipped (no data, not applicable)
+    ERRORED = "ERRORED"  # Unexpected error during verification
+    INFO = "INFO"  # Informational message (not a verification)
 ```
 
 **Status Decision Tree**:
@@ -23304,27 +23475,24 @@ result = self.format_verification_result(
         "tenant_name": "production",
         "bd_name": "web_bd",
         "subnet_ip": "10.1.1.1/24",
-        "gateway_ip": "10.1.1.1"
+        "gateway_ip": "10.1.1.1",
     },
     reason="Subnet gateway IP verified successfully",
-    api_duration=0.245
+    api_duration=0.245,
 )
 
 # Failure case with API details
 result = self.format_verification_result(
     status=ResultStatus.FAILED,
-    context={
-        "tenant_name": "production",
-        "bd_name": "missing_bd"
-    },
+    context={"tenant_name": "production", "bd_name": "missing_bd"},
     reason="Bridge Domain not found in APIC fabric",
     api_duration=0.123,
     api_details={
         "url": "https://apic/api/node/mo/uni/tn-production/BD-missing_bd.json",
         "response_code": 404,
         "response_time": 0.123,
-        "response_body": '{"totalCount":"0","imdata":[]}'
-    }
+        "response_body": '{"totalCount":"0","imdata":[]}',
+    },
 )
 ```
 
@@ -23355,20 +23523,17 @@ def format_mismatch(self, attribute, expected, actual, context):
 ```python
 # TEST_CONFIG defines:
 TEST_CONFIG = {
-    'resource_type': 'Bridge Domain Subnet',
-    'attribute_names': {
-        'scope': 'Subnet Scope',
-        'preferred': 'Preferred Flag'
+    "resource_type": "Bridge Domain Subnet",
+    "attribute_names": {"scope": "Subnet Scope", "preferred": "Preferred Flag"},
+    "schema_paths": {
+        "scope": "aci.tenants[].bridge_domains[].subnets[].scope",
+        "preferred": "aci.tenants[].bridge_domains[].subnets[].preferred",
     },
-    'schema_paths': {
-        'scope': 'aci.tenants[].bridge_domains[].subnets[].scope',
-        'preferred': 'aci.tenants[].bridge_domains[].subnets[].preferred'
-    }
 }
 
 # Usage in test:
 if expected_scope != actual_scope:
-    return self.format_mismatch('scope', expected_scope, actual_scope, context)
+    return self.format_mismatch("scope", expected_scope, actual_scope, context)
 
 # Generated Error Message:
 """
@@ -23434,7 +23599,7 @@ def format_not_found(self, resource_type, identifier, context):
 **Example**:
 ```python
 if not bridge_domain_exists:
-    return self.format_not_found('Bridge Domain', bd_identifier, context)
+    return self.format_not_found("Bridge Domain", bd_identifier, context)
 
 # Generated Error Message:
 """
@@ -23478,11 +23643,7 @@ def build_api_context(
 ```python
 # BGP peer verification
 context = self.build_api_context(
-    "BGP Peer",
-    "192.168.1.1",
-    tenant="Production",
-    node="101",
-    l3out="External"
+    "BGP Peer", "192.168.1.1", tenant="Production", node="101", l3out="External"
 )
 # Result: "BGP Peer: 192.168.1.1 (L3Out: External, Node: 101, Tenant: Production)"
 
@@ -23497,7 +23658,7 @@ context = self.build_api_context(
     tenant="infra",
     l3out="internet",
     node="spine-1",
-    vrf="overlay-1"
+    vrf="overlay-1",
 )
 # Result: "Static Route: 0.0.0.0/0 (L3Out: internet, Node: spine-1, Tenant: infra, Vrf: overlay-1)"
 ```
@@ -23516,7 +23677,7 @@ self.result_collector.add_command_api_execution(
     device_name="APIC",
     command="GET /api/node/mo/...",
     output=response.text,
-    test_context=context_str  # Links this API call to test context
+    test_context=context_str,  # Links this API call to test context
 )
 ```
 
@@ -23564,7 +23725,7 @@ self.add_verification_result(
     ResultStatus.PASSED,
     "BGP peer",
     "192.168.1.1",
-    test_context="BGP Peer: 192.168.1.1 (Tenant: Production, Node: 101)"
+    test_context="BGP Peer: 192.168.1.1 (Tenant: Production, Node: 101)",
 )
 
 # Using string status (automatically converted to enum)
@@ -23573,7 +23734,7 @@ self.add_verification_result(
     "Bridge Domain subnet",
     "10.1.1.1/24",
     details=result.get("reason", "Unknown error"),
-    test_context="Bridge Domain: web_bd (Tenant: Production)"
+    test_context="Bridge Domain: web_bd (Tenant: Production)",
 )
 ```
 
@@ -23614,10 +23775,11 @@ If no items to verify, automatically generates SKIPPED result with comprehensive
 
 ```python
 # No items found
-return [{
-    'status': ResultStatus.SKIPPED,
-    'context': {},
-    'reason': """
+return [
+    {
+        "status": ResultStatus.SKIPPED,
+        "context": {},
+        "reason": """
 No Bridge Domain configurations found in data model.
 
 Managed Objects Checked:
@@ -23630,8 +23792,9 @@ Schema Paths Checked:
 • aci.tenants[].bridge_domains[].subnets[]
 ... and 12 more paths
     """,
-    'api_duration': 0
-}]
+        "api_duration": 0,
+    }
+]
 ```
 
 ---
@@ -23659,18 +23822,18 @@ class SubnetVerificationTest(NACTestBase):
             Example: {"tenant1/bd1": [subnet1_ctx, subnet2_ctx, subnet3_ctx]}
         """
         groups = {}
-        for tenant in self.data_model.get('aci', {}).get('tenants', []):
-            for bd in tenant.get('bridge_domains', []):
+        for tenant in self.data_model.get("aci", {}).get("tenants", []):
+            for bd in tenant.get("bridge_domains", []):
                 bd_key = f"{tenant['name']}/{bd['name']}"
                 subnet_contexts = [
                     {
-                        'tenant_name': tenant['name'],
-                        'bd_name': bd['name'],
-                        'subnet_ip': subnet['ip'],
-                        'gateway_ip': subnet.get('gateway_ip'),
+                        "tenant_name": tenant["name"],
+                        "bd_name": bd["name"],
+                        "subnet_ip": subnet["ip"],
+                        "gateway_ip": subnet.get("gateway_ip"),
                         # ... all subnet attributes ...
                     }
-                    for subnet in bd.get('subnets', [])
+                    for subnet in bd.get("subnets", [])
                 ]
                 if subnet_contexts:
                     groups[bd_key] = subnet_contexts
@@ -23689,7 +23852,7 @@ class SubnetVerificationTest(NACTestBase):
             List[Dict]: One result per subnet
         """
         async with semaphore:  # Limit concurrent API calls
-            tenant_name, bd_name = group_key.split('/')
+            tenant_name, bd_name = group_key.split("/")
 
             # ONE API call fetches all subnets in this bridge domain
             url = f"/api/node/mo/uni/tn-{tenant_name}/BD-{bd_name}.json?rsp-subtree=children"
@@ -23705,32 +23868,38 @@ class SubnetVerificationTest(NACTestBase):
             # Parse API response ONCE
             bd_data = response.json()
             actual_subnets = {
-                subnet['ip']: subnet
-                for subnet in bd_data.get('fvBD', {}).get('children', [])
+                subnet["ip"]: subnet
+                for subnet in bd_data.get("fvBD", {}).get("children", [])
             }
 
             # Verify each subnet against parsed data (no additional API calls)
             results = []
             for ctx in contexts:
-                subnet_ip = ctx['subnet_ip']
+                subnet_ip = ctx["subnet_ip"]
                 actual_subnet = actual_subnets.get(subnet_ip)
 
                 if not actual_subnet:
-                    results.append(self.format_not_found('Subnet', subnet_ip, ctx))
+                    results.append(self.format_not_found("Subnet", subnet_ip, ctx))
                     continue
 
                 # Verify attributes
-                expected_gateway = ctx.get('gateway_ip')
-                actual_gateway = actual_subnet.get('gateway')
+                expected_gateway = ctx.get("gateway_ip")
+                actual_gateway = actual_subnet.get("gateway")
 
                 if expected_gateway != actual_gateway:
-                    results.append(self.format_mismatch('gateway_ip', expected_gateway, actual_gateway, ctx))
+                    results.append(
+                        self.format_mismatch(
+                            "gateway_ip", expected_gateway, actual_gateway, ctx
+                        )
+                    )
                 else:
-                    results.append(self.format_verification_result(
-                        ResultStatus.PASSED,
-                        ctx,
-                        f"Subnet {subnet_ip} verified successfully"
-                    ))
+                    results.append(
+                        self.format_verification_result(
+                            ResultStatus.PASSED,
+                            ctx,
+                            f"Subnet {subnet_ip} verified successfully",
+                        )
+                    )
 
             return results
 ```
@@ -23747,6 +23916,7 @@ class SubnetVerificationTest(NACTestBase):
 **Concurrency Control**:
 ```python
 from nac_test.pyats_core.constants import DEFAULT_API_CONCURRENCY
+
 semaphore = asyncio.Semaphore(DEFAULT_API_CONCURRENCY)  # Default: 55
 
 # Each verify_group() must acquire semaphore:
@@ -23780,15 +23950,17 @@ class BridgeDomainVerificationTest(NACTestBase):
             Example: [bd1_ctx, bd2_ctx, bd3_ctx]
         """
         contexts = []
-        for tenant in self.data_model.get('aci', {}).get('tenants', []):
-            for bd in tenant.get('bridge_domains', []):
-                contexts.append({
-                    'tenant_name': tenant['name'],
-                    'bd_name': bd['name'],
-                    'vrf_name': bd.get('vrf'),
-                    'l2_unknown_unicast': bd.get('l2_unknown_unicast', 'proxy'),
-                    # ... all BD attributes ...
-                })
+        for tenant in self.data_model.get("aci", {}).get("tenants", []):
+            for bd in tenant.get("bridge_domains", []):
+                contexts.append(
+                    {
+                        "tenant_name": tenant["name"],
+                        "bd_name": bd["name"],
+                        "vrf_name": bd.get("vrf"),
+                        "l2_unknown_unicast": bd.get("l2_unknown_unicast", "proxy"),
+                        # ... all BD attributes ...
+                    }
+                )
         return contexts
 
     async def verify_item(self, semaphore, client, context):
@@ -23803,8 +23975,8 @@ class BridgeDomainVerificationTest(NACTestBase):
             Dict: Single verification result
         """
         async with semaphore:
-            tenant_name = context['tenant_name']
-            bd_name = context['bd_name']
+            tenant_name = context["tenant_name"]
+            bd_name = context["bd_name"]
 
             # One API call per bridge domain
             url = f"/api/node/mo/uni/tn-{tenant_name}/BD-{bd_name}.json"
@@ -23814,22 +23986,27 @@ class BridgeDomainVerificationTest(NACTestBase):
                 return self.format_api_error(response.status_code, url, context)
 
             bd_data = response.json()
-            actual_bd = bd_data.get('fvBD', {}).get('attributes', {})
+            actual_bd = bd_data.get("fvBD", {}).get("attributes", {})
 
             if not actual_bd:
-                return self.format_not_found('Bridge Domain', bd_name, context)
+                return self.format_not_found("Bridge Domain", bd_name, context)
 
             # Verify attributes
-            expected_l2_unicast = context.get('l2_unknown_unicast')
-            actual_l2_unicast = actual_bd.get('unkMacUcastAct')
+            expected_l2_unicast = context.get("l2_unknown_unicast")
+            actual_l2_unicast = actual_bd.get("unkMacUcastAct")
 
             if expected_l2_unicast != actual_l2_unicast:
-                return self.format_mismatch('l2_unknown_unicast', expected_l2_unicast, actual_l2_unicast, context)
+                return self.format_mismatch(
+                    "l2_unknown_unicast",
+                    expected_l2_unicast,
+                    actual_l2_unicast,
+                    context,
+                )
 
             return self.format_verification_result(
                 ResultStatus.PASSED,
                 context,
-                f"Bridge Domain {bd_name} verified successfully"
+                f"Bridge Domain {bd_name} verified successfully",
             )
 ```
 
@@ -23876,6 +24053,7 @@ def extract_step_context(self, result: VerificationResult) -> Dict[str, Any]:
     """
     raise NotImplementedError("Subclasses must implement extract_step_context()")
 
+
 def format_step_name(self, context: Dict[str, Any]) -> str:
     """Format PyATS step name from extracted context.
 
@@ -23886,6 +24064,7 @@ def format_step_name(self, context: Dict[str, Any]) -> str:
         return f"Verify BGP peer {context['peer_ip']} on node {context['node']}"
     """
     raise NotImplementedError("Subclasses must implement format_step_name()")
+
 
 def format_step_description(self, context: Dict[str, Any]) -> str:
     """Format detailed step description for logging.
@@ -23898,7 +24077,10 @@ def format_step_description(self, context: Dict[str, Any]) -> str:
     """
     raise NotImplementedError("Subclasses must implement format_step_description()")
 
-def build_item_identifier_from_context(self, result: VerificationResult, context: Dict[str, Any]) -> str:
+
+def build_item_identifier_from_context(
+    self, result: VerificationResult, context: Dict[str, Any]
+) -> str:
     """Build identifier string for HTML reporting.
 
     Returns:
@@ -23907,7 +24089,9 @@ def build_item_identifier_from_context(self, result: VerificationResult, context
     Example:
         return f"{context['peer_ip']} on node {context['node']}"
     """
-    raise NotImplementedError("Subclasses must implement build_item_identifier_from_context()")
+    raise NotImplementedError(
+        "Subclasses must implement build_item_identifier_from_context()"
+    )
 ```
 
 **Processing Flow**:
@@ -23935,7 +24119,7 @@ class BGPPeerVerificationTest(SSHTestBase):
             "peer_ip": result["context"]["peer_ip"],
             "tenant": result["context"]["tenant_name"],
             "node": result["context"]["node_id"],
-            "l3out": result["context"]["l3out_name"]
+            "l3out": result["context"]["l3out_name"],
         }
 
     def format_step_name(self, context):
@@ -23970,25 +24154,25 @@ def process_results_smart(self, results, steps) -> None:
 
 ```python
 TEST_CONFIG = {
-    'resource_type': 'Bridge Domain',
-    'test_type_name': 'Bridge Domain Verification',
-    'identifier_format': "BD '{tenant_name}/{bd_name}'",
-    'step_name_format': "Verify {resource_type} '{tenant_name}/{bd_name}'",
-    'attribute_names': {
-        'vrf': 'VRF',
-        'l2_unknown_unicast': 'L2 Unknown Unicast Action'
+    "resource_type": "Bridge Domain",
+    "test_type_name": "Bridge Domain Verification",
+    "identifier_format": "BD '{tenant_name}/{bd_name}'",
+    "step_name_format": "Verify {resource_type} '{tenant_name}/{bd_name}'",
+    "attribute_names": {
+        "vrf": "VRF",
+        "l2_unknown_unicast": "L2 Unknown Unicast Action",
     },
-    'schema_paths': {
-        'vrf': 'aci.tenants[].bridge_domains[].vrf',
-        'l2_unknown_unicast': 'aci.tenants[].bridge_domains[].l2_unknown_unicast'
+    "schema_paths": {
+        "vrf": "aci.tenants[].bridge_domains[].vrf",
+        "l2_unknown_unicast": "aci.tenants[].bridge_domains[].l2_unknown_unicast",
     },
-    'log_fields': ['tenant_name', 'bd_name', 'vrf'],
-    'schema_paths_list': [
-        'aci.tenants[].bridge_domains[].name',
-        'aci.tenants[].bridge_domains[].vrf',
+    "log_fields": ["tenant_name", "bd_name", "vrf"],
+    "schema_paths_list": [
+        "aci.tenants[].bridge_domains[].name",
+        "aci.tenants[].bridge_domains[].vrf",
         # ... all paths this test validates ...
     ],
-    'managed_objects': ['fvBD', 'fvRsCtx']
+    "managed_objects": ["fvBD", "fvRsCtx"],
 }
 ```
 
@@ -24027,29 +24211,29 @@ class BridgeDomainVerificationTest(NACTestBase):
     TEST_TYPE_NAME = "Bridge Domain"
 
     TEST_CONFIG = {
-        'resource_type': 'Bridge Domain',
-        'test_type_name': 'Bridge Domain Verification',
-        'identifier_format': "BD '{tenant_name}/{bd_name}'",
-        'step_name_format': "Verify {resource_type} '{tenant_name}/{bd_name}'",
-        'attribute_names': {
-            'vrf': 'VRF',
-            'l2_unknown_unicast': 'L2 Unknown Unicast Action',
-            'l3_unknown_multicast': 'L3 Unknown Multicast Flooding'
+        "resource_type": "Bridge Domain",
+        "test_type_name": "Bridge Domain Verification",
+        "identifier_format": "BD '{tenant_name}/{bd_name}'",
+        "step_name_format": "Verify {resource_type} '{tenant_name}/{bd_name}'",
+        "attribute_names": {
+            "vrf": "VRF",
+            "l2_unknown_unicast": "L2 Unknown Unicast Action",
+            "l3_unknown_multicast": "L3 Unknown Multicast Flooding",
         },
-        'schema_paths': {
-            'vrf': 'aci.tenants[].bridge_domains[].vrf',
-            'l2_unknown_unicast': 'aci.tenants[].bridge_domains[].l2_unknown_unicast',
-            'l3_unknown_multicast': 'aci.tenants[].bridge_domains[].l3_unknown_multicast'
+        "schema_paths": {
+            "vrf": "aci.tenants[].bridge_domains[].vrf",
+            "l2_unknown_unicast": "aci.tenants[].bridge_domains[].l2_unknown_unicast",
+            "l3_unknown_multicast": "aci.tenants[].bridge_domains[].l3_unknown_multicast",
         },
-        'log_fields': ['tenant_name', 'bd_name', 'vrf'],
-        'schema_paths_list': [
-            'aci.tenants[].bridge_domains[].name',
-            'aci.tenants[].bridge_domains[].vrf',
-            'aci.tenants[].bridge_domains[].l2_unknown_unicast',
-            'aci.tenants[].bridge_domains[].l3_unknown_multicast',
-            'aci.tenants[].bridge_domains[].subnets[]'
+        "log_fields": ["tenant_name", "bd_name", "vrf"],
+        "schema_paths_list": [
+            "aci.tenants[].bridge_domains[].name",
+            "aci.tenants[].bridge_domains[].vrf",
+            "aci.tenants[].bridge_domains[].l2_unknown_unicast",
+            "aci.tenants[].bridge_domains[].l3_unknown_multicast",
+            "aci.tenants[].bridge_domains[].subnets[]",
         ],
-        'managed_objects': ['fvBD', 'fvRsCtx']
+        "managed_objects": ["fvBD", "fvRsCtx"],
     }
 
     def get_items_to_verify(self):
@@ -24204,9 +24388,11 @@ class BridgeDomainVerificationTest(NACTestBase):
 # Answer: No - each VRF in different tenant requires separate API call
 # Decision: Use item verification pattern
 
+
 def get_items_to_verify(self) -> List[Dict[str, Any]]:
     """Return list of VRF contexts."""
     pass  # Return list, not dict
+
 
 async def verify_item(self, semaphore, client, context):
     """Verify one VRF with one API call."""
@@ -24217,29 +24403,29 @@ async def verify_item(self, semaphore, client, context):
 
 ```python
 TEST_CONFIG = {
-    'resource_type': 'VRF',
-    'test_type_name': 'VRF Verification',
-    'identifier_format': "VRF '{tenant_name}/{vrf_name}'",
-    'step_name_format': "Verify {resource_type} '{tenant_name}/{vrf_name}'",
-    'attribute_names': {
-        'pc_enforcement_direction': 'Policy Control Enforcement Direction',
-        'pc_enforcement_preference': 'Policy Control Enforcement Preference',
-        'bd_enforcement': 'Bridge Domain Enforcement'
+    "resource_type": "VRF",
+    "test_type_name": "VRF Verification",
+    "identifier_format": "VRF '{tenant_name}/{vrf_name}'",
+    "step_name_format": "Verify {resource_type} '{tenant_name}/{vrf_name}'",
+    "attribute_names": {
+        "pc_enforcement_direction": "Policy Control Enforcement Direction",
+        "pc_enforcement_preference": "Policy Control Enforcement Preference",
+        "bd_enforcement": "Bridge Domain Enforcement",
     },
-    'schema_paths': {
-        'pc_enforcement_direction': 'aci.tenants[].vrfs[].policy_control_enforcement_direction',
-        'pc_enforcement_preference': 'aci.tenants[].vrfs[].policy_control_enforcement_preference',
-        'bd_enforcement': 'aci.tenants[].vrfs[].bd_enforcement_enabled'
+    "schema_paths": {
+        "pc_enforcement_direction": "aci.tenants[].vrfs[].policy_control_enforcement_direction",
+        "pc_enforcement_preference": "aci.tenants[].vrfs[].policy_control_enforcement_preference",
+        "bd_enforcement": "aci.tenants[].vrfs[].bd_enforcement_enabled",
     },
-    'log_fields': ['tenant_name', 'vrf_name'],
-    'schema_paths_list': [
-        'aci.tenants[].vrfs[].name',
-        'aci.tenants[].vrfs[].description',
-        'aci.tenants[].vrfs[].policy_control_enforcement_direction',
-        'aci.tenants[].vrfs[].policy_control_enforcement_preference',
-        'aci.tenants[].vrfs[].bd_enforcement_enabled'
+    "log_fields": ["tenant_name", "vrf_name"],
+    "schema_paths_list": [
+        "aci.tenants[].vrfs[].name",
+        "aci.tenants[].vrfs[].description",
+        "aci.tenants[].vrfs[].policy_control_enforcement_direction",
+        "aci.tenants[].vrfs[].policy_control_enforcement_preference",
+        "aci.tenants[].vrfs[].bd_enforcement_enabled",
     ],
-    'managed_objects': ['fvCtx']
+    "managed_objects": ["fvCtx"],
 }
 ```
 
@@ -24249,16 +24435,22 @@ TEST_CONFIG = {
 def get_items_to_verify(self) -> List[Dict[str, Any]]:
     """Extract VRF contexts from data model."""
     contexts = []
-    for tenant in self.data_model.get('aci', {}).get('tenants', []):
-        for vrf in tenant.get('vrfs', []):
-            contexts.append({
-                'tenant_name': tenant['name'],
-                'vrf_name': vrf['name'],
-                'description': vrf.get('description'),
-                'pc_enforcement_direction': vrf.get('policy_control_enforcement_direction', 'ingress'),
-                'pc_enforcement_preference': vrf.get('policy_control_enforcement_preference', 'enforced'),
-                'bd_enforcement': vrf.get('bd_enforcement_enabled', False)
-            })
+    for tenant in self.data_model.get("aci", {}).get("tenants", []):
+        for vrf in tenant.get("vrfs", []):
+            contexts.append(
+                {
+                    "tenant_name": tenant["name"],
+                    "vrf_name": vrf["name"],
+                    "description": vrf.get("description"),
+                    "pc_enforcement_direction": vrf.get(
+                        "policy_control_enforcement_direction", "ingress"
+                    ),
+                    "pc_enforcement_preference": vrf.get(
+                        "policy_control_enforcement_preference", "enforced"
+                    ),
+                    "bd_enforcement": vrf.get("bd_enforcement_enabled", False),
+                }
+            )
     return contexts
 ```
 
@@ -24268,14 +24460,14 @@ def get_items_to_verify(self) -> List[Dict[str, Any]]:
 async def verify_item(self, semaphore, client, context):
     """Verify one VRF with one API call."""
     async with semaphore:
-        tenant_name = context['tenant_name']
-        vrf_name = context['vrf_name']
+        tenant_name = context["tenant_name"]
+        vrf_name = context["vrf_name"]
 
         # Build API URL
         url = f"/api/node/mo/uni/tn-{tenant_name}/ctx-{vrf_name}.json"
 
         # Build API context for command tracking
-        api_context = self.build_api_context('VRF', vrf_name, tenant=tenant_name)
+        api_context = self.build_api_context("VRF", vrf_name, tenant=tenant_name)
 
         # Make API call with tracking
         start_time = time.time()
@@ -24288,31 +24480,35 @@ async def verify_item(self, semaphore, client, context):
 
         # Parse response
         vrf_data = response.json()
-        actual_vrf = vrf_data.get('fvCtx', {}).get('attributes', {})
+        actual_vrf = vrf_data.get("fvCtx", {}).get("attributes", {})
 
         # Handle not found
         if not actual_vrf:
-            return self.format_not_found('VRF', vrf_name, context)
+            return self.format_not_found("VRF", vrf_name, context)
 
         # Verify attributes
-        expected_pc_dir = context['pc_enforcement_direction']
-        actual_pc_dir = actual_vrf.get('pcEnfDir')
+        expected_pc_dir = context["pc_enforcement_direction"]
+        actual_pc_dir = actual_vrf.get("pcEnfDir")
 
         if expected_pc_dir != actual_pc_dir:
-            return self.format_mismatch('pc_enforcement_direction', expected_pc_dir, actual_pc_dir, context)
+            return self.format_mismatch(
+                "pc_enforcement_direction", expected_pc_dir, actual_pc_dir, context
+            )
 
-        expected_pc_pref = context['pc_enforcement_preference']
-        actual_pc_pref = actual_vrf.get('pcEnfPref')
+        expected_pc_pref = context["pc_enforcement_preference"]
+        actual_pc_pref = actual_vrf.get("pcEnfPref")
 
         if expected_pc_pref != actual_pc_pref:
-            return self.format_mismatch('pc_enforcement_preference', expected_pc_pref, actual_pc_pref, context)
+            return self.format_mismatch(
+                "pc_enforcement_preference", expected_pc_pref, actual_pc_pref, context
+            )
 
         # All checks passed
         return self.format_verification_result(
             ResultStatus.PASSED,
             context,
             f"VRF {vrf_name} verified successfully",
-            api_duration=api_duration
+            api_duration=api_duration,
         )
 ```
 
@@ -24333,7 +24529,7 @@ class VRFVerificationTest(NACTestBase):
 
     TEST_TYPE_NAME = "VRF"
 
-    TEST_CONFIG = { ... }  # From Step 2
+    TEST_CONFIG = {...}  # From Step 2
 
     def get_items_to_verify(self):  # From Step 3
         pass
@@ -24360,16 +24556,22 @@ class VRFVerificationTest(NACTestBase):
 ```python
 def get_items_to_verify(self):
     contexts = []
-    for tenant in self.data_model.get('aci', {}).get('tenants', []):
-        for bd in tenant.get('bridge_domains', []):
-            contexts.append({
-                'tenant_name': tenant['name'],
-                'bd_name': bd['name'],
-                # Apply defaults here, before verification
-                'l2_unknown_unicast': bd.get('l2_unknown_unicast', 'proxy'),  # Default: proxy
-                'l3_unknown_multicast': bd.get('l3_unknown_multicast', 'flood'),  # Default: flood
-                'arp_flooding': bd.get('arp_flooding', True)  # Default: True
-            })
+    for tenant in self.data_model.get("aci", {}).get("tenants", []):
+        for bd in tenant.get("bridge_domains", []):
+            contexts.append(
+                {
+                    "tenant_name": tenant["name"],
+                    "bd_name": bd["name"],
+                    # Apply defaults here, before verification
+                    "l2_unknown_unicast": bd.get(
+                        "l2_unknown_unicast", "proxy"
+                    ),  # Default: proxy
+                    "l3_unknown_multicast": bd.get(
+                        "l3_unknown_multicast", "flood"
+                    ),  # Default: flood
+                    "arp_flooding": bd.get("arp_flooding", True),  # Default: True
+                }
+            )
     return contexts
 ```
 
@@ -24387,24 +24589,27 @@ def get_items_to_verify(self):
 # Approach 1: Filter in get_items_to_verify()
 def get_items_to_verify(self):
     contexts = []
-    for tenant in self.data_model.get('aci', {}).get('tenants', []):
-        for l3out in tenant.get('l3outs', []):
+    for tenant in self.data_model.get("aci", {}).get("tenants", []):
+        for l3out in tenant.get("l3outs", []):
             # Only include L3outs with VRF configured
-            if l3out.get('vrf'):
-                contexts.append({
-                    'tenant_name': tenant['name'],
-                    'l3out_name': l3out['name'],
-                    'vrf_name': l3out['vrf']
-                })
+            if l3out.get("vrf"):
+                contexts.append(
+                    {
+                        "tenant_name": tenant["name"],
+                        "l3out_name": l3out["name"],
+                        "vrf_name": l3out["vrf"],
+                    }
+                )
     return contexts
+
 
 # Approach 2: Return SKIPPED from verify_item()
 async def verify_item(self, semaphore, client, context):
-    if not context.get('vrf_name'):
+    if not context.get("vrf_name"):
         return self.format_verification_result(
             ResultStatus.SKIPPED,
             context,
-            "L3out has no VRF configured - static routes not applicable"
+            "L3out has no VRF configured - static routes not applicable",
         )
     # ... verify static routes ...
 ```
@@ -24423,10 +24628,12 @@ async def verify_item(self, semaphore, client, context):
 async def verify_group(self, semaphore, client, group_key, contexts):
     """Verify all subnets in one bridge domain."""
     async with semaphore:
-        tenant_name, bd_name = group_key.split('/')
+        tenant_name, bd_name = group_key.split("/")
 
         # Phase 1: Verify parent (bridge domain) exists
-        url = f"/api/node/mo/uni/tn-{tenant_name}/BD-{bd_name}.json?rsp-subtree=children"
+        url = (
+            f"/api/node/mo/uni/tn-{tenant_name}/BD-{bd_name}.json?rsp-subtree=children"
+        )
         response = await client.get(url)
 
         if response.status_code != 200:
@@ -24440,15 +24647,15 @@ async def verify_group(self, semaphore, client, group_key, contexts):
 
         # Phase 2: Verify children (subnets) under parent
         actual_subnets = {
-            subnet['ip']: subnet
-            for subnet in bd_data.get('fvBD', {}).get('children', [])
+            subnet["ip"]: subnet
+            for subnet in bd_data.get("fvBD", {}).get("children", [])
         }
 
         results = []
         for ctx in contexts:
-            subnet_ip = ctx['subnet_ip']
+            subnet_ip = ctx["subnet_ip"]
             if subnet_ip not in actual_subnets:
-                results.append(self.format_not_found('Subnet', subnet_ip, ctx))
+                results.append(self.format_not_found("Subnet", subnet_ip, ctx))
             else:
                 # Verify subnet attributes
                 pass
@@ -25085,9 +25292,7 @@ def _print_execution_summary(self, has_pyats: bool, has_robot: bool) -> None:
         if not self.render_only:
             typer.echo(f"   📊 Reports: {self.output_dir}/report.html")
 
-    typer.echo(
-        f"\n📄 Merged data model: {self.output_dir}/{self.merged_data_filename}"
-    )
+    typer.echo(f"\n📄 Merged data model: {self.output_dir}/{self.merged_data_filename}")
     typer.echo("=" * 50)
 ```
 
@@ -25365,9 +25570,7 @@ if pyats and robot:
             fg=typer.colors.RED,
         )
     )
-    typer.echo(
-        "Use one development flag at a time, or neither for combined execution."
-    )
+    typer.echo("Use one development flag at a time, or neither for combined execution.")
     raise typer.Exit(1)
 ```
 
@@ -25823,9 +26026,12 @@ When errors occur in nac-test-pyats-common (e.g., auth failures), they must surf
 ```python
 # In nac_test_pyats_common/exceptions.py
 
+
 class NACPyATSCommonError(Exception):
     """Base exception for nac-test-pyats-common package."""
+
     pass
+
 
 class AuthenticationError(NACPyATSCommonError):
     """Raised when controller authentication fails.
@@ -25835,6 +26041,7 @@ class AuthenticationError(NACPyATSCommonError):
         url: Controller URL (sanitized - no credentials)
         cause: Original exception that caused the failure
     """
+
     def __init__(self, controller_type: str, url: str, cause: Exception | None = None):
         self.controller_type = controller_type
         self.url = url
@@ -25844,8 +26051,10 @@ class AuthenticationError(NACPyATSCommonError):
             message += f": {cause}"
         super().__init__(message)
 
+
 class EnvironmentConfigError(NACPyATSCommonError):
     """Raised when required environment variables are missing."""
+
     def __init__(self, missing_vars: list[str], controller_type: str):
         self.missing_vars = missing_vars
         self.controller_type = controller_type
@@ -25860,6 +26069,7 @@ class EnvironmentConfigError(NACPyATSCommonError):
 
 from nac_test_pyats_common.exceptions import AuthenticationError, EnvironmentConfigError
 
+
 class CatalystCenterAuth:
     @classmethod
     def get_auth(cls) -> dict[str, Any]:
@@ -25869,9 +26079,12 @@ class CatalystCenterAuth:
 
         # Clear error for missing env vars
         missing = []
-        if not url: missing.append("CC_URL")
-        if not username: missing.append("CC_USERNAME")
-        if not password: missing.append("CC_PASSWORD")
+        if not url:
+            missing.append("CC_URL")
+        if not username:
+            missing.append("CC_USERNAME")
+        if not password:
+            missing.append("CC_PASSWORD")
         if missing:
             raise EnvironmentConfigError(missing, "CatalystCenter")
 
@@ -25912,12 +26125,15 @@ class CatalystCenterAuth:
 import pytest
 from importlib.metadata import version
 
+
 def test_nac_test_version_compatible():
     """Verify nac-test version is within compatible range."""
     from packaging.version import Version
+
     nac_test_ver = Version(version("nac-test"))
     assert nac_test_ver >= Version("1.1.0")
     assert nac_test_ver < Version("2.0.0")
+
 
 def test_required_base_classes_importable():
     """Verify critical nac-test classes can be imported."""
@@ -25928,6 +26144,7 @@ def test_required_base_classes_importable():
     assert hasattr(NACTestBase, "setup")
     assert hasattr(NACTestBase, "cleanup")
     assert hasattr(AuthCache, "get_or_create")
+
 
 def test_auth_cache_signature_compatible():
     """Verify AuthCache.get_or_create has expected signature."""
