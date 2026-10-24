@@ -9,6 +9,7 @@
 
 ## Bug Fixes
 
+- dependencies: update nac-yaml to 2.1.0: `!vault` values are now decrypted with the password from `ANSIBLE_VAULT_PASSWORD`.
 - dependencies: pin `scrapli<2026.10.0` to prevent breaking changes and installation failures introduced in scrapli 2026.10+ (#965).
 - pyats broker: unified per-device locking to prevent a stale caller from tearing down a successor's connection during the reconnect-and-retry window. The execute and disconnect paths previously used separate locks over two halves of one critical section.
 - pyats: register `FTDTestBase` in `BASE_CLASS_MAPPING` so that `--include`/`--exclude` tag filtering works for FTD tests. Previously, FTD tests silently fell through to directory-based detection which drops group tags.

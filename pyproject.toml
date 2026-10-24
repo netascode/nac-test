@@ -32,7 +32,7 @@ dependencies = [
     "Jinja2>=3.1.6",
     "jmespath>=1.0.1",
     "nac-test-pyats-common>=0.4.0b2",
-    "nac-yaml>=2.0.0",
+    "nac-yaml>=2.1.0",
     "robotframework>=7.4.2",
     "robotframework-jmespath",
     "robotframework-jsonlibrary>=0.5",
@@ -41,7 +41,7 @@ dependencies = [
     "robotframework-requests>=0.9.7",
     "ruamel.yaml>=0.18.15",
     "ruamel.yaml.clib>=0.2.12; platform_python_implementation == 'CPython'",
-    "typer>=0.17.4",
+    "typer>=0.27.3",
     "scrapli-netconf>=2026.1.12",
     "scrapli<2026.10.0",  # scrapli 2026.10+ (v2) removed AsyncDriver needed by scrapli-netconf and dropped Windows support
     "asyncssh>=2.22.0",
@@ -68,17 +68,18 @@ nac-test = "nac_test.cli.main:app"
 
 [project.optional-dependencies]
 dev = [
-    "ansible-core>=2.17.6",
+    "ansible-core>=2.17.6; sys_platform != 'win32' and python_version < '3.12'",
+    "ansible-core>=2.20.0; sys_platform != 'win32' and python_version >= '3.12'",
     "bandit[toml]>=1.9.4",
     "flask>=3.1.3",
-    "mypy>=1.17.1",
-    "pre-commit>=4.6.0",
-    "pytest>=9.0.3",
+    "mypy>=2.4.0",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
     "pytest-cov~=7.1",
     "pytest-httpserver>=1.1.5",
-    "pytest-mock>=3.15.1",
+    "pytest-mock>=3.17.0",
     "pytest-xdist>=3.8.0",  # Parallel test execution
-    "ruff>=0.15.10",
+    "ruff>=0.17.1",
     "types-aiofiles>=25.1.0.20260409",
     "types-markdown>=3.10.2.20260408",
     "types-pyyaml>=6.0.12.20250822",
@@ -119,7 +120,6 @@ select = [
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)
-    "UP038",  # Use `X | Y` in `isinstance` call instead of `(X, Y)`
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -132,6 +132,7 @@ known-first-party = ["nac_test"]
 [tool.bandit]
 exclude_dirs = ["tests"]
 # B101: assert used for type narrowing
+# B105: hardcoded password string (false positives on env var names and "PASS" test status)
 # B108: hardcoded tmp directory (expected for temp files)
 # B110: try/except/pass (expected for best-effort cleanup)
 # B311: random used for jitter, not security
@@ -139,7 +140,7 @@ exclude_dirs = ["tests"]
 # B403: pickle needed for serialization
 # B404: subprocess needed for test execution
 # B701: jinja2 without autoescape (not generating HTML)
-skips = ["B101", "B108", "B110", "B311", "B324", "B403", "B404", "B701"]
+skips = ["B101", "B105", "B108", "B110", "B311", "B324", "B403", "B404", "B701"]
 
 [tool.mypy]
 check_untyped_defs = true
