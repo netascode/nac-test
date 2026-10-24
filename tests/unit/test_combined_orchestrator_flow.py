@@ -1107,3 +1107,61 @@ class TestDiscoverTestTypes(TestCombinedOrchestratorFlow):
 
         assert has_pyats is False
         assert has_robot is False
+
+
+PYATS_LIKE = "from nac_test.base import X\n\n@aetest.test\ndef check():\n    pass\n"
+
+
+class TestDiscoverTestTypesExclusions:
+    """Filter and Jinja test directories are excluded from PyATS discovery."""
+
+    @staticmethod
+    def build(tmp_path: Path, **kwargs: object) -> CombinedOrchestrator:
+        templates_dir = tmp_path / "templates"
+        (templates_dir / "filters").mkdir(parents=True)
+        (templates_dir / "jinja_tests").mkdir()
+        # Python files that would be mistaken for PyATS tests if not excluded
+        (templates_dir / "filters" / "f.py").write_text(PYATS_LIKE)
+        (templates_dir / "jinja_tests" / "t.py").write_text(PYATS_LIKE)
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        return CombinedOrchestrator(
+            data_paths=[data_dir],
+            templates_dir=templates_dir,
+            output_dir=tmp_path / "out",
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    def test_without_exclusions_the_files_count_as_pyats_tests(
+        self, tmp_path: Path
+    ) -> None:
+        """Should treat the files as tests, proving the exclusion matters."""
+        has_pyats, _ = self.build(tmp_path)._discover_test_types()
+
+        assert has_pyats is True
+
+    def test_single_directories_are_excluded(self, tmp_path: Path) -> None:
+        """Should keep excluding plain Path arguments, as before."""
+        orchestrator = self.build(
+            tmp_path,
+            filters_path=tmp_path / "templates" / "filters",
+            tests_path=tmp_path / "templates" / "jinja_tests",
+        )
+
+        has_pyats, _ = orchestrator._discover_test_types()
+
+        assert has_pyats is False
+
+    def test_lists_of_directories_are_excluded(self, tmp_path: Path) -> None:
+        """Should exclude every directory when several layers provide them."""
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        orchestrator = self.build(
+            tmp_path,
+            filters_path=[elsewhere, tmp_path / "templates" / "filters"],
+            tests_path=[tmp_path / "templates" / "jinja_tests", elsewhere],
+        )
+
+        has_pyats, _ = orchestrator._discover_test_types()
+
+        assert has_pyats is False

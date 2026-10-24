@@ -80,6 +80,13 @@ DRY_RUN_REASON = "dry-run mode"
 # These define the standardized paths for test results and reports
 PYATS_RESULTS_DIRNAME: str = "pyats_results"
 ROBOT_RESULTS_DIRNAME: str = "robot_results"
+
+# Artifacts below the nac/ directory of a module or bundle (see nac-artifacts)
+ARTIFACTS_TEMPLATES_PATH: str = "tests/templates"
+ARTIFACTS_FILTERS_PATH: str = "tests/jinja_filters"
+ARTIFACTS_JINJA_TESTS_PATH: str = "tests/jinja_tests"
+# Output subdirectory holding templates merged from several layers
+MERGED_TEMPLATES_DIRNAME: str = "merged_templates"
 HTML_REPORTS_DIRNAME: str = "html_reports"
 SUMMARY_REPORT_FILENAME: str = "summary_report.html"
 COMBINED_SUMMARY_FILENAME: str = "combined_summary.html"

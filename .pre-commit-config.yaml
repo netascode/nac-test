@@ -34,6 +34,7 @@ repos:
           - types-aiofiles>=23.2.0.20240623
           - types-markdown>=3.8.0.20250809
           - types-requests>=2.32.0.20250809
+          - nac-artifacts>=0.1.0
   - repo: https://github.com/PyCQA/bandit
     rev: 1.8.6
     hooks:

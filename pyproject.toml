@@ -31,6 +31,7 @@ classifiers = [
 dependencies = [
     "Jinja2>=3.1.6",
     "jmespath>=1.0.1",
+    "nac-artifacts>=0.1.0",
     "nac-test-pyats-common>=0.4.0b2",
     "nac-yaml>=2.0.0",
     "robotframework>=7.4.2",
@@ -92,7 +93,7 @@ override-dependencies = [
 ]
 # Dependency cooldown: ignore packages uploaded less than 3 days ago.
 exclude-newer = "3 days"
-exclude-newer-package = { nac-yaml = false,  nac-test-pyats-common = false }
+exclude-newer-package = { nac-yaml = false,  nac-test-pyats-common = false, nac-artifacts = false }
 
 [tool.coverage.run]
 source = ["nac_test"]

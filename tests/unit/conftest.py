@@ -3,6 +3,7 @@
 
 """Shared fixtures for unit tests."""
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
@@ -111,3 +112,18 @@ def cc_controller_env(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv("CC_URL", "https://cc.test.com")
     monkeypatch.setenv("CC_USERNAME", "admin")
     monkeypatch.setenv("CC_PASSWORD", "test_pass")
+
+
+@pytest.fixture
+def project(tmp_path: Path, monkeypatch: MonkeyPatch) -> Path:
+    """Empty project directory that is also the working directory.
+
+    Module and bundle discovery are relative to the working directory, so tests
+    that exercise them run inside an isolated project with no inherited
+    TF_DATA_DIR.
+    """
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    monkeypatch.chdir(project_dir)
+    monkeypatch.delenv("TF_DATA_DIR", raising=False)
+    return project_dir

@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 from jinja2 import Environment, FileSystemLoader
 
+from nac_test.exceptions import TemplateError
 from nac_test.robot.robot_writer import RobotWriter
 
 # ---------------------------------------------------------------------------
@@ -175,3 +176,93 @@ class TestChunkNestedObjects:
         assert [e["name"] for e in chunks[1]["services"][1]["endpoints"]] == ["e4"]
         assert [p["name"] for p in chunks[2]["services"]] == ["s3"]
         assert [e["name"] for e in chunks[2]["services"][0]["endpoints"]] == ["e5"]
+
+
+# ---------------------------------------------------------------------------
+# Filter and Jinja test directories (layers)
+# ---------------------------------------------------------------------------
+
+FILTER_SOURCE = (
+    'class Filter:\n    name = "{name}"\n\n    @classmethod\n'
+    '    def filter(cls, value):\n        return "{marker}"\n'
+)
+TEST_SOURCE = (
+    'class Test:\n    name = "{name}"\n\n    @classmethod\n'
+    "    def test(cls, value):\n        return {result}\n"
+)
+
+
+def make_filters(directory: Path, **markers: str) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    for name, marker in markers.items():
+        (directory / f"{name}.py").write_text(
+            FILTER_SOURCE.format(name=name, marker=marker)
+        )
+    return directory
+
+
+class TestExtensionDirectories:
+    """RobotWriter loads filters and Jinja tests from one or several directories."""
+
+    def test_single_directory_is_still_accepted(self, tmp_path: Path) -> None:
+        """Should keep accepting a plain Path for filters and tests."""
+        filters = make_filters(tmp_path / "f", shout="loud")
+        tests = tmp_path / "t"
+        tests.mkdir()
+        (tests / "positive.py").write_text(
+            TEST_SOURCE.format(name="positive", result="value > 0")
+        )
+
+        writer = RobotWriter({}, filters, tests)
+
+        assert list(writer.filters) == ["shout"]
+        assert list(writer.tests) == ["positive"]
+
+    def test_no_directories(self) -> None:
+        """Should have no filters or tests without directories."""
+        writer = RobotWriter({}, None, None)
+
+        assert writer.filters == {} and writer.tests == {}
+
+    def test_several_directories_merge_with_priority(self, tmp_path: Path) -> None:
+        """Should let the first directory win and keep the others' extra names."""
+        high = make_filters(tmp_path / "high", shout="high")
+        low = make_filters(tmp_path / "low", shout="low", whisper="low")
+
+        writer = RobotWriter({}, [high, low], None)
+
+        assert writer.filters["shout"].filter(None) == "high"
+        assert writer.filters["whisper"].filter(None) == "low"
+        assert writer.filter_origins == {"shout": high, "whisper": low}
+
+    def test_jinja_test_origins(self, tmp_path: Path) -> None:
+        """Should remember which directory each Jinja test came from."""
+        tests = tmp_path / "t"
+        tests.mkdir()
+        (tests / "a.py").write_text(TEST_SOURCE.format(name="a", result="True"))
+
+        writer = RobotWriter({}, None, [tests])
+
+        assert writer.test_origins == {"a": tests}
+
+    def test_duplicate_filter_names_in_one_directory_raise(
+        self, tmp_path: Path
+    ) -> None:
+        """Should refuse two filter files declaring the same name."""
+        directory = make_filters(tmp_path / "f", one="x")
+        (directory / "two.py").write_text(FILTER_SOURCE.format(name="one", marker="y"))
+
+        with pytest.raises(TemplateError, match="Duplicate filter name 'one'"):
+            RobotWriter({}, directory, None)
+
+    def test_filters_are_usable_when_rendering(self, tmp_path: Path) -> None:
+        """Should register merged filters in the Jinja environment used for output."""
+        filters = make_filters(tmp_path / "f", shout="LOUD")
+        templates = tmp_path / "templates"
+        templates.mkdir()
+        (templates / "a.robot").write_text("*** Test Cases ***\n{{ 'x' | shout }}\n")
+        out = tmp_path / "out"
+
+        RobotWriter({}, [filters], None).write(templates, out)
+
+        assert "LOUD" in (out / "a.robot").read_text()
