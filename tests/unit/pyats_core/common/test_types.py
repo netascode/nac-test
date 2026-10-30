@@ -19,7 +19,7 @@ def _meta(path: str, test_type: TestType) -> TestFileMetadata:
 class TestPyatsDiscoveryResultProperties:
     """Tests for PyatsDiscoveryResult computed properties.
 
-    Plain dataclass field assignment is not tested here — mypy enforces that.
+    Plain dataclass field assignment is not tested here — the type checker enforces that.
     """
 
     def test_total_count_sums_both_lists(self) -> None:

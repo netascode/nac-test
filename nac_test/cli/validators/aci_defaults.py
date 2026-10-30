@@ -42,7 +42,7 @@ def validate_aci_defaults(data_paths: list[Path]) -> bool:
         False if ACI environment detected AND no defaults structure found.
     """
     aci_url = os.environ.get(CONTROLLER_REGISTRY["ACI"].url_env_var)
-    if not aci_url:
+    if aci_url is None or aci_url == "":
         # Not an ACI environment, no validation needed
         return True
 

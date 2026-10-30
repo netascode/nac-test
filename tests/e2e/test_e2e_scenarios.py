@@ -765,7 +765,7 @@ class E2ECombinedTestBase:
         html_content = load_html_file(api_summary_path)
 
         # If we have D2D hostnames defined, make sure they don't appear in API reports
-        if results.scenario.expected_d2d_hostnames:
+        if results.scenario.expected_d2d_hostnames is not None:
             for hostname in results.scenario.expected_d2d_hostnames:
                 assert f"({hostname})" not in html_content, (
                     f"Found hostname '{hostname}' in API summary, but API tests should not have hostnames"
@@ -887,7 +887,10 @@ class E2ECombinedTestBase:
         if not results.scenario.has_pyats_d2d_tests:
             pytest.skip("No PyATS D2D tests in this scenario")
 
-        assert results.scenario.expected_d2d_hostnames
+        assert (
+            results.scenario.expected_d2d_hostnames is not None
+            and len(results.scenario.expected_d2d_hostnames) > 0
+        )
         d2d_dir = results.output_dir / PYATS_RESULTS_DIRNAME / "d2d"
         xunit_files = list(d2d_dir.glob("*/xunit.xml"))
 

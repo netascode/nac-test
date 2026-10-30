@@ -9,6 +9,7 @@ Generates summary report following PyATS dashboard pattern for visual consistenc
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 from nac_test.core.constants import (
     COMBINED_SUMMARY_FILENAME,
@@ -81,7 +82,7 @@ class RobotReportGenerator:
             data = parser.parse()
 
             # Get aggregated stats (TestResults object)
-            stats: TestResults = data["aggregated_stats"]
+            stats = cast(TestResults, data["aggregated_stats"])
 
             # If no tests, don't generate report
             if stats.total == 0:

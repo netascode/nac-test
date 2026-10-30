@@ -28,6 +28,9 @@ class TestResultCollector:
     Each process has its own instance, so no thread/process safety is needed.
     """
 
+    # Optionally set by the owning test instance after construction (see NACTestBase)
+    _test_instance: Any
+
     def __init__(self, test_id: str, output_dir: Path) -> None:
         """Initialize the result collector.
 

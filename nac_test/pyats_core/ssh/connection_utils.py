@@ -53,10 +53,10 @@ def build_connection_start_command(
         >>> build_connection_start_command('console', '/dev/ttyS0')
         'cu -l /dev/ttyS0'
     """
-    if not protocol:
+    if protocol is None or protocol == "":
         raise ValueError("Protocol cannot be None or empty")
 
-    if not host:
+    if host is None or host == "":
         raise ValueError("Host cannot be None or empty")
 
     protocol = protocol.lower().strip()
@@ -90,7 +90,7 @@ def _build_ssh_command(
     Returns:
         SSH command string
     """
-    if username:
+    if username is not None and username != "":
         cmd = f"ssh {username}@{host}"
     else:
         cmd = f"ssh {host}"
@@ -102,7 +102,7 @@ def _build_ssh_command(
             )
         cmd = f"{cmd} -p {port}"
 
-    if ssh_options:
+    if ssh_options is not None and ssh_options != "":
         # Ensure ssh_options is properly formatted (starts with space if not)
         ssh_options = ssh_options.strip()
         if ssh_options and not ssh_options.startswith("-"):

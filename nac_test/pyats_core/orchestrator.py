@@ -400,7 +400,7 @@ class PyATSOrchestrator:
                 self.custom_testbed_path,
             )
 
-        # Use a local narrowed variable to satisfy mypy
+        # Use a local narrowed variable for the type checker
         device_executor = self.device_executor
         assert device_executor is not None
 
@@ -545,7 +545,7 @@ class PyATSOrchestrator:
         cleanup_pyats_runtime()
 
         # Clean up old test outputs (CI/CD only)
-        if os.environ.get("CI"):
+        if os.environ.get("CI", "") != "":
             cleanup_old_test_outputs(self.output_dir, days=3)
 
         # Note: Merged data file created by main.py (single source of truth)
@@ -683,7 +683,7 @@ class PyATSOrchestrator:
         # handling in run_device_job_with_semaphore() captures these failures. By clearing
         # here, we discard DeviceExecutor's buggy success tracking while the error case
         # is still logged.
-        if self.test_status is not None and self.test_status:
+        if self.test_status:
             self.api_test_status.clear()
             self.d2d_test_status.clear()
 

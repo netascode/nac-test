@@ -154,7 +154,9 @@ class MultiArchiveReportGenerator:
 
         # Cleanup JSONL files after stats collection
         # Respects NAC_TEST_DEBUG and NAC_TEST_PYATS_KEEP_REPORT_DATA environment variables
-        if not (DEBUG_MODE or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA")):
+        if not (
+            DEBUG_MODE or os.environ.get("NAC_TEST_PYATS_KEEP_REPORT_DATA", "") != ""
+        ):
             logger.info("Cleaning up JSONL files after stats collection")
             await self._cleanup_all_jsonl_files()
         else:

@@ -11,7 +11,7 @@ import pytest
 
 from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.core.controller import get_controller_context
-from nac_test.core.types import AuthMethod, ControllerContext
+from nac_test.core.types import AuthMethod, ControllerContext, ControllerTypeKey
 from nac_test.pyats_core.constants import ENV_TEST_DIR
 from nac_test.pyats_core.execution.subprocess_runner import SubprocessRunner
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
@@ -100,13 +100,13 @@ class TestControllerContextRoundTrip:
         pyats_test_dirs: PyATSTestDirs,
         aci_controller_env: None,
         monkeypatch: pytest.MonkeyPatch,
-        controller_type: str,
+        controller_type: ControllerTypeKey,
         auth_method: AuthMethod,
     ) -> None:
         """Serialized ENV_CONTROLLER_CONTEXT from orchestrator deserializes
         back to an identical ControllerContext via get_controller_context()."""
         original = ControllerContext(
-            controller_type=controller_type,  # type: ignore[arg-type]
+            controller_type=controller_type,
             auth_method=auth_method,
         )
         orchestrator = PyATSOrchestrator(

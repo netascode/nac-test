@@ -116,7 +116,7 @@ class SystemResourceCalculator:
         calculated = max(1, min(cpu_workers, memory_workers, max_workers))
 
         # Allow environment variable override
-        if env_var and os.environ.get(env_var):
+        if env_var and os.environ.get(env_var, "") != "":
             try:
                 override = int(os.environ[env_var])
                 logger.info(f"Using {env_var} environment override: {override}")
@@ -162,7 +162,7 @@ class SystemResourceCalculator:
         )
 
         # Allow environment variable override
-        if env_var and os.environ.get(env_var):
+        if env_var and os.environ.get(env_var, "") != "":
             try:
                 override = int(os.environ[env_var])
                 logger.info(f"Using {env_var} environment override: {override}")

@@ -457,8 +457,8 @@ def main(
 
     if render_only:
         if stats.has_errors:
-            reason = stats.robot.reason if stats.robot and stats.robot.reason else None
-            if reason:
+            reason = stats.robot.reason if stats.robot else None
+            if reason is not None and reason != "":
                 typer.echo(f"\n❌ Template rendering failed: {reason}", err=True)
             else:
                 typer.echo("\n❌ Template rendering failed", err=True)

@@ -120,7 +120,7 @@ class MockAPIServer:
             "path_pattern": path_pattern,
             "status_code": status_code,
             "response_data": response_data or {},
-            "method": method.upper() if method else None,
+            "method": method.upper() if method is not None and method != "" else None,
             "match_type": match_type,
             "set_cookies": set_cookies or {},
         }

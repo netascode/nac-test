@@ -331,8 +331,10 @@ with open({output_path_escaped}, "w", encoding="utf-8") as f:
         return result
 
     finally:
-        # Clean up temp files
-        for path in [input_path, output_path, script_path]:
+        # Clean up temp files. Explicitly typed: any of these may still be None
+        # if an exception occurred before the corresponding file was created.
+        temp_paths: list[str | None] = [input_path, output_path, script_path]
+        for path in temp_paths:
             if path is not None:
                 try:
                     os.unlink(path)

@@ -75,7 +75,6 @@ ENV/
 tmp/
 __nac_tmp_*
 
-.mypy_cache/
 .ruff_cache/
 
 # Application execution logs (including Claude Code logs)

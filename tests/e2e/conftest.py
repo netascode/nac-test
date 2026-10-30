@@ -235,14 +235,14 @@ def _run_e2e_scenario(
         )
 
     # Secondary device credentials for D2D tests targeting devices with an OS distinct from the controller
-    if scenario.expected_d2d_hostnames:
+    if scenario.expected_d2d_hostnames is not None:
         for hostname in scenario.expected_d2d_hostnames:
             dev_os = MOCK_DEVICES.get(hostname, {}).get("os", "").upper()
             if dev_os and dev_os != arch:
                 env[f"{dev_os}_USERNAME"] = "mock_user"
                 env[f"{dev_os}_PASSWORD"] = TEST_CREDENTIAL_SENTINEL
 
-    if extra_env_vars:
+    if extra_env_vars is not None:
         env.update(extra_env_vars)
 
     cli_args = [
@@ -254,11 +254,11 @@ def _run_e2e_scenario(
         output_arg,
     ]
 
-    if scenario.requires_testbed and user_testbed:
+    if scenario.requires_testbed and user_testbed is not None and user_testbed != "":
         cli_args.extend(["--testbed", user_testbed])
 
     # Add extra CLI arguments (e.g., --dry-run, --verbose)
-    if extra_cli_args:
+    if extra_cli_args is not None:
         cli_args.extend(extra_cli_args)
 
     # Execute via subprocess: each scenario gets a fresh interpreter with no shared state.

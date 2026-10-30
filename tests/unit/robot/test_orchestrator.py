@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2025 Daniel Schmidt
 
-# mypy: disable-error-code="no-untyped-def,method-assign"
-
 """Unit tests for Robot Framework orchestrator."""
 
 from pathlib import Path

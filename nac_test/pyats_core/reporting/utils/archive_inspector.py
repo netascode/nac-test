@@ -11,7 +11,7 @@ import json
 import logging
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from nac_test.utils.path_utils import derive_test_name
 
@@ -40,7 +40,9 @@ class ArchiveInspector:
             Dictionary mapping file types to their paths within the archive.
             Returns None for files that don't exist.
         """
-        results: dict[str, str | None] = dict.fromkeys(ArchiveInspector.PYATS_FILES)
+        results: dict[str, str | None] = dict.fromkeys(
+            ArchiveInspector.PYATS_FILES, cast(str | None, None)
+        )
 
         try:
             with zipfile.ZipFile(archive_path, "r") as zip_ref:
@@ -124,7 +126,7 @@ class ArchiveInspector:
                     results_json_path = name
                     break
 
-            if not results_json_path:
+            if results_json_path is None:
                 logger.debug("No results.json found in archive")
                 return results
 
