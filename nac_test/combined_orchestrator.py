@@ -45,6 +45,7 @@ from nac_test.core.types import (
 )
 from nac_test.pyats_core.discovery import TestDiscovery
 from nac_test.pyats_core.orchestrator import PyATSOrchestrator
+from nac_test.robot.jinja_extensions import DirectorySpec, as_directories
 from nac_test.robot.orchestrator import RobotOrchestrator
 from nac_test.utils.cleanup import cleanup_stale_test_artifacts
 from nac_test.utils.logging import DEFAULT_LOGLEVEL, LogLevel
@@ -81,8 +82,8 @@ class CombinedOrchestrator:
         templates_dir: Path,
         output_dir: Path,
         merged_data: dict[str, Any] | None = None,
-        filters_path: Path | None = None,
-        tests_path: Path | None = None,
+        filters_path: DirectorySpec = None,
+        tests_path: DirectorySpec = None,
         include_tags: list[str] | None = None,
         exclude_tags: list[str] | None = None,
         render_only: bool = False,
@@ -104,8 +105,10 @@ class CombinedOrchestrator:
             templates_dir: Directory containing test templates and PyATS test files
             output_dir: Base directory for test output
             merged_data: Already-loaded merged data model dict (avoids re-reading from disk)
-            filters_path: Path to Jinja filters (Robot only)
-            tests_path: Path to Jinja tests (Robot only)
+            filters_path: Directory or directories (highest priority first) with
+                Jinja filters (Robot only)
+            tests_path: Directory or directories (highest priority first) with
+                Jinja tests (Robot only)
             include_tags: Tag patterns to include (Robot Framework syntax, applies to both)
             exclude_tags: Tag patterns to exclude (Robot Framework syntax, applies to both)
             render_only: Only render tests without executing (Robot only)
@@ -303,11 +306,10 @@ class CombinedOrchestrator:
             Tuple of (has_pyats, has_robot)
         """
         # Build list of directories to exclude from PyATS discovery
-        exclude_paths: list[Path] = []
-        if self.filters_path:
-            exclude_paths.append(self.filters_path)
-        if self.tests_path:
-            exclude_paths.append(self.tests_path)
+        exclude_paths: list[Path] = [
+            *as_directories(self.filters_path),
+            *as_directories(self.tests_path),
+        ]
 
         # PyATS discovery - use has_pyats_tests() for efficient early exit
         has_pyats = False

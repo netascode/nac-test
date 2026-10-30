@@ -1,5 +1,13 @@
 # Unreleased
 
+## Features
+
+- artifacts: templates, Jinja filters and Jinja tests can now also come from a bundle dropped into `.nac/` (any `.zip`, `.tar.gz` or `.tgz` file, or `bundle/`) and from the `nac/tests/{templates,jinja_filters,jinja_tests}` directories of an installed Terraform/OpenTofu module, discovered through `nac-artifacts`. Local `-t`/`-f`/`--tests` take priority over the bundle, which takes priority over the module. Templates are replaced by relative path (several directories are merged into `<output>/merged_templates/`), filters and Jinja tests by their declared name. A single templates directory is used in place, so existing setups behave as before.
+- artifacts: several bundles are peers of one priority tier and may split templates, filters and Jinja tests between them; a template path, filter or Jinja test provided by two bundles is an error naming both, as are two bundles with the same manifest `name`. Bundles in `.nac/` that provide nothing for nac-test are skipped.
+- cli: add `--bundle` (repeatable) and `--module-dir` (env `NAC_TEST_BUNDLE`, `NAC_TEST_MODULE_DIR`) and `--list-artifacts` to show the layers, effective templates, filters and tests.
+- artifacts: `overrides.yaml` can disable templates of lower layers (`disable: {templates: [...]}`, relative paths or globs): `.nac/overrides.yaml` in the project disables templates of a bundle and the module, a bundle's `overrides.yaml` disables templates of the module. Local templates are never affected. Entries are declarative: one that matches nothing is not an error, and `--list-artifacts` shows disabled templates and entries that matched none.
+- cli: `-t/--templates` is optional when a module or bundle provides templates; nac-test exits with an error if no layer provides any.
+
 ## Performance
 
 - yaml parser: enabled C-accelerated parser/emitter (`ruamel.yaml.clib` / `pure=False`) in YAML utilities. Speeds up YAML loading and data model merge operations by ~3x on CPython.
@@ -9,6 +17,7 @@
 
 ## Bug Fixes
 
+- jinja filters/tests: two files in the same directory declaring the same filter or test name now raise an error instead of one silently replacing the other depending on directory listing order. Files are loaded in sorted order.
 - dependencies: pin `scrapli<2026.10.0` to prevent breaking changes and installation failures introduced in scrapli 2026.10+ (#965).
 - pyats broker: unified per-device locking to prevent a stale caller from tearing down a successor's connection during the reconnect-and-retry window. The execute and disconnect paths previously used separate locks over two halves of one critical section.
 - pyats: register `FTDTestBase` in `BASE_CLASS_MAPPING` so that `--include`/`--exclude` tag filtering works for FTD tests. Previously, FTD tests silently fell through to directory-based detection which drops group tags.

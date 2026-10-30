@@ -27,6 +27,7 @@ from nac_test.core.constants import (
     ROBOT_RESULTS_DIRNAME,
 )
 from nac_test.core.types import ErrorType, TestResults, ValidatedRobotArgs
+from nac_test.robot.jinja_extensions import DirectorySpec
 from nac_test.robot.pabot import run_pabot
 from nac_test.robot.reporting.robot_generator import RobotReportGenerator
 from nac_test.robot.robot_writer import RobotWriter
@@ -50,8 +51,8 @@ class RobotOrchestrator:
         templates_dir: Path,
         output_dir: Path,
         merged_data: dict[str, Any] | None = None,
-        filters_path: Path | None = None,
-        tests_path: Path | None = None,
+        filters_path: DirectorySpec = None,
+        tests_path: DirectorySpec = None,
         include_tags: list[str] | None = None,
         exclude_tags: list[str] | None = None,
         render_only: bool = False,
@@ -67,8 +68,10 @@ class RobotOrchestrator:
             templates_dir: Directory containing Robot template files
             output_dir: Base output directory (orchestrator uses its robot_results subdirectory)
             merged_data: Already-loaded merged data model dict (avoids re-reading from disk)
-            filters_path: Optional path to filter files
-            tests_path: Optional path to test files
+            filters_path: Optional directory or directories (highest priority first)
+                with filter files
+            tests_path: Optional directory or directories (highest priority first)
+                with Jinja test files
             include_tags: Optional list of tags to include
             exclude_tags: Optional list of tags to exclude
             render_only: If True, only render templates without executing tests

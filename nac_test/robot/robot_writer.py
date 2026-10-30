@@ -2,13 +2,11 @@
 # Copyright (c) 2025 Daniel Schmidt
 
 import copy
-import importlib.util
 import logging
 import os
 import pathlib
 import re
 import shutil
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +18,12 @@ from jinja2 import (
 )
 from robot.api import SuiteVisitor, TestSuite
 from robot.utils import is_truthy
+
+from nac_test.robot.jinja_extensions import (
+    DirectorySpec,
+    as_tiers,
+    load_jinja_extensions,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,45 +63,39 @@ class RobotWriter:
     def __init__(
         self,
         merged_data: dict[str, Any],
-        filters_path: Path | None,
-        tests_path: Path | None,
+        filters_path: DirectorySpec,
+        tests_path: DirectorySpec,
         include_tags: list[str] | None = None,
         exclude_tags: list[str] | None = None,
     ) -> None:
         # nac-yaml 2.0+ guarantees plain dict/list — no CommentedMap conversion needed
         self.data = merged_data
-        self.filters: dict[str, Any] = {}
         self.include_tags = include_tags or []
         self.exclude_tags = exclude_tags or []
-        if filters_path:
+        filter_dirs = as_tiers(filters_path)
+        if filter_dirs:
             logger.info("Loading filters")
-            for filename in os.listdir(filters_path):
-                if Path(filename).suffix == ".py":
-                    file_path = Path(filters_path, filename)
-                    spec = importlib.util.spec_from_file_location(
-                        "nac_test.filters", file_path
-                    )
-                    if spec is not None:
-                        mod = importlib.util.module_from_spec(spec)
-                        sys.modules["nac_test.filters"] = mod
-                        if spec.loader is not None:
-                            spec.loader.exec_module(mod)
-                            self.filters[mod.Filter.name] = mod.Filter
-        self.tests: dict[str, Any] = {}
-        if tests_path:
+        loaded_filters = load_jinja_extensions(
+            filter_dirs,
+            class_name="Filter",
+            module_name="nac_test.filters",
+        )
+        self.filters: dict[str, Any] = {n: e.cls for n, e in loaded_filters.items()}
+        self.filter_origins: dict[str, Path] = {
+            n: e.origin for n, e in loaded_filters.items()
+        }
+        test_dirs = as_tiers(tests_path)
+        if test_dirs:
             logger.info("Loading tests")
-            for filename in os.listdir(tests_path):
-                if Path(filename).suffix == ".py":
-                    file_path = Path(tests_path, filename)
-                    spec = importlib.util.spec_from_file_location(
-                        "nac_test.tests", file_path
-                    )
-                    if spec is not None:
-                        mod = importlib.util.module_from_spec(spec)
-                        sys.modules["nac_test.tests"] = mod
-                        if spec.loader is not None:
-                            spec.loader.exec_module(mod)
-                            self.tests[mod.Test.name] = mod.Test
+        loaded_tests = load_jinja_extensions(
+            test_dirs,
+            class_name="Test",
+            module_name="nac_test.tests",
+        )
+        self.tests: dict[str, Any] = {n: e.cls for n, e in loaded_tests.items()}
+        self.test_origins: dict[str, Path] = {
+            n: e.origin for n, e in loaded_tests.items()
+        }
         self.ordering_entries: list[str] = []
 
     def render_template(
