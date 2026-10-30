@@ -12,7 +12,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Ensure we can import mock_server from the same directory
@@ -45,7 +45,7 @@ def write_state(pid: int, port: int) -> None:
     state = {
         "pid": pid,
         "port": port,
-        "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": datetime.now(UTC).isoformat(),
     }
     STATE_FILE.write_text(json.dumps(state, indent=2))
 

@@ -8,7 +8,6 @@ better type safety and IDE support for verification result structures used
 throughout the NAC test automation framework.
 """
 
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import (
@@ -16,15 +15,9 @@ from typing import (
     Generic,
     Literal,
     Protocol,
+    TypedDict,
     TypeVar,
 )
-
-# Python 3.10 doesn't allow inheriting from both TypedDict and Generic.
-# Use typing_extensions for 3.10 compatibility, standard typing for 3.11+.
-if sys.version_info >= (3, 11):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
 
 from nac_test.pyats_core.reporting.types import ResultStatus
 
