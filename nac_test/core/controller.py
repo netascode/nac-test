@@ -378,7 +378,7 @@ def get_controller_context() -> ControllerContext:
         ValueError: If no controller credentials are found (via fallback path).
     """
     raw = os.environ.get(ENV_CONTROLLER_CONTEXT)
-    if raw:
+    if raw is not None and raw != "":
         return ControllerContext.from_json(raw)
 
     # --- Transitional fallback (remove in Phase 3) -----------------------
@@ -510,7 +510,7 @@ def get_controller_url(controller_type: str) -> str:
     # Fallback for alternative URL vars (e.g., IOSXE_HOST)
     for cred_set in config.credential_sets:
         url_var = cred_set.fields.get("url")
-        if url_var and url_var != config.url_env_var:
+        if url_var is not None and url_var != "" and url_var != config.url_env_var:
             alt = os.environ.get(url_var, "").strip()
             if alt:
                 return alt

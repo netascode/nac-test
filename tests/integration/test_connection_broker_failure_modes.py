@@ -21,9 +21,9 @@ import os
 import socket as _socket
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -34,6 +34,10 @@ from nac_test.pyats_core.broker.connection_broker import ConnectionBroker
 from nac_test.pyats_core.constants import MAX_BROKER_MESSAGE_BYTES
 
 pytestmark = pytest.mark.integration
+
+T = TypeVar("T")
+
+MakeBroker = Callable[[dict[str, MagicMock]], ConnectionBroker]
 
 
 @pytest.fixture
@@ -61,7 +65,7 @@ def bad_device() -> MagicMock:
 def make_broker(
     socket_dir: Path,
     tmp_path: Path,
-) -> Callable[[dict[str, MagicMock]], ConnectionBroker]:
+) -> MakeBroker:
     """Factory fixture: call make_broker(devices) to get a wired ConnectionBroker."""
 
     def _factory(devices: dict[str, MagicMock]) -> ConnectionBroker:
@@ -87,7 +91,7 @@ def _patch_executor(loop: asyncio.AbstractEventLoop) -> Any:
     return patch.object(loop, "run_in_executor", side_effect=fake_executor)
 
 
-async def _run_broker(broker: ConnectionBroker, coro: Any) -> Any:
+async def _run_broker(broker: ConnectionBroker, coro: Awaitable[T]) -> T:
     await broker._start_socket_server()
     try:
         result = await coro
@@ -162,7 +166,7 @@ class TestBrokerUnavailable:
 class TestDeviceConnection:
     def test_connect_command_returns_error_when_device_unreachable(
         self,
-        make_broker: Any,
+        make_broker: MakeBroker,
         bad_device: MagicMock,
     ) -> None:
         """When device.connect() fails the broker returns an error response with the
@@ -224,7 +228,7 @@ class TestBrokerClientSocketPathValidation:
 class TestSocketDeletedMidRun:
     def test_existing_client_still_works_after_socket_unlinked(
         self,
-        make_broker: Any,
+        make_broker: MakeBroker,
     ) -> None:
         broker: ConnectionBroker = make_broker({})
 
@@ -251,7 +255,7 @@ class TestSocketDeletedMidRun:
 
     def test_new_client_fails_after_socket_unlinked(
         self,
-        make_broker: Any,
+        make_broker: MakeBroker,
     ) -> None:
         broker: ConnectionBroker = make_broker({})
 
@@ -284,7 +288,7 @@ class TestSocketDeletedMidRun:
 class TestConcurrency:
     def test_concurrent_connect_requests_only_connect_once(
         self,
-        make_broker: Any,
+        make_broker: MakeBroker,
         good_device: MagicMock,
     ) -> None:
         broker: ConnectionBroker = make_broker({"router-1": good_device})
@@ -318,7 +322,7 @@ class TestConcurrency:
 
     def test_multiple_processes_can_connect_concurrently(
         self,
-        make_broker: Any,
+        make_broker: MakeBroker,
         good_device: MagicMock,
     ) -> None:
         broker: ConnectionBroker = make_broker({"router-1": good_device})
@@ -378,7 +382,7 @@ class TestConcurrency:
 
 
 class TestMalformedRequests:
-    def test_unknown_command_returns_error(self, make_broker: Any) -> None:
+    def test_unknown_command_returns_error(self, make_broker: MakeBroker) -> None:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> str:
@@ -400,7 +404,7 @@ class TestMalformedRequests:
         err = asyncio.run(_run())
         assert "Unknown command" in err
 
-    def test_missing_command_returns_error(self, make_broker: Any) -> None:
+    def test_missing_command_returns_error(self, make_broker: MakeBroker) -> None:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> str:
@@ -441,7 +445,7 @@ class TestMalformedRequests:
     )
     def test_invalid_protocol_closes_connection(
         self,
-        make_broker: Any,
+        make_broker: MakeBroker,
         payload: bytes,
         use_payload_len: bool,
     ) -> None:
@@ -471,7 +475,7 @@ class TestMalformedRequests:
 
         asyncio.run(_run())
 
-    def test_oversized_frame_closes_connection(self, make_broker: Any) -> None:
+    def test_oversized_frame_closes_connection(self, make_broker: MakeBroker) -> None:
         """Frames exceeding MAX_BROKER_MESSAGE_BYTES are rejected before read."""
         broker: ConnectionBroker = make_broker({})
 
@@ -498,7 +502,7 @@ class TestMalformedRequests:
         asyncio.run(_run())
 
     def test_valid_json_non_object_returns_error_response(
-        self, make_broker: Any
+        self, make_broker: MakeBroker
     ) -> None:
         broker: ConnectionBroker = make_broker({})
 
@@ -544,7 +548,7 @@ class TestMalformedRequests:
     )
     def test_missing_required_parameters_return_error(
         self,
-        make_broker: Any,
+        make_broker: MakeBroker,
         broker_request: dict[str, Any],
         expected_substrings: list[str],
     ) -> None:
@@ -563,7 +567,7 @@ class TestMalformedRequests:
             assert s in err
 
     def test_disconnect_succeeds_when_device_not_connected(
-        self, make_broker: Any
+        self, make_broker: MakeBroker
     ) -> None:
         broker: ConnectionBroker = make_broker({})
 
@@ -583,7 +587,7 @@ class TestMalformedRequests:
         result = asyncio.run(_run())
         assert result == {"status": "success", "result": True}
 
-    def test_error_responses_are_framed_json(self, make_broker: Any) -> None:
+    def test_error_responses_are_framed_json(self, make_broker: MakeBroker) -> None:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> dict[str, Any]:
@@ -609,7 +613,9 @@ class TestMalformedRequests:
         assert result["status"] == "error"
         assert "hostname" in result.get("error", "")
 
-    def test_sequential_requests_over_single_connection(self, make_broker: Any) -> None:
+    def test_sequential_requests_over_single_connection(
+        self, make_broker: MakeBroker
+    ) -> None:
         broker: ConnectionBroker = make_broker({})
 
         async def _run() -> None:
@@ -660,7 +666,7 @@ class TestMalformedRequests:
 class TestCleanup:
     def test_shutdown_disconnects_all_connected_devices(
         self,
-        make_broker: Any,
+        make_broker: MakeBroker,
         good_device: MagicMock,
     ) -> None:
         """shutdown() disconnects all devices and removes the socket file."""
@@ -693,7 +699,7 @@ class TestCommandRejectionVsTransportFailure:
 
     def test_sub_command_failure_preserves_connection_and_cache(
         self,
-        make_broker: Any,
+        make_broker: MakeBroker,
         good_device: MagicMock,
     ) -> None:
         """SubCommandFailure re-raises to the client but does NOT disconnect
@@ -759,7 +765,7 @@ class TestCommandRejectionVsTransportFailure:
 
     def test_transport_failure_disconnects_and_wipes_cache(
         self,
-        make_broker: Any,
+        make_broker: MakeBroker,
         good_device: MagicMock,
     ) -> None:
         """A transport-level exception (e.g. OSError) disconnects the device

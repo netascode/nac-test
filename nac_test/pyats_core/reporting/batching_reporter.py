@@ -157,7 +157,9 @@ class OverflowDetector:
             "ema_rate": self.ema_rate,
             "burst_detected": self.burst_detected,
             "burst_duration": (
-                time.time() - self.burst_start_time if self.burst_start_time else 0
+                time.time() - self.burst_start_time
+                if self.burst_start_time is not None
+                else 0
             ),
         }
 

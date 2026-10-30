@@ -100,11 +100,7 @@ class TestCombinedOrchestratorController:
 
         # Controller should now be detected
         assert orchestrator.controller_context is not None
-        # Note: mypy flags this as unreachable because it loses type narrowing after
-        # the method call above. The assertion at line 107 narrows the type, but mypy
-        # conservatively assumes run_tests() could have mutated controller_context back
-        # to None. This is a known mypy limitation with attribute narrowing across calls.
-        assert orchestrator.controller_context.controller_type == "ACI"  # type: ignore[unreachable]
+        assert orchestrator.controller_context.controller_type == "ACI"
 
     def test_detection_failure_continues_with_preflight_failure(
         self, tmp_path: Path

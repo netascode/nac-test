@@ -39,7 +39,7 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("ACI_PASSWORD", "password")
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -72,7 +72,7 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("IOSXE_PASSWORD", "password")
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -108,7 +108,7 @@ class TestBaseTestControllerDetection:
             monkeypatch.delenv(env_var, raising=False)
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -132,7 +132,7 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("CONTROLLER_TYPE", "ACI")
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -158,7 +158,7 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("CC_PASSWORD", "password")
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -184,7 +184,7 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("SDWAN_API_TOKEN", "test-token-value")
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -208,7 +208,7 @@ class TestBaseTestSetupErrorLogging:
 
     def _make_test_instance(self) -> "NACTestBase":
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 

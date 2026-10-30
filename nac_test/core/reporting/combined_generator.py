@@ -136,7 +136,7 @@ def _build_controller_credential_vars(
     Returns:
         List of dicts with keys ``var`` and ``kind``.
     """
-    if not controller_type:
+    if controller_type is None or controller_type == "":
         return []
     try:
         cred_vars = get_credential_vars(controller_type)
@@ -319,11 +319,15 @@ class CombinedReportGenerator:
                 else None
             )
             host = (
-                extract_host(failure.controller_url) if failure.controller_url else None
+                extract_host(failure.controller_url)
+                if failure.controller_url is not None and failure.controller_url != ""
+                else None
             )
             curl_example = (
                 _get_curl_example(failure.controller_type, failure.controller_url)
-                if failure.controller_type and failure.controller_url
+                if failure.controller_type
+                and failure.controller_url is not None
+                and failure.controller_url != ""
                 else None
             )
             timestamp = datetime.now().strftime(REPORT_TIMESTAMP_FORMAT)

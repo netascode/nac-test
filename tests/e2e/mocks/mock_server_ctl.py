@@ -14,11 +14,12 @@ import urllib.error
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 # Ensure we can import mock_server from the same directory
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mock_server import (
+from mock_server import (  # ty: ignore[unresolved-import]
     SERVER_POLL_INTERVAL_SECONDS,
     SERVER_STARTUP_TIMEOUT_SECONDS,
     MockAPIServer,
@@ -34,7 +35,7 @@ def read_state() -> dict[str, int | str] | None:
     if not STATE_FILE.exists():
         return None
     try:
-        data: dict[str, int | str] = json.loads(STATE_FILE.read_text())
+        data = cast(dict[str, int | str], json.loads(STATE_FILE.read_text()))
         return data
     except (json.JSONDecodeError, OSError):
         return None
@@ -89,7 +90,7 @@ def daemonize() -> bool:
 def cmd_start(args: argparse.Namespace) -> None:
     """Start the mock server."""
     state = read_state()
-    if state:
+    if state is not None and len(state) > 0:
         pid = int(state["pid"])
         if is_process_running(pid):
             print(f"Server already running (PID: {pid}, port: {state['port']})")
@@ -145,7 +146,7 @@ def cmd_start(args: argparse.Namespace) -> None:
 def cmd_stop(args: argparse.Namespace) -> None:
     """Stop the mock server."""
     state = read_state()
-    if not state:
+    if state is None or len(state) == 0:
         print("No running server found (state file missing)")
         sys.exit(1)
 
@@ -181,7 +182,7 @@ def cmd_stop(args: argparse.Namespace) -> None:
 def cmd_status(args: argparse.Namespace) -> None:
     """Check mock server status."""
     state = read_state()
-    if not state:
+    if state is None or len(state) == 0:
         print("Server: NOT RUNNING (no state file)")
         sys.exit(1)
 

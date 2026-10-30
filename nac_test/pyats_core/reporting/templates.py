@@ -76,7 +76,8 @@ def get_status_style(status: ResultStatus | str) -> dict[str, str]:
         >>> get_status_style(ResultStatus.PASSED)
         {"css_class": "pass-status", "display_text": "PASSED"}
     """
-    if isinstance(status, str):
+    # Runtime guard kept: this is also used as a Jinja filter with untyped input
+    if isinstance(status, str):  # ty: ignore[redundant-condition-strict]
         # Try to convert string to enum
         try:
             status = ResultStatus(status)

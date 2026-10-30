@@ -58,7 +58,7 @@ _CONTROLLED_ROBOT_OPTIONS: list[_ControlledOption] = [
 _CONTROLLED_OPTIONS_LOOKUP: dict[str, str] = {
     k: hint
     for long, short, hint in _CONTROLLED_ROBOT_OPTIONS
-    for k in ([long, short] if short else [long])
+    for k in ([long, short] if short is not None and short != "" else [long])
 }
 
 # pabot's parse_args requires at least one datasource argument. Using a UUID-based
@@ -75,8 +75,8 @@ def _get_pabot_option_names() -> frozenset[str]:
     dict; its keys are the canonical option names.
     """
     if _pabot_parse_args is None:
-        return frozenset()
-    return frozenset(_pabot_parse_args([_DUMMY_DATASOURCE])[2].keys())
+        return frozenset[str]()
+    return frozenset[str](_pabot_parse_args([_DUMMY_DATASOURCE])[2].keys())
 
 
 def _raise_if_controlled_robot_options(extra_args: list[str]) -> None:
@@ -96,7 +96,7 @@ def _raise_if_controlled_robot_options(extra_args: list[str]) -> None:
             continue
 
         hint = _CONTROLLED_OPTIONS_LOOKUP.get(key)
-        if hint:
+        if hint is not None and hint != "":
             controlled.append((arg, hint))
 
     if controlled:

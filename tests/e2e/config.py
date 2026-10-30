@@ -195,7 +195,9 @@ class E2EScenario:
             ValueError: If configuration is inconsistent.
         """
         # D2D tests require expected_d2d_hostnames to be defined
-        if self.has_pyats_d2d_tests and not self.expected_d2d_hostnames:
+        if self.has_pyats_d2d_tests and (
+            self.expected_d2d_hostnames is None or len(self.expected_d2d_hostnames) == 0
+        ):
             raise ValueError(
                 f"Scenario '{self.name}' has D2D tests ({self.expected_pyats_d2d_total} total) "
                 "but expected_d2d_hostnames is not defined"

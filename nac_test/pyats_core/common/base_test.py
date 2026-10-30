@@ -10,7 +10,7 @@ import os
 import sys
 import tempfile
 import time
-from collections.abc import Awaitable, Callable, Iterator
+from collections.abc import Awaitable, Callable, Generator
 from contextlib import contextmanager
 from datetime import datetime
 from functools import lru_cache
@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import (
     Any,
     TypeVar,
+    cast,
 )
 
 import httpx
@@ -161,7 +162,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         return html
 
-    @aetest.setup  # type: ignore[misc]
+    @aetest.setup  # type: ignore[misc]  # ty: ignore[dynamic-function-decorator-return]
     def setup(self) -> None:
         """Common setup for all tests"""
         # Configure test-specific logger
@@ -274,15 +275,19 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # Generate unique test ID
         test_id = self._generate_test_id()
         self.result_collector = TestResultCollector(test_id, html_report_data_dir)
-        # mypy: allow private attribute set for linking test instance
-        self.result_collector._test_instance = self  # type: ignore[attr-defined]
+        # Link the test instance so the collector can read the current test context
+        self.result_collector._test_instance = self
 
         # Attach pre-rendered metadata to collector
         metadata = self.get_rendered_metadata()
 
         # Add jobfile path to metadata
         module = sys.modules[self.__class__.__module__]
-        if hasattr(module, "__file__") and module.__file__:
+        if (
+            hasattr(module, "__file__")
+            and module.__file__ is not None
+            and module.__file__ != ""
+        ):
             # Get relative path from project root if possible
             try:
                 jobfile_path = Path(module.__file__)
@@ -801,7 +806,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # For D2D tests, include hostname in test_id for clearer filenames
         # The HOSTNAME environment variable is set by device_executor for d2d tests
         hostname = os.environ.get("HOSTNAME")
-        if hostname:
+        if hostname is not None and hostname != "":
             safe_hostname = sanitize_hostname(hostname)
             return f"{class_name}_{safe_hostname}_{timestamp}"
 
@@ -814,7 +819,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             Merged data model dictionary
         """
         data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH")
-        if not data_file_path:
+        if data_file_path is None or data_file_path == "":
             raise FileNotFoundError(
                 "Environment variable MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH is not set"
             )
@@ -1035,7 +1040,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                         # Ensure connection is closed
                         if hasattr(e, "request") and e.request:
                             try:
-                                await e.request.aclose()
+                                await cast(Any, e.request).aclose()
                             except Exception:
                                 pass  # Best effort cleanup
                         raise
@@ -1067,7 +1072,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                     # Ensure connection is closed before retry
                     if hasattr(e, "request") and e.request:
                         try:
-                            await e.request.aclose()
+                            await cast(Any, e.request).aclose()
                         except Exception:
                             pass  # Best effort cleanup
 
@@ -1243,7 +1248,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         self._current_test_context = None
 
     @contextmanager
-    def test_context(self, context: str) -> Iterator[None]:
+    def test_context(self, context: str) -> Generator[None, None, None]:
         """Context manager for setting test context temporarily.
 
         This provides a clean way to set context for a block of code
@@ -1317,7 +1322,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 api_duration=0.245
             )
         """
-        result = {
+        result: BaseVerificationResultOptional = {
             "status": status,
             "context": context,
             "reason": reason,
@@ -1325,10 +1330,10 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             "timestamp": time.time(),
         }
 
-        if api_details:
+        if api_details is not None and len(api_details) > 0:
             result["api_details"] = api_details
 
-        return result  # type: ignore[return-value]
+        return result
 
     # =========================
     # RESULT PROCESSING METHODS
@@ -1451,21 +1456,21 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # Build standardized message based on status
         if status_enum == ResultStatus.PASSED:
             message = f"{test_type} {item_identifier} verified successfully"
-            if details:
+            if details is not None and details != "":
                 message += f" - {details}"
         elif status_enum == ResultStatus.FAILED:
-            if details:
+            if details is not None and details != "":
                 message = f"{test_type} {item_identifier} failed: {details}"
             else:
                 message = f"{test_type} {item_identifier} failed"
         elif status_enum == ResultStatus.SKIPPED:
-            if details:
+            if details is not None and details != "":
                 message = f"{test_type} {item_identifier} skipped: {details}"
             else:
                 message = f"{test_type} {item_identifier} skipped"
         else:
             # Handle other status types (ERRORED, INFO, etc.)
-            if details:
+            if details is not None and details != "":
                 message = f"{test_type} {item_identifier} {status_enum.value.lower()}: {details}"
             else:
                 message = f"{test_type} {item_identifier} {status_enum.value.lower()}"
@@ -1533,13 +1538,13 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             >>> failed, skipped, passed = self.categorize_results(results)
             >>> self.logger.info(f"Summary: {len(passed)} passed, {len(failed)} failed, {len(skipped)} skipped")
         """
-        failed = [
+        failed: list[VerificationResult] = [
             r
             for r in results
             if isinstance(r, dict)
             and (r.get("status") == "FAILED" or r.get("status") == ResultStatus.FAILED)
         ]
-        skipped = [
+        skipped: list[VerificationResult] = [
             r
             for r in results
             if isinstance(r, dict)
@@ -1547,14 +1552,14 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 r.get("status") == "SKIPPED" or r.get("status") == ResultStatus.SKIPPED
             )
         ]
-        passed = [
+        passed: list[VerificationResult] = [
             r
             for r in results
             if isinstance(r, dict)
             and (r.get("status") == "PASSED" or r.get("status") == ResultStatus.PASSED)
         ]
 
-        return failed, skipped, passed  # type: ignore[return-value]
+        return failed, skipped, passed
 
     def log_result_summary(
         self,
@@ -1825,7 +1830,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         Returns:
             bool: True if step details should be logged
         """
-        return result.get("status") == "FAILED"
+        return bool(result.get("status") == "FAILED")
 
     def log_additional_step_details(
         self, result: VerificationResult, context: dict[str, Any]
@@ -2375,7 +2380,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         try:
             # Try to format using the provided format string
-            return format_str.format(**context)  # type: ignore[no-any-return]
+            return str(format_str.format(**context))
         except (KeyError, ValueError) as e:
             # Log warning to help test authors fix their identifier_format
             resource_type = config.get("resource_type", "Resource")
@@ -2566,7 +2571,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
                 reason if reason else f"Test completed with status: {status}",
             )
 
-    @aetest.cleanup  # type: ignore[misc]
+    @aetest.cleanup  # type: ignore[misc]  # ty: ignore[dynamic-function-decorator-return]
     def cleanup(self) -> None:
         """Clean up test resources and save test results.
 

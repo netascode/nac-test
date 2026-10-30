@@ -102,17 +102,23 @@ def run_pabot(
         ]
     )
 
-    if extra_args:
+    if extra_args is not None and len(extra_args) > 0:
         robot_args.extend(extra_args.args)
 
     # Respect explicit --loglevel in extra_args; default only applies if absent
-    if default_robot_loglevel and not (
-        extra_args and extra_args.robot_opts.get("loglevel")
+    if (
+        default_robot_loglevel is not None
+        and default_robot_loglevel != ""
+        and not (
+            extra_args is not None
+            and len(extra_args) > 0
+            and extra_args.robot_opts.get("loglevel")
+        )
     ):
         robot_args.extend(["--loglevel", default_robot_loglevel])
 
     args = pabot_args + robot_args + [str(abs_path)]
     logger.info("Running pabot with args: %s", " ".join(args))
-    exit_code: int = pabot.pabot.main_program(args)
+    exit_code = int(pabot.pabot.main_program(args))
     logger.info(f"Pabot execution completed with exit code {exit_code}")
     return exit_code

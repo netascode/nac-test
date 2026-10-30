@@ -12,7 +12,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class BrokerClient:
     def _get_socket_path(self) -> Path:
         """Get socket path from environment or default location."""
         socket_env = os.environ.get("NAC_TEST_BROKER_SOCKET")
-        if socket_env:
+        if socket_env is not None and socket_env != "":
             return Path(socket_env)
 
         # Default: look for socket in temp directory
@@ -170,7 +170,7 @@ class BrokerClient:
         result = response.get("result", "")
         logger.debug(f"Command output length: {len(result)} characters")
 
-        return result  # type: ignore[no-any-return]
+        return cast(str, result)
 
     async def ensure_connection(self, hostname: str) -> bool:
         """Ensure device is connected through broker.
@@ -185,7 +185,7 @@ class BrokerClient:
             response = await self._send_request(
                 {"command": "connect", "hostname": hostname}
             )
-            return response.get("result", False)  # type: ignore[no-any-return]
+            return cast(bool, response.get("result", False))
 
         except Exception as e:
             logger.debug(f"Failed to ensure connection to {hostname}: {e}")
@@ -221,7 +221,7 @@ class BrokerClient:
         """
         try:
             response = await self._send_request({"command": "ping"})
-            return response.get("result") == "pong"
+            return bool(response.get("result") == "pong")
 
         except Exception as e:
             logger.debug(f"Broker ping failed: {e}")

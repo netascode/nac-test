@@ -136,7 +136,7 @@ class NoRecognizedBaseError(Exception):
         self.filename = filename
         self.found_bases = found_bases or []
 
-        if found_bases:
+        if found_bases is not None and len(found_bases) > 0:
             message = (
                 f"No recognized base class found in {filename}. "
                 f"Found bases: {', '.join(found_bases)}, "
@@ -213,7 +213,7 @@ class TestMetadataResolver:
                     base_name = base.attr
                     logger.debug(f"  Qualified base: {base_name}")
 
-                if base_name:
+                if base_name is not None and base_name != "":
                     found_bases.append(base_name)
 
                     if base_name in BASE_CLASS_MAPPING and detected_test_type is None:

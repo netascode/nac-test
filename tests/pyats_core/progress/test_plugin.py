@@ -34,7 +34,7 @@ def _make_plugin(
         plugin.event_count = 0
         plugin.test_dir_path = None
         raw = os.environ.get(ENV_TEST_DIR)
-        if raw:
+        if raw is not None and raw != "":
             candidate = Path(raw).absolute()
             if candidate.exists() and candidate.is_dir():
                 plugin.test_dir_path = candidate

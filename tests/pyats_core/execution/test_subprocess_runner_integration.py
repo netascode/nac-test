@@ -17,7 +17,7 @@ malformed data recovery, resource limit handling, initialization and more
 import asyncio
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -92,7 +92,9 @@ def _run_and_capture_cmd(
             return mock_process
 
         mock_exec.side_effect = capture
-        result = asyncio.run(getattr(runner, method)(**method_kwargs))
+        result = cast(
+            Path | None, asyncio.run(getattr(runner, method)(**method_kwargs))
+        )
 
     return captured_cmd, result
 

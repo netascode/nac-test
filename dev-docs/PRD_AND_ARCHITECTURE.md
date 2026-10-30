@@ -1058,7 +1058,7 @@ def main(
 
 **Key Benefits**:
 
-1. **Compile-Time Type Safety**: IDEs and mypy validate types before runtime
+1. **Compile-Time Type Safety**: IDEs and ty validate types before runtime
 2. **Automatic Validation**: Typer validates paths, ranges, mutual exclusivity
 3. **Auto-Generated Help**: `nac-test --help` built from annotations
 4. **Environment Variable Binding**: Seamless env var → CLI flag mapping
@@ -1547,7 +1547,7 @@ nac-test \
 
 **Specific Benefits**:
 - **Type Annotations as Documentation**: `data: list[Path]` is self-documenting
-- **Compile-Time Validation**: mypy catches type errors before runtime
+- **Compile-Time Validation**: ty catches type errors before runtime
 - **Automatic Conversion**: Typer converts strings to Paths, ints, enums automatically
 - **Rich Terminal Output**: Built-in support for colors, styling, progress bars
 
@@ -22388,7 +22388,7 @@ The contract system consists of five layers:
 **Why Contracts Exist**:
 
 - **Framework Extensibility**: New test architectures (e.g., SDWAN Manager API tests) can be added by implementing contracts
-- **Type Safety**: TypedDict contracts provide IDE autocompletion and mypy validation
+- **Type Safety**: TypedDict contracts provide IDE autocompletion and ty validation
 - **Consistent Reporting**: Module-level constants ensure all tests have proper HTML report metadata
 - **Parallel Execution Safety**: Contracts define what state is shared vs isolated across processes
 - **Clear Extension Points**: Developers know exactly what to implement for new test types
@@ -22538,7 +22538,7 @@ PASS_FAIL_CRITERIA = """
 
 ### Contract 3: Type System Contracts (TypedDict)
 
-**Purpose**: Provides structured type definitions for data exchanged between tests and framework, enabling IDE autocompletion and mypy type checking.
+**Purpose**: Provides structured type definitions for data exchanged between tests and framework, enabling IDE autocompletion and ty type checking.
 
 **Core TypedDict Definitions** (`nac_test/pyats_core/common/types.py`):
 
@@ -23024,7 +23024,7 @@ required_vars = [
 
 **Enforcement Mechanisms**:
 
-1. **Type Hints + mypy**: TypedDict contracts validated by mypy static analysis
+1. **Type Hints + ty**: TypedDict contracts validated by ty static analysis
 2. **Runtime Checks**: Environment variable validation in orchestrator preflight checks
 3. **Base Class `__init_subclass__`**: Class variable enforcement (currently commented out)
 4. **Documentation**: This document + inline docstrings

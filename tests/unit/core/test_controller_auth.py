@@ -241,7 +241,7 @@ class TestPreflightAuthCheck:
         """Unknown controller types are handled gracefully (skipped)."""
         result = preflight_auth_check(
             ControllerContext(
-                controller_type="UNKNOWN_CONTROLLER",  # type: ignore[arg-type]
+                controller_type="UNKNOWN_CONTROLLER",  # ty: ignore[invalid-argument-type]
                 auth_method=AuthMethod.SESSION,
             )
         )
