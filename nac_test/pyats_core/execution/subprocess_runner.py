@@ -385,7 +385,7 @@ class SubprocessRunner:
                     drain_duration,
                 )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "Timeout after %.2fs draining subprocess buffer - some test output "
                 "may be lost. Consider increasing NAC_TEST_PYATS_PIPE_DRAIN_TIMEOUT.",

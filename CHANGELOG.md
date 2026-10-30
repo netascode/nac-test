@@ -1,5 +1,9 @@
 # Unreleased
 
+## Breaking Changes
+
+- python: dropped support for Python 3.10 (end-of-life). Python 3.11 is now the minimum supported version.
+
 ## Performance
 
 - yaml parser: enabled C-accelerated parser/emitter (`ruamel.yaml.clib` / `pure=False`) in YAML utilities. Speeds up YAML loading and data model merge operations by ~3x on CPython.

@@ -178,7 +178,7 @@ class SSHTestBase(NACTestBase):
 
         # The rest of the setup is async, we'll run it in the event loop
         try:
-            # Get or create event loop for Python 3.10+ compatibility
+            # Get or create event loop for Python 3.11+ compatibility
             loop = get_or_create_event_loop()
             loop.run_until_complete(self._async_setup(hostname))
         except ConnectionError as e:

@@ -4,17 +4,17 @@
 """Asyncio utilities for cross-version compatibility.
 
 This module provides utilities to handle differences in asyncio behavior
-across Python versions, particularly for Python 3.10-3.12+ compatibility.
+across Python versions, particularly between Python 3.11 and 3.12+.
 """
 
 import asyncio
 
 
 def get_or_create_event_loop() -> asyncio.AbstractEventLoop:
-    """Get or create an event loop in a Python 3.10+ compatible way.
+    """Get or create an event loop in a Python 3.11+ compatible way.
 
     In Python 3.12+, get_event_loop() raises RuntimeError if there's no
-    current event loop in the main thread. In older versions (3.10-3.11),
+    current event loop in the main thread. In Python 3.11,
     it automatically creates one. This helper function works across all
     supported versions by handling both behaviors.
 
