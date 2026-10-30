@@ -88,6 +88,21 @@ class TestDisplayAuthFailureBanner:
         content = output.getvalue()
         assert "sdwan-manager.lab.local" in content
 
+    def test_sanitizes_embedded_credentials(self) -> None:
+        """Banner strips embedded credentials from displayed controller URL."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_auth_failure_banner(
+                controller_type="ACI",
+                controller_url="https://admin:s3cret@apic.example.com:8443/",
+                detail="HTTP 401: Unauthorized",
+            )
+
+        content = output.getvalue()
+        assert "s3cret" not in content
+        assert "admin:" not in content
+        assert "https://apic.example.com:8443" in content
+
     def test_contains_credential_env_var_hints(self) -> None:
         """Banner shows environment variable names for credentials."""
         output = StringIO()
@@ -163,6 +178,22 @@ class TestDisplayUnreachableBanner:
 
         content = output.getvalue()
         assert "sdwan.example.com" in content
+
+    def test_sanitizes_embedded_credentials_and_host_in_ping(self) -> None:
+        """Banner strips embedded credentials from controller URL and ping command."""
+        output = StringIO()
+        with patch("sys.stdout", new=output):
+            display_unreachable_banner(
+                controller_type="ACI",
+                controller_url="https://admin:s3cret@apic.lab.local:8443/",
+                detail="Connection refused",
+            )
+
+        content = output.getvalue()
+        assert "s3cret" not in content
+        assert "admin:" not in content
+        assert "https://apic.lab.local:8443" in content
+        assert "ping apic.lab.local" in content
 
     def test_contains_curl_command_for_testing(self) -> None:
         """Banner includes a curl command for connectivity testing."""
