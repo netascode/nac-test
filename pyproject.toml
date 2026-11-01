@@ -4,7 +4,7 @@ version = "2.1.0b2"
 description = "A CLI tool to render to execute Robot Framework (RF) and PyATS tests for Network as Code (NAC)."
 license = { text = "MPL-2.0" }
 readme = "README.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.11,<3.15"
 authors = [
     { name = "Daniel Schmidt", email = "danischm@cisco.com" },
     { name = "Andrea Testino", email = "atestini@cisco.com" },
@@ -22,7 +22,6 @@ classifiers = [
     "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -53,7 +52,6 @@ dependencies = [
     "aiofiles>=23.2.1",  # radkit-client still uses <24.0, so relax to avoid conflicts
     "colorama>=0.4.6",
     "markdown>=3.10.2",
-    "typing_extensions>=4.0; python_version < '3.11'",
     "filelock>=3.25.2",
     "lxml>=6.1.0",
 ]
@@ -103,7 +101,7 @@ exclude_lines = ["pragma: no cover", "@abstract", "except ImportError:"]
 omit = ["*/__main__.py"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 88
 extend-exclude = ["tests/fixtures/", "tests/integration/fixtures/", "tests/e2e/fixtures/"]
 
@@ -120,6 +118,7 @@ select = [
 ignore = [
     "E501",   # line too long (handled by formatter)
     "UP038",  # Use `X | Y` in `isinstance` call instead of `(X, Y)`
+    "UP042",  # Keep `(str, Enum)` instead of `StrEnum` (StrEnum changes str() output)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -150,7 +149,7 @@ disallow_untyped_decorators = false
 disallow_untyped_defs = true
 ignore_errors = false
 ignore_missing_imports = true
-python_version = "3.10"
+python_version = "3.11"
 strict_optional = true
 warn_redundant_casts = true
 warn_return_any = true

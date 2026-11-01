@@ -534,7 +534,7 @@ class ConnectionBroker:
                     self._disconnect_device(hostname),
                     timeout=BROKER_SHUTDOWN_DEVICE_TIMEOUT,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     f"Timed out waiting for device lock on {hostname} during shutdown"
                 )

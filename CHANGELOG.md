@@ -2,6 +2,7 @@
 
 ## Breaking Changes
 
+- python: dropped support for Python 3.10 (end-of-life). Python 3.11 is now the minimum supported version.
 - controller: removed `nac_test.utils.controller` (`detect_controller_type`, `get_matched_credential_set`), the `nac_test.pyats_core.common.auth_cache` re-export (use `nac_test.core.auth_cache`) and the transitional fallback in `get_controller_context()`. Use `nac_test.core.controller.resolve_controller()`; the orchestrator now publishes the resolved context via `NAC_TEST_CONTROLLER_CONTEXT`, which `get_controller_context()` requires.
 
 ## Performance
