@@ -1,5 +1,9 @@
 # Unreleased
 
+## Breaking Changes
+
+- controller: removed `nac_test.utils.controller` (`detect_controller_type`, `get_matched_credential_set`), the `nac_test.pyats_core.common.auth_cache` re-export (use `nac_test.core.auth_cache`) and the transitional fallback in `get_controller_context()`. Use `nac_test.core.controller.resolve_controller()`; the orchestrator now publishes the resolved context via `NAC_TEST_CONTROLLER_CONTEXT`, which `get_controller_context()` requires.
+
 ## Performance
 
 - yaml parser: enabled C-accelerated parser/emitter (`ruamel.yaml.clib` / `pure=False`) in YAML utilities. Speeds up YAML loading and data model merge operations by ~3x on CPython.

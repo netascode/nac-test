@@ -3,12 +3,15 @@
 
 """Unit tests for CombinedOrchestrator controller detection integration."""
 
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
 from nac_test.combined_orchestrator import CombinedOrchestrator
+from nac_test.core.constants import ENV_CONTROLLER_CONTEXT
 from nac_test.core.controller_auth import AuthCheckResult, AuthOutcome
 from nac_test.core.types import ControllerContext, PyATSResults
 from nac_test.utils.logging import DEFAULT_LOGLEVEL
@@ -105,6 +108,102 @@ class TestCombinedOrchestratorController:
         # conservatively assumes run_tests() could have mutated controller_context back
         # to None. This is a known mypy limitation with attribute narrowing across calls.
         assert orchestrator.controller_context.controller_type == "ACI"  # type: ignore[unreachable]
+
+    def test_controller_context_published_for_pyats_phase_and_cleared(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Context env var is set during pre-flight and PyATS execution, then popped."""
+        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
+        monkeypatch.setenv("ACI_USERNAME", "admin")
+        monkeypatch.setenv("ACI_PASSWORD", "password")
+
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        orchestrator = CombinedOrchestrator(
+            data_paths=[data_dir],
+            templates_dir=templates_dir,
+            output_dir=output_dir,
+            dev_pyats_only=True,
+        )
+
+        seen: dict[str, str | None] = {}
+
+        def fake_preflight(ctx: ControllerContext) -> AuthCheckResult:
+            seen["preflight"] = os.environ.get(ENV_CONTROLLER_CONTEXT)
+            return AUTH_SUCCESS
+
+        def fake_pyats_run() -> PyATSResults:
+            seen["pyats"] = os.environ.get(ENV_CONTROLLER_CONTEXT)
+            return PyATSResults()
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.preflight_auth_check",
+                side_effect=fake_preflight,
+            ),
+            patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats,
+            patch("nac_test.combined_orchestrator.CombinedReportGenerator"),
+            patch("typer.echo"),
+            patch("typer.secho"),
+            patch.object(CombinedOrchestrator, "_check_python_version"),
+        ):
+            mock_pyats.return_value.run_tests.side_effect = fake_pyats_run
+            orchestrator.run_tests()
+
+        assert orchestrator.controller_context is not None
+        expected = orchestrator.controller_context.to_json()  # type: ignore[unreachable]
+        assert seen["preflight"] == expected
+        assert seen["pyats"] == expected
+        assert ENV_CONTROLLER_CONTEXT not in os.environ
+
+    def test_controller_context_cleared_when_pyats_raises(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Context env var is popped even if PyATS execution raises."""
+        monkeypatch.setenv("ACI_URL", "https://apic.test.com")
+        monkeypatch.setenv("ACI_USERNAME", "admin")
+        monkeypatch.setenv("ACI_PASSWORD", "password")
+
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        templates_dir = tmp_path / "templates"
+        templates_dir.mkdir()
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        orchestrator = CombinedOrchestrator(
+            data_paths=[data_dir],
+            templates_dir=templates_dir,
+            output_dir=output_dir,
+            dev_pyats_only=True,
+        )
+
+        with (
+            patch.object(
+                orchestrator, "_discover_test_types", return_value=(True, False)
+            ),
+            patch(
+                "nac_test.combined_orchestrator.preflight_auth_check",
+                return_value=AUTH_SUCCESS,
+            ),
+            patch("nac_test.combined_orchestrator.PyATSOrchestrator") as mock_pyats,
+            patch("typer.echo"),
+            patch("typer.secho"),
+            patch.object(CombinedOrchestrator, "_check_python_version"),
+        ):
+            mock_pyats.return_value.run_tests.side_effect = RuntimeError("boom")
+            with pytest.raises(RuntimeError, match="boom"):
+                orchestrator.run_tests()
+
+        assert ENV_CONTROLLER_CONTEXT not in os.environ
 
     def test_detection_failure_continues_with_preflight_failure(
         self, tmp_path: Path
