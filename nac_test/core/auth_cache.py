@@ -3,20 +3,36 @@
 
 """Generic file-based authentication token caching for parallel processes."""
 
+import fcntl
 import hashlib
 import json
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
-
-from filelock import FileLock
 
 from nac_test.core.constants import AUTH_CACHE_DIR
 from nac_test.utils.url import sanitize_url_for_display
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _file_lock(lock_file: Path) -> Iterator[None]:
+    """Hold an exclusive inter-process lock on ``lock_file`` (blocking).
+
+    Uses ``fcntl.flock`` directly rather than the ``filelock`` package: filelock
+    installs a process-wide fork audit hook on import that makes concurrent
+    ``os.forkpty`` calls (Unicon SSH spawns on broker threads) fail intermittently.
+    """
+    with open(lock_file, "w") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 class AuthCache:
@@ -52,7 +68,7 @@ class AuthCache:
         cache_file = cache_dir / f"{controller_type}_{url_hash}.json"
         lock_file = cache_dir / f"{controller_type}_{url_hash}.lock"
 
-        with FileLock(str(lock_file)):
+        with _file_lock(lock_file):
             # Check if valid cached data exists
             if cache_file.exists():
                 try:
@@ -131,7 +147,7 @@ class AuthCache:
         display_url = sanitize_url_for_display(url)
 
         try:
-            with FileLock(str(lock_file)):
+            with _file_lock(lock_file):
                 if cache_file.exists():
                     cache_file.unlink()
                     logger.debug(
