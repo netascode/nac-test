@@ -59,20 +59,16 @@ def mock_auth_cache_dir(mocker: MockerFixture, tmp_path: Path) -> Path:
 def mock_fcntl(mocker: MockerFixture) -> Any:
     """Fixture to mock file locking operations.
 
-    Note: This fixture now mocks filelock.FileLock instead of fcntl.flock,
-    as the implementation was changed to use the cross-platform filelock
-    library for Windows/macOS/Linux compatibility.
-
     Args:
         mocker: Pytest mocker fixture for creating mocks.
 
     Returns:
-        Mock object for FileLock context manager.
+        Mock object for the _file_lock context manager.
     """
     mock_lock = mocker.MagicMock()
     mock_lock.__enter__ = mocker.MagicMock(return_value=None)
     mock_lock.__exit__ = mocker.MagicMock(return_value=None)
-    return mocker.patch("nac_test.core.auth_cache.FileLock", return_value=mock_lock)
+    return mocker.patch("nac_test.core.auth_cache._file_lock", return_value=mock_lock)
 
 
 @pytest.fixture
@@ -517,12 +513,12 @@ class TestAuthCacheInternal:
     ) -> None:
         """Test that file locking is properly called during cache operations.
 
-        This test verifies that FileLock is used as a context manager
+        This test verifies that the file lock is used as a context manager
         to ensure thread/process safety during cache operations.
 
         Args:
             mock_auth_cache_dir: Mocked auth cache directory path.
-            mock_fcntl: Mocked file locking (FileLock).
+            mock_fcntl: Mocked file locking (_file_lock).
             mock_time: Mocked time.time() for consistent testing.
             sample_auth_func: Mock authentication function.
         """
@@ -538,12 +534,11 @@ class TestAuthCacheInternal:
             extract_token=True,
         )
 
-        # Assert - FileLock should be instantiated with the lock file path
+        # Assert - the lock should be taken with the lock file path
         mock_fcntl.assert_called_once()
-        # Verify FileLock was used as context manager
         call_args = mock_fcntl.call_args
         lock_file_path = call_args[0][0]
-        assert lock_file_path.endswith(".lock"), (
+        assert lock_file_path.name.endswith(".lock"), (
             f"Expected .lock file, got: {lock_file_path}"
         )
 
@@ -1099,10 +1094,9 @@ class TestAuthCacheInvalidate:
     ) -> None:
         """Invalidate leaves no cache or lock artifacts behind.
 
-        This test does NOT mock FileLock so that real file locking occurs.
-        Note: filelock >= 3.13 (UnixFileLock) auto-deletes lock files on
-        release, so the .lock file may not persist between calls. This test
-        verifies the end state — no artifacts remain after invalidation.
+        This test does NOT mock _file_lock so that real file locking occurs.
+        It verifies the end state: invalidate removes both the cache file and
+        the lock file.
 
         Args:
             mock_auth_cache_dir: Mocked auth cache directory path.
@@ -1112,7 +1106,7 @@ class TestAuthCacheInvalidate:
         controller_type = "ACI"
         url = "https://apic.example.com"
 
-        # Populate cache (using real FileLock)
+        # Populate cache (using real file lock)
         AuthCache._cache_auth_data(
             controller_type=controller_type,
             url=url,
@@ -1151,9 +1145,9 @@ class TestAuthCacheInvalidate:
         cache_file = mock_auth_cache_dir / f"{controller_type}_{url_hash}.json"
         cache_file.write_text("{}")
 
-        # Make FileLock raise an OSError to simulate a permission issue
+        # Make the lock raise an OSError to simulate a permission issue
         mocker.patch(
-            "nac_test.core.auth_cache.FileLock",
+            "nac_test.core.auth_cache._file_lock",
             side_effect=OSError("Permission denied"),
         )
 
