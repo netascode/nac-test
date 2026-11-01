@@ -3,7 +3,6 @@
 
 """Generic file-based authentication token caching for parallel processes."""
 
-import fcntl
 import hashlib
 import json
 import logging
@@ -26,7 +25,12 @@ def _file_lock(lock_file: Path) -> Iterator[None]:
     Uses ``fcntl.flock`` directly rather than the ``filelock`` package: filelock
     installs a process-wide fork audit hook on import that makes concurrent
     ``os.forkpty`` calls (Unicon SSH spawns on broker threads) fail intermittently.
+
+    ``fcntl`` is imported lazily because it does not exist on Windows, where this
+    module is still imported (Robot-only runs) but the auth cache is never used.
     """
+    import fcntl
+
     with open(lock_file, "w") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         try:
