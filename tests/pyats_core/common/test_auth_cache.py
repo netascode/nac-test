@@ -14,6 +14,7 @@ authentication caching for parallel processes. The tests cover:
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -1054,6 +1055,41 @@ class TestAuthCacheInvalidate:
 
         # Directory should still be empty
         assert len(list(mock_auth_cache_dir.glob("*.json"))) == 0
+
+    @pytest.mark.parametrize("cache_exists", [False, True])
+    def test_invalidate_does_not_log_embedded_credentials(
+        self,
+        cache_exists: bool,
+        mock_auth_cache_dir: Path,
+        mock_fcntl: Mock,
+        mock_time: Mock,
+        sample_auth_func: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Invalidate logs the sanitized URL; the raw URL is only the cache key.
+
+        Args:
+            cache_exists: Whether a cache entry exists to be invalidated.
+            mock_auth_cache_dir: Mocked auth cache directory path.
+            mock_fcntl: Mocked file locking.
+            mock_time: Mocked time.time() for consistent testing.
+            sample_auth_func: Mock authentication function.
+            caplog: Pytest log capture fixture.
+        """
+        url = "https://admin:s3cret@apic.example.com/"
+        if cache_exists:
+            AuthCache._cache_auth_data(
+                controller_type="ACI",
+                url=url,
+                auth_func=sample_auth_func,
+                extract_token=True,
+            )
+
+        with caplog.at_level(logging.DEBUG):
+            AuthCache.invalidate("ACI", url)
+
+        assert "apic.example.com" in caplog.text
+        assert "s3cret" not in caplog.text
 
     def test_invalidate_cleans_up_lock_file(
         self,
