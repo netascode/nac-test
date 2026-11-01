@@ -1,5 +1,10 @@
 # Unreleased
 
+## Breaking Changes
+
+- python: dropped support for Python 3.10 (end-of-life). Python 3.11 is now the minimum supported version.
+- controller: removed `nac_test.utils.controller` (`detect_controller_type`, `get_matched_credential_set`), the `nac_test.pyats_core.common.auth_cache` re-export (use `nac_test.core.auth_cache`) and the transitional fallback in `get_controller_context()`. Use `nac_test.core.controller.resolve_controller()`; the orchestrator now publishes the resolved context via `NAC_TEST_CONTROLLER_CONTEXT`, which `get_controller_context()` requires.
+
 ## Performance
 
 - yaml parser: enabled C-accelerated parser/emitter (`ruamel.yaml.clib` / `pure=False`) in YAML utilities. Speeds up YAML loading and data model merge operations by ~3x on CPython.
@@ -9,6 +14,7 @@
 
 ## Bug Fixes
 
+- controller URLs: embedded credentials (userinfo) and trailing slashes are stripped from URLs shown in auth-failure banners, the HTML report (`controller_url`, curl and ping hints) and the pre-flight log. Passwords containing unencoded `/`, `?` or `#` are covered, and `extract_host()` no longer returns the port or userinfo for schemeless URLs. The `AuthCache` invalidation log line no longer prints the raw URL.
 - dependencies: update nac-yaml to 2.1.0: `!vault` values are now decrypted with the password from `ANSIBLE_VAULT_PASSWORD`.
 - dependencies: pin `scrapli<2026.10.0` to prevent breaking changes and installation failures introduced in scrapli 2026.10+ (#965).
 - pyats broker: unified per-device locking to prevent a stale caller from tearing down a successor's connection during the reconnect-and-retry window. The execute and disconnect paths previously used separate locks over two halves of one critical section.

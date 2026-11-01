@@ -10,6 +10,7 @@ import pytest
 from pyats import aetest
 
 from nac_test.pyats_core.common.base_test import NACTestBase
+from tests.conftest import resolve_and_inject_context
 
 
 class TestResultCollectorInitialization:
@@ -22,6 +23,7 @@ class TestResultCollectorInitialization:
         monkeypatch.setenv("ACI_URL", "https://apic.example.com")
         monkeypatch.setenv("ACI_USERNAME", "admin")
         monkeypatch.setenv("ACI_PASSWORD", "password")
+        resolve_and_inject_context(monkeypatch)
 
         # Point to non-existent file to trigger fallback
         monkeypatch.setenv(

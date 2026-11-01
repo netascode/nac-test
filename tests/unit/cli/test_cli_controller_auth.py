@@ -256,6 +256,30 @@ class TestPreflightCacheInvalidation:
     credential changes.
     """
 
+    def test_cache_invalidation_uses_raw_url(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Cache key must match what auth adapters stored: raw URL, trailing / stripped."""
+        monkeypatch.setenv("ACI_URL", "https://admin:s3cret@APIC.lab.local:8443/")
+
+        with (
+            patch(
+                "nac_test.core.controller_auth._get_auth_callable",
+                return_value=MagicMock(return_value={"token": "t"}),
+            ),
+            patch(
+                "nac_test.core.controller_auth.AuthCache.invalidate"
+            ) as patched_invalidate,
+        ):
+            preflight_auth_check(
+                ControllerContext(controller_type="ACI", auth_method=AuthMethod.SESSION)
+            )
+
+        # Credentials and case intentionally preserved: this is the adapters' cache key.
+        patched_invalidate.assert_called_once_with(
+            "ACI", "https://admin:s3cret@APIC.lab.local:8443"
+        )
+
     @pytest.mark.parametrize(
         "controller_type,url_env_var,url_value,expected_cache_key",
         [

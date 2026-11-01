@@ -136,8 +136,8 @@ pytest tests/e2e/ -n 4 --dist loadscope
 
 From `.github/workflows/test.yml`:
 
-- **Linux**: `uv run pytest -n auto --dist loadscope tests/` — Python 3.10, 3.11, 3.12, 3.13 on ubuntu-latest
-- **Windows**: `uv run pytest -m windows -n auto --dist loadscope tests/e2e tests/integration/...` — Python 3.10-3.13 on windows-latest (only `@pytest.mark.windows` tests)
+- **Linux**: `uv run pytest -n auto --dist loadscope tests/` — Python 3.11, 3.12, 3.13 on ubuntu-latest
+- **Windows**: `uv run pytest -m windows -n auto --dist loadscope tests/e2e tests/integration/...` — Python 3.11-3.13 on windows-latest (only `@pytest.mark.windows` tests)
 
 ## Test Markers
 

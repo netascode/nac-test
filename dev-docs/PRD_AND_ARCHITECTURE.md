@@ -243,7 +243,7 @@ from nac_test.pyats_core.reporting.types import ResultStatus
 ```python
 # nac_test_pyats_common/catc/test_base.py
 from nac_test.pyats_core.common.base_test import NACTestBase
-from nac_test.pyats_core.common.auth_cache import AuthCache
+from nac_test.core.auth_cache import AuthCache
 
 
 class CatalystCenterTestBase(NACTestBase):
@@ -295,7 +295,7 @@ __version__ = "1.0.0"
 _REQUIRED_NAC_TEST_METHODS = [
     ("nac_test.pyats_core.common.base_test", "NACTestBase", "setup"),
     ("nac_test.pyats_core.common.base_test", "NACTestBase", "cleanup"),
-    ("nac_test.pyats_core.common.auth_cache", "AuthCache", "get_or_create"),
+    ("nac_test.core.auth_cache", "AuthCache", "get_or_create"),
 ]
 
 
@@ -4517,7 +4517,7 @@ sequenceDiagram
 AuthCache is a generic file-based token caching mechanism provided by nac-test. It enables token sharing across parallel test processes using file locking.
 
 ```python
-# nac_test/pyats_core/common/auth_cache.py
+# nac_test/core/auth_cache.py
 class AuthCache:
     """Generic file-based auth token caching across parallel processes.
 
@@ -5136,7 +5136,7 @@ import os
 from typing import Any
 import httpx
 
-from nac_test.pyats_core.common.auth_cache import AuthCache
+from nac_test.core.auth_cache import AuthCache
 
 
 class ISEAuth:
@@ -5938,7 +5938,7 @@ def resolve_controller() -> ControllerContext:
 
 def get_controller_context() -> ControllerContext:
     """Subprocess accessor — reads NAC_TEST_CONTROLLER_CONTEXT env var.
-    Falls back to resolve_controller() if env var is absent (transitional).
+    Raises if the variable is absent: the orchestrator must publish it.
     """
 
 
@@ -6053,14 +6053,14 @@ Example: `IOSXE_USERNAME` and `IOSXE_PASSWORD` could be used for:
 │    IOSXE_PASSWORD=device-pass                                      │
 │                                                                    │
 │  Detection Result:                                                 │
-│    detect_controller_type() → "sdwan"                              │
-│    → TestTypeResolver uses BASE_CLASS_MAPPING["SDWANTestBase"]    │
-│    → Device SSH uses IOSXE_USERNAME/IOSXE_PASSWORD                │
+│    resolve_controller() → ControllerContext(type="SDWAN")          │
+│    → TestTypeResolver uses BASE_CLASS_MAPPING["SDWANTestBase"]     │
+│    → Device SSH uses IOSXE_USERNAME/IOSXE_PASSWORD                 │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
 **What happens during D2D test execution:**
-1. Framework detects `CONTROLLER_TYPE=SDWAN` from controller credentials
+1. Framework detects `controller_context.controller_type == "SDWAN"` from controller credentials
 2. Framework loads `SDWANDeviceResolver` for device inventory resolution
 3. Tests connect to devices via SSH using `IOSXE_*` credentials
 4. Controller credentials are NOT used for connection (D2D tests bypass controller)
@@ -6071,11 +6071,8 @@ The detected controller type informs test categorization:
 
 ```python
 # In orchestrator.py
-controller_type = detect_controller_type()
-if controller_type:
-    logger.info(f"Detected controller type: {controller_type}")
-else:
-    logger.warning("Could not auto-detect controller type from environment")
+controller_context = resolve_controller()
+logger.info(f"Detected controller type: {controller_context.controller_type}")
 ```
 
 #### Usage Examples
@@ -25902,7 +25899,7 @@ uv run pytest tests/ -v --tb=short
 **Current State**: `AuthCache` in nac-test uses the `filelock` library for cross-platform process-safe token caching:
 
 ```python
-# nac_test/pyats_core/common/auth_cache.py
+# nac_test/core/auth_cache.py
 from filelock import FileLock
 
 with FileLock(str(lock_file)):
@@ -26139,7 +26136,7 @@ def test_required_base_classes_importable():
     """Verify critical nac-test classes can be imported."""
     from nac_test.pyats_core.common.base_test import NACTestBase
     from nac_test.pyats_core.common.ssh_base_test import SSHTestBase
-    from nac_test.pyats_core.common.auth_cache import AuthCache
+    from nac_test.core.auth_cache import AuthCache
 
     assert hasattr(NACTestBase, "setup")
     assert hasattr(NACTestBase, "cleanup")
@@ -26148,7 +26145,7 @@ def test_required_base_classes_importable():
 
 def test_auth_cache_signature_compatible():
     """Verify AuthCache.get_or_create has expected signature."""
-    from nac_test.pyats_core.common.auth_cache import AuthCache
+    from nac_test.core.auth_cache import AuthCache
     import inspect
 
     sig = inspect.signature(AuthCache.get_or_create)
