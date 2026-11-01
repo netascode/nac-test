@@ -90,7 +90,7 @@ def daemonize() -> bool:
 def cmd_start(args: argparse.Namespace) -> None:
     """Start the mock server."""
     state = read_state()
-    if state is not None and len(state) > 0:
+    if state:
         pid = int(state["pid"])
         if is_process_running(pid):
             print(f"Server already running (PID: {pid}, port: {state['port']})")
@@ -146,7 +146,7 @@ def cmd_start(args: argparse.Namespace) -> None:
 def cmd_stop(args: argparse.Namespace) -> None:
     """Stop the mock server."""
     state = read_state()
-    if state is None or len(state) == 0:
+    if not state:
         print("No running server found (state file missing)")
         sys.exit(1)
 
@@ -182,7 +182,7 @@ def cmd_stop(args: argparse.Namespace) -> None:
 def cmd_status(args: argparse.Namespace) -> None:
     """Check mock server status."""
     state = read_state()
-    if state is None or len(state) == 0:
+    if not state:
         print("Server: NOT RUNNING (no state file)")
         sys.exit(1)
 

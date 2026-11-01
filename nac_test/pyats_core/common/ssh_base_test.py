@@ -107,12 +107,7 @@ class SSHTestBase(NACTestBase):
         device_info_json = os.environ.get("DEVICE_INFO")
         data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH")
 
-        if (
-            device_info_json is None
-            or device_info_json == ""
-            or data_file_path is None
-            or data_file_path == ""
-        ):
+        if not device_info_json or not data_file_path:
             self.failed(
                 "Framework Error: DEVICE_INFO and MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH env vars must be set by the orchestrator."
             )
@@ -208,11 +203,7 @@ class SSHTestBase(NACTestBase):
         try:
             # Check if broker is active (priority over testbed to enable connection pooling)
             broker_socket_env = os.environ.get("NAC_TEST_BROKER_SOCKET")
-            broker_socket = (
-                Path(broker_socket_env)
-                if broker_socket_env is not None and broker_socket_env != ""
-                else None
-            )
+            broker_socket = Path(broker_socket_env) if broker_socket_env else None
 
             if broker_socket is not None and not broker_socket.is_socket():
                 self.logger.warning(

@@ -37,7 +37,7 @@ class BrokerClient:
     def _get_socket_path(self) -> Path:
         """Get socket path from environment or default location."""
         socket_env = os.environ.get("NAC_TEST_BROKER_SOCKET")
-        if socket_env is not None and socket_env != "":
+        if socket_env:
             return Path(socket_env)
 
         # Default: look for socket in temp directory

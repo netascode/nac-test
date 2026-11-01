@@ -160,6 +160,8 @@ exclude = ["tests/fixtures/", "tests/integration/fixtures/", "tests/e2e/fixtures
 "all" = "error"
 # typing.override requires Python 3.12
 "missing-override-decorator" = "ignore"
+# `if x:` on optional values is intentional; None and empty are handled alike
+"truthiness-test-of-none-union" = "ignore"
 
 [tool.pytest.ini_options]
 markers = ["unit", "integration", "e2e", "windows"]

@@ -79,15 +79,11 @@ class TagMatcher:
         tags_list = tags or []
 
         # Check exclusions first - if any exclude pattern matches, filter out
-        if (
-            self._exclude_patterns is not None
-            and len(self._exclude_patterns) > 0
-            and self._exclude_patterns.match(tags_list)
-        ):
+        if self._exclude_patterns and self._exclude_patterns.match(tags_list):
             return False
 
         # If no include patterns specified, include the test
-        if self._include_patterns is None or len(self._include_patterns) == 0:
+        if not self._include_patterns:
             return True
 
         # Check if tags match any include pattern
@@ -101,10 +97,10 @@ class TagMatcher:
         "bgp OR ospf".  The raw input form is available via __repr__.
         """
         parts = []
-        if self._include_patterns is not None and len(self._include_patterns) > 0:
+        if self._include_patterns:
             include_str = ", ".join(f"'{p}'" for p in self._include_patterns)
             parts.append(f"include: {include_str}")
-        if self._exclude_patterns is not None and len(self._exclude_patterns) > 0:
+        if self._exclude_patterns:
             exclude_str = ", ".join(f"'{p}'" for p in self._exclude_patterns)
             parts.append(f"exclude: {exclude_str}")
         return ", ".join(parts)

@@ -231,9 +231,7 @@ class SubprocessHttpClient:
             timeout: Optional timeout settings (httpx.Timeout object).
             verify: SSL verification flag. Set to False to skip verification.
         """
-        self._base_url = (
-            base_url.rstrip("/") if base_url is not None and base_url != "" else None
-        )
+        self._base_url = base_url.rstrip("/") if base_url else None
         self._headers = headers or {}
         self._verify = verify
 
@@ -285,7 +283,7 @@ class SubprocessHttpClient:
         """
         if url.startswith(("http://", "https://")):
             return url
-        if self._base_url is not None and self._base_url != "":
+        if self._base_url:
             return f"{self._base_url}{url}"
         return url
 
@@ -320,7 +318,7 @@ class SubprocessHttpClient:
 
         # Merge headers
         merged_headers = dict(self._headers)
-        if headers is not None and len(headers) > 0:
+        if headers:
             merged_headers.update(headers)
 
         # Prepare request body

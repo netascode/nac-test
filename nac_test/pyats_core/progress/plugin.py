@@ -64,7 +64,7 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
         # should ever fire in production.
         self.test_dir_path: Path | None = None
         test_dir = os.environ.get(ENV_TEST_DIR)
-        if test_dir is not None and test_dir != "":
+        if test_dir:
             candidate = Path(test_dir).absolute()
             if not candidate.exists() or not candidate.is_dir():
                 logger.warning(
@@ -171,7 +171,7 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
                                 ):
                                     title = node.value.value
                                 break
-                        if title is not None and title != "":
+                        if title:
                             break
 
             except Exception:
@@ -180,7 +180,7 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
 
             # If no TITLE found, use test_name as display title (relative dot-name,
             # or bare stem if NAC_TEST_TEST_DIR is unset)
-            if title is None or title == "":
+            if not title:
                 title = test_name
 
             # Get actual worker ID from task runtime

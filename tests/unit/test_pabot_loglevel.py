@@ -90,5 +90,5 @@ class TestRunPabotLoglevel:
         )
 
         # default loglevel must not be appended when extra_args already contains one
-        if default_robot_loglevel is not None and len(default_robot_loglevel) > 0:
+        if default_robot_loglevel:
             assert call_args[-2:] != ["--loglevel", default_robot_loglevel]

@@ -545,7 +545,7 @@ class PyATSOrchestrator:
         cleanup_pyats_runtime()
 
         # Clean up old test outputs (CI/CD only)
-        if os.environ.get("CI", "") != "":
+        if os.environ.get("CI"):
             cleanup_old_test_outputs(self.output_dir, days=3)
 
         # Note: Merged data file created by main.py (single source of truth)

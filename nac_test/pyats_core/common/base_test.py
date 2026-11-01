@@ -283,11 +283,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
 
         # Add jobfile path to metadata
         module = sys.modules[self.__class__.__module__]
-        if (
-            hasattr(module, "__file__")
-            and module.__file__ is not None
-            and module.__file__ != ""
-        ):
+        if hasattr(module, "__file__") and module.__file__:
             # Get relative path from project root if possible
             try:
                 jobfile_path = Path(module.__file__)
@@ -806,7 +802,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # For D2D tests, include hostname in test_id for clearer filenames
         # The HOSTNAME environment variable is set by device_executor for d2d tests
         hostname = os.environ.get("HOSTNAME")
-        if hostname is not None and hostname != "":
+        if hostname:
             safe_hostname = sanitize_hostname(hostname)
             return f"{class_name}_{safe_hostname}_{timestamp}"
 
@@ -819,7 +815,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             Merged data model dictionary
         """
         data_file_path = os.environ.get("MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH")
-        if data_file_path is None or data_file_path == "":
+        if not data_file_path:
             raise FileNotFoundError(
                 "Environment variable MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH is not set"
             )
@@ -1330,7 +1326,7 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
             "timestamp": time.time(),
         }
 
-        if api_details is not None and len(api_details) > 0:
+        if api_details:
             result["api_details"] = api_details
 
         return result
@@ -1456,21 +1452,21 @@ class NACTestBase(aetest.Testcase):  # type: ignore[misc]
         # Build standardized message based on status
         if status_enum == ResultStatus.PASSED:
             message = f"{test_type} {item_identifier} verified successfully"
-            if details is not None and details != "":
+            if details:
                 message += f" - {details}"
         elif status_enum == ResultStatus.FAILED:
-            if details is not None and details != "":
+            if details:
                 message = f"{test_type} {item_identifier} failed: {details}"
             else:
                 message = f"{test_type} {item_identifier} failed"
         elif status_enum == ResultStatus.SKIPPED:
-            if details is not None and details != "":
+            if details:
                 message = f"{test_type} {item_identifier} skipped: {details}"
             else:
                 message = f"{test_type} {item_identifier} skipped"
         else:
             # Handle other status types (ERRORED, INFO, etc.)
-            if details is not None and details != "":
+            if details:
                 message = f"{test_type} {item_identifier} {status_enum.value.lower()}: {details}"
             else:
                 message = f"{test_type} {item_identifier} {status_enum.value.lower()}"

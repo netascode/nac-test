@@ -126,7 +126,7 @@ class ArchiveInspector:
                     results_json_path = name
                     break
 
-            if results_json_path is None:
+            if not results_json_path:
                 logger.debug("No results.json found in archive")
                 return results
 
