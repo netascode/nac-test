@@ -18,7 +18,6 @@ the merged NAC data model.
 
 import logging
 import os
-import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -272,10 +271,6 @@ CONTROLLER_REGISTRY: dict[str, ControllerConfig] = {
     ),
 }
 
-# Module-level cache for the credential set that was matched during detection.
-# Populated by detect_controller_type(), consumed by get_matched_credential_set().
-_matched_credential_sets: dict[str, CredentialSet] = {}
-
 
 class ResolutionError(NacTestError):
     """Base for controller resolution failures."""
@@ -313,10 +308,6 @@ def resolve_controller() -> ControllerContext:
     :class:`ResolutionError` subclass on failure.  The caller decides
     how to handle failures — this function never calls ``sys.exit()``.
 
-    Side-effects:
-        * Populates ``_matched_credential_sets`` (same as the legacy
-          ``detect_controller_type()``).
-
     Returns:
         ControllerContext with ``controller_type`` and ``auth_method``.
 
@@ -340,7 +331,6 @@ def resolve_controller() -> ControllerContext:
     # Exactly one complete set — success
     controller_type = next(iter(complete))
     matched_cred_set = complete[controller_type]
-    _matched_credential_sets[controller_type] = matched_cred_set
 
     ctx = ControllerContext(
         controller_type=controller_type,
@@ -364,42 +354,30 @@ def get_controller_context() -> ControllerContext:
     ``PyATSOrchestrator``, which serializes it to ``NAC_TEST_CONTROLLER_CONTEXT``
     before launching subprocesses.
 
-    **Primary path (subprocess):** Deserializes from ``NAC_TEST_CONTROLLER_CONTEXT``
-    environment variable set by ``PyATSOrchestrator``.
-
-    **Fallback (transitional):** If the env var is absent, falls back to
-    ``detect_controller_type()`` for backwards compatibility. This fallback
-    will be removed in Phase 3 once all consumers are migrated.
+    Deserializes from ``NAC_TEST_CONTROLLER_CONTEXT`` environment variable
+    set by ``PyATSOrchestrator``.
 
     Returns:
         ControllerContext with controller_type and auth_method.
 
     Raises:
-        ValueError: If no controller credentials are found (via fallback path).
+        ValueError: If ``NAC_TEST_CONTROLLER_CONTEXT`` is not set or invalid.
     """
     raw = os.environ.get(ENV_CONTROLLER_CONTEXT)
-    if raw:
-        return ControllerContext.from_json(raw)
-
-    # --- Transitional fallback (remove in Phase 3) -----------------------
-    logging.getLogger(__name__).info(
-        "NAC_TEST_CONTROLLER_CONTEXT not set — falling back to "
-        "detect_controller_type(). This fallback will be removed in a "
-        "future release."
-    )
-
-    controller_type = detect_controller_type()
-    return ControllerContext(
-        controller_type=controller_type,
-        auth_method=_infer_auth_method(controller_type),
-    )
+    if not raw:
+        raise ValueError(
+            f"Environment variable {ENV_CONTROLLER_CONTEXT} is not set. "
+            "Controller context must be resolved by the orchestrator via "
+            "resolve_controller() and passed to subprocesses."
+        )
+    return ControllerContext.from_json(raw)
 
 
 def format_resolution_error(error: ResolutionError) -> str:
     """Format a :class:`ResolutionError` into a user-facing message.
 
-    Re-uses the existing detailed error formatters so that CLI output
-    stays identical to the legacy ``detect_controller_type()`` path.
+    Uses the detailed error formatters for multiple, incomplete, or missing
+    credentials.
     """
     if isinstance(error, MultipleControllersFound):
         return _format_multiple_credentials_error(error.controllers)
@@ -679,85 +657,6 @@ def get_connection_params(
     return values
 
 
-def detect_controller_type() -> ControllerTypeKey:
-    """Detect the controller type based on environment variables.
-
-    .. deprecated::
-        This function is retained for backwards compatibility with external
-        packages (e.g., ``nac-test-pyats-common``) that have not yet migrated
-        to :func:`resolve_controller`. New code should use ``resolve_controller()``
-        directly and handle :class:`ResolutionError` subtypes. This function
-        will be removed once all consumers have migrated.
-
-    This function examines environment variables to determine which network controller
-    architecture is being targeted. It ensures exactly one controller type has credentials
-    configured to prevent ambiguous test contexts.
-
-    Controller credentials are required for ALL test types:
-    - API tests: Use credentials directly for controller authentication
-    - D2D tests: Use controller type to determine device resolution logic
-
-    Returns:
-        The detected controller type (e.g., "ACI", "SDWAN", "CC", "MERAKI", "FMC", "ISE").
-
-    Raises:
-        ValueError: If no controller credentials are found, multiple controllers are
-            configured, or credentials are incomplete.
-
-    Example:
-        >>> os.environ.update({"ACI_URL": "https://apic.local",
-        ...                    "ACI_USERNAME": "admin",
-        ...                    "ACI_PASSWORD": "pass"})
-        >>> controller = detect_controller_type()
-        >>> print(controller)
-        "ACI"
-
-    Note:
-        This function delegates to :func:`resolve_controller` and converts typed
-        exceptions to ``ValueError`` for backwards compatibility with existing callers.
-    """
-    warnings.warn(
-        "detect_controller_type() is deprecated; use resolve_controller() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    try:
-        ctx = resolve_controller()
-        return ctx.controller_type
-    except ResolutionError as e:
-        raise ValueError(format_resolution_error(e)) from e
-
-
-def get_matched_credential_set(controller_type: str) -> CredentialSet | None:
-    """Get the credential set that was matched during controller detection.
-
-    .. deprecated::
-        This function is a transitional API for ``nac-test-pyats-common`` auth
-        adapters. It will be removed in Phase 3 once auth adapters migrate to
-        using ``get_controller_context().auth_method`` directly. New code should
-        not use this function.
-
-    Returns the CredentialSet that satisfied detection for the given controller
-    type. This is populated by detect_controller_type() / resolve_controller()
-    and is intended for use by auth adapters in nac-test-pyats-common to
-    determine which authentication mechanism to use.
-
-    Args:
-        controller_type: The controller type key (e.g., "SDWAN", "ACI").
-
-    Returns:
-        The matched CredentialSet, or None if detection has not been called
-        or the controller type was not detected.
-    """
-    warnings.warn(
-        "get_matched_credential_set() is deprecated; use "
-        "get_controller_context().auth_method instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return _matched_credential_sets.get(controller_type)
-
-
 def _find_credential_sets() -> tuple[
     dict[ControllerTypeKey, CredentialSet],
     list[ControllerTypeKey],
@@ -802,23 +701,6 @@ def _find_credential_sets() -> tuple[
             partial.append(ct_key)
 
     return complete, partial
-
-
-def _infer_auth_method(controller_type: str) -> AuthMethod:
-    """Infer auth_method by scanning env vars for a controller type.
-
-    Used only in the transitional fallback path of
-    ``get_controller_context()`` when ``NAC_TEST_CONTROLLER_CONTEXT``
-    is absent.  Mirrors the logic of ``_find_credential_sets()`` but
-    returns only the auth_method string.
-    """
-    config = CONTROLLER_REGISTRY.get(controller_type)
-    if config is None:
-        return AuthMethod.SESSION
-    for cred_set in config.credential_sets:
-        if all(is_env_var_set(v) for v in cred_set.env_vars):
-            return cred_set.auth_method
-    return AuthMethod.SESSION
 
 
 def _format_incomplete_credentials_error(partial_controllers: Sequence[str]) -> str:
