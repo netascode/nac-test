@@ -30,6 +30,7 @@ from nac_test.core.constants import (
 )
 from nac_test.data_merger import DataMerger
 from nac_test.utils.cleanup import get_cleanup_manager
+from nac_test.utils.fork_guard import serialize_forks
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import (
     DEFAULT_LOGLEVEL,
@@ -353,6 +354,10 @@ def main(
     configure_logging(effective_loglevel)
 
     check_and_exit_if_unsupported_macos_python()
+
+    # The connection broker opens device connections on parallel threads;
+    # see fork_guard for why their forkpty calls must not overlap.
+    serialize_forks()
 
     # Validate development flag combinations
     if pyats and robot:

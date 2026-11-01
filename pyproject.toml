@@ -52,6 +52,7 @@ dependencies = [
     "aiofiles>=23.2.1",  # radkit-client still uses <24.0, so relax to avoid conflicts
     "colorama>=0.4.6",
     "markdown>=3.10.2",
+    "filelock>=3.25.2",
     "lxml>=6.1.0",
 ]
 
