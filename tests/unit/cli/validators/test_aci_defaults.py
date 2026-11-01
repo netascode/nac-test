@@ -24,12 +24,12 @@ class TestValidateAciDefaults:
     mistake of forgetting to include -d ./defaults/ in the command.
     """
 
-    def test_returns_true_when_not_aci_environment(
-        self, monkeypatch: MonkeyPatch
-    ) -> None:
-        """Non-ACI environment always passes the validation check."""
-        monkeypatch.delenv("ACI_URL", raising=False)
+    def test_returns_true_when_not_aci_environment(self) -> None:
+        """Non-ACI environment always passes the validation check.
 
+        Relies on the global autouse ``clean_controller_env`` fixture in
+        ``tests/conftest.py`` ensuring ACI_URL is unset.
+        """
         result = validate_aci_defaults([Path("./data")])
 
         assert result is True
