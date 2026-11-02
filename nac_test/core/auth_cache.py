@@ -186,7 +186,7 @@ class AuthCache:
             auth_func=auth_func,
             extract_token=False,
         )
-        # Type narrowing for mypy - we know it's a dict when extract_token=False
+        # Type narrowing for the type checker - we know it's a dict when extract_token=False
         assert isinstance(result, dict)
         return result
 
@@ -219,6 +219,6 @@ class AuthCache:
             auth_func=wrapped_auth_func,
             extract_token=True,
         )
-        # Type narrowing for mypy - we know it's a str when extract_token=True
+        # Type narrowing for the type checker - we know it's a str when extract_token=True
         assert isinstance(result, str)
         return result

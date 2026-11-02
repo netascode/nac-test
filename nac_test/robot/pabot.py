@@ -113,6 +113,6 @@ def run_pabot(
 
     args = pabot_args + robot_args + [str(abs_path)]
     logger.info("Running pabot with args: %s", " ".join(args))
-    exit_code: int = pabot.pabot.main_program(args)
+    exit_code = int(pabot.pabot.main_program(args))
     logger.info(f"Pabot execution completed with exit code {exit_code}")
     return exit_code

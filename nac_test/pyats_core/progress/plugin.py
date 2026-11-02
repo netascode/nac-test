@@ -48,6 +48,8 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
     global uniqueness across parallel workers.
     """
 
+    worker_id: str
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         # Get worker ID from environment or runtime
@@ -155,7 +157,7 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
             test_name = self._get_test_name(task.testscript)
 
             # Extract TITLE from the test file using AST parsing
-            title = None
+            title: str | None = None
             try:
                 with open(task.testscript, encoding="utf-8") as f:
                     tree = ast.parse(f.read())
@@ -164,13 +166,9 @@ class ProgressReporterPlugin(BasePlugin):  # type: ignore[misc]
                     if isinstance(node, ast.Assign):
                         for target in node.targets:
                             if isinstance(target, ast.Name) and target.id == "TITLE":
-                                if isinstance(node.value, ast.Str):  # Python < 3.8
-                                    title = node.value.s
-                                elif isinstance(
-                                    node.value, ast.Constant
-                                ) and isinstance(
+                                if isinstance(node.value, ast.Constant) and isinstance(
                                     node.value.value, str
-                                ):  # Python >= 3.8
+                                ):
                                     title = node.value.value
                                 break
                         if title:

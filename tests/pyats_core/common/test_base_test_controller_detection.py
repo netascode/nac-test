@@ -41,7 +41,7 @@ class TestBaseTestControllerDetection:
         resolve_and_inject_context(monkeypatch)
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -73,7 +73,7 @@ class TestBaseTestControllerDetection:
         resolve_and_inject_context(monkeypatch)
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -101,7 +101,7 @@ class TestBaseTestControllerDetection:
         """
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -126,7 +126,7 @@ class TestBaseTestControllerDetection:
         resolve_and_inject_context(monkeypatch)
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -152,7 +152,7 @@ class TestBaseTestControllerDetection:
         monkeypatch.setenv("SDWAN_API_TOKEN", "test-token-value")
 
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 
@@ -176,7 +176,7 @@ class TestBaseTestSetupErrorLogging:
 
     def _make_test_instance(self) -> "NACTestBase":
         class TestClass(NACTestBase):
-            @aetest.test  # type: ignore[misc]
+            @aetest.test  # ty: ignore[dynamic-function-decorator-return]
             def test_method(self) -> None:
                 pass
 

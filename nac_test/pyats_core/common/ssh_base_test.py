@@ -30,7 +30,7 @@ class SSHTestBase(NACTestBase):
     #TODO: Move this to its own thing to better adhere for SRP. Hustling the MVP.
     """
 
-    # Instance variables set during setup (type annotations for mypy)
+    # Instance variables set during setup (type annotations for the type checker)
     # Optional attributes (may be None before setup completes or if setup fails)
     connection: BrokerCommandExecutor | Any | None = (
         None  # BrokerCommandExecutor or testbed device
@@ -85,7 +85,7 @@ class SSHTestBase(NACTestBase):
                 return self.testbed.devices[self.hostname]
         return None
 
-    @aetest.setup  # type: ignore[misc]
+    @aetest.setup  # type: ignore[misc]  # ty: ignore[dynamic-function-decorator-return]
     def setup(self) -> None:
         """
         Combined setup that calls parent setup then sets up SSH context.
@@ -348,13 +348,15 @@ class SSHTestBase(NACTestBase):
             command_cache.set(cmd, output)
             return output
 
-        self.testbed_device.execute = broker_execute  # type: ignore[union-attr]
+        # testbed_device is guaranteed non-None in broker mode (checked by the caller)
+        device: Any = self.testbed_device
+        device.execute = broker_execute
         # Mark device as "connected" so Genie's parse() will use device.execute()
         # instead of requiring pre-fetched output. The actual connection is managed
         # by the broker, but Genie checks device.connected before executing.
-        self.testbed_device.connected = True  # type: ignore[union-attr]
+        device.connected = True
         # Also patch connectionmgr.is_connected since Genie may check that
-        self.testbed_device.connectionmgr.is_connected = lambda *args, **kwargs: True  # type: ignore[union-attr]
+        device.connectionmgr.is_connected = lambda *args, **kwargs: True
 
         # Genie's _get_parser_output accesses device.cli as a connection handle
         # that has an execute() method. Create a thin shim that delegates to our
@@ -377,7 +379,7 @@ class SSHTestBase(NACTestBase):
                     f"only 'execute' is supported in broker mode."
                 )
 
-        self.testbed_device.cli = _BrokerCliShim()  # type: ignore[union-attr]
+        device.cli = _BrokerCliShim()
         self.logger.debug(
             f"Patched testbed_device.execute for {hostname} to route through broker"
         )
@@ -469,11 +471,12 @@ class SSHTestBase(NACTestBase):
         try:
             # Get device name from device info
             _fallback = "Unknown Device"
-            device_name: str = (
+            device_name = cast(
+                str,
                 self.device_info.get(
                     "hostname", self.device_info.get("host", _fallback)
                 )
-                or _fallback
+                or _fallback,
             )
 
             # Get current test context if available (set by base class methods)

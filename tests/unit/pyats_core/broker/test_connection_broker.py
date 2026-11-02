@@ -468,14 +468,13 @@ class TestExecuteCommandRetry:
             observed.append(broker._device_locks[hostname].locked())
             return MagicMock()
 
-        broker._get_connection = _spy  # type: ignore[method-assign]
-
-        _run_execute(
-            broker,
-            "router-1",
-            "show version",
-            [UniconConnectionError("socket closed"), "live output"],
-        )
+        with patch.object(broker, "_get_connection", _spy):
+            _run_execute(
+                broker,
+                "router-1",
+                "show version",
+                [UniconConnectionError("socket closed"), "live output"],
+            )
 
         assert observed == [True, True]
 

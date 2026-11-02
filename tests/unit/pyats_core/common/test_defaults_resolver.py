@@ -491,7 +491,7 @@ class TestGetDefaultValueErrorHandling:
         """
         with pytest.raises(ValueError, match="Required default value not found"):
             resolve_default_value(
-                None,  # type: ignore[arg-type]
+                None,  # ty: ignore[invalid-argument-type]
                 "some.path",
                 defaults_prefix="defaults.apic",
             )

@@ -135,7 +135,7 @@ class SubprocessRunner:
             cmd.extend(["--testbed-file", str(testbed_file_path)])
 
         # Unreachable in practice: _create_config_files() always sets these in __init__,
-        # or raises before __init__ completes. Guard exists for mypy type narrowing only.
+        # or raises before __init__ completes. Guard exists for type checker narrowing only.
         if (
             self._plugin_config_file is None or self._pyats_config_file is None
         ):  # pragma: no cover
@@ -170,7 +170,7 @@ class SubprocessRunner:
             cmd.append("--quiet")
         elif self.loglevel == LogLevel.ERROR:
             cmd.extend(["--quiet", "--quiet"])
-        elif self.loglevel == LogLevel.CRITICAL:
+        else:  # LogLevel.CRITICAL
             cmd.extend(["--quiet", "--quiet", "--quiet"])
         return cmd
 
@@ -214,7 +214,7 @@ class SubprocessRunner:
 
             # Process output in real-time if we have a handler
             return_code: int | None
-            if self.output_handler is not None and process.stdout is not None:
+            if process.stdout is not None:
                 return_code = await self._process_output_realtime(process)
             else:
                 await process.communicate()
@@ -293,7 +293,7 @@ class SubprocessRunner:
                         f"PyATS job completed with test failures (return code: {return_code})"
                     )
                     # Return code 1 is normal when tests fail - archive is still valid
-                elif return_code is not None:
+                else:
                     logger.error(f"PyATS job failed with return code: {return_code}")
                     return None
 

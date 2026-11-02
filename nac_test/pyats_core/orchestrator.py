@@ -397,7 +397,7 @@ class PyATSOrchestrator:
                 self.custom_testbed_path,
             )
 
-        # Use a local narrowed variable to satisfy mypy
+        # Use a local narrowed variable for the type checker
         device_executor = self.device_executor
         assert device_executor is not None
 
@@ -680,7 +680,7 @@ class PyATSOrchestrator:
         # handling in run_device_job_with_semaphore() captures these failures. By clearing
         # here, we discard DeviceExecutor's buggy success tracking while the error case
         # is still logged.
-        if self.test_status is not None and self.test_status:
+        if self.test_status:
             self.api_test_status.clear()
             self.d2d_test_status.clear()
 

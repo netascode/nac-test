@@ -164,7 +164,7 @@ cd /path/to/nac-test-pyats-common
 uv pip install -e ".[dev]"
 ```
 
-The `[dev]` extra includes `pytest`, `ruff`, `mypy`, `bandit`, and test coverage tools.
+The `[dev]` extra includes `pytest`, `ruff`, `ty`, `bandit`, and test coverage tools.
 
 ### Install from Architecture Repository
 

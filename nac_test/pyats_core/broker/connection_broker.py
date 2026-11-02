@@ -15,7 +15,7 @@ import json
 import logging
 import os
 import tempfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -572,7 +572,7 @@ class ConnectionBroker:
         logger.info("Connection broker shutdown complete")
 
     @asynccontextmanager
-    async def run_context(self) -> AsyncIterator["ConnectionBroker"]:
+    async def run_context(self) -> AsyncGenerator["ConnectionBroker", None]:
         """Context manager for running the broker."""
         try:
             await self.start()
