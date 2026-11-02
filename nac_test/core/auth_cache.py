@@ -30,13 +30,28 @@ def _file_lock(lock_file: Path) -> Iterator[None]:
     module is still imported (Robot-only runs) but the auth cache is never used.
     """
     import fcntl
+    import os
 
-    with open(lock_file, "w") as lock:
-        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+    # O_NOFOLLOW and no O_TRUNC: the lock path is predictable and lives in a shared
+    # temp dir, so never follow a planted symlink or truncate its target.
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+    while True:
+        fd = os.open(lock_file, flags, 0o600)
         try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            # invalidate() unlinks the lock file. If it was replaced while we were
+            # blocked, we hold a stale inode and must retry on the current one.
+            try:
+                current = os.stat(lock_file)
+            except FileNotFoundError:
+                continue
+            held = os.fstat(fd)
+            if (held.st_dev, held.st_ino) != (current.st_dev, current.st_ino):
+                continue
             yield
+            return
         finally:
-            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+            os.close(fd)  # also releases the flock
 
 
 class AuthCache:

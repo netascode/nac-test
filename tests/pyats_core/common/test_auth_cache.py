@@ -15,6 +15,10 @@ authentication caching for parallel processes. The tests cover:
 
 import json
 import logging
+import os
+import subprocess
+import sys
+import threading
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -22,7 +26,7 @@ from unittest.mock import Mock
 import pytest
 from pytest_mock import MockerFixture
 
-from nac_test.core.auth_cache import AuthCache
+from nac_test.core.auth_cache import AuthCache, _file_lock
 
 
 @pytest.fixture
@@ -1156,3 +1160,84 @@ class TestAuthCacheInvalidate:
 
         # The cache file still exists because we couldn't acquire the lock
         assert cache_file.exists()
+
+
+class TestFileLock:
+    """Tests for the real (unmocked) _file_lock helper."""
+
+    def test_second_acquirer_blocks_until_release(self, tmp_path: Path) -> None:
+        lock_path = tmp_path / "x.lock"
+        acquired = threading.Event()
+
+        def contender() -> None:
+            with _file_lock(lock_path):
+                acquired.set()
+
+        with _file_lock(lock_path):
+            t = threading.Thread(target=contender)
+            t.start()
+            assert not acquired.wait(0.3)
+        t.join(timeout=5)
+        assert acquired.is_set()
+
+    def test_lock_released_when_body_raises(self, tmp_path: Path) -> None:
+        lock_path = tmp_path / "x.lock"
+        try:
+            with _file_lock(lock_path):
+                raise RuntimeError("boom")
+        except RuntimeError:
+            pass
+        acquired = threading.Event()
+
+        def contender() -> None:
+            with _file_lock(lock_path):
+                acquired.set()
+
+        t = threading.Thread(target=contender)
+        t.start()
+        t.join(timeout=5)
+        assert acquired.is_set()
+
+    def test_does_not_follow_symlink_or_truncate(self, tmp_path: Path) -> None:
+        target = tmp_path / "victim.txt"
+        target.write_text("precious")
+        lock_path = tmp_path / "x.lock"
+        lock_path.symlink_to(target)
+        with pytest.raises(OSError):
+            with _file_lock(lock_path):
+                pass
+        assert target.read_text() == "precious"
+
+    def test_retries_when_lock_file_replaced(self, tmp_path: Path) -> None:
+        """A waiter on an unlinked inode must not enter the critical section."""
+        lock_path = tmp_path / "x.lock"
+        entered = threading.Event()
+
+        def waiter() -> None:
+            with _file_lock(lock_path):
+                entered.set()
+
+        with _file_lock(lock_path):
+            t = threading.Thread(target=waiter)
+            t.start()
+            assert not entered.wait(0.3)
+            # Simulate invalidate(): unlink while the waiter is blocked on the old inode
+            lock_path.unlink()
+        t.join(timeout=5)
+        assert entered.is_set()
+        assert lock_path.exists()
+
+
+def test_filelock_not_imported_by_runtime_modules() -> None:
+    """filelock installs a fork audit hook on import and must stay out of the process."""
+    code = (
+        "import sys\n"
+        "import nac_test.cli.main\n"
+        "import nac_test.pyats_core.broker.connection_broker\n"
+        "import nac_test.core.auth_cache\n"
+        "assert 'filelock' not in sys.modules, 'filelock was imported'\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, env=os.environ
+    )
+    assert result.returncode == 0, result.stderr
