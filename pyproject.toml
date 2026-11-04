@@ -1,10 +1,10 @@
 [project]
 name = "nac-test"
-version = "2.1.0b2"
+version = "2.1.0b3"
 description = "A CLI tool to render to execute Robot Framework (RF) and PyATS tests for Network as Code (NAC)."
 license = { text = "MPL-2.0" }
 readme = "README.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.11,<3.15"
 authors = [
     { name = "Daniel Schmidt", email = "danischm@cisco.com" },
     { name = "Andrea Testino", email = "atestini@cisco.com" },
@@ -22,7 +22,6 @@ classifiers = [
     "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -33,7 +32,7 @@ dependencies = [
     "jmespath>=1.0.1",
     "nac-artifacts>=0.1.0",
     "nac-test-pyats-common>=0.4.0b2",
-    "nac-yaml>=2.0.0",
+    "nac-yaml>=2.1.0",
     "robotframework>=7.4.2",
     "robotframework-jmespath",
     "robotframework-jsonlibrary>=0.5",
@@ -42,7 +41,7 @@ dependencies = [
     "robotframework-requests>=0.9.7",
     "ruamel.yaml>=0.18.15",
     "ruamel.yaml.clib>=0.2.12; platform_python_implementation == 'CPython'",
-    "typer>=0.17.4",
+    "typer>=0.27.3",
     "scrapli-netconf>=2026.1.12",
     "scrapli<2026.10.0",  # scrapli 2026.10+ (v2) removed AsyncDriver needed by scrapli-netconf and dropped Windows support
     "asyncssh>=2.22.0",
@@ -54,7 +53,6 @@ dependencies = [
     "aiofiles>=23.2.1",  # radkit-client still uses <24.0, so relax to avoid conflicts
     "colorama>=0.4.6",
     "markdown>=3.10.2",
-    "typing_extensions>=4.0; python_version < '3.11'",
     "filelock>=3.25.2",
     "lxml>=6.1.0",
 ]
@@ -69,18 +67,20 @@ nac-test = "nac_test.cli.main:app"
 
 [project.optional-dependencies]
 dev = [
-    "ansible-core>=2.17.6",
+    "ansible-core>=2.17.6; sys_platform != 'win32' and python_version < '3.12'",
+    "ansible-core>=2.20.0; sys_platform != 'win32' and python_version >= '3.12'",
     "bandit[toml]>=1.9.4",
     "flask>=3.1.3",
-    "mypy>=1.17.1",
-    "pre-commit>=4.6.0",
-    "pytest>=9.0.3",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
     "pytest-cov~=7.1",
     "pytest-httpserver>=1.1.5",
-    "pytest-mock>=3.15.1",
+    "pytest-mock>=3.17.0",
     "pytest-xdist>=3.8.0",  # Parallel test execution
-    "ruff>=0.15.10",
+    "ruff>=0.17.2",
+    "ty>=0.0.92",
     "types-aiofiles>=25.1.0.20260409",
+    "types-colorama>=0.4.15.20260508",
     "types-markdown>=3.10.2.20260408",
     "types-pyyaml>=6.0.12.20250822",
     "types-requests>=2.33.0.20260408",
@@ -104,7 +104,7 @@ exclude_lines = ["pragma: no cover", "@abstract", "except ImportError:"]
 omit = ["*/__main__.py"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 88
 extend-exclude = ["tests/fixtures/", "tests/integration/fixtures/", "tests/e2e/fixtures/"]
 
@@ -120,7 +120,7 @@ select = [
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)
-    "UP038",  # Use `X | Y` in `isinstance` call instead of `(X, Y)`
+    "UP042",  # Keep `(str, Enum)` instead of `StrEnum` (StrEnum changes str() output)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -133,6 +133,7 @@ known-first-party = ["nac_test"]
 [tool.bandit]
 exclude_dirs = ["tests"]
 # B101: assert used for type narrowing
+# B105: hardcoded password string (false positives on env var names and "PASS" test status)
 # B108: hardcoded tmp directory (expected for temp files)
 # B110: try/except/pass (expected for best-effort cleanup)
 # B311: random used for jitter, not security
@@ -140,26 +141,29 @@ exclude_dirs = ["tests"]
 # B403: pickle needed for serialization
 # B404: subprocess needed for test execution
 # B701: jinja2 without autoescape (not generating HTML)
-skips = ["B101", "B108", "B110", "B311", "B324", "B403", "B404", "B701"]
+skips = ["B101", "B105", "B108", "B110", "B311", "B324", "B403", "B404", "B701"]
 
-[tool.mypy]
-check_untyped_defs = true
-disallow_any_generics = true
-disallow_incomplete_defs = true
-disallow_untyped_calls = true
-disallow_untyped_decorators = false
-disallow_untyped_defs = true
-ignore_errors = false
-ignore_missing_imports = true
-python_version = "3.10"
-strict_optional = true
-warn_redundant_casts = true
-warn_return_any = true
-warn_unused_configs = true
-warn_unused_ignores = false
-warn_unreachable = true
-show_error_context = true
-exclude = ["^tests/fixtures/", "^tests/integration/fixtures/", "^tests/e2e/fixtures/"]
+[tool.ty.environment]
+python-version = "3.11"
+
+[tool.ty.analysis]
+# Compiled (Cython) modules without Python sources or stubs
+allowed-unresolved-imports = [
+    "lxml.etree",
+    "pyats.aetest.steps.implementation",
+    "pyats.easypy.plugins.bases",
+    "unicon.core.errors",
+]
+
+[tool.ty.src]
+exclude = ["tests/fixtures/", "tests/integration/fixtures/", "tests/e2e/fixtures/"]
+
+[tool.ty.rules]
+"all" = "error"
+# typing.override requires Python 3.12
+"missing-override-decorator" = "ignore"
+# `if x:` on optional values is intentional; None and empty are handled alike
+"truthiness-test-of-none-union" = "ignore"
 
 [tool.pytest.ini_options]
 markers = ["unit", "integration", "e2e", "windows"]

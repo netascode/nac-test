@@ -12,13 +12,14 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 # Ensure we can import mock_server from the same directory
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mock_server import (
+from mock_server import (  # ty: ignore[unresolved-import]
     SERVER_POLL_INTERVAL_SECONDS,
     SERVER_STARTUP_TIMEOUT_SECONDS,
     MockAPIServer,
@@ -34,7 +35,7 @@ def read_state() -> dict[str, int | str] | None:
     if not STATE_FILE.exists():
         return None
     try:
-        data: dict[str, int | str] = json.loads(STATE_FILE.read_text())
+        data = cast(dict[str, int | str], json.loads(STATE_FILE.read_text()))
         return data
     except (json.JSONDecodeError, OSError):
         return None
@@ -45,7 +46,7 @@ def write_state(pid: int, port: int) -> None:
     state = {
         "pid": pid,
         "port": port,
-        "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": datetime.now(UTC).isoformat(),
     }
     STATE_FILE.write_text(json.dumps(state, indent=2))
 

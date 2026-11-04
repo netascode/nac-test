@@ -31,7 +31,7 @@ class TestGetPositiveNumericEnv:
         self,
         monkeypatch: pytest.MonkeyPatch,
         env_value: str | None,
-        value_type: type,
+        value_type: type[int] | type[float],
         default: int | float,
         expected: int | float,
     ) -> None:

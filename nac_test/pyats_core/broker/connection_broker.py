@@ -15,7 +15,7 @@ import json
 import logging
 import os
 import tempfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -534,7 +534,7 @@ class ConnectionBroker:
                     self._disconnect_device(hostname),
                     timeout=BROKER_SHUTDOWN_DEVICE_TIMEOUT,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     f"Timed out waiting for device lock on {hostname} during shutdown"
                 )
@@ -572,7 +572,7 @@ class ConnectionBroker:
         logger.info("Connection broker shutdown complete")
 
     @asynccontextmanager
-    async def run_context(self) -> AsyncIterator["ConnectionBroker"]:
+    async def run_context(self) -> AsyncGenerator["ConnectionBroker", None]:
         """Context manager for running the broker."""
         try:
             await self.start()

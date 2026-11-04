@@ -9,7 +9,7 @@ including connection pooling, resource limits, and per-device locking.
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
@@ -256,7 +256,7 @@ class DeviceConnectionManager:
             True if connection is healthy, False otherwise
         """
         try:
-            return conn.connected and hasattr(conn, "spawn") and conn.spawn
+            return bool(conn.connected and hasattr(conn, "spawn") and conn.spawn)
         except Exception:
             return False
 
@@ -432,7 +432,7 @@ class DeviceConnectionManager:
     @asynccontextmanager
     async def device_connection(
         self, hostname: str, device_info: dict[str, Any]
-    ) -> AsyncIterator["Connection"]:
+    ) -> AsyncGenerator["Connection", None]:
         """Context manager for device connections with automatic cleanup.
 
         Args:

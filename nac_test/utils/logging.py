@@ -11,7 +11,7 @@ _VALID_STREAMS = ("stdout", "stderr")
 StreamName = Literal["stdout", "stderr"]
 
 
-class CurrentStreamHandler(logging.StreamHandler):  # type: ignore[type-arg]
+class CurrentStreamHandler(logging.StreamHandler[TextIO]):
     """StreamHandler that always uses the current sys.stdout/stderr.
 
     This prevents 'I/O operation on closed file' errors when sys.stdout
@@ -56,22 +56,21 @@ class LogLevel(str, Enum):
 
     def __int__(self) -> int:
         """Return Python logging integer value (e.g., 10 for DEBUG, 20 for INFO)."""
-        level: int = logging.getLevelName(self.value)
-        return level
+        return logging.getLevelNamesMapping()[self.value]
 
-    def __le__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+    def __le__(self, other: str) -> bool:
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
         return int(self) <= int(other)
 
-    def __lt__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+    def __lt__(self, other: str) -> bool:
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
         return int(self) < int(other)
 
-    def __ge__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+    def __ge__(self, other: str) -> bool:
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
         return int(self) >= int(other)
 
-    def __gt__(self, other: "LogLevel") -> bool:  # type: ignore[override]
+    def __gt__(self, other: str) -> bool:
         """Compare log levels: DEBUG < INFO < WARNING < ERROR < CRITICAL."""
         return int(self) > int(other)
 

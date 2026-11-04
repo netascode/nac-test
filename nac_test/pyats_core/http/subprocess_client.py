@@ -38,7 +38,7 @@ import stat
 import sys
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -183,7 +183,7 @@ class SubprocessResponse:
             raise httpx.HTTPStatusError(
                 f"HTTP {self.status_code} error for URL: {self.url}",
                 request=request,
-                response=self,  # type: ignore[arg-type]
+                response=cast(httpx.Response, self),
             )
 
 

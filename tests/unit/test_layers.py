@@ -29,6 +29,7 @@ from nac_artifacts.testing import (
 
 from nac_test.layers import (
     AssetLayer,
+    Origin,
     directories,
     extension_tiers,
     resolve_layers,
@@ -180,9 +181,9 @@ class TestDirectories:
     """Tests for collecting one kind of directory from the layers."""
 
     @staticmethod
-    def layer(origin: str, templates: str | None, filters: str | None) -> AssetLayer:
+    def layer(origin: Origin, templates: str | None, filters: str | None) -> AssetLayer:
         return AssetLayer(
-            origin=origin,  # type: ignore[arg-type]
+            origin=origin,
             templates=Path(templates) if templates else None,
             filters=Path(filters) if filters else None,
             jinja_tests=None,

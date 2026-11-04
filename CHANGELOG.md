@@ -1,5 +1,10 @@
 # Unreleased
 
+## Breaking Changes
+
+- python: dropped support for Python 3.10 (end-of-life). Python 3.11 is now the minimum supported version.
+- controller: removed `nac_test.utils.controller` (`detect_controller_type`, `get_matched_credential_set`), the `nac_test.pyats_core.common.auth_cache` re-export (use `nac_test.core.auth_cache`) and the transitional fallback in `get_controller_context()`. Use `nac_test.core.controller.resolve_controller()`; the orchestrator now publishes the resolved context via `NAC_TEST_CONTROLLER_CONTEXT`, which `get_controller_context()` requires.
+
 ## Features
 
 - artifacts: templates, Jinja filters and Jinja tests can now also come from a bundle dropped into `.nac/` (any `.zip`, `.tar.gz` or `.tgz` file, or `bundle/`) and from the `nac/tests/{templates,jinja_filters,jinja_tests}` directories of an installed Terraform/OpenTofu module, discovered through `nac-artifacts`. Local `-t`/`-f`/`--tests` take priority over the bundle, which takes priority over the module. Templates are replaced by relative path (several directories are merged into `<output>/merged_templates/`), filters and Jinja tests by their declared name. A single templates directory is used in place, so existing setups behave as before.
@@ -18,6 +23,8 @@
 ## Bug Fixes
 
 - jinja filters/tests: two files in the same directory declaring the same filter or test name now raise an error instead of one silently replacing the other depending on directory listing order. Files are loaded in sorted order.
+- controller URLs: embedded credentials (userinfo) and trailing slashes are stripped from URLs shown in auth-failure banners, the HTML report (`controller_url`, curl and ping hints) and the pre-flight log. Passwords containing unencoded `/`, `?` or `#` are covered, and `extract_host()` no longer returns the port or userinfo for schemeless URLs. The `AuthCache` invalidation log line no longer prints the raw URL.
+- dependencies: update nac-yaml to 2.1.0: `!vault` values are now decrypted with the password from `ANSIBLE_VAULT_PASSWORD`.
 - dependencies: pin `scrapli<2026.10.0` to prevent breaking changes and installation failures introduced in scrapli 2026.10+ (#965).
 - pyats broker: unified per-device locking to prevent a stale caller from tearing down a successor's connection during the reconnect-and-retry window. The execute and disconnect paths previously used separate locks over two halves of one critical section.
 - pyats: register `FTDTestBase` in `BASE_CLASS_MAPPING` so that `--include`/`--exclude` tag filtering works for FTD tests. Previously, FTD tests silently fell through to directory-based detection which drops group tags.

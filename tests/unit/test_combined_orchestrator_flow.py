@@ -13,6 +13,7 @@ These tests verify the orchestration flow using mocks to ensure:
 import os
 from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -1116,7 +1117,7 @@ class TestDiscoverTestTypesExclusions:
     """Filter and Jinja test directories are excluded from PyATS discovery."""
 
     @staticmethod
-    def build(tmp_path: Path, **kwargs: object) -> CombinedOrchestrator:
+    def build(tmp_path: Path, **kwargs: Any) -> CombinedOrchestrator:
         templates_dir = tmp_path / "templates"
         (templates_dir / "filters").mkdir(parents=True)
         (templates_dir / "jinja_tests").mkdir()
@@ -1129,7 +1130,7 @@ class TestDiscoverTestTypesExclusions:
             data_paths=[data_dir],
             templates_dir=templates_dir,
             output_dir=tmp_path / "out",
-            **kwargs,  # type: ignore[arg-type]
+            **kwargs,
         )
 
     def test_without_exclusions_the_files_count_as_pyats_tests(

@@ -75,8 +75,8 @@ def _get_pabot_option_names() -> frozenset[str]:
     dict; its keys are the canonical option names.
     """
     if _pabot_parse_args is None:
-        return frozenset()
-    return frozenset(_pabot_parse_args([_DUMMY_DATASOURCE])[2].keys())
+        return frozenset[str]()
+    return frozenset[str](_pabot_parse_args([_DUMMY_DATASOURCE])[2].keys())
 
 
 def _raise_if_controlled_robot_options(extra_args: list[str]) -> None:

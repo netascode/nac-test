@@ -397,12 +397,10 @@ def extract_view_details_links(html_content: str) -> list[str]:
     # Pattern to match: <a href="..." class="view-btn">...View Details...</a>
     # Also handles class before href: <a class="view-btn" href="...">
     pattern = r'<a\s+(?:[^>]*?\s+)?href="([^"]+)"[^>]*class="view-btn"[^>]*>|<a\s+(?:[^>]*?\s+)?class="view-btn"[^>]*href="([^"]+)"[^>]*>'
-    matches = re.findall(pattern, html_content, re.IGNORECASE)
-
-    links = []
-    for match in matches:
-        # match is a tuple of two groups; one will be empty
-        href = match[0] or match[1]
+    links: list[str] = []
+    for match in re.finditer(pattern, html_content, re.IGNORECASE):
+        # One of the two groups matched; the other is None
+        href = match.group(1) or match.group(2) or ""
         # Strip anchor if present (e.g., "log.html#s1-s2" -> "log.html")
         file_path = href.split("#")[0]
         if file_path:

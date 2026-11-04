@@ -110,7 +110,8 @@ def test_cleanup_on_signal(tmp_path: Path, signum: signal.Signals) -> None:
 
     # Wait until the child signals it is ready (handlers installed, file registered).
     try:
-        ready_line = proc.stdout.readline()  # type: ignore[union-attr]
+        assert proc.stdout is not None
+        ready_line = proc.stdout.readline()
         assert ready_line.strip() == "ready", f"Unexpected output: {ready_line!r}"
     except Exception as e:
         proc.kill()

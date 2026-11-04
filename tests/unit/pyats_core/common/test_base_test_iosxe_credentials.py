@@ -16,6 +16,8 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import resolve_and_inject_context
+
 
 @pytest.fixture()
 def temp_data_model_file(
@@ -44,44 +46,34 @@ class TestIOSXEOptionalCredentials:
         iosxe_controller_env: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """setup() should fail for IOSXE without USERNAME/PASSWORD.
+        """setup() raises when the context is valid but IOSXE credentials are gone.
 
-        IOSXE now requires IOSXE_USERNAME and IOSXE_PASSWORD in addition to
-        IOSXE_URL (or IOSXE_HOST). Detection should report incomplete credentials.
+        IOSXE requires IOSXE_USERNAME and IOSXE_PASSWORD in addition to
+        IOSXE_URL (or IOSXE_HOST). The orchestrator resolved the controller,
+        so a failure in get_connection_params() is a real misconfiguration.
         """
-        # Remove USERNAME and PASSWORD to simulate incomplete IOSXE environment
-        monkeypatch.delenv("IOSXE_USERNAME", raising=False)
-        monkeypatch.delenv("IOSXE_PASSWORD", raising=False)
-
-        # Verify environment is correct
-        assert "IOSXE_URL" in os.environ
-        assert "IOSXE_USERNAME" not in os.environ
-        assert "IOSXE_PASSWORD" not in os.environ
+        resolve_and_inject_context(monkeypatch)
+        monkeypatch.delenv("IOSXE_USERNAME")
+        monkeypatch.delenv("IOSXE_PASSWORD")
 
         instance = nac_test_base_class.__new__(nac_test_base_class)
-
-        # setup() should fail with incomplete credentials
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="IOSXE_USERNAME"):
             instance.setup()
-
-        error_msg = str(exc_info.value)
-        assert "Incomplete controller credentials detected" in error_msg
-        assert "IOSXE" in error_msg
 
     def test_iosxe_setup_works_with_username_password(
         self,
         nac_test_base_class: Any,
         temp_data_model_file: Path,
         iosxe_controller_env: None,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """setup() should also work if IOSXE USERNAME/PASSWORD are provided.
-
-        While not required, if someone sets them, we should accept them.
-        """
+        """setup() works when IOSXE credentials and context are provided."""
         # Verify all credentials are set
         assert "IOSXE_URL" in os.environ
         assert "IOSXE_USERNAME" in os.environ
         assert "IOSXE_PASSWORD" in os.environ
+
+        resolve_and_inject_context(monkeypatch)
 
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.setup()
@@ -96,6 +88,7 @@ class TestIOSXEOptionalCredentials:
         nac_test_base_class: Any,
         temp_data_model_file: Path,
         aci_controller_env: None,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """setup() should succeed for ACI with all required credentials.
 
@@ -106,6 +99,8 @@ class TestIOSXEOptionalCredentials:
         assert "ACI_URL" in os.environ
         assert "ACI_USERNAME" in os.environ
         assert "ACI_PASSWORD" in os.environ
+
+        resolve_and_inject_context(monkeypatch)
 
         instance = nac_test_base_class.__new__(nac_test_base_class)
         instance.setup()
@@ -122,18 +117,10 @@ class TestIOSXEOptionalCredentials:
         aci_controller_env: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Controller detection should fail for ACI without USERNAME.
-
-        ACI requires all three credentials - detect_controller_type() should
-        raise ValueError for incomplete credentials before setup() reads them.
-        """
-        monkeypatch.delenv("ACI_USERNAME", raising=False)
+        """setup() raises when the context is valid but ACI_USERNAME is gone."""
+        resolve_and_inject_context(monkeypatch)
+        monkeypatch.delenv("ACI_USERNAME")
 
         instance = nac_test_base_class.__new__(nac_test_base_class)
-
-        # setup() should fail during controller detection, not when reading env vars
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="ACI_USERNAME"):
             instance.setup()
-
-        assert "Incomplete controller credentials" in str(exc_info.value)
-        assert "ACI: incomplete credentials" in str(exc_info.value)

@@ -36,9 +36,7 @@ class DataMerger:
         logger.info(
             "Loading yaml files from %s", ", ".join([str(path) for path in data_paths])
         )
-        data = yaml.load_yaml_files(data_paths, typ="safe")
-        # Ensure we always return a dict, even if yaml returns None
-        return data if isinstance(data, dict) else {}
+        return yaml.load_yaml_files(data_paths, typ="safe")
 
     @staticmethod
     def merged_data_path(output_directory: Path) -> Path:

@@ -37,7 +37,7 @@ def test_deploy_template_rendering_via_shim(tmp_path: Path) -> None:
 
         writer = RobotWriter([data_dir], "", "")
         # Intentionally passing str (not Path) — downstream repos do this
-        writer.write(deploy_dir, output_dir)  # type: ignore[arg-type]
+        writer.write(deploy_dir, output_dir)  # ty: ignore[invalid-argument-type]
 
     # Verify the single expected rendered file is valid JSON
     rendered_dir = Path(output_dir)
@@ -69,7 +69,7 @@ def test_robot_render_and_run_via_shim(tmp_path: Path) -> None:
 
         writer = RobotWriter([data_dir], "", "")
         # Intentionally passing str (not Path) — downstream repos do this
-        writer.write(tests_dir, output_dir)  # type: ignore[arg-type]
+        writer.write(tests_dir, output_dir)  # ty: ignore[invalid-argument-type]
         exit_code = nac_test.pabot.run_pabot(output_dir)
 
     assert exit_code == 0, f"pabot returned exit code {exit_code}, expected 0"

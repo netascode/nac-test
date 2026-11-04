@@ -8,7 +8,7 @@ it reports problems, for local options as well as bundles and modules.
 """
 
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
@@ -505,7 +505,7 @@ class TestMultipleBundles:
     """Several bundles are peers: they may split templates, filters and tests."""
 
     @staticmethod
-    def bundle(tmp_path: Path, name: str, files: dict[str, str]) -> Path:
+    def bundle(tmp_path: Path, name: str, files: Mapping[str, str]) -> Path:
         return make_zip(tmp_path / f"{name}.zip", bundle_files(files, name=name))
 
     def test_templates_split_across_bundles_are_merged(
