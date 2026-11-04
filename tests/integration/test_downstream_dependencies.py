@@ -8,8 +8,7 @@ for downstream consumer templates and test suites rather than being directly
 used in nac_test core code.
 
 This module verifies:
-1. scrapli and scrapli-netconf driver imports and instantiation compatibility
-   (Issue #965, used by nac-iosxe UtilsLib.py).
+1. scrapli and scrapli-netconf driver imports and instantiation compatibility.
 """
 
 import pytest
