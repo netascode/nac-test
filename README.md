@@ -26,7 +26,7 @@ $ nac-test --help
 ╭─ Options ────────────────────────────────────────────────────────────────────╮
 │ *  --data              -d   PATH        Path to data YAML files.             │
 │                                         [env var: NAC_TEST_DATA] [required]  │
-│    --templates         -t   DIRECTORY   Path to test templates (optional if │
+│    --templates         -t   DIRECTORY   Path to test templates (optional if  │
 │                                         a module or bundle provides them).   │
 │                                         [env var: NAC_TEST_TEMPLATES]        │
 │ *  --output            -o   DIRECTORY   Path to output directory.            │
@@ -35,12 +35,13 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_FILTERS]          │
 │    --tests                  DIRECTORY   Path to Jinja tests.                 │
 │                                         [env var: NAC_TEST_TESTS]            │
-│    --bundle                 PATH        Artifact bundle (zip, tar.gz or      │
-│                                         directory), repeatable, default:     │
-│                                         the bundles in nac/bundles/          │
+│    --bundle                 PATH        Experimental: artifact bundle (zip,  │
+│                                         tar.gz or directory), repeatable,    │
+│                                         default: the bundles in nac/bundles/ │
 │                                         [env var: NAC_TEST_BUNDLE]           │
-│    --module-dir             DIRECTORY   Module directory with nac/ artifacts,│
-│                                         default: via terraform init          │
+│    --module-dir             DIRECTORY   Experimental: module directory with  │
+│                                         nac/ artifacts, default: via         │
+│                                         terraform init                       │
 │                                         [env var: NAC_TEST_MODULE_DIR]       │
 │    --list-artifacts                     List artifact layers, templates,     │
 │                                         filters and tests, then exit.        │
@@ -80,7 +81,7 @@ $ nac-test --help
 ## How It Works
 
 1. **Data Merging**: All YAML files from `--data` paths are merged into a single data model
-2. **Test Discovery**: The framework discovers both Robot templates (`.robot`, `.j2`) and PyATS tests (`.py`) in the `--templates` directory and in the templates provided by modules and bundles (see [Templates from Modules and Bundles](#templates-from-modules-and-bundles))
+2. **Test Discovery**: The framework discovers both Robot templates (`.robot`, `.j2`) and PyATS tests (`.py`) in the `--templates` directory and in the templates provided by modules and bundles (see [Templates from Modules and Bundles (Experimental)](#templates-from-modules-and-bundles-experimental))
 3. **Robot Rendering**: Jinja templates are rendered using the merged data model
 4. **Test Execution**: Both Robot Framework and PyATS tests execute in parallel
 5. **Report Generation**: HTML reports and artifacts are generated in the `--output` directory
@@ -455,7 +456,9 @@ nac-test -d ./data -t ./tests -o ./output --pyats --max-parallel-devices 10
 
 The `--max-parallel-devices` option sets an upper limit on concurrent SSH connections to prevent overwhelming network devices or exhausting system resources.
 
-## Templates from Modules and Bundles
+## Templates from Modules and Bundles (Experimental)
+
+> **Note:** This feature is experimental and may change in future versions. It is not subject to semantic versioning guarantees.
 
 Templates, Jinja filters and Jinja tests can come from three layers, highest priority first:
 
@@ -495,7 +498,7 @@ Bundles usually contain Python code that nac-test executes (filters, PyATS tests
 
 ## Custom Jinja Filters
 
-Custom Jinja filters can be used by providing a set of Python classes where each filter is implemented as a separate `Filter` class in a `.py` file located in the `--filters` path. The class must have a single attribute named `name`, the filter name, and a `classmethod()` named `filter` which has one or more arguments. The name must be unique within the directory; a filter with the same name in a higher priority layer (see [Templates from Modules and Bundles](#templates-from-modules-and-bundles)) replaces it. A sample filter can be found below.
+Custom Jinja filters can be used by providing a set of Python classes where each filter is implemented as a separate `Filter` class in a `.py` file located in the `--filters` path. The class must have a single attribute named `name`, the filter name, and a `classmethod()` named `filter` which has one or more arguments. The name must be unique within the directory; a filter with the same name in a higher priority layer (see [Templates from Modules and Bundles (Experimental)](#templates-from-modules-and-bundles-experimental)) replaces it. A sample filter can be found below.
 
 ```python
 class Filter:

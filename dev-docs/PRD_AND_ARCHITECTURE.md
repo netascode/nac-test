@@ -18,7 +18,7 @@
    - [Combined Orchestrator](#combined-orchestrator)
    - [PyATS Core](#pyats-core)
    - [Robot Framework Orchestrator](#robot-framework-orchestrator)
-   - [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles)
+   - [Artifact Layers (Experimental)](#artifact-layers-templates-from-modules-and-bundles-experimental)
    - [Reporting System](#reporting-system)
 6. [Test Execution Modes](#test-execution-modes)
    - [API Tests](#api-tests)
@@ -798,7 +798,7 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 - **Environment Variable**: `NAC_TEST_TEMPLATES`
 - **Purpose**: Directory containing Robot Framework `.robot` test templates with Jinja2 syntax
 - **Behavior**:
-  - Highest priority (local) layer of templates; module and bundle templates with the same relative path are replaced (see [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles))
+  - Highest priority (local) layer of templates; module and bundle templates with the same relative path are replaced (see [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles-experimental))
   - nac-test exits with an error if neither `-t` nor any module or bundle provides templates
   - Scanned recursively for `.robot` files
   - Rendered with merged data model as Jinja2 context
@@ -854,11 +854,11 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
   nac-test -d config/ -t templates/ --tests custom_tests/ -o output/
   ```
 
-##### Artifact Layer Flags
+##### Artifact Layer Flags (Experimental)
 
-See [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles) for how these layers are combined.
+See [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles-experimental) for how these layers are combined.
 
-**`--bundle`** (OPTIONAL, repeatable)
+**`--bundle`** (OPTIONAL, repeatable, experimental)
 - **Type**: `list[Path] | None`
 - **Environment Variable**: `NAC_TEST_BUNDLE`
 - **Purpose**: Artifact bundles (`.zip`, `.tar.gz`, `.tgz` or directory) to use instead of the ones found in `nac/bundles/`
@@ -871,7 +871,7 @@ See [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles) for h
   nac-test -d config/ -o output/ --bundle acme-base.zip --bundle acme-extra.zip
   ```
 
-**`--module-dir`** (OPTIONAL)
+**`--module-dir`** (OPTIONAL, experimental)
 - **Type**: `Path | None`
 - **Environment Variable**: `NAC_TEST_MODULE_DIR`
 - **Purpose**: Module directory whose `nac/tests/` to use, instead of the module discovered through `terraform init`
@@ -1349,8 +1349,8 @@ Every CLI flag (except `--version`) supports environment variable configuration 
 | `-o, --output` | `NAC_TEST_OUTPUT` | `Path` | `NAC_TEST_OUTPUT="/artifacts/output"` |
 | `-f, --filters` | `NAC_TEST_FILTERS` | `Path` | `NAC_TEST_FILTERS="/app/filters"` |
 | `--tests` | `NAC_TEST_TESTS` | `Path` | `NAC_TEST_TESTS="/app/custom_tests"` |
-| `--bundle` | `NAC_TEST_BUNDLE` | `list[Path]` | `NAC_TEST_BUNDLE="acme-base.zip:acme-extra.zip"` |
-| `--module-dir` | `NAC_TEST_MODULE_DIR` | `Path` | `NAC_TEST_MODULE_DIR=".terraform/modules/aci"` |
+| `--bundle` (experimental) | `NAC_TEST_BUNDLE` | `list[Path]` | `NAC_TEST_BUNDLE="acme-base.zip:acme-extra.zip"` |
+| `--module-dir` (experimental) | `NAC_TEST_MODULE_DIR` | `Path` | `NAC_TEST_MODULE_DIR=".terraform/modules/aci"` |
 | `-i, --include` | `NAC_TEST_INCLUDE` | `list[str]` | `NAC_TEST_INCLUDE="smoke:regression"` |
 | `-e, --exclude` | `NAC_TEST_EXCLUDE` | `list[str]` | `NAC_TEST_EXCLUDE="wip:experimental"` |
 | `--render-only` | `NAC_TEST_RENDER_ONLY` | `bool` | `NAC_TEST_RENDER_ONLY=1` |
@@ -4141,7 +4141,9 @@ Additional Robot Framework arguments passed via the `--` separator are validated
 
 The `CONTROLLED_ROBOT_OPTIONS` dict maps long options to their short forms and nac-test equivalents for user-friendly error messages.
 
-### Artifact Layers: Templates from Modules and Bundles
+### Artifact Layers: Templates from Modules and Bundles (Experimental)
+
+> **Note:** This feature is experimental and may change in future versions. It is not subject to semantic versioning guarantees.
 
 Test templates, Jinja filters and Jinja tests do not have to live in the user's repository. nac-test also reads them from an installed Terraform/OpenTofu module and from bundles dropped into the project, so a module or a separately distributed bundle can ship its tests. nac-validate uses the same mechanism for schema and rules. Locating modules and bundles, extracting archives and reading `overrides.yaml` is done by [nac-artifacts](https://github.com/netascode/nac-artifacts), which both tools share. nac-test adds the local layer and decides how the layers are combined.
 

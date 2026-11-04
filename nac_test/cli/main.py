@@ -177,7 +177,7 @@ Bundle = Annotated[
         "--bundle",
         exists=False,
         help=(
-            "Path to an artifact bundle (zip, tar.gz or directory), repeatable. "
+            "Experimental: path to an artifact bundle (zip, tar.gz or directory), repeatable. "
             "Defaults to every .zip, .tar.gz or .tgz file and directory in nac/bundles/."
         ),
         envvar="NAC_TEST_BUNDLE",
@@ -193,7 +193,7 @@ ModuleDir = Annotated[
         dir_okay=True,
         file_okay=False,
         help=(
-            "Path to a module directory containing nac/ artifacts. "
+            "Experimental: path to a module directory containing nac/ artifacts. "
             "Defaults to the module discovered via terraform init."
         ),
         envvar="NAC_TEST_MODULE_DIR",
