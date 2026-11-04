@@ -1,9 +1,4 @@
-# Unreleased
-
-## Breaking Changes
-
-- python: dropped support for Python 3.10 (end-of-life). Python 3.11 is now the minimum supported version.
-- controller: removed `nac_test.utils.controller` (`detect_controller_type`, `get_matched_credential_set`), the `nac_test.pyats_core.common.auth_cache` re-export (use `nac_test.core.auth_cache`) and the transitional fallback in `get_controller_context()`. Use `nac_test.core.controller.resolve_controller()`; the orchestrator now publishes the resolved context via `NAC_TEST_CONTROLLER_CONTEXT`, which `get_controller_context()` requires.
+# 2.1.0
 
 ## Features
 
@@ -15,47 +10,33 @@
   - Add `--bundle` (repeatable) and `--module-dir` CLI options (env `NAC_TEST_BUNDLE`, `NAC_TEST_MODULE_DIR`).
   - `overrides.yaml` can disable templates of lower layers (`disable: {templates: [...]}`, relative paths or globs): `nac/overrides.yaml` in the project disables templates of a bundle and the module, a bundle's `overrides.yaml` disables templates of the module. Local templates are never affected. Entries are declarative: one that matches nothing is not an error, and `--list-artifacts` shows disabled templates and entries that matched none.
   - `-t/--templates` is optional when a module or bundle provides templates (with `--artifacts`); nac-test exits with an error if no layer provides any.
-- cli: add `--list-artifacts` to show the layers, effective templates, filters and tests.
+  - Add `--list-artifacts` to show the layers, effective templates, filters and tests.
+- robot rendering: added support for dicts as parent_key in `iterate_list_chunked`
+- add `NAC_TEST_DUMP_YAML_DATA_MODEL` environment variable to also write the merged data model as YAML (alongside the JSON file) for post-run inspection/debugging. The YAML file is not auto-cleaned up and may contain sensitive values (passwords, tokens, credentials), so review and remove it manually.
+- add support for SDWAN token authentication for pyATS test cases via SDWAN_USERNAME & SDWAN_API_TOKEN
 
 ## Performance
 
 - yaml parser: enabled C-accelerated parser/emitter (`ruamel.yaml.clib` / `pure=False`) in YAML utilities. Speeds up YAML loading and data model merge operations by ~3x on CPython.
-- pyats broker: removed the per-command SSH liveness probe from the connection broker; dead sessions are now recovered by reconnecting and retrying the command once. Removes ~0.77s of event-loop blocking per test and the fleet-wide slowdown it caused.
-- pyats broker: command rejections (SubCommandFailure) no longer trigger a full SSH disconnect and cache wipe; only transport-level failures do. Eliminates a 4.7x per-failure penalty on devices with unsupported commands.
-- pyats broker: disconnect all devices concurrently during broker shutdown via `asyncio.gather`, reducing post-test teardown from O(n × disconnect_time) to O(max(disconnect_time)) also for user-provided testbeds where timeout settings might be missing.
+- pyATS execution performance enhancements:
+  - Replace batched device barriers with flat semaphore for D2D execution, eliminating idle time when devices finish at different speeds (#901)
+  - broker: removed the per-command SSH liveness probe from the connection broker; dead sessions are now recovered by reconnecting and retrying the command once. Removes ~0.77s of event-loop blocking per test and the fleet-wide slowdown it caused.
+  - broker: command rejections (SubCommandFailure) no longer trigger a full SSH disconnect and cache wipe; only transport-level failures do. Eliminates a 4.7x per-failure penalty on devices with unsupported commands.
+  - broker: disconnect all devices concurrently during broker shutdown via `asyncio.gather`, reducing post-test teardown from O(n × disconnect_time) to O(max(disconnect_time)) also for user-provided testbeds where timeout settings might be missing.
 
 ## Bug Fixes
 
 - controller URLs: embedded credentials (userinfo) and trailing slashes are stripped from URLs shown in auth-failure banners, the HTML report (`controller_url`, curl and ping hints) and the pre-flight log. Passwords containing unencoded `/`, `?` or `#` are covered, and `extract_host()` no longer returns the port or userinfo for schemeless URLs. The `AuthCache` invalidation log line no longer prints the raw URL.
 - dependencies: update nac-yaml to 2.1.0: `!vault` values are now decrypted with the password from `ANSIBLE_VAULT_PASSWORD`.
 - dependencies: pin `scrapli<2026.10.0` to prevent breaking changes and installation failures introduced in scrapli 2026.10+ (#965).
-- pyats broker: unified per-device locking to prevent a stale caller from tearing down a successor's connection during the reconnect-and-retry window. The execute and disconnect paths previously used separate locks over two halves of one critical section.
-- pyats: register `FTDTestBase` in `BASE_CLASS_MAPPING` so that `--include`/`--exclude` tag filtering works for FTD tests. Previously, FTD tests silently fell through to directory-based detection which drops group tags.
 - jinja filters/tests: two files in the same directory declaring the same filter or test name now raise an error instead of one silently replacing the other depending on directory listing order. Files are loaded in sorted order. A filter or test directory that relied on listing order to pick one of two same-named files now fails; rename or remove one of them.
-
-# 2.1.0b1
-
-## Features
-
-- robot rendering: added support for dicts as parent_key in `iterate_list_chunked`
-- add support for SDWAN token authentication for pyATS test cases via SDWAN_USERNAME & SDWAN_API_TOKEN
-- add `NAC_TEST_DUMP_YAML_DATA_MODEL` environment variable to also write the merged data model as YAML (alongside the JSON file) for post-run inspection/debugging. The YAML file is not auto-cleaned up and may contain sensitive values (passwords, tokens, credentials), so review and remove it manually.
-
-## Performance
-
-- Replace batched device barriers with flat semaphore for D2D execution, eliminating idle time when devices finish at different speeds (#901)
-
-## Bug Fixes
-
 - Genie parsers that fire supplementary commands (e.g. VRF resolution) now work in broker mode
 
-## Breaking Changes
+## Other Changes
 
-- SSHTestBase.parse_output() is now async — test cases must use await self.parse_output(...)
-
-## Breaking Changes
-
-- **Internal merged data model file format changed to JSON**: For performance reasons, the internal temporary file used to pass the merged data model to test subprocesses is now written as JSON (`merged_data_model_test_variables.json`, previously `.yaml`). This has no effect on your YAML data files or data model structure. The standard `self.data_model` API is unaffected. This is only breaking if your tests or scripts read the file directly via the `MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH` environment variable — in that case, switch from YAML parsing to `json.load()`. Note two JSON serialization differences versus the previous YAML format: non-string mapping keys (e.g. integer keys such as VLAN IDs used as keys) are coerced to strings, and values that JSON cannot represent natively (e.g. unquoted YAML dates parsed as `datetime.date`) are written as their string form. Quote such keys/values in your data files if you need them preserved as strings anyway.
+- pyats: **Breaking Change**: `SSHTestBase.parse_output()` is now async. Custom pyATS test cases calling it must use `await self.parse_output(...)`.
+- python: dropped support for Python 3.10 (end-of-life). Python 3.11 is now the minimum supported version.
+- **Internal merged data model file format changed to JSON**: For performance reasons, the internal temporary file used to pass the merged data model to test subprocesses is now written as JSON (`merged_data_model_test_variables.json`, previously `.yaml`). This has no effect on your YAML data files or data model structure. The standard `self.data_model` API is unaffected. It only matters if your tests or scripts read the file directly via the `MERGED_DATA_MODEL_TEST_VARIABLES_FILEPATH` environment variable — in that case, switch from YAML parsing to `json.load()`. Note two JSON serialization differences versus the previous YAML format: non-string mapping keys (e.g. integer keys such as VLAN IDs used as keys) are coerced to strings, and values that JSON cannot represent natively (e.g. unquoted YAML dates parsed as `datetime.date`) are written as their string form. Quote such keys/values in your data files if you need them preserved as strings anyway.
 
 # 2.0.1
 
