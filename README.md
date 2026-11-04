@@ -507,7 +507,13 @@ Entries are paths relative to the templates directory; globs are allowed and `*`
 
 Use `nac-test --list-artifacts` (no `-d` or `-o` needed) to see the layers, the templates each contributes, which templates were replaced or disabled (and entries that matched nothing), and the filters and tests that will be loaded.
 
-Bundles usually contain Python code that nac-test executes (filters, PyATS tests), so a bundle needs the same trust as code in your own repository. Bundle and module discovery is provided by [nac-artifacts](https://github.com/netascode/nac-artifacts), which documents the bundle format.
+The project directory is the **current working directory**, not the `-d` or `-t` location: `nac/bundles/`, `nac/overrides.yaml` and the `.terraform/` directory (or `TF_DATA_DIR`) written by `terraform init` are looked up there. Run nac-test from your root module directory, or point to the artifacts with `--module-dir` and `--bundle`.
+
+### Trust
+
+Bundles and modules usually contain Python code that nac-test executes (filters, Jinja tests, PyATS tests) with your controller and device credentials in the environment, so they need the same trust as code in your own repository. Review them with `--list-artifacts` (bundle archives are shown with a SHA-256 prefix) before enabling `--artifacts`. Note that a module update (`terraform init -upgrade`) or a new file in `nac/bundles/` changes which code runs, and `.terraform/` is usually not part of your reviewed changes.
+
+Bundle and module discovery is provided by [nac-artifacts](https://github.com/netascode/nac-artifacts), which documents the bundle format.
 
 ## Custom Jinja Filters
 

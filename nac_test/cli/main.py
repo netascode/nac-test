@@ -38,7 +38,7 @@ from nac_test.layers import (
     resolve_layers,
     template_sources,
 )
-from nac_test.robot.jinja_extensions import load_jinja_extensions
+from nac_test.robot.jinja_extensions import declared_jinja_extensions
 from nac_test.utils.cleanup import get_cleanup_manager
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import (
@@ -418,7 +418,11 @@ def _list_artifacts(
     artifacts: bool,
     loglevel: LogLevel | None,
 ) -> None:
-    """Print the effective artifact layers, templates, filters and tests."""
+    """Print the effective artifact layers, templates, filters and tests.
+
+    Filters and Jinja tests are parsed, not imported, so no code of a bundle or
+    module runs. Bundle archives are still extracted into ``nac/bundles/.cache/``.
+    """
     configure_logging(loglevel or DEFAULT_LOGLEVEL)
     try:
         layers = resolve_layers(
@@ -435,15 +439,12 @@ def _list_artifacts(
         plan = plan_template_merge(
             template_sources(layers), exclude=[*filter_dirs, *test_dirs]
         )
-        loaded_filters = load_jinja_extensions(
-            extension_tiers(layers, "filters"),
-            class_name="Filter",
-            module_name="nac_test.filters",
+        # Read statically: listing must not run bundle or module code
+        loaded_filters = declared_jinja_extensions(
+            extension_tiers(layers, "filters"), class_name="Filter"
         )
-        loaded_tests = load_jinja_extensions(
-            extension_tiers(layers, "jinja_tests"),
-            class_name="Test",
-            module_name="nac_test.tests",
+        loaded_tests = declared_jinja_extensions(
+            extension_tiers(layers, "jinja_tests"), class_name="Test"
         )
     except (ArtifactError, NacTestError) as e:
         _print_cli_error(str(e))

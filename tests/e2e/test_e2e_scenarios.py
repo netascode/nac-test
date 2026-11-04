@@ -30,6 +30,7 @@ from nac_test.core.constants import (
     IS_WINDOWS,
     LOG_HTML,
     MERGED_DATA_FILENAME,
+    MERGED_TEMPLATES_DIRNAME,
     OUTPUT_XML,
     PRE_FLIGHT_FAILURE_FILENAME,
     PYATS_RESULTS_DIRNAME,
@@ -160,6 +161,8 @@ class E2ECombinedTestBase:
             expected_dirs.add(ROBOT_RESULTS_DIRNAME)
         if results.has_pyats_results or results.scenario.expected_preflight_failure:
             expected_dirs.add(PYATS_RESULTS_DIRNAME)
+        if results.scenario.merges_templates:
+            expected_dirs.add(MERGED_TEMPLATES_DIRNAME)
 
         expected_files = {
             COMBINED_SUMMARY_FILENAME,
@@ -1112,6 +1115,50 @@ class TestE2ESuccess(E2ECombinedTestBase):
         }
         missing = expected - root_items
         assert not missing, f"Missing expected items at root: {missing}"
+
+
+# =============================================================================
+# ARTIFACT LAYERS SCENARIO TESTS
+# =============================================================================
+
+
+class TestE2EArtifactLayers(E2ECombinedTestBase):
+    """E2E tests for templates merged from local, bundle and module layers.
+
+    Scenario: local templates (-t) plus a bundle (--bundle, a directory) and a
+    module (--module-dir). The merged tree goes through PyATS discovery and
+    Robot rendering:
+    - a local Robot template replaces the module's failing one by relative path
+    - a bundle Robot template imports a module resource by relative path and
+      uses a bundle filter that replaces the module filter of the same name
+    - the PyATS API test comes from the module, the D2D test from the bundle
+    """
+
+    @pytest.fixture
+    def results(self, e2e_artifact_layers_results: E2EResults) -> E2EResults:
+        """Provide artifact layers scenario results."""
+        return e2e_artifact_layers_results
+
+    def test_templates_are_merged_into_the_output_directory(
+        self, results: E2EResults
+    ) -> None:
+        """Should run from a merged tree holding every layer's effective files."""
+        merged = results.output_dir / MERGED_TEMPLATES_DIRNAME / "tests"
+        assert sorted(
+            p.relative_to(merged).as_posix() for p in merged.rglob("*") if p.is_file()
+        ) == [
+            "config/cross_layer.robot",
+            "config/shadowed.robot",
+            "resources/common.resource",
+            "verify_iosxe_control.py",
+            "verify_sdwan_sync.py",
+        ]
+        assert "Local Template Wins" in (merged / "config/shadowed.robot").read_text()
+
+    def test_filter_directories_are_not_merged(self, results: E2EResults) -> None:
+        """Should keep Jinja filters out of the merged templates."""
+        merged = results.output_dir / MERGED_TEMPLATES_DIRNAME
+        assert not list(merged.rglob("marker.py"))
 
 
 # =============================================================================

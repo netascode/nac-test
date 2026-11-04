@@ -8,7 +8,8 @@
 ## Features
 
 - **Packaged templates, filters and tests** (EXPERIMENTAL, may change in future versions and is not subject to semantic versioning guarantees)
-  - Add `--artifacts/--no-artifacts` CLI option (env `NAC_TEST_ARTIFACTS`) to opt in to loading templates, Jinja filters and Jinja tests from bundles and modules; it is off by default for now (implied by `--bundle` and `--module-dir`) and will become the default in a future version
+  - Add `--artifacts/--no-artifacts` CLI option (env `NAC_TEST_ARTIFACTS`) to opt in to loading templates, Jinja filters and Jinja tests from bundles and modules; it is off by default for now (implied by `--bundle` and `--module-dir`) and will become the default in a future version.
+  - Bundles and the module are looked up relative to the current working directory (`nac/bundles/`, `nac/overrides.yaml`, `.terraform/` or `TF_DATA_DIR`), not the `-d` or `-t` location.
   - Templates, Jinja filters and Jinja tests can now also come from bundles dropped into the project (every `.zip`, `.tar.gz` or `.tgz` file and every directory in `nac/bundles/`, holding `tests/{templates,jinja_filters,jinja_tests}` at the bundle root) and from the `nac/tests/{templates,jinja_filters,jinja_tests}` directories of an installed Terraform/OpenTofu module, discovered through `nac-artifacts`. Local `-t`/`-f`/`--tests` take priority over the bundle, which takes priority over the module. Templates are replaced by relative path (several directories are merged into `<output>/merged_templates/`), filters and Jinja tests by their declared name. A single templates directory is used in place, so existing setups behave as before.
   - Several bundles are peers of one priority tier and may split templates, filters and Jinja tests between them; a template path, filter or Jinja test provided by two bundles is an error naming both, as are two bundles with the same manifest `name`. Bundles in `nac/bundles/` that provide nothing for nac-test are skipped.
   - Add `--bundle` (repeatable) and `--module-dir` CLI options (env `NAC_TEST_BUNDLE`, `NAC_TEST_MODULE_DIR`).
@@ -25,12 +26,12 @@
 
 ## Bug Fixes
 
-- jinja filters/tests: two files in the same directory declaring the same filter or test name now raise an error instead of one silently replacing the other depending on directory listing order. Files are loaded in sorted order.
 - controller URLs: embedded credentials (userinfo) and trailing slashes are stripped from URLs shown in auth-failure banners, the HTML report (`controller_url`, curl and ping hints) and the pre-flight log. Passwords containing unencoded `/`, `?` or `#` are covered, and `extract_host()` no longer returns the port or userinfo for schemeless URLs. The `AuthCache` invalidation log line no longer prints the raw URL.
 - dependencies: update nac-yaml to 2.1.0: `!vault` values are now decrypted with the password from `ANSIBLE_VAULT_PASSWORD`.
 - dependencies: pin `scrapli<2026.10.0` to prevent breaking changes and installation failures introduced in scrapli 2026.10+ (#965).
 - pyats broker: unified per-device locking to prevent a stale caller from tearing down a successor's connection during the reconnect-and-retry window. The execute and disconnect paths previously used separate locks over two halves of one critical section.
 - pyats: register `FTDTestBase` in `BASE_CLASS_MAPPING` so that `--include`/`--exclude` tag filtering works for FTD tests. Previously, FTD tests silently fell through to directory-based detection which drops group tags.
+- jinja filters/tests: two files in the same directory declaring the same filter or test name now raise an error instead of one silently replacing the other depending on directory listing order. Files are loaded in sorted order. A filter or test directory that relied on listing order to pick one of two same-named files now fails; rename or remove one of them.
 
 # 2.1.0b1
 

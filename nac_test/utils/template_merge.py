@@ -186,6 +186,42 @@ def plan_template_merge(
     )
 
 
+def _check_target(sources: Sequence[Path | TemplateSource], target: Path) -> None:
+    """Refuse a merge target that is or contains a source, since it is deleted."""
+    for source in _as_sources(sources):
+        absolute = Path(source.path).absolute()
+        if _is_inside(absolute, target):
+            raise ValueError(
+                f"Merge target {target} must not be or contain the template "
+                f"directory {absolute}"
+            )
+
+
+def _write_merge(
+    plan: TemplatePlan, target: Path, source_count: int
+) -> MergedTemplates:
+    """(Re)create ``target`` with the files of ``plan``."""
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    for rel, path in plan.files.items():
+        destination = target / rel
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, destination)
+    logger.info(
+        "Merged %d template files from %d directories into %s",
+        len(plan.files),
+        source_count,
+        target,
+    )
+    return MergedTemplates(
+        root=target,
+        origins=plan.origins,
+        shadowed=plan.shadowed,
+        disabled=plan.disabled,
+    )
+
+
 def merge_template_dirs(
     sources: Sequence[Path | TemplateSource],
     target: Path,
@@ -204,35 +240,10 @@ def merge_template_dirs(
             it is deleted before the merge.
         TemplateError: If two peer sources provide the same path.
     """
-    absolute_sources = [Path(src.path).absolute() for src in _as_sources(sources)]
     target = Path(target).absolute()
-    for source in absolute_sources:
-        if _is_inside(source, target):
-            raise ValueError(
-                f"Merge target {target} must not be or contain the template "
-                f"directory {source}"
-            )
+    _check_target(sources, target)
     plan = plan_template_merge(sources, [target, *exclude])
-
-    if target.exists():
-        shutil.rmtree(target)
-    target.mkdir(parents=True)
-    for rel, path in plan.files.items():
-        destination = target / rel
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, destination)
-    logger.info(
-        "Merged %d template files from %d directories into %s",
-        len(plan.files),
-        len(absolute_sources),
-        target,
-    )
-    return MergedTemplates(
-        root=target,
-        origins=plan.origins,
-        shadowed=plan.shadowed,
-        disabled=plan.disabled,
-    )
+    return _write_merge(plan, target, len(sources))
 
 
 def effective_templates_dir(
@@ -254,12 +265,14 @@ def effective_templates_dir(
         directory). Otherwise a merged copy in a subdirectory of ``output_dir``.
 
     Raises:
+        ValueError: If the merge target is or contains a source directory.
         TemplateError: If two peer sources provide the same path.
     """
     if not sources:
         return None
-    if len(sources) == 1 and not plan_template_merge(sources, exclude).disabled:
+    target = (Path(output_dir) / MERGED_TEMPLATES_DIRNAME).absolute()
+    plan = plan_template_merge(sources, [target, *exclude])
+    if len(sources) == 1 and not plan.disabled:
         return Path(_as_sources(sources)[0].path)
-    return merge_template_dirs(
-        sources, Path(output_dir) / MERGED_TEMPLATES_DIRNAME, exclude
-    ).root
+    _check_target(sources, target)
+    return _write_merge(plan, target, len(sources)).root

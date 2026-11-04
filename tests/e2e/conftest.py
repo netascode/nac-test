@@ -25,6 +25,8 @@ import ruamel.yaml
 from nac_test.utils.terminal import TerminalColors
 from tests.e2e.config import (
     ALL_FAIL_SCENARIO,
+    ARTIFACT_LAYERS_FIXTURE,
+    ARTIFACT_LAYERS_SCENARIO,
     DRY_RUN_PYATS_ONLY_SCENARIO,
     DRY_RUN_ROBOT_FAIL_SCENARIO,
     DRY_RUN_SCENARIO,
@@ -311,6 +313,27 @@ def e2e_success_results(
         mock_api_server,
         user_testbed,
         tmp_path_factory,
+    )
+
+
+@pytest.fixture(scope="class")
+def e2e_artifact_layers_results(
+    mock_api_server: MockAPIServer,
+    user_testbed: str,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> E2EResults:
+    """Execute the artifact layers scenario (local + bundle + module) once."""
+    return _run_e2e_scenario(
+        ARTIFACT_LAYERS_SCENARIO,
+        mock_api_server,
+        user_testbed,
+        tmp_path_factory,
+        extra_cli_args=[
+            "--module-dir",
+            f"{ARTIFACT_LAYERS_FIXTURE}/module",
+            "--bundle",
+            f"{ARTIFACT_LAYERS_FIXTURE}/bundle",
+        ],
     )
 
 

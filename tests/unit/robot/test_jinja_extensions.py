@@ -17,10 +17,12 @@ from nac_artifacts.testing import write_files
 
 from nac_test.exceptions import TemplateError
 from nac_test.robot.jinja_extensions import (
+    UNRESOLVED_NAME,
     DirectorySpec,
     LoadedExtension,
     as_directories,
     as_tiers,
+    declared_jinja_extensions,
     load_jinja_extensions,
 )
 
@@ -284,3 +286,89 @@ class TestTiers:
         low = write_files(tmp_path / "l", {"x.py": filter_file("f", "low")})
 
         assert load([high, low])["f"].cls.filter(None) == "high"
+
+
+def declared(directories: DirectorySpec) -> dict[str, LoadedExtension]:
+    return declared_jinja_extensions(directories, class_name="Filter")
+
+
+class TestDeclaredExtensions:
+    """Tests for resolving names statically, without running the files."""
+
+    def test_same_result_as_loading(self, tmp_path: Path) -> None:
+        """Should resolve the same names and origins as importing the files."""
+        a = write_files(tmp_path / "a", {"x.py": filter_file("f")})
+        b = write_files(tmp_path / "b", {"y.py": filter_file("g")})
+        module = write_files(
+            tmp_path / "m", {"z.py": filter_file("f"), "w.py": filter_file("h")}
+        )
+        spec: DirectorySpec = [[a, b], module]
+
+        static = {name: ext.origin for name, ext in declared(spec).items()}
+        loaded = {name: ext.origin for name, ext in load(spec).items()}
+
+        assert static == loaded
+
+    def test_files_are_not_executed(self, tmp_path: Path) -> None:
+        """Should not run any code of the files."""
+        marker = tmp_path / "ran"
+        source = (
+            f"open({str(marker)!r}, 'w').close()\nclass Filter:\n    name = \"f\"\n"
+        )
+        directory = write_files(tmp_path / "f", {"x.py": source})
+
+        result = declared([directory])
+
+        assert list(result) == ["f"]
+        assert result["f"].cls is None
+        assert not marker.exists()
+
+    def test_annotated_name(self, tmp_path: Path) -> None:
+        """Should read an annotated assignment too."""
+        source = 'class Filter:\n    name: str = "typed"\n'
+        directory = write_files(tmp_path / "f", {"x.py": source})
+
+        assert list(declared([directory])) == ["typed"]
+
+    def test_last_assignment_wins(self, tmp_path: Path) -> None:
+        """Should use the last literal assignment, as Python would."""
+        source = 'class Filter:\n    name = "a"\n    name = "b"\n'
+        directory = write_files(tmp_path / "f", {"x.py": source})
+
+        assert list(declared([directory])) == ["b"]
+
+    @pytest.mark.parametrize(
+        "source",
+        [
+            'PREFIX = "p"\nclass Filter:\n    name = PREFIX + "_f"\n',
+            "class Filter:\n    pass\n",
+            "from elsewhere import Filter\n",
+        ],
+        ids=["computed", "no-name", "imported-class"],
+    )
+    def test_unresolvable_name_is_listed_by_file(
+        self, tmp_path: Path, source: str
+    ) -> None:
+        """Should report the file as not statically resolvable."""
+        directory = write_files(tmp_path / "f", {"x.py": source})
+
+        result = declared([directory])
+
+        assert list(result) == [f"x.py: {UNRESOLVED_NAME}"]
+        assert result[f"x.py: {UNRESOLVED_NAME}"].origin == directory
+
+    def test_duplicate_name_in_one_directory_raises(self, tmp_path: Path) -> None:
+        """Should detect duplicates just like loading does."""
+        directory = write_files(
+            tmp_path / "f", {"a.py": filter_file("dup"), "b.py": filter_file("dup")}
+        )
+
+        with pytest.raises(TemplateError, match="Duplicate filter name 'dup'"):
+            declared([directory])
+
+    def test_syntax_error_raises(self, tmp_path: Path) -> None:
+        """Should report a file that is not valid Python."""
+        directory = write_files(tmp_path / "f", {"x.py": "class Filter(:\n"})
+
+        with pytest.raises(TemplateError, match="Cannot parse .*x.py"):
+            declared([directory])

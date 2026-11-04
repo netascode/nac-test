@@ -43,6 +43,8 @@ class E2EScenario:
         expected_preflight_failure: True when a pre-flight failure is expected. The
             pyats_results/ directory is created for pre_flight_failure.html even when
             no PyATS tests ran, so the root-level whitelist test must account for it.
+        merges_templates: True when templates come from several layers, so the
+            merged_templates/ directory is expected in the output root.
     """
 
     name: str
@@ -54,6 +56,7 @@ class E2EScenario:
         ""  # Controller type: "SDWAN", "ACI", "CC" - determines env var prefix
     )
     is_dry_run: bool = False  # Dry-run mode: validates structure without execution
+    merges_templates: bool = False  # Several template layers: merged_templates/
 
     # Expected CLI behavior
     expected_exit_code: int = 0
@@ -235,6 +238,30 @@ SUCCESS_SCENARIO = E2EScenario(
     expected_pyats_api_passed=1,
     expected_pyats_api_failed=0,
     # PyATS D2D: verify_iosxe_control.py (IOSXETestBase) - 1 pass
+    expected_pyats_d2d_passed=1,
+    expected_pyats_d2d_failed=0,
+    expected_d2d_hostnames=["sd-dc-c8kv-01"],
+)
+
+ARTIFACT_LAYERS_FIXTURE = f"{_FIXTURE_BASE}/artifact_layers"
+
+ARTIFACT_LAYERS_SCENARIO = E2EScenario(
+    name="artifact_layers",
+    description=(
+        "Templates merged from local, bundle and module layers - Robot (2 pass) "
+        "+ PyATS API (1 pass, module) + PyATS D2D (1 pass, bundle)"
+    ),
+    data_path=f"{ARTIFACT_LAYERS_FIXTURE}/data.yaml",
+    templates_path=f"{ARTIFACT_LAYERS_FIXTURE}/templates",
+    architecture="SDWAN",
+    merges_templates=True,
+    expected_exit_code=0,
+    # shadowed.robot (local replaces the failing module one) and cross_layer.robot
+    # (bundle template, bundle filter replacing the module's, module resource)
+    expected_robot_passed=2,
+    expected_robot_failed=0,
+    expected_pyats_api_passed=1,
+    expected_pyats_api_failed=0,
     expected_pyats_d2d_passed=1,
     expected_pyats_d2d_failed=0,
     expected_d2d_hostnames=["sd-dc-c8kv-01"],

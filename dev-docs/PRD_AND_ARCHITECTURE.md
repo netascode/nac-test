@@ -899,7 +899,7 @@ See [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles-experi
 **`--list-artifacts`** (OPTIONAL)
 - **Type**: `bool`
 - **Purpose**: Print the artifact layers, effective templates (with shadowed and disabled ones), Jinja filters and Jinja tests, then exit
-- **Behavior**: Needs no `-d` or `-o`; exits with code 2 on the same errors a run would report
+- **Behavior**: Needs no `-d` or `-o`; exits with code 2 on the same errors a run would report. Reads filter and Jinja test names statically, so no bundle or module code runs; with `--artifacts` it still extracts bundle archives into `nac/bundles/.cache/`
 - **Example**:
   ```bash
   nac-test --list-artifacts
@@ -4196,6 +4196,7 @@ A module keeps its artifacts in its `nac/` directory, because the module directo
 - A bundle found in `nac/bundles/` that provides none of the three directories (for example a bundle with only nac-validate rules) is skipped. A bundle passed with `--bundle` that provides nothing is an error.
 - An archive of an unsupported type in `nac/bundles/` (such as `.tar.xz`) is an error, so a bundle meant to be used is never skipped silently. Other files there are ignored.
 - Several modules providing tests are an error that asks for `--module-dir`.
+- The **project directory** is the current working directory, not the `-d` or `-t` location: `nac/bundles/`, `nac/overrides.yaml` and the Terraform data directory (`.terraform/`, or `TF_DATA_DIR`) holding `modules.json` are looked up there. Run nac-test from the root module directory, where `terraform init` ran, or pass `--module-dir`/`--bundle`.
 - Existing setups are unaffected: without `--artifacts` (or a module or bundle that ships tests), only the local layer exists and `-t` is used in place.
 
 #### Resolution Flow (`layers.py`)
@@ -4249,7 +4250,7 @@ Filter and Jinja test directories are excluded from the merge (they may sit insi
 - Each file gets its own module name (prefix plus a hash of its path), so same-named files from different layers do not replace each other in `sys.modules`.
 - Files load through a loader that writes no bytecode, because module and bundle directories (including the extraction cache) are not the user's to write to.
 
-`RobotWriter` uses the same loader when rendering templates, so `--list-artifacts` and an actual run see the same filters and Jinja tests.
+`RobotWriter` uses this loader when rendering templates. `--list-artifacts` uses `declared_jinja_extensions()` instead, which applies the same resolution (`_resolve()`: tiers, replacement, duplicate errors) but parses each file with `ast` instead of importing it, reading the string literal assigned to `name` in the top-level `Filter`/`Test` class. A file whose name is not a string literal (computed, inherited, imported class) is listed as `<file>: unknown (not statically resolvable)` and takes part in no duplicate check; an actual run still resolves it by importing.
 
 #### Overrides: Disabling Templates of Lower Layers
 
@@ -4272,7 +4273,7 @@ disable:
 
 #### `--list-artifacts` (`cli/ui/artifacts.py`)
 
-`nac-test --list-artifacts` resolves the layers, plans the template merge and loads the filters and Jinja tests exactly as a run would, but copies nothing and needs no `-d` or `-o`. It honours `--artifacts` like a run and, when bundles and modules are not loaded, ends with a hint to use `--artifacts`. `format_artifacts_list()` prints:
+`nac-test --list-artifacts` resolves the layers, plans the template merge and resolves the filters and Jinja tests as a run would, but copies nothing and needs no `-d` or `-o`. It runs no code of a bundle or module: filters and Jinja tests are read statically (see above). It is not entirely read-only, though: with `--artifacts`, bundle archives are extracted into `nac/bundles/.cache/` of the project. It honours `--artifacts` like a run and, when bundles and modules are not loaded, ends with a hint to use `--artifacts`. `format_artifacts_list()` prints:
 
 - the layers, highest priority first, with version and location (bundle archives include a short SHA-256)
 - the effective templates with their layer, and which layer each shadows
@@ -4281,7 +4282,14 @@ disable:
 
 #### Trust Model
 
-Bundles and modules usually contain Python code that nac-test executes (filters, Jinja tests, PyATS tests). They need the same trust as code in the user's own repository. nac-artifacts guards archive extraction (unsafe paths, symlinks, file count and size limits), but does not sandbox what the extracted code does.
+Bundles and modules usually contain Python code that nac-test executes (filters, Jinja tests, PyATS tests), with controller and device credentials in the environment. They need the same trust as code in the user's own repository. nac-artifacts guards archive extraction (unsafe paths, symlinks, file count and size limits), but does not sandbox what the extracted code does. `--list-artifacts` executes none of it.
+
+While loading is opt-in, running such code requires an explicit `--artifacts`, `--bundle` or `--module-dir`. Making it the default is a **breaking change** in trust: a `terraform init -upgrade` or a file dropped into `nac/bundles/` would then change which Python runs, and `.terraform/` is normally not reviewed in a diff. Before the default flips, nac-test should gain a consent or pinning mechanism. The current plan (not implemented):
+
+- **Lock file** (for example `nac/artifacts.lock`) recording, per layer, the module key and version or bundle name and version, plus a SHA-256 of the content nac-test executes (the archive for bundles, a tree hash of `nac/tests/` for modules). `--list-artifacts` already shows a SHA-256 prefix for bundle archives as a starting point.
+- A command (for example `nac-test --lock-artifacts`) that writes or updates the lock file after the user reviewed `--list-artifacts`; the lock file is committed with the project.
+- A run with layers that are missing from the lock file or whose hash differs fails with a clear message (or warns, configurable for CI), instead of executing unreviewed code.
+- The same lock file format is shared with nac-validate through nac-artifacts, since both tools execute Python from the same layers (nac-validate rules).
 
 ---
 

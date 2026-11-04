@@ -481,6 +481,20 @@ class TestListArtifacts:
         assert result.exit_code == EXIT_INVALID_ARGS
         assert "Duplicate filter name 'dup'" in _plain(result)
 
+    def test_does_not_run_module_filter_code(self, project: Path) -> None:
+        """Should read filter names statically, never importing module code."""
+        marker = project / "ran"
+        source = f"open({str(marker)!r}, 'w').close()\n" + FILTER.format(
+            name="mod_filter"
+        )
+        install_module(project, {"tests/jinja_filters/mod.py": source})
+
+        result = runner.invoke(app, ["--artifacts", "--list-artifacts"])
+
+        assert result.exit_code == 0
+        assert "mod_filter [module]" in _plain(result)
+        assert not marker.exists()
+
     def test_with_nothing_to_show(self, project: Path) -> None:
         """Should still succeed and say there are no templates."""
         result = runner.invoke(app, ["--list-artifacts"])
