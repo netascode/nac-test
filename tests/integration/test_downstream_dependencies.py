@@ -26,7 +26,7 @@ def test_scrapli_and_scrapli_netconf_imports_and_instantiation() -> None:
     from scrapli import AsyncDriver, Driver
     from scrapli_netconf import AsyncNetconfDriver, NetconfDriver
 
-    assert scrapli_netconf.__version__
+    assert len(scrapli_netconf.__version__) > 0
     assert hasattr(scrapli, "AsyncDriver"), "scrapli must export AsyncDriver"
     assert hasattr(scrapli, "Driver"), "scrapli must export Driver"
     assert issubclass(AsyncNetconfDriver, AsyncDriver)
