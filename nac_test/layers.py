@@ -137,14 +137,21 @@ def resolve_layers(
     jinja_tests: Path | None = None,
     bundles: Sequence[Path] | None = None,
     module_dir: Path | None = None,
+    artifacts: bool = True,
 ) -> list[AssetLayer]:
     """Resolve all template, filter and Jinja test layers, highest priority first.
+
+    With ``artifacts`` False only the local layer is returned: bundles, the
+    installed module and ``nac/overrides.yaml`` are not read.
 
     Raises:
         nac_artifacts.ArtifactError: If a bundle or module cannot be resolved.
     """
     local = _local_layer(templates, filters, jinja_tests)
     logger.info("Artifact layer [%s]: %s", local.origin, local.detail)
+    if not artifacts:
+        logger.info("Loading of bundles and modules is disabled")
+        return [local]
     try:
         artifact_layers = resolve_artifact_layers(
             project_dir,

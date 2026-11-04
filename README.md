@@ -27,7 +27,8 @@ $ nac-test --help
 │ *  --data              -d   PATH        Path to data YAML files.             │
 │                                         [env var: NAC_TEST_DATA] [required]  │
 │    --templates         -t   DIRECTORY   Path to test templates (optional if  │
-│                                         a module or bundle provides them).   │
+│                                         a module or bundle provides them,    │
+│                                         with --artifacts).                   │
 │                                         [env var: NAC_TEST_TEMPLATES]        │
 │ *  --output            -o   DIRECTORY   Path to output directory.            │
 │                                         [env var: NAC_TEST_OUTPUT] [required]│
@@ -35,13 +36,19 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_FILTERS]          │
 │    --tests                  DIRECTORY   Path to Jinja tests.                 │
 │                                         [env var: NAC_TEST_TESTS]            │
+│    --artifacts/--no-artifacts           Experimental: also load templates,   │
+│                                         filters and tests from bundles and   │
+│                                         the installed module. Off by default │
+│                                         (implied by --bundle/--module-dir).  │
+│                                         [env var: NAC_TEST_ARTIFACTS]        │
 │    --bundle                 PATH        Experimental: artifact bundle (zip,  │
 │                                         tar.gz or directory), repeatable,    │
-│                                         default: the bundles in nac/bundles/ │
+│                                         implies --artifacts, default: the    │
+│                                         bundles in nac/bundles/              │
 │                                         [env var: NAC_TEST_BUNDLE]           │
 │    --module-dir             DIRECTORY   Experimental: module directory with  │
-│                                         nac/ artifacts, default: via         │
-│                                         terraform init                       │
+│                                         nac/ artifacts, implies --artifacts, │
+│                                         default: via terraform init          │
 │                                         [env var: NAC_TEST_MODULE_DIR]       │
 │    --list-artifacts                     List artifact layers, templates,     │
 │                                         filters and tests, then exit.        │
@@ -460,7 +467,13 @@ The `--max-parallel-devices` option sets an upper limit on concurrent SSH connec
 
 > **Note:** This feature is experimental and may change in future versions. It is not subject to semantic versioning guarantees.
 
-Templates, Jinja filters and Jinja tests can come from three layers, highest priority first:
+Besides the local `--templates`, `--filters` and `--tests` paths, templates, Jinja filters and Jinja tests can come from bundles and an installed module. Loading them is currently opt-in: enable it with `--artifacts` or `NAC_TEST_ARTIFACTS=true` (passing `--bundle` or `--module-dir` enables it as well). It will become the default in a future version, after which `--no-artifacts` turns it off.
+
+```shell
+nac-test --artifacts -d data/ -o output/
+```
+
+The layers are, highest priority first:
 
 1. **Local**: the `--templates`, `--filters` and `--tests` options
 2. **Bundles**: every archive (`.zip`, `.tar.gz` or `.tgz`) and every directory in `nac/bundles/` of your project, or `--bundle` (repeatable). Several bundles are peers of one tier and may split content between them
@@ -480,8 +493,8 @@ How layers are combined:
 - **Templates** are identified by their path relative to the templates directory. If several layers provide the same path, the highest layer wins. A single templates directory is used in place; several are merged into a copy in `<output>/merged_templates/`, which is what Robot and PyATS then use.
 - **Filters and Jinja tests** are identified by the `name` they declare, not by their file name. A higher layer replaces a lower one with the same name. Two files in one directory declaring the same name are an error.
 - **Several bundles** are peers: a template path, filter or Jinja test provided by two bundles is an error naming both, so content can be split cleanly but not overlap. Each bundle needs a unique `name` in its manifest, and two bundles with the same name (typically an old and a new version left in `nac/bundles/`) are an error. A bundle in `nac/bundles/` that provides nothing for nac-test (for example only a schema and rules) is skipped.
-- `-t` is optional if a module or bundle provides templates. If no layer provides any, nac-test exits with an error.
-- Existing projects are unaffected until an installed module ships `nac/tests` or a bundle ships `tests`.
+- `-t` is optional if a module or bundle provides templates (with `--artifacts`). If no layer provides any, nac-test exits with an error.
+- Without `--artifacts`, `--bundle` or `--module-dir`, only the local paths are used, so existing projects are unaffected.
 
 To remove templates of a lower layer, list them in `nac/overrides.yaml` of your project (this affects the bundles and the module), or in an `overrides.yaml` at the root of a bundle (this affects the module):
 

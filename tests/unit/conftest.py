@@ -126,4 +126,6 @@ def project(tmp_path: Path, monkeypatch: MonkeyPatch) -> Path:
     project_dir.mkdir()
     monkeypatch.chdir(project_dir)
     monkeypatch.delenv("TF_DATA_DIR", raising=False)
+    for var in ("NAC_TEST_ARTIFACTS", "NAC_TEST_BUNDLE", "NAC_TEST_MODULE_DIR"):
+        monkeypatch.delenv(var, raising=False)
     return project_dir

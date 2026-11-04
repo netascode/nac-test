@@ -792,7 +792,7 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
   nac-test -t templates/ -o output/
   ```
 
-**`-t, --templates`** (REQUIRED unless a module or bundle provides templates)
+**`-t, --templates`** (REQUIRED unless a module or bundle provides templates with `--artifacts`)
 - **Type**: `Path | None`
 - **Validation**: Must exist, must be directory (not file)
 - **Environment Variable**: `NAC_TEST_TEMPLATES`
@@ -858,11 +858,26 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 
 See [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles-experimental) for how these layers are combined.
 
+**`--artifacts/--no-artifacts`** (OPTIONAL, experimental)
+- **Type**: `bool | None`
+- **Default**: off (`None`, implied by `--bundle` and `--module-dir`); will become the default in a future version
+- **Environment Variable**: `NAC_TEST_ARTIFACTS`
+- **Purpose**: Opt in to loading templates, Jinja filters and Jinja tests from bundles in `nac/bundles/` and the installed module, applying `nac/overrides.yaml`
+- **Behavior**:
+  - Off: only the local `-t`/`-f`/`--tests` layer is used; bundles, the module and `nac/overrides.yaml` are not read, and `--list-artifacts` prints a hint
+  - `--no-artifacts` wins over `NAC_TEST_ARTIFACTS=true`
+  - `--no-artifacts` combined with `--bundle` or `--module-dir` is an error (exit code 2)
+- **Example**:
+  ```bash
+  nac-test --artifacts -d config/ -o output/
+  ```
+
 **`--bundle`** (OPTIONAL, repeatable, experimental)
 - **Type**: `list[Path] | None`
 - **Environment Variable**: `NAC_TEST_BUNDLE`
 - **Purpose**: Artifact bundles (`.zip`, `.tar.gz`, `.tgz` or directory) to use instead of the ones found in `nac/bundles/`
 - **Behavior**:
+  - Implies `--artifacts`
   - Without it, every supported archive and every directory in the project's `nac/bundles/` is a bundle
   - Several bundles are peers that may split content but must not overlap
   - A bundle given here that provides no templates, filters or Jinja tests, and whose `overrides.yaml` disables nothing, is an error
@@ -875,7 +890,7 @@ See [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles-experi
 - **Type**: `Path | None`
 - **Environment Variable**: `NAC_TEST_MODULE_DIR`
 - **Purpose**: Module directory whose `nac/tests/` to use, instead of the module discovered through `terraform init`
-- **Behavior**: Needed when several installed modules provide tests
+- **Behavior**: Implies `--artifacts`; needed when several installed modules provide tests
 - **Example**:
   ```bash
   nac-test -d config/ -o output/ --module-dir .terraform/modules/aci
@@ -1349,6 +1364,7 @@ Every CLI flag (except `--version`) supports environment variable configuration 
 | `-o, --output` | `NAC_TEST_OUTPUT` | `Path` | `NAC_TEST_OUTPUT="/artifacts/output"` |
 | `-f, --filters` | `NAC_TEST_FILTERS` | `Path` | `NAC_TEST_FILTERS="/app/filters"` |
 | `--tests` | `NAC_TEST_TESTS` | `Path` | `NAC_TEST_TESTS="/app/custom_tests"` |
+| `--artifacts/--no-artifacts` (experimental) | `NAC_TEST_ARTIFACTS` | `bool` | `NAC_TEST_ARTIFACTS=true` |
 | `--bundle` (experimental) | `NAC_TEST_BUNDLE` | `list[Path]` | `NAC_TEST_BUNDLE="acme-base.zip:acme-extra.zip"` |
 | `--module-dir` (experimental) | `NAC_TEST_MODULE_DIR` | `Path` | `NAC_TEST_MODULE_DIR=".terraform/modules/aci"` |
 | `-i, --include` | `NAC_TEST_INCLUDE` | `list[str]` | `NAC_TEST_INCLUDE="smoke:regression"` |
@@ -4147,6 +4163,10 @@ The `CONTROLLED_ROBOT_OPTIONS` dict maps long options to their short forms and n
 
 Test templates, Jinja filters and Jinja tests do not have to live in the user's repository. nac-test also reads them from an installed Terraform/OpenTofu module and from bundles dropped into the project, so a module or a separately distributed bundle can ship its tests. nac-validate uses the same mechanism for schema and rules. Locating modules and bundles, extracting archives and reading `overrides.yaml` is done by [nac-artifacts](https://github.com/netascode/nac-artifacts), which both tools share. nac-test adds the local layer and decides how the layers are combined.
 
+#### Opt-in
+
+Loading bundles and modules is currently opt-in with `--artifacts` (env `NAC_TEST_ARTIFACTS`), implied by `--bundle` and `--module-dir`. Without it, `resolve_layers(..., artifacts=False)` returns only the local layer, and neither bundles, the module nor `nac/overrides.yaml` are read. It will become the default in a future version, after which `--no-artifacts` turns it off. `--no-artifacts` combined with `--bundle` or `--module-dir` is an error (`_artifacts_enabled()` in `cli/main.py`).
+
 #### Layers and Priority
 
 Up to three layers, highest priority first:
@@ -4176,15 +4196,15 @@ A module keeps its artifacts in its `nac/` directory, because the module directo
 - A bundle found in `nac/bundles/` that provides none of the three directories (for example a bundle with only nac-validate rules) is skipped. A bundle passed with `--bundle` that provides nothing is an error.
 - An archive of an unsupported type in `nac/bundles/` (such as `.tar.xz`) is an error, so a bundle meant to be used is never skipped silently. Other files there are ignored.
 - Several modules providing tests are an error that asks for `--module-dir`.
-- Existing setups are unaffected: without a module or bundle that ships tests, only the local layer exists and `-t` is used in place.
+- Existing setups are unaffected: without `--artifacts` (or a module or bundle that ships tests), only the local layer exists and `-t` is used in place.
 
 #### Resolution Flow (`layers.py`)
 
 ```mermaid
 flowchart TD
-    CLI["cli/main.py<br/>-t, -f, --tests, --bundle, --module-dir"] --> RL["resolve_layers()"]
+    CLI["cli/main.py<br/>-t, -f, --tests, --artifacts, --bundle, --module-dir"] --> RL["resolve_layers()"]
     RL --> LOC["local AssetLayer<br/>(from CLI options)"]
-    RL --> NA["nac_artifacts.resolve_artifact_layers()<br/>provides=tests/templates, tests/jinja_filters, tests/jinja_tests"]
+    RL -->|"artifacts=True"| NA["nac_artifacts.resolve_artifact_layers()<br/>provides=tests/templates, tests/jinja_filters, tests/jinja_tests"]
     NA --> LD["nac_artifacts.layer_disables()<br/>project and bundle overrides.yaml"]
     LD --> AL["bundle and module AssetLayers"]
     LOC --> LAYERS["list[AssetLayer], highest priority first"]
@@ -4252,7 +4272,7 @@ disable:
 
 #### `--list-artifacts` (`cli/ui/artifacts.py`)
 
-`nac-test --list-artifacts` resolves the layers, plans the template merge and loads the filters and Jinja tests exactly as a run would, but copies nothing and needs no `-d` or `-o`. `format_artifacts_list()` prints:
+`nac-test --list-artifacts` resolves the layers, plans the template merge and loads the filters and Jinja tests exactly as a run would, but copies nothing and needs no `-d` or `-o`. It honours `--artifacts` like a run and, when bundles and modules are not loaded, ends with a hint to use `--artifacts`. `format_artifacts_list()` prints:
 
 - the layers, highest priority first, with version and location (bundle archives include a short SHA-256)
 - the effective templates with their layer, and which layer each shadows

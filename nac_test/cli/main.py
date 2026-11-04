@@ -123,7 +123,7 @@ Templates = Annotated[
         file_okay=False,
         help=(
             "Path to test templates. Optional if a module or bundle provides "
-            "templates; these are merged underneath."
+            "templates (with --artifacts); these are merged underneath."
         ),
         envvar="NAC_TEST_TEMPLATES",
     ),
@@ -171,13 +171,30 @@ Output = Annotated[
 ]
 
 
+Artifacts = Annotated[
+    bool | None,
+    typer.Option(
+        "--artifacts/--no-artifacts",
+        help=(
+            "Experimental: also load templates, Jinja filters and Jinja tests from "
+            "bundles in nac/bundles/ and the installed Terraform module, applying "
+            "nac/overrides.yaml. Off by default (implied by --bundle and "
+            "--module-dir); will become the default in a future version."
+        ),
+        envvar="NAC_TEST_ARTIFACTS",
+        show_default=False,
+    ),
+]
+
+
 Bundle = Annotated[
     list[Path] | None,
     typer.Option(
         "--bundle",
         exists=False,
         help=(
-            "Experimental: path to an artifact bundle (zip, tar.gz or directory), repeatable. "
+            "Experimental: path to an artifact bundle (zip, tar.gz or directory), repeatable; "
+            "implies --artifacts. "
             "Defaults to every .zip, .tar.gz or .tgz file and directory in nac/bundles/."
         ),
         envvar="NAC_TEST_BUNDLE",
@@ -193,7 +210,8 @@ ModuleDir = Annotated[
         dir_okay=True,
         file_okay=False,
         help=(
-            "Experimental: path to a module directory containing nac/ artifacts. "
+            "Experimental: path to a module directory containing nac/ artifacts; "
+            "implies --artifacts. "
             "Defaults to the module discovered via terraform init."
         ),
         envvar="NAC_TEST_MODULE_DIR",
@@ -372,12 +390,32 @@ def _collapse(
     return tiers[0] if len(tiers) == 1 and isinstance(tiers[0], Path) else tiers
 
 
+def _artifacts_enabled(
+    artifacts: bool | None, bundles: list[Path] | None, module_dir: Path | None
+) -> bool:
+    """Whether to load bundles and modules: opt-in, implied by explicit paths.
+
+    Raises:
+        typer.Exit: If ``--no-artifacts`` is combined with ``--bundle`` or
+            ``--module-dir``.
+    """
+    explicit = bool(bundles) or module_dir is not None
+    if artifacts is False and explicit:
+        _print_cli_error(
+            "--bundle and --module-dir cannot be combined with --no-artifacts "
+            "(or NAC_TEST_ARTIFACTS=false)."
+        )
+        raise typer.Exit(EXIT_INVALID_ARGS)
+    return bool(artifacts) or explicit
+
+
 def _list_artifacts(
     templates: Path | None,
     filters: Path | None,
     tests: Path | None,
     bundles: list[Path] | None,
     module_dir: Path | None,
+    artifacts: bool,
     loglevel: LogLevel | None,
 ) -> None:
     """Print the effective artifact layers, templates, filters and tests."""
@@ -390,6 +428,7 @@ def _list_artifacts(
             jinja_tests=tests,
             bundles=bundles,
             module_dir=module_dir,
+            artifacts=artifacts,
         )
         filter_dirs = directories(layers, "filters")
         test_dirs = directories(layers, "jinja_tests")
@@ -410,6 +449,11 @@ def _list_artifacts(
         _print_cli_error(str(e))
         raise typer.Exit(EXIT_INVALID_ARGS) from None
     typer.echo(format_artifacts_list(layers, plan, loaded_filters, loaded_tests))
+    if not artifacts:
+        typer.echo(
+            "Bundles and modules are not loaded; use --artifacts to include them "
+            "(this will become the default in a future version)."
+        )
     raise typer.Exit(0)
 
 
@@ -425,6 +469,7 @@ def main(
     output: Output = None,
     filters: Filters = None,
     tests: Tests = None,
+    artifacts: Artifacts = None,
     bundle: Bundle = None,
     module_dir: ModuleDir = None,
     list_artifacts: ListArtifacts = False,
@@ -452,8 +497,11 @@ def main(
     files/directories, and options controlled by nac-test (like --include, --exclude)
     are not supported and will result in an error.
     """
+    load_artifacts = _artifacts_enabled(artifacts, bundle, module_dir)
     if list_artifacts:
-        _list_artifacts(templates, filters, tests, bundle, module_dir, loglevel)
+        _list_artifacts(
+            templates, filters, tests, bundle, module_dir, load_artifacts, loglevel
+        )
     data, output = _require_options(data, output)
 
     # Default child processes to UTF-8 regardless of OS locale (#630)
@@ -515,6 +563,7 @@ def main(
             jinja_tests=tests,
             bundles=bundle,
             module_dir=module_dir,
+            artifacts=load_artifacts,
         )
     except ArtifactError as e:
         _print_cli_error(str(e))
@@ -523,7 +572,7 @@ def main(
     if not template_dirs:
         _print_cli_error(
             "No test templates found. Use -t/--templates, or provide them "
-            "through a module or bundle."
+            "through a module or bundle (with --artifacts)."
         )
         raise typer.Exit(EXIT_INVALID_ARGS)
     filter_dirs = directories(layers, "filters")

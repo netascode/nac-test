@@ -135,6 +135,110 @@ class TestLocalTemplatesOnly:
         orchestrator_cls.assert_not_called()
 
 
+class TestArtifactsOptIn:
+    """Bundles and modules are only loaded with --artifacts (for now)."""
+
+    @staticmethod
+    def setup_project(project: Path) -> None:
+        install_module(project, module_files())
+        write_files(
+            project / "nac/bundles/acme",
+            bundle_files({"tests/templates/bundle.robot": "b"}, name="acme"),
+        )
+        (project / "nac/overrides.yaml").write_text("- not valid\n")
+
+    def test_off_by_default(self, project: Path) -> None:
+        """Should ignore the module, bundles and overrides and hint at --artifacts."""
+        self.setup_project(project)
+
+        result = runner.invoke(app, ["--list-artifacts"])
+
+        assert result.exit_code == 0
+        assert "module.robot" not in _plain(result)
+        assert "bundle.robot" not in _plain(result)
+        assert "use --artifacts to include them" in _plain(result)
+
+    def test_run_uses_local_templates_only_by_default(
+        self, project: Path, dirs: dict[str, Path], orchestrator_cls: Mock
+    ) -> None:
+        """Should run with the -t directory in place, as before."""
+        self.setup_project(project)
+        templates = write_files(project / "templates", {"a.robot": "x"})
+
+        result = invoke(dirs, "-t", str(templates))
+
+        assert result.exit_code == 0
+        assert kwargs_of(orchestrator_cls)["templates_dir"] == templates
+
+    def test_no_templates_hint_at_artifacts(
+        self, project: Path, dirs: dict[str, Path], orchestrator_cls: Mock
+    ) -> None:
+        """Should mention --artifacts when only a module provides templates."""
+        install_module(project, module_files())
+
+        result = invoke(dirs)
+
+        assert result.exit_code == EXIT_INVALID_ARGS
+        assert "(with --artifacts)" in _plain(result)
+        orchestrator_cls.assert_not_called()
+
+    def test_flag_enables_loading(self, project: Path) -> None:
+        """Should load the module and bundles with --artifacts."""
+        install_module(project, module_files())
+
+        result = runner.invoke(app, ["--list-artifacts", "--artifacts"])
+
+        assert result.exit_code == 0
+        assert "module.robot [module]" in _plain(result)
+        assert "use --artifacts" not in _plain(result)
+
+    @pytest.mark.parametrize("value", ["true", "1", "yes"])
+    def test_env_var_enables_loading(
+        self, project: Path, monkeypatch: pytest.MonkeyPatch, value: str
+    ) -> None:
+        """Should read the opt-in from NAC_TEST_ARTIFACTS."""
+        install_module(project, module_files())
+        monkeypatch.setenv("NAC_TEST_ARTIFACTS", value)
+
+        result = runner.invoke(app, ["--list-artifacts"])
+
+        assert result.exit_code == 0
+        assert "module.robot [module]" in _plain(result)
+
+    def test_no_artifacts_overrides_env_var(
+        self, project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should let --no-artifacts win over NAC_TEST_ARTIFACTS=true."""
+        install_module(project, module_files())
+        monkeypatch.setenv("NAC_TEST_ARTIFACTS", "true")
+
+        result = runner.invoke(app, ["--list-artifacts", "--no-artifacts"])
+
+        assert result.exit_code == 0
+        assert "module.robot" not in _plain(result)
+
+    def test_bundle_implies_artifacts(self, project: Path, tmp_path: Path) -> None:
+        """Should load an explicit --bundle without --artifacts."""
+        archive = make_zip(
+            tmp_path / "b.zip", bundle_files({"tests/templates/b.robot": "b"})
+        )
+
+        result = runner.invoke(app, ["--list-artifacts", "--bundle", str(archive)])
+
+        assert result.exit_code == 0
+        assert "b.robot [bundle" in _plain(result)
+
+    @pytest.mark.parametrize("args", [["--bundle", "b.zip"], ["--module-dir", "mod"]])
+    def test_explicit_paths_conflict_with_no_artifacts(
+        self, project: Path, args: list[str]
+    ) -> None:
+        """Should refuse --bundle or --module-dir together with --no-artifacts."""
+        result = runner.invoke(app, ["--list-artifacts", "--no-artifacts", *args])
+
+        assert result.exit_code == EXIT_INVALID_ARGS
+        assert "cannot be combined with --no-artifacts" in _plain(result)
+
+
 class TestPackagedTemplates:
     """Templates, filters and Jinja tests from modules and bundles."""
 
@@ -147,7 +251,7 @@ class TestPackagedTemplates:
             module_files(**{"tests/jinja_filters/f.py": FILTER.format(name="f")}),
         )
 
-        result = invoke(dirs)
+        result = invoke(dirs, "--artifacts")
 
         nac_dir = module_dir.resolve() / "nac"
         assert result.exit_code == 0
@@ -174,7 +278,7 @@ class TestPackagedTemplates:
             project / "templates", {"shared.robot": ROBOT.format(text="local")}
         )
 
-        result = invoke(dirs, "-t", str(local))
+        result = invoke(dirs, "--artifacts", "-t", str(local))
 
         merged = kwargs_of(orchestrator_cls)["templates_dir"]
         assert result.exit_code == 0
@@ -215,7 +319,9 @@ class TestPackagedTemplates:
         local_filters = write_files(project / "filters", {})
         local_templates = write_files(project / "templates", {"a.robot": "x"})
 
-        invoke(dirs, "-t", str(local_templates), "-f", str(local_filters))
+        invoke(
+            dirs, "--artifacts", "-t", str(local_templates), "-f", str(local_filters)
+        )
 
         assert kwargs_of(orchestrator_cls)["filters_path"] == [
             local_filters,
@@ -232,7 +338,7 @@ class TestPackagedTemplates:
             {"a.robot": "x", "filters/f.py": FILTER.format(name="f")},
         )
 
-        invoke(dirs, "-t", str(local), "-f", str(local / "filters"))
+        invoke(dirs, "--artifacts", "-t", str(local), "-f", str(local / "filters"))
 
         merged = kwargs_of(orchestrator_cls)["templates_dir"]
         assert (merged / "a.robot").exists()
@@ -296,7 +402,7 @@ class TestPackagedErrors:
             project, [module_entry(k, f".terraform/modules/{k}") for k in ("a", "b")]
         )
 
-        result = invoke(dirs)
+        result = invoke(dirs, "--artifacts")
 
         assert result.exit_code == EXIT_INVALID_ARGS
         assert "--module-dir" in _plain(result)
@@ -335,7 +441,15 @@ class TestListArtifacts:
         )
 
         result = runner.invoke(
-            app, ["--list-artifacts", "-t", str(local), "-f", str(local_filters)]
+            app,
+            [
+                "--artifacts",
+                "--list-artifacts",
+                "-t",
+                str(local),
+                "-f",
+                str(local_filters),
+            ],
         )
 
         assert result.exit_code == 0
@@ -395,7 +509,7 @@ class TestDisabledTemplates:
         )
         self.project_overrides(project, templates=["drop.robot"])
 
-        result = invoke(dirs)
+        result = invoke(dirs, "--artifacts")
 
         used = kwargs_of(orchestrator_cls)["templates_dir"]
         assert result.exit_code == 0
@@ -453,7 +567,7 @@ class TestDisabledTemplates:
         module_dir = install_module(project, {"tests/templates/a.robot": "x"})
         self.project_overrides(project, templates=["nothing/here"])
 
-        invoke(dirs)
+        invoke(dirs, "--artifacts")
 
         used = kwargs_of(orchestrator_cls)["templates_dir"]
         assert used == module_dir.resolve() / "nac/tests/templates"
@@ -465,7 +579,7 @@ class TestDisabledTemplates:
         install_module(project, {"tests/templates/a.robot": "x"})
         write_files(project / "nac", {"overrides.yaml": "disabel:\n  templates: [a]\n"})
 
-        result = invoke(dirs)
+        result = invoke(dirs, "--artifacts")
 
         assert result.exit_code == EXIT_INVALID_ARGS
         assert "Unknown key(s) disabel" in _plain(result)
@@ -482,7 +596,7 @@ class TestDisabledTemplates:
         )
         self.project_overrides(project, templates=["drop.robot", "typo/*"])
 
-        result = runner.invoke(app, ["--list-artifacts"])
+        result = runner.invoke(app, ["--artifacts", "--list-artifacts"])
 
         assert result.exit_code == 0
         assert "drop.robot [module] disabled by project overrides" in _plain(result)
@@ -534,7 +648,7 @@ class TestMultipleBundles:
                 bundle_files({f"tests/templates/{name}.robot": name}, name=name),
             )
 
-        result = invoke(dirs)
+        result = invoke(dirs, "--artifacts")
 
         used = kwargs_of(orchestrator_cls)["templates_dir"]
         assert result.exit_code == 0
@@ -547,7 +661,7 @@ class TestMultipleBundles:
             bundle_files({"tests/templates/dir.robot": "d"}, name="acme"),
         )
 
-        result = runner.invoke(app, ["--list-artifacts"])
+        result = runner.invoke(app, ["--artifacts", "--list-artifacts"])
 
         assert result.exit_code == 0
         assert "dir.robot [bundle acme]" in _plain(result)
@@ -640,7 +754,7 @@ class TestMultipleBundles:
                 ),
             )
 
-        result = invoke(dirs)
+        result = invoke(dirs, "--artifacts")
 
         assert result.exit_code == EXIT_INVALID_ARGS
         assert "'acme' is present 2 times" in _plain(result)
@@ -663,7 +777,7 @@ class TestMultipleBundles:
             bundle_files({"tests/templates/a.robot": "x"}, name="t"),
         )
 
-        result = invoke(dirs)
+        result = invoke(dirs, "--artifacts")
 
         assert result.exit_code == 0
         assert (kwargs_of(orchestrator_cls)["templates_dir"] / "a.robot").exists()

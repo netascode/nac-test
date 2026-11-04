@@ -151,6 +151,17 @@ class TestPackagedLayers:
             "nac/tests/templates"
         )
 
+    def test_artifacts_disabled_returns_only_the_local_layer(
+        self, project: Path
+    ) -> None:
+        """Should read neither modules, bundles nor overrides without artifacts."""
+        install_module(project, TEMPLATES)
+        write_files(project / "nac", {"overrides.yaml": "- not valid\n"})
+
+        layers = resolve_layers(project, templates=Path("t"), artifacts=False)
+
+        assert [layer.origin for layer in layers] == ["local"]
+
 
 class TestErrors:
     """Tests for failures while resolving packaged layers."""
