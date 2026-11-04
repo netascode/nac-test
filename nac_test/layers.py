@@ -7,7 +7,7 @@ Templates, Jinja filters and Jinja tests come from up to three layers, highest
 priority first:
 
 1. local:  the ``-t``/``-f``/``--tests`` options
-2. bundles: archives or directories dropped into the project (``.nac/``); several
+2. bundles: archives or directories dropped into the project (``nac/bundles/``); several
    bundles are peers that may split artifacts but must not overlap
 3. module: the ``nac/`` directory embedded in an installed Terraform module
 
@@ -55,7 +55,7 @@ class AssetLayer:
         version: Module version or bundle manifest version, if known.
         detail: Human-readable description of where the layer came from.
         disabled_templates: Entries (relative paths or globs) that disable
-            templates of this layer, from ``.nac/overrides.yaml`` and from
+            templates of this layer, from ``nac/overrides.yaml`` and from
             bundles above it.
         label: Name for messages, e.g. ``bundle acme-base`` (defaults to the origin).
     """

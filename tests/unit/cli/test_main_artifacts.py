@@ -380,7 +380,7 @@ class TestDisabledTemplates:
 
     @staticmethod
     def project_overrides(project: Path, **kwargs: list[str]) -> None:
-        write_files(project / ".nac", {"overrides.yaml": overrides_yaml(**kwargs)})
+        write_files(project / "nac", {"overrides.yaml": overrides_yaml(**kwargs)})
 
     def test_module_template_is_disabled_from_the_project(
         self, project: Path, dirs: dict[str, Path], orchestrator_cls: Mock
@@ -463,9 +463,7 @@ class TestDisabledTemplates:
     ) -> None:
         """Should exit with code 2 and say what is wrong with the file."""
         install_module(project, {"tests/templates/a.robot": "x"})
-        write_files(
-            project / ".nac", {"overrides.yaml": "disabel:\n  templates: [a]\n"}
-        )
+        write_files(project / "nac", {"overrides.yaml": "disabel:\n  templates: [a]\n"})
 
         result = invoke(dirs)
 
@@ -528,11 +526,11 @@ class TestMultipleBundles:
     def test_bundles_in_nac_are_all_used(
         self, project: Path, dirs: dict[str, Path], orchestrator_cls: Mock
     ) -> None:
-        """Should use every archive dropped into .nac/."""
-        (project / ".nac").mkdir()
+        """Should use every archive dropped into nac/bundles/."""
+        (project / "nac/bundles").mkdir(parents=True)
         for name in ("one", "two"):
             make_zip(
-                project / ".nac" / f"{name}.zip",
+                project / "nac/bundles" / f"{name}.zip",
                 bundle_files({f"tests/templates/{name}.robot": name}, name=name),
             )
 
@@ -541,6 +539,18 @@ class TestMultipleBundles:
         used = kwargs_of(orchestrator_cls)["templates_dir"]
         assert result.exit_code == 0
         assert (used / "one.robot").exists() and (used / "two.robot").exists()
+
+    def test_bundle_directory_in_nac_bundles_is_used(self, project: Path) -> None:
+        """Should use an extracted bundle directory with its artifacts at its root."""
+        write_files(
+            project / "nac/bundles/acme",
+            bundle_files({"tests/templates/dir.robot": "d"}, name="acme"),
+        )
+
+        result = runner.invoke(app, ["--list-artifacts"])
+
+        assert result.exit_code == 0
+        assert "dir.robot [bundle acme]" in _plain(result)
 
     def test_overlapping_templates_are_an_invalid_argument_error(
         self,
@@ -620,11 +630,11 @@ class TestMultipleBundles:
     def test_same_bundle_name_twice_is_an_invalid_argument_error(
         self, project: Path, dirs: dict[str, Path], orchestrator_cls: Mock
     ) -> None:
-        """Should refuse an old and a new version of one bundle left in .nac/."""
-        (project / ".nac").mkdir()
+        """Should refuse an old and a new version of one bundle left in nac/bundles/."""
+        (project / "nac/bundles").mkdir(parents=True)
         for version in ("1.0.0", "2.0.0"):
             make_zip(
-                project / ".nac" / f"acme-{version}.zip",
+                project / "nac/bundles" / f"acme-{version}.zip",
                 bundle_files(
                     {"tests/templates/a.robot": "x"}, name="acme", version=version
                 ),
@@ -643,13 +653,13 @@ class TestMultipleBundles:
         orchestrator_cls: Mock,
     ) -> None:
         """Should skip a detected bundle that only ships a schema and rules."""
-        (project / ".nac").mkdir()
+        (project / "nac/bundles").mkdir(parents=True)
         make_zip(
-            project / ".nac/validate-only.zip",
+            project / "nac/bundles/validate-only.zip",
             bundle_files({"schema.yaml": "a: str()\n", "rules/1.py": ""}, name="v"),
         )
         make_zip(
-            project / ".nac/tests.zip",
+            project / "nac/bundles/tests.zip",
             bundle_files({"tests/templates/a.robot": "x"}, name="t"),
         )
 

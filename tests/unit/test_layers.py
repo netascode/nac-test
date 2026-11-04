@@ -207,7 +207,7 @@ class TestDisabledTemplates:
 
     @staticmethod
     def write_project_overrides(project: Path, **kwargs: list[str]) -> None:
-        write_files(project / ".nac", {"overrides.yaml": overrides_yaml(**kwargs)})
+        write_files(project / "nac", {"overrides.yaml": overrides_yaml(**kwargs)})
 
     def test_local_layer_is_never_affected(self, project: Path) -> None:
         """Should keep the local templates out of reach of any disable entry."""
@@ -219,7 +219,7 @@ class TestDisabledTemplates:
     def test_project_entries_reach_bundle_and_module(
         self, project: Path, tmp_path: Path
     ) -> None:
-        """Should apply .nac/overrides.yaml to every packaged layer."""
+        """Should apply nac/overrides.yaml to every packaged layer."""
         install_module(project, TEMPLATES)
         archive = make_zip(tmp_path / "b.zip", bundle_files(TEMPLATES))
         self.write_project_overrides(project, templates=["lib/*"])
@@ -258,7 +258,7 @@ class TestDisabledTemplates:
     def test_malformed_overrides_raise(self, project: Path) -> None:
         """Should fail instead of ignoring a broken overrides file."""
         install_module(project, TEMPLATES)
-        write_files(project / ".nac", {"overrides.yaml": "- x\n"})
+        write_files(project / "nac", {"overrides.yaml": "- x\n"})
 
         with pytest.raises(OverridesError):
             resolve_layers(project)

@@ -37,7 +37,7 @@ $ nac-test --help
 │                                         [env var: NAC_TEST_TESTS]            │
 │    --bundle                 PATH        Artifact bundle (zip, tar.gz or      │
 │                                         directory), repeatable, default:     │
-│                                         the bundles in .nac/                 │
+│                                         the bundles in nac/bundles/          │
 │                                         [env var: NAC_TEST_BUNDLE]           │
 │    --module-dir             DIRECTORY   Module directory with nac/ artifacts,│
 │                                         default: via terraform init          │
@@ -460,13 +460,13 @@ The `--max-parallel-devices` option sets an upper limit on concurrent SSH connec
 Templates, Jinja filters and Jinja tests can come from three layers, highest priority first:
 
 1. **Local**: the `--templates`, `--filters` and `--tests` options
-2. **Bundles**: archives (`.zip`, `.tar.gz` or `.tgz`) or a `bundle/` directory in `.nac/` of your project, or `--bundle` (repeatable). Several bundles are peers of one tier and may split content between them
+2. **Bundles**: every archive (`.zip`, `.tar.gz` or `.tgz`) and every directory in `nac/bundles/` of your project, or `--bundle` (repeatable). Several bundles are peers of one tier and may split content between them
 3. **Module**: the `nac/` directory shipped inside an installed Terraform or OpenTofu module, found through `terraform init` (or `--module-dir`)
 
-Modules and bundles use the same layout below their `nac/` directory:
+A module holds its artifacts in its `nac/` directory, a bundle directly at its root (next to its `manifest.yaml`). Both use the same `tests/` layout:
 
 ```text
-nac/tests/
+tests/
 ├── templates/       # test templates (and PyATS tests)
 ├── jinja_filters/   # Jinja filters
 └── jinja_tests/     # Jinja tests
@@ -476,11 +476,11 @@ How layers are combined:
 
 - **Templates** are identified by their path relative to the templates directory. If several layers provide the same path, the highest layer wins. A single templates directory is used in place; several are merged into a copy in `<output>/merged_templates/`, which is what Robot and PyATS then use.
 - **Filters and Jinja tests** are identified by the `name` they declare, not by their file name. A higher layer replaces a lower one with the same name. Two files in one directory declaring the same name are an error.
-- **Several bundles** are peers: a template path, filter or Jinja test provided by two bundles is an error naming both, so content can be split cleanly but not overlap. Each bundle needs a unique `name` in its manifest, and two bundles with the same name (typically an old and a new version left in `.nac/`) are an error. A bundle in `.nac/` that provides nothing for nac-test (for example only a schema and rules) is skipped.
+- **Several bundles** are peers: a template path, filter or Jinja test provided by two bundles is an error naming both, so content can be split cleanly but not overlap. Each bundle needs a unique `name` in its manifest, and two bundles with the same name (typically an old and a new version left in `nac/bundles/`) are an error. A bundle in `nac/bundles/` that provides nothing for nac-test (for example only a schema and rules) is skipped.
 - `-t` is optional if a module or bundle provides templates. If no layer provides any, nac-test exits with an error.
-- Existing projects are unaffected until an installed module or bundle ships `nac/tests`.
+- Existing projects are unaffected until an installed module ships `nac/tests` or a bundle ships `tests`.
 
-To remove templates of a lower layer, list them in `.nac/overrides.yaml` of your project (this affects the bundle and the module), or in an `overrides.yaml` at the root of a bundle (this affects the module):
+To remove templates of a lower layer, list them in `nac/overrides.yaml` of your project (this affects the bundles and the module), or in an `overrides.yaml` at the root of a bundle (this affects the module):
 
 ```yaml
 disable:

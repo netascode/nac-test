@@ -81,7 +81,7 @@ DRY_RUN_REASON = "dry-run mode"
 PYATS_RESULTS_DIRNAME: str = "pyats_results"
 ROBOT_RESULTS_DIRNAME: str = "robot_results"
 
-# Artifacts below the nac/ directory of a module or bundle (see nac-artifacts)
+# Artifacts in a module's nac/ directory or at a bundle's root (see nac-artifacts)
 ARTIFACTS_TEMPLATES_PATH: str = "tests/templates"
 ARTIFACTS_FILTERS_PATH: str = "tests/jinja_filters"
 ARTIFACTS_JINJA_TESTS_PATH: str = "tests/jinja_tests"
