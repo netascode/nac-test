@@ -1144,8 +1144,12 @@ class TestE2EArtifactLayers(E2ECombinedTestBase):
     ) -> None:
         """Should run from a merged tree holding every layer's effective files."""
         merged = results.output_dir / MERGED_TEMPLATES_DIRNAME / "tests"
+        # PyATS imports the merged tests, which writes __pycache__ into the tree
+        # unless PYTHONDONTWRITEBYTECODE is set; it is not part of the merge
         assert sorted(
-            p.relative_to(merged).as_posix() for p in merged.rglob("*") if p.is_file()
+            p.relative_to(merged).as_posix()
+            for p in merged.rglob("*")
+            if p.is_file() and "__pycache__" not in p.parts
         ) == [
             "config/cross_layer.robot",
             "config/shadowed.robot",
