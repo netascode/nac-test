@@ -7,7 +7,7 @@ import hashlib
 import json
 import logging
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def _file_lock(lock_file: Path) -> Iterator[None]:
+def _file_lock(lock_file: Path) -> Generator[None]:
     """Hold an exclusive inter-process lock on ``lock_file`` (blocking).
 
     Uses ``fcntl.flock`` directly rather than the ``filelock`` package: filelock
