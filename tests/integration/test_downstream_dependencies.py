@@ -21,10 +21,7 @@ pytestmark = [
 
 
 def test_scrapli_and_scrapli_netconf_imports_and_instantiation() -> None:
-    """Verify scrapli and scrapli-netconf driver imports and basic instantiation.
-
-    Replicates the downstream consumer pattern from nac-iosxe UtilsLib.py:14.
-    """
+    """Verify scrapli and scrapli-netconf driver imports and basic instantiation."""
     import scrapli
     import scrapli_netconf
     from scrapli import AsyncDriver, Driver
