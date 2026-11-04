@@ -19,3 +19,8 @@ updates:
       - dependency-type: 'all'
     cooldown:
       default-days: 3
+      # Maintained by us, so new releases are picked up right away
+      exclude:
+        - 'nac-artifacts'
+        - 'nac-test-pyats-common'
+        - 'nac-yaml'

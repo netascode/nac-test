@@ -1,0 +1,13 @@
+# UTF-8 in data fields exercises the full YAML → template → report pipeline (#630)
+sdwan:
+  management_ip_variable: vpn0_ip
+  test_credential: !env TEST_CREDENTIAL_SENTINEL
+  sites:
+    - name: SITE_München_100
+      site_id: "100"
+      routers:
+        - chassis_id: CHI24330K5V
+          device_variables:
+            system_hostname: sd-dc-c8kv-01
+            vpn0_ip: 10.100.1.1
+            system_ip: 10.0.0.1

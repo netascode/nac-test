@@ -5,6 +5,18 @@
 - python: dropped support for Python 3.10 (end-of-life). Python 3.11 is now the minimum supported version.
 - controller: removed `nac_test.utils.controller` (`detect_controller_type`, `get_matched_credential_set`), the `nac_test.pyats_core.common.auth_cache` re-export (use `nac_test.core.auth_cache`) and the transitional fallback in `get_controller_context()`. Use `nac_test.core.controller.resolve_controller()`; the orchestrator now publishes the resolved context via `NAC_TEST_CONTROLLER_CONTEXT`, which `get_controller_context()` requires.
 
+## Features
+
+- **Packaged templates, filters and tests** (EXPERIMENTAL, may change in future versions and is not subject to semantic versioning guarantees)
+  - Add `--artifacts/--no-artifacts` CLI option (env `NAC_TEST_ARTIFACTS`) to opt in to loading templates, Jinja filters and Jinja tests from bundles and modules; it is off by default for now (implied by `--bundle` and `--module-dir`) and will become the default in a future version.
+  - Bundles and the module are looked up relative to the current working directory (`nac/bundles/`, `nac/overrides.yaml`, `.terraform/` or `TF_DATA_DIR`), not the `-d` or `-t` location.
+  - Templates, Jinja filters and Jinja tests can now also come from bundles dropped into the project (every `.zip`, `.tar.gz` or `.tgz` file and every directory in `nac/bundles/`, holding `tests/{templates,jinja_filters,jinja_tests}` at the bundle root) and from the `nac/tests/{templates,jinja_filters,jinja_tests}` directories of an installed Terraform/OpenTofu module, discovered through `nac-artifacts`. Local `-t`/`-f`/`--tests` take priority over the bundle, which takes priority over the module. Templates are replaced by relative path (several directories are merged into `<output>/merged_templates/`), filters and Jinja tests by their declared name. A single templates directory is used in place, so existing setups behave as before.
+  - Several bundles are peers of one priority tier and may split templates, filters and Jinja tests between them; a template path, filter or Jinja test provided by two bundles is an error naming both, as are two bundles with the same manifest `name`. Bundles in `nac/bundles/` that provide nothing for nac-test are skipped.
+  - Add `--bundle` (repeatable) and `--module-dir` CLI options (env `NAC_TEST_BUNDLE`, `NAC_TEST_MODULE_DIR`).
+  - `overrides.yaml` can disable templates of lower layers (`disable: {templates: [...]}`, relative paths or globs): `nac/overrides.yaml` in the project disables templates of a bundle and the module, a bundle's `overrides.yaml` disables templates of the module. Local templates are never affected. Entries are declarative: one that matches nothing is not an error, and `--list-artifacts` shows disabled templates and entries that matched none.
+  - `-t/--templates` is optional when a module or bundle provides templates (with `--artifacts`); nac-test exits with an error if no layer provides any.
+- cli: add `--list-artifacts` to show the layers, effective templates, filters and tests.
+
 ## Performance
 
 - yaml parser: enabled C-accelerated parser/emitter (`ruamel.yaml.clib` / `pure=False`) in YAML utilities. Speeds up YAML loading and data model merge operations by ~3x on CPython.
@@ -19,6 +31,7 @@
 - dependencies: pin `scrapli<2026.10.0` to prevent breaking changes and installation failures introduced in scrapli 2026.10+ (#965).
 - pyats broker: unified per-device locking to prevent a stale caller from tearing down a successor's connection during the reconnect-and-retry window. The execute and disconnect paths previously used separate locks over two halves of one critical section.
 - pyats: register `FTDTestBase` in `BASE_CLASS_MAPPING` so that `--include`/`--exclude` tag filtering works for FTD tests. Previously, FTD tests silently fell through to directory-based detection which drops group tags.
+- jinja filters/tests: two files in the same directory declaring the same filter or test name now raise an error instead of one silently replacing the other depending on directory listing order. Files are loaded in sorted order. A filter or test directory that relied on listing order to pick one of two same-named files now fails; rename or remove one of them.
 
 # 2.1.0b1
 

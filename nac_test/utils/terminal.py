@@ -6,12 +6,15 @@
 import os
 import re
 
-from colorama import Fore, Style, init
+from colorama import Fore, Style, just_fix_windows_console
 
 from nac_test.core.types import CombinedResults
 
-# autoreset=True means colors reset after each print
-init(autoreset=True)
+# Only enable ANSI support on Windows consoles. Unlike init(), this never
+# wraps stdout to strip ANSI codes when it is not a terminal (e.g. piped
+# through `nac test`): color is controlled solely by NO_COLOR, consistent
+# with nac-validate. Every colored string carries its own RESET.
+just_fix_windows_console()
 
 
 class TerminalColors:

@@ -11,6 +11,7 @@ exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for 
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
+nac-artifacts = false
 nac-test-pyats-common = false
 nac-yaml = false
 
@@ -1568,6 +1569,19 @@ wheels = [
 ]
 
 [[package]]
+name = "nac-artifacts"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "ruamel-yaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/97/54/7aea8d05ca6df7776e61e34c27c387f9322fbc8a658a6f9c32b7ef33c2ab/nac_artifacts-0.2.0.tar.gz", hash = "sha256:3676f05a7cd1da7c724ae050236928e981d4b3babb5abde9cc5dd9bd66b6d568", size = 46193, upload-time = "2026-11-03T19:54:47.095Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b5/ac/fb28fec9d1a9bf900187f46811626da4e600cd52e63b47a59189230a3a5c/nac_artifacts-0.2.0-py3-none-any.whl", hash = "sha256:8b8617a7e3af9d3a26e8e49705706adecd5a16d0da2b91ca54fb9d085701279c", size = 30130, upload-time = "2026-11-03T19:54:46.18Z" },
+]
+
+[[package]]
 name = "nac-test"
 version = "2.1.0b3"
 source = { editable = "." }
@@ -1582,6 +1596,7 @@ dependencies = [
     { name = "jsonpath-ng" },
     { name = "lxml" },
     { name = "markdown" },
+    { name = "nac-artifacts" },
     { name = "nac-test-pyats-common" },
     { name = "nac-yaml" },
     { name = "psutil" },
@@ -1635,6 +1650,7 @@ requires-dist = [
     { name = "jsonpath-ng", specifier = "!=1.8.0" },
     { name = "lxml", specifier = ">=6.1.0" },
     { name = "markdown", specifier = ">=3.10.2" },
+    { name = "nac-artifacts", specifier = ">=0.2.0" },
     { name = "nac-test-pyats-common", specifier = ">=0.4.0b2" },
     { name = "nac-yaml", specifier = ">=2.1.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.6.2" },

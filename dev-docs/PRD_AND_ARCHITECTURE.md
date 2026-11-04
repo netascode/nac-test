@@ -18,6 +18,7 @@
    - [Combined Orchestrator](#combined-orchestrator)
    - [PyATS Core](#pyats-core)
    - [Robot Framework Orchestrator](#robot-framework-orchestrator)
+   - [Artifact Layers (Experimental)](#artifact-layers-templates-from-modules-and-bundles-experimental)
    - [Reporting System](#reporting-system)
 6. [Test Execution Modes](#test-execution-modes)
    - [API Tests](#api-tests)
@@ -791,12 +792,14 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
   nac-test -t templates/ -o output/
   ```
 
-**`-t, --templates`** (REQUIRED)
-- **Type**: `Path`
+**`-t, --templates`** (REQUIRED unless a module or bundle provides templates with `--artifacts`)
+- **Type**: `Path | None`
 - **Validation**: Must exist, must be directory (not file)
 - **Environment Variable**: `NAC_TEST_TEMPLATES`
 - **Purpose**: Directory containing Robot Framework `.robot` test templates with Jinja2 syntax
 - **Behavior**:
+  - Highest priority (local) layer of templates; module and bundle templates with the same relative path are replaced (see [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles-experimental))
+  - nac-test exits with an error if neither `-t` nor any module or bundle provides templates
   - Scanned recursively for `.robot` files
   - Rendered with merged data model as Jinja2 context
   - Used by both Robot orchestrator (template rendering) and PyATS orchestrator (test discovery)
@@ -830,6 +833,7 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 - **Behavior**:
   - Filters loaded as Python modules
   - Available in Robot templates via Jinja2 environment
+  - Highest priority (local) layer; replaces module and bundle filters with the same declared `name`
   - Enables custom data transformation logic in templates
 - **Example**:
   ```bash
@@ -844,9 +848,61 @@ nac-test provides 13 CLI flags covering data input, template configuration, exec
 - **Behavior**:
   - Tests loaded and registered with Jinja2 environment
   - Used in Robot templates for conditional logic (`{% if value is custom_test %}`)
+  - Highest priority (local) layer; replaces module and bundle Jinja tests with the same declared `name`
 - **Example**:
   ```bash
   nac-test -d config/ -t templates/ --tests custom_tests/ -o output/
+  ```
+
+##### Artifact Layer Flags (Experimental)
+
+See [Artifact Layers](#artifact-layers-templates-from-modules-and-bundles-experimental) for how these layers are combined.
+
+**`--artifacts/--no-artifacts`** (OPTIONAL, experimental)
+- **Type**: `bool | None`
+- **Default**: off (`None`, implied by `--bundle` and `--module-dir`); will become the default in a future version
+- **Environment Variable**: `NAC_TEST_ARTIFACTS`
+- **Purpose**: Opt in to loading templates, Jinja filters and Jinja tests from bundles in `nac/bundles/` and the installed module, applying `nac/overrides.yaml`
+- **Behavior**:
+  - Off: only the local `-t`/`-f`/`--tests` layer is used; bundles, the module and `nac/overrides.yaml` are not read, and `--list-artifacts` prints a hint
+  - `--no-artifacts` wins over `NAC_TEST_ARTIFACTS=true`
+  - `--no-artifacts` combined with `--bundle` or `--module-dir` is an error (exit code 2)
+- **Example**:
+  ```bash
+  nac-test --artifacts -d config/ -o output/
+  ```
+
+**`--bundle`** (OPTIONAL, repeatable, experimental)
+- **Type**: `list[Path] | None`
+- **Environment Variable**: `NAC_TEST_BUNDLE`
+- **Purpose**: Artifact bundles (`.zip`, `.tar.gz`, `.tgz` or directory) to use instead of the ones found in `nac/bundles/`
+- **Behavior**:
+  - Implies `--artifacts`
+  - Without it, every supported archive and every directory in the project's `nac/bundles/` is a bundle
+  - Several bundles are peers that may split content but must not overlap
+  - A bundle given here that provides no templates, filters or Jinja tests, and whose `overrides.yaml` disables nothing, is an error
+- **Example**:
+  ```bash
+  nac-test -d config/ -o output/ --bundle acme-base.zip --bundle acme-extra.zip
+  ```
+
+**`--module-dir`** (OPTIONAL, experimental)
+- **Type**: `Path | None`
+- **Environment Variable**: `NAC_TEST_MODULE_DIR`
+- **Purpose**: Module directory whose `nac/tests/` to use, instead of the module discovered through `terraform init`
+- **Behavior**: Implies `--artifacts`; needed when several installed modules provide tests
+- **Example**:
+  ```bash
+  nac-test -d config/ -o output/ --module-dir .terraform/modules/aci
+  ```
+
+**`--list-artifacts`** (OPTIONAL)
+- **Type**: `bool`
+- **Purpose**: Print the artifact layers, effective templates (with shadowed and disabled ones), Jinja filters and Jinja tests, then exit
+- **Behavior**: Needs no `-d` or `-o`; exits with code 2 on the same errors a run would report. Reads filter and Jinja test names statically, so no bundle or module code runs; with `--artifacts` it still extracts bundle archives into `nac/bundles/.cache/`
+- **Example**:
+  ```bash
+  nac-test --list-artifacts
   ```
 
 ##### Execution Control Flags
@@ -1308,6 +1364,9 @@ Every CLI flag (except `--version`) supports environment variable configuration 
 | `-o, --output` | `NAC_TEST_OUTPUT` | `Path` | `NAC_TEST_OUTPUT="/artifacts/output"` |
 | `-f, --filters` | `NAC_TEST_FILTERS` | `Path` | `NAC_TEST_FILTERS="/app/filters"` |
 | `--tests` | `NAC_TEST_TESTS` | `Path` | `NAC_TEST_TESTS="/app/custom_tests"` |
+| `--artifacts/--no-artifacts` (experimental) | `NAC_TEST_ARTIFACTS` | `bool` | `NAC_TEST_ARTIFACTS=true` |
+| `--bundle` (experimental) | `NAC_TEST_BUNDLE` | `list[Path]` | `NAC_TEST_BUNDLE="acme-base.zip:acme-extra.zip"` |
+| `--module-dir` (experimental) | `NAC_TEST_MODULE_DIR` | `Path` | `NAC_TEST_MODULE_DIR=".terraform/modules/aci"` |
 | `-i, --include` | `NAC_TEST_INCLUDE` | `list[str]` | `NAC_TEST_INCLUDE="smoke:regression"` |
 | `-e, --exclude` | `NAC_TEST_EXCLUDE` | `list[str]` | `NAC_TEST_EXCLUDE="wip:experimental"` |
 | `--render-only` | `NAC_TEST_RENDER_ONLY` | `bool` | `NAC_TEST_RENDER_ONLY=1` |
@@ -4098,6 +4157,140 @@ Additional Robot Framework arguments passed via the `--` separator are validated
 
 The `CONTROLLED_ROBOT_OPTIONS` dict maps long options to their short forms and nac-test equivalents for user-friendly error messages.
 
+### Artifact Layers: Templates from Modules and Bundles (Experimental)
+
+> **Note:** This feature is experimental and may change in future versions. It is not subject to semantic versioning guarantees.
+
+Test templates, Jinja filters and Jinja tests do not have to live in the user's repository. nac-test also reads them from an installed Terraform/OpenTofu module and from bundles dropped into the project, so a module or a separately distributed bundle can ship its tests. nac-validate uses the same mechanism for schema and rules. Locating modules and bundles, extracting archives and reading `overrides.yaml` is done by [nac-artifacts](https://github.com/netascode/nac-artifacts), which both tools share. nac-test adds the local layer and decides how the layers are combined.
+
+#### Opt-in
+
+Loading bundles and modules is currently opt-in with `--artifacts` (env `NAC_TEST_ARTIFACTS`), implied by `--bundle` and `--module-dir`. Without it, `resolve_layers(..., artifacts=False)` returns only the local layer, and neither bundles, the module nor `nac/overrides.yaml` are read. It will become the default in a future version, after which `--no-artifacts` turns it off. `--no-artifacts` combined with `--bundle` or `--module-dir` is an error (`_artifacts_enabled()` in `cli/main.py`).
+
+#### Layers and Priority
+
+Up to three layers, highest priority first:
+
+| Priority | Layer | Source | Located by |
+|----------|-------|--------|------------|
+| 1 | `local` | `-t/--templates`, `-f/--filters`, `--tests` | CLI options |
+| 2 | `bundle` | Every `.zip`, `.tar.gz` or `.tgz` file and every directory in the project's `nac/bundles/`, or `--bundle` (repeatable) | `nac_artifacts.resolve_artifact_layers()` |
+| 3 | `module` | The `nac/` directory of an installed module, found through the `modules.json` that `terraform init` / `tofu init` writes, or `--module-dir` | `nac_artifacts.resolve_artifact_layers()` |
+
+Each layer provides any subset of three directories (`ARTIFACTS_*_PATH` in `core/constants.py`):
+
+```text
+module/                          bundle/                       project/
+├── main.tf                      ├── manifest.yaml (required)  ├── main.tf
+└── nac/                         ├── overrides.yaml            └── nac/
+    └── tests/                   └── tests/                        ├── overrides.yaml
+        ├── templates/               ├── templates/                └── bundles/
+        ├── jinja_filters/           ├── jinja_filters/                ├── acme-1.2.0.zip
+        └── jinja_tests/             └── jinja_tests/                  ├── other-bundle/
+                                                                       └── .cache/  (extracted archives, git-ignored)
+```
+
+A module keeps its artifacts in its `nac/` directory, because the module directory is shared with Terraform code. A bundle belongs to nac only and keeps them at its root, next to `manifest.yaml`. nac-test reads both through `ArtifactLayer.nac_dir`, which points to the right directory for each origin.
+
+- Several bundles are **peers** in one tier. They may split templates, filters and Jinja tests between them, but a template path, filter or Jinja test provided by two bundles is an error naming both. Two bundles with the same manifest `name` (for example an old and a new version left in `nac/bundles/`) are an error too.
+- A bundle found in `nac/bundles/` that provides none of the three directories (for example a bundle with only nac-validate rules) is skipped. A bundle passed with `--bundle` that provides nothing is an error.
+- An archive of an unsupported type in `nac/bundles/` (such as `.tar.xz`) is an error, so a bundle meant to be used is never skipped silently. Other files there are ignored.
+- Several modules providing tests are an error that asks for `--module-dir`.
+- The **project directory** is the current working directory, not the `-d` or `-t` location: `nac/bundles/`, `nac/overrides.yaml` and the Terraform data directory (`.terraform/`, or `TF_DATA_DIR`) holding `modules.json` are looked up there. Run nac-test from the root module directory, where `terraform init` ran, or pass `--module-dir`/`--bundle`.
+- Existing setups are unaffected: without `--artifacts` (or a module or bundle that ships tests), only the local layer exists and `-t` is used in place.
+
+#### Resolution Flow (`layers.py`)
+
+```mermaid
+flowchart TD
+    CLI["cli/main.py<br/>-t, -f, --tests, --artifacts, --bundle, --module-dir"] --> RL["resolve_layers()"]
+    RL --> LOC["local AssetLayer<br/>(from CLI options)"]
+    RL -->|"artifacts=True"| NA["nac_artifacts.resolve_artifact_layers()<br/>provides=tests/templates, tests/jinja_filters, tests/jinja_tests"]
+    NA --> LD["nac_artifacts.layer_disables()<br/>project and bundle overrides.yaml"]
+    LD --> AL["bundle and module AssetLayers"]
+    LOC --> LAYERS["list[AssetLayer], highest priority first"]
+    AL --> LAYERS
+    LAYERS --> TS["template_sources()"] --> ETD["effective_templates_dir()"]
+    LAYERS --> ET["extension_tiers('filters' / 'jinja_tests')"] --> CO["CombinedOrchestrator<br/>filters_path, tests_path"]
+    ETD --> CO2["CombinedOrchestrator<br/>templates_dir"]
+```
+
+`resolve_layers()` returns `AssetLayer` objects (`origin`, `templates`, `filters`, `jinja_tests`, `version`, `detail`, `disabled_templates`, `label`). A directory is `None` when the layer does not provide it. Helpers turn the layers into what the rest of nac-test consumes:
+
+| Helper | Returns | Used for |
+|--------|---------|----------|
+| `directories(layers, kind)` | Flat list of directories of one kind | Checking that some layer provides templates; excluding filter and Jinja test directories from the template merge |
+| `template_sources(layers)` | `TemplateSource` per templates directory, with its disable entries and its tier (the origin) | Template merge |
+| `extension_tiers(layers, kind)` | Directories grouped into priority tiers; bundles of one tier form a list of peers | Loading filters and Jinja tests |
+
+Discovery failures raise `nac_artifacts.ArtifactError` subclasses (`ModuleDiscoveryError`, `AmbiguousModuleError`, `BundleError`, `OverridesError`). The CLI prints them and exits with `EXIT_INVALID_ARGS` (2), as it does when no layer provides any templates.
+
+#### Template Merging (`utils/template_merge.py`)
+
+A template is identified by its path relative to its templates directory. `plan_template_merge()` works out the winner for every relative path without copying anything:
+
+1. Tiers are processed from lowest to highest priority, so higher tiers replace lower ones.
+2. Within a source, files matching one of its disable entries are dropped first. A higher layer can therefore still provide a path that is disabled in a lower one.
+3. Within a tier, two sources providing the same path raise `TemplateError` naming both.
+4. The resulting `TemplatePlan` records the winning files, their origins, shadowed paths, disabled templates and disable entries that matched nothing.
+
+`effective_templates_dir()` decides which directory the orchestrators read:
+
+- **One templates directory with nothing disabled**: that directory is used in place. Nothing is copied, so a plain `-t templates/` run behaves as before.
+- **Otherwise**: `merge_template_dirs()` recreates `<output>/merged_templates/` (`MERGED_TEMPLATES_DIRNAME`) with real copies of the winning files. Copies are used instead of symlinks because PyATS computes test names relative to the templates directory and breaks on symlinked files. The merge target must not be or contain a source directory, since it is deleted first.
+
+Filter and Jinja test directories are excluded from the merge (they may sit inside a templates directory), and `CombinedOrchestrator._discover_test_types()` excludes them from PyATS discovery as well, so their `.py` files are never mistaken for PyATS tests.
+
+#### Jinja Filters and Jinja Tests (`robot/jinja_extensions.py`)
+
+`load_jinja_extensions()` loads `Filter` or `Test` classes from the directories that `extension_tiers()` returns:
+
+- An extension is identified by its declared `name`, not its file name. A higher tier replaces a lower one with the same name.
+- Two files in one directory, or in two peer bundles, declaring the same name raise `TemplateError`. Files load in sorted order, so results do not depend on directory listing order.
+- Each file gets its own module name (prefix plus a hash of its path), so same-named files from different layers do not replace each other in `sys.modules`.
+- Files load through a loader that writes no bytecode, because module and bundle directories (including the extraction cache) are not the user's to write to.
+
+`RobotWriter` uses this loader when rendering templates. `--list-artifacts` uses `declared_jinja_extensions()` instead, which applies the same resolution (`_resolve()`: tiers, replacement, duplicate errors) but parses each file with `ast` instead of importing it, reading the string literal assigned to `name` in the top-level `Filter`/`Test` class. A file whose name is not a string literal (computed, inherited, imported class) is listed as `<file>: unknown (not statically resolvable)` and takes part in no duplicate check; an actual run still resolves it by importing.
+
+#### Overrides: Disabling Templates of Lower Layers
+
+`overrides.yaml` disables templates of lower layers by relative path or glob (`*` also matches `/`):
+
+```yaml
+disable:
+  templates: ["config/bridge_domain.robot", "lib/*"]
+```
+
+| File | Disables templates of |
+|------|-----------------------|
+| `nac/overrides.yaml` in the project | All bundles and the module |
+| `overrides.yaml` at a bundle's root | The module (not peer bundles) |
+
+- Local templates are never affected. Users delete them or leave them out of `-t` instead.
+- Entries are declarative: one that matches nothing is not an error, and `--list-artifacts` lists it.
+- A `disable.rules` list in the same file is read by nac-validate and ignored by nac-test.
+- A bundle whose `overrides.yaml` disables something is used even if it provides no templates of its own.
+
+#### `--list-artifacts` (`cli/ui/artifacts.py`)
+
+`nac-test --list-artifacts` resolves the layers, plans the template merge and resolves the filters and Jinja tests as a run would, but copies nothing and needs no `-d` or `-o`. It runs no code of a bundle or module: filters and Jinja tests are read statically (see above). It is not entirely read-only, though: with `--artifacts`, bundle archives are extracted into `nac/bundles/.cache/` of the project. It honours `--artifacts` like a run and, when bundles and modules are not loaded, ends with a hint to use `--artifacts`. `format_artifacts_list()` prints:
+
+- the layers, highest priority first, with version and location (bundle archives include a short SHA-256)
+- the effective templates with their layer, and which layer each shadows
+- disabled templates, the source that disabled them, and disable entries that matched no template
+- the loaded filters and Jinja tests with their layer
+
+#### Trust Model
+
+Bundles and modules usually contain Python code that nac-test executes (filters, Jinja tests, PyATS tests), with controller and device credentials in the environment. They need the same trust as code in the user's own repository. nac-artifacts guards archive extraction (unsafe paths, symlinks, file count and size limits), but does not sandbox what the extracted code does. `--list-artifacts` executes none of it.
+
+While loading is opt-in, running such code requires an explicit `--artifacts`, `--bundle` or `--module-dir`. Making it the default is a **breaking change** in trust: a `terraform init -upgrade` or a file dropped into `nac/bundles/` would then change which Python runs, and `.terraform/` is normally not reviewed in a diff. Before the default flips, nac-test should gain a consent or pinning mechanism. The current plan (not implemented):
+
+- **Lock file** (for example `nac/artifacts.lock`) recording, per layer, the module key and version or bundle name and version, plus a SHA-256 of the content nac-test executes (the archive for bundles, a tree hash of `nac/tests/` for modules). `--list-artifacts` already shows a SHA-256 prefix for bundle archives as a starting point.
+- A command (for example `nac-test --lock-artifacts`) that writes or updates the lock file after the user reviewed `--list-artifacts`; the lock file is committed with the project.
+- A run with layers that are missing from the lock file or whose hash differs fails with a clear message (or warns, configurable for CI), instead of executing unreviewed code.
+- The same lock file format is shared with nac-validate through nac-artifacts, since both tools execute Python from the same layers (nac-validate rules).
+
 ---
 
 ## Test Execution Modes
@@ -6360,9 +6553,12 @@ project-root/
 │   ├── __init__.py
 │   ├── __main__.py             # Entry point
 │   ├── cli/
-│   │   └── main.py             # CLI implementation
+│   │   ├── main.py             # CLI implementation
+│   │   └── ui/
+│   │       └── artifacts.py    # --list-artifacts output
 │   ├── combined_orchestrator.py
 │   ├── data_merger.py
+│   ├── layers.py               # Template/filter/Jinja test layers (local, bundle, module)
 │   ├── core/
 │   │   ├── constants.py
 │   │   └── models.py
@@ -6375,6 +6571,7 @@ project-root/
 │   │   ├── reporting/          # HTML reports
 │   │   └── ssh/                # SSH management
 │   ├── robot/                  # Robot Framework
+│   │   ├── jinja_extensions.py # Loading of Jinja filters and Jinja tests
 │   │   ├── orchestrator.py
 │   │   ├── pabot.py
 │   │   └── robot_writer.py
@@ -6384,6 +6581,7 @@ project-root/
 │       ├── logging.py
 │       ├── path_setup.py
 │       ├── system_resources.py
+│       ├── template_merge.py   # Merging of template directories from several layers
 │       └── terminal.py
 │
 ├── tests/                      # Test suite
@@ -6395,6 +6593,7 @@ project-root/
 │
 └── output/                     # Generated outputs (git-ignored)
     ├── merged_data_model.json  # Merged data file
+    ├── merged_templates/       # Templates merged from several layers (only if needed)
     ├── pyats_results/          # Extracted archives
     │   ├── api/                # API test results
     │   │   ├── html_reports/

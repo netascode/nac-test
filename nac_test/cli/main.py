@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from nac_artifacts import ArtifactError
 from rich.console import Console
 from rich.panel import Panel
 from robot.errors import DataError
@@ -18,6 +19,7 @@ from robot.errors import DataError
 import nac_test
 from nac_test.cli.diagnostic import run_diagnostic
 from nac_test.cli.ui import display_aci_defaults_banner
+from nac_test.cli.ui.artifacts import format_artifacts_list
 from nac_test.cli.validators import validate_aci_defaults, validate_extra_args
 from nac_test.combined_orchestrator import CombinedOrchestrator
 from nac_test.core.constants import (
@@ -29,6 +31,14 @@ from nac_test.core.constants import (
     EXIT_INVALID_ARGS,
 )
 from nac_test.data_merger import DataMerger
+from nac_test.exceptions import NacTestError
+from nac_test.layers import (
+    directories,
+    extension_tiers,
+    resolve_layers,
+    template_sources,
+)
+from nac_test.robot.jinja_extensions import declared_jinja_extensions
 from nac_test.utils.cleanup import get_cleanup_manager
 from nac_test.utils.formatting import format_duration
 from nac_test.utils.logging import (
@@ -37,6 +47,8 @@ from nac_test.utils.logging import (
     configure_logging,
 )
 from nac_test.utils.platform import check_and_exit_if_unsupported_macos_python
+from nac_test.utils.template_merge import effective_templates_dir, plan_template_merge
+from nac_test.utils.terminal import TerminalColors
 
 # Pretty exceptions are verbose but helpful for debugging.
 # Enable them when NAC_TEST_DEBUG=true, disable for cleaner output otherwise.
@@ -52,7 +64,7 @@ def _print_cli_error(message: str) -> None:
     Args:
         message: The error message to display inside the panel.
     """
-    Console(stderr=True).print(
+    Console(stderr=True, force_terminal=not TerminalColors.NO_COLOR).print(
         Panel(message, title="Error", border_style="red", title_align="left")
     )
 
@@ -88,7 +100,7 @@ DeprecatedVerbosity = Annotated[
 
 
 Data = Annotated[
-    list[Path],
+    list[Path] | None,
     typer.Option(
         "-d",
         "--data",
@@ -102,14 +114,17 @@ Data = Annotated[
 
 
 Templates = Annotated[
-    Path,
+    Path | None,
     typer.Option(
         "-t",
         "--templates",
         exists=True,
         dir_okay=True,
         file_okay=False,
-        help="Path to test templates.",
+        help=(
+            "Path to test templates. Optional if a module or bundle provides "
+            "templates (with --artifacts); these are merged underneath."
+        ),
         envvar="NAC_TEST_TEMPLATES",
     ),
 ]
@@ -143,7 +158,7 @@ Tests = Annotated[
 
 
 Output = Annotated[
-    Path,
+    Path | None,
     typer.Option(
         "-o",
         "--output",
@@ -152,6 +167,63 @@ Output = Annotated[
         file_okay=False,
         help="Path to output directory.",
         envvar="NAC_TEST_OUTPUT",
+    ),
+]
+
+
+Artifacts = Annotated[
+    bool | None,
+    typer.Option(
+        "--artifacts/--no-artifacts",
+        help=(
+            "Experimental: also load templates, Jinja filters and Jinja tests from "
+            "bundles in nac/bundles/ and the installed Terraform module, applying "
+            "nac/overrides.yaml. Off by default (implied by --bundle and "
+            "--module-dir); will become the default in a future version."
+        ),
+        envvar="NAC_TEST_ARTIFACTS",
+        show_default=False,
+    ),
+]
+
+
+Bundle = Annotated[
+    list[Path] | None,
+    typer.Option(
+        "--bundle",
+        exists=False,
+        help=(
+            "Experimental: path to an artifact bundle (zip, tar.gz or directory), repeatable; "
+            "implies --artifacts. "
+            "Defaults to every .zip, .tar.gz or .tgz file and directory in nac/bundles/."
+        ),
+        envvar="NAC_TEST_BUNDLE",
+    ),
+]
+
+
+ModuleDir = Annotated[
+    Path | None,
+    typer.Option(
+        "--module-dir",
+        exists=False,
+        dir_okay=True,
+        file_okay=False,
+        help=(
+            "Experimental: path to a module directory containing nac/ artifacts; "
+            "implies --artifacts. "
+            "Defaults to the module discovered via terraform init."
+        ),
+        envvar="NAC_TEST_MODULE_DIR",
+    ),
+]
+
+
+ListArtifacts = Annotated[
+    bool,
+    typer.Option(
+        "--list-artifacts",
+        help="List the artifact layers, effective templates, Jinja filters and Jinja tests and exit.",
     ),
 ]
 
@@ -293,14 +365,115 @@ Testbed = Annotated[
 ]
 
 
-@app.command(context_settings={"allow_extra_args": True})
+def _require_options(
+    data: list[Path] | None, output: Path | None
+) -> tuple[list[Path], Path]:
+    """Report missing -d/-o like a required option.
+
+    They are optional at the parser level only so that --list-artifacts works
+    without them.
+    """
+    for value, hint in ((data, "'--data' / '-d'"), (output, "'--output' / '-o'")):
+        if value is None:
+            _print_cli_error(f"Missing option {hint}.")
+            raise typer.Exit(EXIT_INVALID_ARGS)
+    assert data is not None and output is not None  # checked above
+    return data, output
+
+
+def _collapse(
+    tiers: list[Path | list[Path]],
+) -> Path | list[Path | list[Path]] | None:
+    """Pass a single directory as a Path, several tiers as a list, none as None."""
+    if not tiers:
+        return None
+    return tiers[0] if len(tiers) == 1 and isinstance(tiers[0], Path) else tiers
+
+
+def _artifacts_enabled(
+    artifacts: bool | None, bundles: list[Path] | None, module_dir: Path | None
+) -> bool:
+    """Whether to load bundles and modules: opt-in, implied by explicit paths.
+
+    Raises:
+        typer.Exit: If ``--no-artifacts`` is combined with ``--bundle`` or
+            ``--module-dir``.
+    """
+    explicit = bool(bundles) or module_dir is not None
+    if artifacts is False and explicit:
+        _print_cli_error(
+            "--bundle and --module-dir cannot be combined with --no-artifacts "
+            "(or NAC_TEST_ARTIFACTS=false)."
+        )
+        raise typer.Exit(EXIT_INVALID_ARGS)
+    return bool(artifacts) or explicit
+
+
+def _list_artifacts(
+    templates: Path | None,
+    filters: Path | None,
+    tests: Path | None,
+    bundles: list[Path] | None,
+    module_dir: Path | None,
+    artifacts: bool,
+    loglevel: LogLevel | None,
+) -> None:
+    """Print the effective artifact layers, templates, filters and tests.
+
+    Filters and Jinja tests are parsed, not imported, so no code of a bundle or
+    module runs. Bundle archives are still extracted into ``nac/bundles/.cache/``.
+    """
+    configure_logging(loglevel or DEFAULT_LOGLEVEL)
+    try:
+        layers = resolve_layers(
+            Path.cwd(),
+            templates=templates,
+            filters=filters,
+            jinja_tests=tests,
+            bundles=bundles,
+            module_dir=module_dir,
+            artifacts=artifacts,
+        )
+        filter_dirs = directories(layers, "filters")
+        test_dirs = directories(layers, "jinja_tests")
+        plan = plan_template_merge(
+            template_sources(layers), exclude=[*filter_dirs, *test_dirs]
+        )
+        # Read statically: listing must not run bundle or module code
+        loaded_filters = declared_jinja_extensions(
+            extension_tiers(layers, "filters"), class_name="Filter"
+        )
+        loaded_tests = declared_jinja_extensions(
+            extension_tiers(layers, "jinja_tests"), class_name="Test"
+        )
+    except (ArtifactError, NacTestError) as e:
+        _print_cli_error(str(e))
+        raise typer.Exit(EXIT_INVALID_ARGS) from None
+    typer.echo(format_artifacts_list(layers, plan, loaded_filters, loaded_tests))
+    if not artifacts:
+        typer.echo(
+            "Bundles and modules are not loaded; use --artifacts to include them "
+            "(this will become the default in a future version)."
+        )
+    raise typer.Exit(0)
+
+
+# color: keep (or strip) styles in typer.echo/secho based on NO_COLOR only,
+# not on whether stdout is a terminal -- consistent with nac-validate.
+@app.command(
+    context_settings={"allow_extra_args": True, "color": not TerminalColors.NO_COLOR}
+)
 def main(
     ctx: typer.Context,
-    data: Data,
-    templates: Templates,
-    output: Output,
+    data: Data = None,
+    templates: Templates = None,
+    output: Output = None,
     filters: Filters = None,
     tests: Tests = None,
+    artifacts: Artifacts = None,
+    bundle: Bundle = None,
+    module_dir: ModuleDir = None,
+    list_artifacts: ListArtifacts = False,
     include: Include = None,
     exclude: Exclude = None,
     render_only: RenderOnly = False,
@@ -325,6 +498,13 @@ def main(
     files/directories, and options controlled by nac-test (like --include, --exclude)
     are not supported and will result in an error.
     """
+    load_artifacts = _artifacts_enabled(artifacts, bundle, module_dir)
+    if list_artifacts:
+        _list_artifacts(
+            templates, filters, tests, bundle, module_dir, load_artifacts, loglevel
+        )
+    data, output = _require_options(data, output)
+
     # Default child processes to UTF-8 regardless of OS locale (#630)
     os.environ.setdefault("PYTHONUTF8", "1")
 
@@ -375,8 +555,43 @@ def main(
             _print_cli_error(f"Invalid Robot Framework argument: {e}")
             raise typer.Exit(EXIT_DATA_ERROR) from None
 
+    # Resolve templates, filters and Jinja tests from local options, bundle and module
+    try:
+        layers = resolve_layers(
+            Path.cwd(),
+            templates=templates,
+            filters=filters,
+            jinja_tests=tests,
+            bundles=bundle,
+            module_dir=module_dir,
+            artifacts=load_artifacts,
+        )
+    except ArtifactError as e:
+        _print_cli_error(str(e))
+        raise typer.Exit(EXIT_INVALID_ARGS) from None
+    template_dirs = directories(layers, "templates")
+    if not template_dirs:
+        _print_cli_error(
+            "No test templates found. Use -t/--templates, or provide them "
+            "through a module or bundle (with --artifacts)."
+        )
+        raise typer.Exit(EXIT_INVALID_ARGS)
+    filter_dirs = directories(layers, "filters")
+    test_dirs = directories(layers, "jinja_tests")
+
     # Create output directory and shared merged data file (SOT)
     output.mkdir(parents=True, exist_ok=True)
+
+    # A single template directory is used in place; several are merged into the
+    # output directory (higher priority layers replace templates by relative path)
+    try:
+        templates_dir = effective_templates_dir(
+            template_sources(layers), output, exclude=[*filter_dirs, *test_dirs]
+        )
+    except NacTestError as e:
+        _print_cli_error(str(e))
+        raise typer.Exit(EXIT_INVALID_ARGS) from None
+    assert templates_dir is not None  # template_dirs is not empty
 
     # Validate ACI defaults before expensive merge operation
     # This catches the common mistake of forgetting -d ./defaults/
@@ -406,12 +621,12 @@ def main(
     # CombinedOrchestrator - handles both dev and production modes (uses pre-created merged data)
     orchestrator = CombinedOrchestrator(
         data_paths=data,
-        templates_dir=templates,
+        templates_dir=templates_dir,
         output_dir=output,
         merged_data=merged_data,
         custom_testbed_path=testbed,
-        filters_path=filters,
-        tests_path=tests,
+        filters_path=_collapse(extension_tiers(layers, "filters")),
+        tests_path=_collapse(extension_tiers(layers, "jinja_tests")),
         include_tags=include,
         exclude_tags=exclude,
         render_only=render_only,
