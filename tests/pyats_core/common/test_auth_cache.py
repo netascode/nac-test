@@ -15,6 +15,10 @@ authentication caching for parallel processes. The tests cover:
 
 import json
 import logging
+import os
+import subprocess
+import sys
+import threading
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -22,7 +26,7 @@ from unittest.mock import Mock
 import pytest
 from pytest_mock import MockerFixture
 
-from nac_test.core.auth_cache import AuthCache
+from nac_test.core.auth_cache import AuthCache, _file_lock
 
 
 @pytest.fixture
@@ -59,20 +63,16 @@ def mock_auth_cache_dir(mocker: MockerFixture, tmp_path: Path) -> Path:
 def mock_fcntl(mocker: MockerFixture) -> Any:
     """Fixture to mock file locking operations.
 
-    Note: This fixture now mocks filelock.FileLock instead of fcntl.flock,
-    as the implementation was changed to use the cross-platform filelock
-    library for Windows/macOS/Linux compatibility.
-
     Args:
         mocker: Pytest mocker fixture for creating mocks.
 
     Returns:
-        Mock object for FileLock context manager.
+        Mock object for the _file_lock context manager.
     """
     mock_lock = mocker.MagicMock()
     mock_lock.__enter__ = mocker.MagicMock(return_value=None)
     mock_lock.__exit__ = mocker.MagicMock(return_value=None)
-    return mocker.patch("nac_test.core.auth_cache.FileLock", return_value=mock_lock)
+    return mocker.patch("nac_test.core.auth_cache._file_lock", return_value=mock_lock)
 
 
 @pytest.fixture
@@ -517,12 +517,12 @@ class TestAuthCacheInternal:
     ) -> None:
         """Test that file locking is properly called during cache operations.
 
-        This test verifies that FileLock is used as a context manager
+        This test verifies that the file lock is used as a context manager
         to ensure thread/process safety during cache operations.
 
         Args:
             mock_auth_cache_dir: Mocked auth cache directory path.
-            mock_fcntl: Mocked file locking (FileLock).
+            mock_fcntl: Mocked file locking (_file_lock).
             mock_time: Mocked time.time() for consistent testing.
             sample_auth_func: Mock authentication function.
         """
@@ -538,12 +538,11 @@ class TestAuthCacheInternal:
             extract_token=True,
         )
 
-        # Assert - FileLock should be instantiated with the lock file path
+        # Assert - the lock should be taken with the lock file path
         mock_fcntl.assert_called_once()
-        # Verify FileLock was used as context manager
         call_args = mock_fcntl.call_args
         lock_file_path = call_args[0][0]
-        assert lock_file_path.endswith(".lock"), (
+        assert lock_file_path.name.endswith(".lock"), (
             f"Expected .lock file, got: {lock_file_path}"
         )
 
@@ -1099,10 +1098,9 @@ class TestAuthCacheInvalidate:
     ) -> None:
         """Invalidate leaves no cache or lock artifacts behind.
 
-        This test does NOT mock FileLock so that real file locking occurs.
-        Note: filelock >= 3.13 (UnixFileLock) auto-deletes lock files on
-        release, so the .lock file may not persist between calls. This test
-        verifies the end state — no artifacts remain after invalidation.
+        This test does NOT mock _file_lock so that real file locking occurs.
+        It verifies the end state: invalidate removes both the cache file and
+        the lock file.
 
         Args:
             mock_auth_cache_dir: Mocked auth cache directory path.
@@ -1112,7 +1110,7 @@ class TestAuthCacheInvalidate:
         controller_type = "ACI"
         url = "https://apic.example.com"
 
-        # Populate cache (using real FileLock)
+        # Populate cache (using real file lock)
         AuthCache._cache_auth_data(
             controller_type=controller_type,
             url=url,
@@ -1151,9 +1149,9 @@ class TestAuthCacheInvalidate:
         cache_file = mock_auth_cache_dir / f"{controller_type}_{url_hash}.json"
         cache_file.write_text("{}")
 
-        # Make FileLock raise an OSError to simulate a permission issue
+        # Make the lock raise an OSError to simulate a permission issue
         mocker.patch(
-            "nac_test.core.auth_cache.FileLock",
+            "nac_test.core.auth_cache._file_lock",
             side_effect=OSError("Permission denied"),
         )
 
@@ -1162,3 +1160,84 @@ class TestAuthCacheInvalidate:
 
         # The cache file still exists because we couldn't acquire the lock
         assert cache_file.exists()
+
+
+class TestFileLock:
+    """Tests for the real (unmocked) _file_lock helper."""
+
+    def test_second_acquirer_blocks_until_release(self, tmp_path: Path) -> None:
+        lock_path = tmp_path / "x.lock"
+        acquired = threading.Event()
+
+        def contender() -> None:
+            with _file_lock(lock_path):
+                acquired.set()
+
+        with _file_lock(lock_path):
+            t = threading.Thread(target=contender)
+            t.start()
+            assert not acquired.wait(0.3)
+        t.join(timeout=5)
+        assert acquired.is_set()
+
+    def test_lock_released_when_body_raises(self, tmp_path: Path) -> None:
+        lock_path = tmp_path / "x.lock"
+        try:
+            with _file_lock(lock_path):
+                raise RuntimeError("boom")
+        except RuntimeError:
+            pass
+        acquired = threading.Event()
+
+        def contender() -> None:
+            with _file_lock(lock_path):
+                acquired.set()
+
+        t = threading.Thread(target=contender)
+        t.start()
+        t.join(timeout=5)
+        assert acquired.is_set()
+
+    def test_does_not_follow_symlink_or_truncate(self, tmp_path: Path) -> None:
+        target = tmp_path / "victim.txt"
+        target.write_text("precious")
+        lock_path = tmp_path / "x.lock"
+        lock_path.symlink_to(target)
+        with pytest.raises(OSError):
+            with _file_lock(lock_path):
+                pass
+        assert target.read_text() == "precious"
+
+    def test_retries_when_lock_file_replaced(self, tmp_path: Path) -> None:
+        """A waiter on an unlinked inode must not enter the critical section."""
+        lock_path = tmp_path / "x.lock"
+        entered = threading.Event()
+
+        def waiter() -> None:
+            with _file_lock(lock_path):
+                entered.set()
+
+        with _file_lock(lock_path):
+            t = threading.Thread(target=waiter)
+            t.start()
+            assert not entered.wait(0.3)
+            # Simulate invalidate(): unlink while the waiter is blocked on the old inode
+            lock_path.unlink()
+        t.join(timeout=5)
+        assert entered.is_set()
+        assert lock_path.exists()
+
+
+def test_filelock_not_imported_by_runtime_modules() -> None:
+    """filelock installs a fork audit hook on import and must stay out of the process."""
+    code = (
+        "import sys\n"
+        "import nac_test.cli.main\n"
+        "import nac_test.pyats_core.broker.connection_broker\n"
+        "import nac_test.core.auth_cache\n"
+        "assert 'filelock' not in sys.modules, 'filelock was imported'\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, env=os.environ
+    )
+    assert result.returncode == 0, result.stderr

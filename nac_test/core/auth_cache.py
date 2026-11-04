@@ -7,16 +7,51 @@ import hashlib
 import json
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
-
-from filelock import FileLock
 
 from nac_test.core.constants import AUTH_CACHE_DIR
 from nac_test.utils.url import sanitize_url_for_display
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _file_lock(lock_file: Path) -> Iterator[None]:
+    """Hold an exclusive inter-process lock on ``lock_file`` (blocking).
+
+    Uses ``fcntl.flock`` directly rather than the ``filelock`` package: filelock
+    installs a process-wide fork audit hook on import that makes concurrent
+    ``os.forkpty`` calls (Unicon SSH spawns on broker threads) fail intermittently.
+
+    ``fcntl`` is imported lazily because it does not exist on Windows, where this
+    module is still imported (Robot-only runs) but the auth cache is never used.
+    """
+    import fcntl
+    import os
+
+    # O_NOFOLLOW and no O_TRUNC: the lock path is predictable and lives in a shared
+    # temp dir, so never follow a planted symlink or truncate its target.
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+    while True:
+        fd = os.open(lock_file, flags, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            # invalidate() unlinks the lock file. If it was replaced while we were
+            # blocked, we hold a stale inode and must retry on the current one.
+            try:
+                current = os.stat(lock_file)
+            except FileNotFoundError:
+                continue
+            held = os.fstat(fd)
+            if (held.st_dev, held.st_ino) != (current.st_dev, current.st_ino):
+                continue
+            yield
+            return
+        finally:
+            os.close(fd)  # also releases the flock
 
 
 class AuthCache:
@@ -52,7 +87,7 @@ class AuthCache:
         cache_file = cache_dir / f"{controller_type}_{url_hash}.json"
         lock_file = cache_dir / f"{controller_type}_{url_hash}.lock"
 
-        with FileLock(str(lock_file)):
+        with _file_lock(lock_file):
             # Check if valid cached data exists
             if cache_file.exists():
                 try:
@@ -131,7 +166,7 @@ class AuthCache:
         display_url = sanitize_url_for_display(url)
 
         try:
-            with FileLock(str(lock_file)):
+            with _file_lock(lock_file):
                 if cache_file.exists():
                     cache_file.unlink()
                     logger.debug(
