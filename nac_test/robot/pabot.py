@@ -54,16 +54,22 @@ def run_pabot(
     include = include or []
     exclude = exclude or []
     robot_args: list[str] = []
-    # Resolve robot binary from the current venv's scripts directory so that pabot
-    # finds the correct robot installation inside the current (possibly isolated)
-    # virtual environment, rather than relying on a bare `robot` on PATH.
+    # Prefer the current environment's scripts directory to preserve isolated
+    # uv tool/venv installs, then check the user scheme for pip --user installs.
     robot_path = Path(sysconfig.get_path("scripts")) / (
         "robot.exe" if IS_WINDOWS else "robot"
     )
     if not robot_path.exists():
-        raise RuntimeError(
-            "robot executable not found - ensure robotframework is installed in the same environment as nac-test"
+        user_robot_path = (
+            Path(sysconfig.get_path("scripts", sysconfig.get_preferred_scheme("user")))
+            / robot_path.name
         )
+        if not user_robot_path.exists():
+            raise RuntimeError(
+                "robot executable not found - ensure robotframework is installed in the same environment as nac-test. "
+                f"Checked: {robot_path}, {user_robot_path}"
+            )
+        robot_path = user_robot_path
     pabot_args = [
         "--command",
         str(robot_path),
