@@ -1,3 +1,9 @@
+# Unreleased
+
+## Other Changes
+
+- dependencies: update nac-yaml to 2.2.1: files in data directories are merged in sorted order.
+
 # 2.1.0
 
 ## Features

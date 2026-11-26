@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11, <3.15"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -7,13 +7,13 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-11-01T15:41:17.115979Z"
+exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
 nac-artifacts = false
-nac-yaml = false
 nac-test-pyats-common = false
+nac-yaml = false
 
 [manifest]
 overrides = [{ name = "pytest-cov", specifier = ">=7.1" }]
@@ -170,11 +170,11 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 dependencies = [
-    { name = "cryptography", marker = "python_full_version < '3.12'" },
-    { name = "jinja2", marker = "python_full_version < '3.12'" },
-    { name = "packaging", marker = "python_full_version < '3.12'" },
-    { name = "pyyaml", marker = "python_full_version < '3.12'" },
-    { name = "resolvelib", marker = "python_full_version < '3.12'" },
+    { name = "cryptography" },
+    { name = "jinja2" },
+    { name = "packaging" },
+    { name = "pyyaml" },
+    { name = "resolvelib" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/81/1e/1d76138cf063c40135e2d24dfdcc9d9128593331a25d4846794dc5629814/ansible_core-2.19.12.tar.gz", hash = "sha256:cfb63b021558d5daddb1d0cd35886a5e1b18db2fc254d1f342e1527c62dac058", size = 3436037, upload-time = "2026-08-10T16:43:33.175Z" }
 wheels = [
@@ -189,11 +189,11 @@ resolution-markers = [
     "python_full_version >= '3.12'",
 ]
 dependencies = [
-    { name = "cryptography", marker = "python_full_version >= '3.12'" },
-    { name = "jinja2", marker = "python_full_version >= '3.12'" },
-    { name = "packaging", marker = "python_full_version >= '3.12'" },
-    { name = "pyyaml", marker = "python_full_version >= '3.12'" },
-    { name = "resolvelib", marker = "python_full_version >= '3.12'" },
+    { name = "cryptography" },
+    { name = "jinja2" },
+    { name = "packaging" },
+    { name = "pyyaml" },
+    { name = "resolvelib" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/11/cb53834d320c38d739e756e2458852d6e74a6c7018a9ab9f6d4ab5e5196e/ansible_core-2.21.3.tar.gz", hash = "sha256:4194fbd82273cbacfd06d86d74d2d7168c3c4b8426c03e93562cd7217f811ae1", size = 3397615, upload-time = "2026-08-10T16:46:14.554Z" }
 wheels = [
@@ -1652,7 +1652,7 @@ requires-dist = [
     { name = "markdown", specifier = ">=3.10.2" },
     { name = "nac-artifacts", specifier = ">=0.2.0" },
     { name = "nac-test-pyats-common", specifier = ">=0.4.0" },
-    { name = "nac-yaml", specifier = ">=2.1.0" },
+    { name = "nac-yaml", specifier = ">=2.2.1" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.6.2" },
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "pyats", marker = "sys_platform != 'win32'", specifier = ">=26.5" },
@@ -1696,14 +1696,15 @@ wheels = [
 
 [[package]]
 name = "nac-yaml"
-version = "2.1.0"
+version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ruamel-yaml" },
+    { name = "ruamel-yaml-clib", marker = "(platform_machine in 'x86_64 arm64' and platform_python_implementation == 'CPython' and sys_platform == 'darwin') or (platform_machine in 'x86_64 aarch64 i686' and platform_python_implementation == 'CPython' and sys_platform == 'linux') or (platform_machine in 'AMD64 x86' and platform_python_implementation == 'CPython' and sys_platform == 'win32')" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/14/b6526a33a3007470387c60841a2a527032e16024d5b951fe657ed769ef64/nac_yaml-2.1.0.tar.gz", hash = "sha256:8bbada6668d606a618da5659fdce784f616b62664ad4194499fd8b8cae6ddbf9", size = 23933, upload-time = "2026-10-23T10:59:24.499Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/72/606769dccc766ab53a7e77fb1488645433919478e679e7c328239f46accd/nac_yaml-2.2.1.tar.gz", hash = "sha256:8c054d80d750c504721a5398fca36bcff1f195c23938436120710e0f6e83eedd", size = 38165, upload-time = "2026-11-26T14:14:50.987Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/40/be/dda69e71843d6d4be9f822cd96c9b69e234eac3fc49739e5a10891c18206/nac_yaml-2.1.0-py3-none-any.whl", hash = "sha256:9d517a1c100bd72a9c2069a6a5c4b40878606388c6ec26d01ad9f40bd67ab8f0", size = 18101, upload-time = "2026-10-23T10:59:23.578Z" },
+    { url = "https://files.pythonhosted.org/packages/39/d5/ae9f269d923bfaeff40c136af89a599be0b3eb68888a615317fbe4f26813/nac_yaml-2.2.1-py3-none-any.whl", hash = "sha256:14578b9d5e185bfbe9d59dc78c4ab544e4bffd1da8b44662f668cb4ceb11074a", size = 24992, upload-time = "2026-11-26T14:14:49.881Z" },
 ]
 
 [[package]]
@@ -1973,7 +1974,7 @@ name = "pyasynchat"
 version = "1.0.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyasyncore", marker = "python_full_version >= '3.12'" },
+    { name = "pyasyncore" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ec/d2/b41df9021c12ca314146abcde7bdd3d9d37d44cc01559d7f13df459ee586/pyasynchat-1.0.5.tar.gz", hash = "sha256:36665473ae730dac51e6d7dad70f8295962120c830ab692f0a31efba32687e24", size = 9959, upload-time = "2026-01-05T20:05:27.712Z" }
 wheels = [
@@ -3056,7 +3057,7 @@ name = "tqdm"
 version = "4.70.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "python_version < '0'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/21/3b/6c24bec5be5e743ffd99576daa5cc077722fc7d5bbc00bd133fa0c698dc6/tqdm-4.70.0.tar.gz", hash = "sha256:55b0b0dbd97462d06ebee91e4dac24ed4d4702be82b24f07e6c1d27e08cea220", size = 795438, upload-time = "2026-07-27T11:33:15.271Z" }
 wheels = [

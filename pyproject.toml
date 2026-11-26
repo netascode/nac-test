@@ -33,7 +33,7 @@ dependencies = [
     "jmespath>=1.0.1",
     "nac-artifacts>=0.2.0",
     "nac-test-pyats-common>=0.4.0",
-    "nac-yaml>=2.1.0",
+    "nac-yaml>=2.2.1",
     "robotframework>=7.4.2",
     "robotframework-jmespath",
     "robotframework-jsonlibrary>=0.5",
